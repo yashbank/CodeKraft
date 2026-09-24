@@ -2,7 +2,9 @@
 
 Premium software-studio website + company-owned digital-product marketplace, specified end to end for AI-assisted implementation.
 
-**Start here:** [`MASTER_SPEC.md`](MASTER_SPEC.md) — the canonical entry point, terminology, design rules, document map and resolution table.
+**New machine or new agent?** Read [`AGENT-RUNBOOK.md`](AGENT-RUNBOOK.md) (prerequisites, first run, how to continue).
+
+**Start here for the spec:** [`MASTER_SPEC.md`](MASTER_SPEC.md) — the canonical entry point, terminology, design rules, document map and resolution table.
 
 ## Repository layout
 

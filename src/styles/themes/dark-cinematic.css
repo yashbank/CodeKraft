@@ -1,0 +1,263 @@
+/*
+ * Theme 1 — dark-cinematic (D-902). Source of truth: ui/theme-01/dark-cinematic.md §6.
+ * Semantic tokens only; primitives live in src/styles/tokens.css. Ships in release 1 as the default.
+ */
+[data-theme="dark-cinematic"] {
+  color-scheme: dark;
+
+  /* colour */
+  --ck-color-canvas: #0a0b10;
+  --ck-color-surface: #12141c;
+  --ck-color-elevated: #1a1d27;
+  --ck-color-glass: rgba(30, 33, 48, 0.72);
+  --ck-color-overlay: rgba(5, 6, 10, 0.72);
+  --ck-color-border: #262a38;
+  --ck-color-border-strong: #626a8a;
+  --ck-color-fg: #f2f4f8;
+  --ck-color-fg-muted: #a3a9b8;
+  --ck-color-fg-subtle: #7c8294;
+  --ck-color-accent: #9d8fff;
+  --ck-color-accent-fg: #0a0b10;
+  --ck-color-accent-hover: #b5abff;
+  --ck-color-accent-active: #8b7cff;
+  --ck-color-accent-soft: #1c1838;
+  --ck-color-accent-text: #9d8fff;
+  --ck-color-accent-solid: #5e4ee6;
+  --ck-color-secondary: #4fe3e0;
+  --ck-color-secondary-fg: #0a0b10;
+  --ck-color-secondary-soft: #0e2a2c;
+  --ck-color-success: #4ade80;
+  --ck-color-success-fg: #0a0b10;
+  --ck-color-success-soft: #10241a;
+  --ck-color-warning: #fbbf24;
+  --ck-color-warning-fg: #0a0b10;
+  --ck-color-warning-soft: #2a2210;
+  --ck-color-danger: #fb7185;
+  --ck-color-danger-fg: #0a0b10;
+  --ck-color-danger-soft: #2a1219;
+  --ck-color-danger-solid: #e11d48;
+  --ck-color-info: #60a5fa;
+  --ck-color-info-fg: #0a0b10;
+  --ck-color-info-soft: #101c2e;
+  --ck-color-ring: #9d8fff;
+  --ck-color-tertiary: #f5b83d;
+  --ck-color-fg-serif-muted: #a3a9b8;
+  --ck-color-inverse: #f2f4f8;
+  --ck-color-inverse-fg: #0a0b10;
+  --ck-color-inverse-fg-muted: #3a3f52;
+  --ck-color-grain: 0.06;
+  --ck-color-scrollbar: #3a3f52;
+
+  --ck-gradient-brand: linear-gradient(135deg, #9d8fff 0%, #4fe3e0 100%);
+  --ck-gradient-brand-muted: linear-gradient(
+    135deg,
+    rgba(157, 143, 255, 0.18) 0%,
+    rgba(79, 227, 224, 0.1) 100%
+  );
+  --ck-gradient-glow: radial-gradient(
+    60% 60% at 50% 40%,
+    rgba(124, 108, 255, 0.35) 0%,
+    rgba(124, 108, 255, 0) 70%
+  );
+  --ck-gradient-glow-cyan: radial-gradient(
+    40% 40% at 80% 60%,
+    rgba(79, 227, 224, 0.18) 0%,
+    rgba(79, 227, 224, 0) 70%
+  );
+  --ck-gradient-fade-canvas: linear-gradient(
+    90deg,
+    #0a0b10 0%,
+    rgba(10, 11, 16, 0.85) 40%,
+    rgba(10, 11, 16, 0) 100%
+  );
+  --ck-gradient-section: linear-gradient(180deg, #0a0b10 0%, #0d0f16 50%, #0a0b10 100%);
+
+  --ck-chart-1: #9d8fff;
+  --ck-chart-2: #4fe3e0;
+  --ck-chart-3: #f5b83d;
+  --ck-chart-4: #fb7185;
+  --ck-chart-5: #4ade80;
+  --ck-chart-6: #60a5fa;
+  --ck-chart-7: #e879f9;
+  --ck-chart-seq-1: #2a2560;
+  --ck-chart-seq-2: #4b3fa8;
+  --ck-chart-seq-3: #6f60e0;
+  --ck-chart-seq-4: #9d8fff;
+  --ck-chart-seq-5: #c4bbff;
+  --ck-chart-grid: #262a38;
+  --ck-chart-axis: #a3a9b8;
+
+  /* typography (family primitives resolve to the next/font loaders, see tokens.css) */
+  --ck-font-display: var(--ck-p-font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --ck-font-body: var(--ck-p-font-inter), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --ck-font-mono: var(--ck-p-font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ck-font-features-body: "cv11", "ss01", "tnum";
+  --ck-display-weight: 700;
+  --ck-heading-weight: 600;
+  --ck-display-style: normal;
+  --ck-text-display-xl-size: clamp(3rem, 2rem + 5vw, 6rem);
+  --ck-text-display-xl-lh: 1;
+  --ck-text-display-xl-ls: -0.03em;
+  --ck-text-display-lg-size: clamp(2.5rem, 1.75rem + 3.5vw, 4.5rem);
+  --ck-text-display-lg-lh: 1.05;
+  --ck-text-display-lg-ls: -0.025em;
+  --ck-text-h1-size: clamp(2.25rem, 1.75rem + 2vw, 3rem);
+  --ck-text-h1-lh: 1.1;
+  --ck-text-h1-ls: -0.02em;
+  --ck-text-h2-size: clamp(1.75rem, 1.4rem + 1.25vw, 2.25rem);
+  --ck-text-h2-lh: 1.15;
+  --ck-text-h2-ls: -0.015em;
+  --ck-text-h3-size: 1.5rem;
+  --ck-text-h3-lh: 1.25;
+  --ck-text-h3-ls: -0.01em;
+  --ck-text-h4-size: 1.25rem;
+  --ck-text-h4-lh: 1.3;
+  --ck-text-h4-ls: 0;
+  --ck-text-body-lg-size: 1.125rem;
+  --ck-text-body-lg-lh: 1.6;
+  --ck-text-body-size: 1rem;
+  --ck-text-body-lh: 1.6;
+  --ck-text-body-sm-size: 0.875rem;
+  --ck-text-body-sm-lh: 1.5;
+  --ck-text-caption-size: 0.75rem;
+  --ck-text-caption-lh: 1.4;
+  --ck-text-caption-ls: 0.01em;
+  --ck-text-overline-size: 0.75rem;
+  --ck-text-overline-lh: 1.2;
+  --ck-text-overline-ls: 0.08em;
+  --ck-text-mono-size: 0.875rem;
+  --ck-text-mono-lh: 1.5;
+  --ck-text-price-size: 1.5rem;
+  --ck-text-price-lh: 1.2;
+  --ck-text-price-ls: -0.01em;
+  --ck-text-pullquote-size: clamp(1.5rem, 1.2rem + 1.5vw, 2rem);
+  --ck-text-pullquote-lh: 1.3;
+
+  /* spacing */
+  --ck-space-gutter: 1rem;
+  --ck-space-section-y: clamp(4rem, 8vw, 8rem);
+  --ck-space-card: 1.25rem;
+  --ck-space-stack-xs: 0.25rem;
+  --ck-space-stack-sm: 0.5rem;
+  --ck-space-stack-md: 1rem;
+  --ck-space-stack-lg: 1.5rem;
+  --ck-space-stack-xl: 2.5rem;
+  --ck-space-inline-sm: 0.5rem;
+  --ck-space-inline-md: 0.75rem;
+  --ck-space-inline-lg: 1rem;
+  --ck-space-admin-page: 1.5rem;
+
+  /* radius, borders */
+  --ck-radius-xs: 4px;
+  --ck-radius-sm: 6px;
+  --ck-radius-md: 10px;
+  --ck-radius-lg: 14px;
+  --ck-radius-xl: 20px;
+  --ck-radius-2xl: 28px;
+  --ck-radius-full: 9999px;
+  --ck-border-hairline: 1px solid var(--ck-color-border);
+  --ck-border-input: 1px solid var(--ck-color-border-strong);
+  --ck-border-focus: 2px solid var(--ck-color-ring);
+  --ck-border-glass: 1px solid rgba(255, 255, 255, 0.1);
+  --ck-border-accent: 1px solid var(--ck-color-accent);
+  --ck-border-rule: 1px solid var(--ck-color-border);
+  --ck-border-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  /* shadows, blur */
+  --ck-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.6);
+  --ck-shadow-2: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --ck-shadow-3: 0 12px 32px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --ck-shadow-4: 0 24px 64px rgba(0, 0, 0, 0.6);
+  --ck-shadow-glow:
+    0 0 0 1px rgba(157, 143, 255, 0.35), 0 0 24px rgba(124, 108, 255, 0.45),
+    0 0 64px rgba(79, 227, 224, 0.18);
+  --ck-shadow-glow-hover:
+    0 0 0 1px rgba(157, 143, 255, 0.6), 0 0 32px rgba(124, 108, 255, 0.6),
+    0 0 96px rgba(79, 227, 224, 0.25);
+  --ck-shadow-glow-soft: 0 0 0 1px rgba(157, 143, 255, 0.18), 0 0 16px rgba(124, 108, 255, 0.22);
+  --ck-blur-glass: 16px;
+  --ck-blur-header: 20px;
+  --ck-blur-overlay: 4px;
+  --ck-glass-saturate: 140%;
+
+  /* z-index */
+  --ck-z-below: -1;
+  --ck-z-base: 0;
+  --ck-z-raised: 10;
+  --ck-z-sticky: 100;
+  --ck-z-header: 200;
+  --ck-z-dropdown: 300;
+  --ck-z-drawer: 400;
+  --ck-z-overlay: 500;
+  --ck-z-modal: 600;
+  --ck-z-toast: 700;
+  --ck-z-tooltip: 800;
+  --ck-z-skip: 900;
+
+  /* motion */
+  --ck-motion-duration-xs: 100ms;
+  --ck-motion-duration-sm: 160ms;
+  --ck-motion-duration-md: 240ms;
+  --ck-motion-duration-lg: 400ms;
+  --ck-motion-duration-xl: 700ms;
+  --ck-motion-duration-hero: 1200ms;
+  --ck-motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ck-motion-ease-emphasized: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --ck-motion-ease-exit: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --ck-motion-ease-gsap: "expo.out";
+  --ck-motion-spring-ui: '{"type":"spring","stiffness":420,"damping":32,"mass":1}';
+  --ck-motion-spring-hero: '{"type":"spring","stiffness":170,"damping":26,"mass":1.2}';
+  --ck-motion-stagger-sm: 40ms;
+  --ck-motion-stagger-md: 70ms;
+  --ck-motion-stagger-lg: 110ms;
+  --ck-motion-hover-lift: translateY(-4px) scale(1.01);
+  --ck-motion-parallax-max: 12%;
+  --ck-motion-reveal-y: 24px;
+  --ck-motion-poster-zoom: 20s;
+}
+
+@media (min-width: 48rem) {
+  [data-theme="dark-cinematic"] {
+    --ck-space-gutter: 1.5rem;
+    --ck-space-card: 1.5rem;
+  }
+}
+@media (min-width: 64rem) {
+  [data-theme="dark-cinematic"] {
+    --ck-space-gutter: 2rem;
+  }
+}
+@media (max-width: 63.98rem) {
+  [data-theme="dark-cinematic"] {
+    --ck-motion-reveal-y: 12px;
+    --ck-motion-stagger-md: 35ms;
+    --ck-motion-stagger-lg: 55ms;
+  }
+}
+
+[data-theme="dark-cinematic"] body {
+  background: var(--ck-color-canvas);
+  color: var(--ck-color-fg);
+  font-feature-settings: var(--ck-font-features-body);
+}
+[data-theme="dark-cinematic"] ::selection {
+  background: var(--ck-color-accent);
+  color: var(--ck-color-accent-fg);
+}
+/* Film grain (docs/08 §12): /public/noise.png is a 64×64 tile, drawn 1:1 to keep the grain crisp. */
+[data-theme="dark-cinematic"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: var(--ck-z-below);
+  pointer-events: none;
+  background: url("/noise.png") repeat;
+  background-size: 64px;
+  opacity: var(--ck-color-grain);
+  mix-blend-mode: overlay;
+}
+@media (max-width: 47.98rem), (prefers-reduced-transparency: reduce) {
+  [data-theme="dark-cinematic"] body::before {
+    display: none;
+  }
+}

@@ -1,2 +1,5 @@
+/* CodeKraft global stylesheet — docs/08 §4.1. Both theme sheets ship in one bundle (MASTER_SPEC §7). */
 @import "tailwindcss";
-/* P1.2 replaces this with tokens.css + theme sheets. */
+@import "../styles/tokens.css";
+@import "../styles/themes/dark-cinematic.css";
+@import "../styles/themes/light-editorial.css";

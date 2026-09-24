@@ -3,6 +3,7 @@ import tseslint from "typescript-eslint";
 import nextPlugin from "@next/eslint-plugin-next";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import prettier from "eslint-config-prettier";
+import globals from "globals";
 import codekraft from "./eslint-rules/index.js";
 
 export default tseslint.config(
@@ -40,6 +41,10 @@ export default tseslint.config(
   {
     files: ["src/components/**/*.{ts,tsx}"],
     rules: { "codekraft/no-hardcoded-colors": "error" },
+  },
+  {
+    files: ["**/*.cjs"],
+    languageOptions: { sourceType: "commonjs", globals: { ...globals.node } },
   },
   {
     files: ["eslint-rules/**/*.js", "scripts/**/*.ts", "tests/**/*.ts"],

@@ -1,0 +1,253 @@
+/*
+ * Theme 2 — light-editorial (D-903). Source of truth: ui/theme-02/light-editorial.md §6.
+ * Semantic tokens only; primitives live in src/styles/tokens.css. The sheet ships in release 1;
+ * the toggle is behind the theme_light_editorial flag (docs/04 §7.9).
+ */
+[data-theme="light-editorial"] {
+  color-scheme: light;
+
+  /* colour */
+  --ck-color-canvas: #faf8f3;
+  --ck-color-surface: #ffffff;
+  --ck-color-elevated: #ffffff;
+  --ck-color-glass: rgba(255, 255, 255, 0.78);
+  --ck-color-overlay: rgba(23, 24, 28, 0.48);
+  --ck-color-border: #e4e0d6;
+  --ck-color-border-strong: #86827a;
+  --ck-color-fg: #17181c;
+  --ck-color-fg-muted: #5d6068;
+  --ck-color-fg-subtle: #676a72;
+  --ck-color-fg-serif-muted: #4a4d55;
+  --ck-color-accent: #3f35d6;
+  --ck-color-accent-fg: #ffffff;
+  --ck-color-accent-hover: #3128b8;
+  --ck-color-accent-active: #241c8f;
+  --ck-color-accent-soft: #e9e7fb;
+  --ck-color-accent-text: #3f35d6;
+  --ck-color-accent-solid: #3f35d6;
+  --ck-color-secondary: #0b7a76;
+  --ck-color-secondary-fg: #ffffff;
+  --ck-color-secondary-soft: #e1f1f0;
+  --ck-color-tertiary: #b4502e;
+  --ck-color-success: #176f42;
+  --ck-color-success-fg: #ffffff;
+  --ck-color-success-soft: #e4f3ea;
+  --ck-color-warning: #9a5b00;
+  --ck-color-warning-fg: #ffffff;
+  --ck-color-warning-soft: #fcf0dc;
+  --ck-color-danger: #c8203a;
+  --ck-color-danger-fg: #ffffff;
+  --ck-color-danger-soft: #fbe7ea;
+  --ck-color-danger-solid: #a81a30;
+  --ck-color-info: #1d5fbf;
+  --ck-color-info-fg: #ffffff;
+  --ck-color-info-soft: #e3ecfa;
+  --ck-color-ring: #3f35d6;
+  --ck-color-inverse: #17181c;
+  --ck-color-inverse-fg: #faf8f3;
+  --ck-color-inverse-fg-muted: #b5b8c0;
+  --ck-color-grain: 0;
+  --ck-color-scrollbar: #c9c4b8;
+
+  --ck-gradient-brand: linear-gradient(135deg, #3f35d6 0%, #0b7a76 100%);
+  --ck-gradient-brand-muted: linear-gradient(
+    135deg,
+    rgba(63, 53, 214, 0.08) 0%,
+    rgba(11, 122, 118, 0.06) 100%
+  );
+  --ck-gradient-glow: radial-gradient(
+    60% 60% at 50% 40%,
+    rgba(63, 53, 214, 0.1) 0%,
+    rgba(63, 53, 214, 0) 70%
+  );
+  --ck-gradient-glow-cyan: radial-gradient(
+    40% 40% at 80% 60%,
+    rgba(11, 122, 118, 0.08) 0%,
+    rgba(11, 122, 118, 0) 70%
+  );
+  --ck-gradient-fade-canvas: linear-gradient(
+    90deg,
+    #faf8f3 0%,
+    rgba(250, 248, 243, 0.85) 40%,
+    rgba(250, 248, 243, 0) 100%
+  );
+  --ck-gradient-section: linear-gradient(180deg, #faf8f3 0%, #f3f0e8 50%, #faf8f3 100%);
+
+  --ck-chart-1: #3f35d6;
+  --ck-chart-2: #0b7a76;
+  --ck-chart-3: #b4502e;
+  --ck-chart-4: #c8203a;
+  --ck-chart-5: #176f42;
+  --ck-chart-6: #1d5fbf;
+  --ck-chart-7: #8a2ba8;
+  --ck-chart-seq-1: #dcd9f8;
+  --ck-chart-seq-2: #b3abf2;
+  --ck-chart-seq-3: #8478e6;
+  --ck-chart-seq-4: #5a50e8;
+  --ck-chart-seq-5: #241c8f;
+  --ck-chart-grid: #e4e0d6;
+  --ck-chart-axis: #676a72;
+
+  /* typography (family primitives resolve to the next/font loaders, see tokens.css) */
+  --ck-font-display: var(--ck-p-font-fraunces), ui-serif, Georgia, "Times New Roman", serif;
+  --ck-font-body: var(--ck-p-font-inter), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --ck-font-mono: var(--ck-p-font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ck-font-features-body: "cv11", "ss01", "tnum";
+  --ck-display-weight: 500;
+  --ck-heading-weight: 500;
+  --ck-display-style: normal;
+  --ck-text-display-xl-size: clamp(3rem, 2rem + 5vw, 6rem);
+  --ck-text-display-xl-lh: 1.02;
+  --ck-text-display-xl-ls: -0.015em;
+  --ck-text-display-lg-size: clamp(2.5rem, 1.75rem + 3.5vw, 4.5rem);
+  --ck-text-display-lg-lh: 1.08;
+  --ck-text-display-lg-ls: -0.012em;
+  --ck-text-h1-size: clamp(2.25rem, 1.75rem + 2vw, 3rem);
+  --ck-text-h1-lh: 1.12;
+  --ck-text-h1-ls: -0.01em;
+  --ck-text-h2-size: clamp(1.75rem, 1.4rem + 1.25vw, 2.25rem);
+  --ck-text-h2-lh: 1.18;
+  --ck-text-h2-ls: -0.008em;
+  --ck-text-h3-size: 1.5rem;
+  --ck-text-h3-lh: 1.3;
+  --ck-text-h3-ls: 0;
+  --ck-text-h4-size: 1.25rem;
+  --ck-text-h4-lh: 1.3;
+  --ck-text-h4-ls: 0;
+  --ck-text-body-lg-size: 1.125rem;
+  --ck-text-body-lg-lh: 1.65;
+  --ck-text-body-size: 1rem;
+  --ck-text-body-lh: 1.65;
+  --ck-text-body-sm-size: 0.875rem;
+  --ck-text-body-sm-lh: 1.5;
+  --ck-text-caption-size: 0.75rem;
+  --ck-text-caption-lh: 1.4;
+  --ck-text-caption-ls: 0.01em;
+  --ck-text-overline-size: 0.75rem;
+  --ck-text-overline-lh: 1.2;
+  --ck-text-overline-ls: 0.08em;
+  --ck-text-mono-size: 0.875rem;
+  --ck-text-mono-lh: 1.5;
+  --ck-text-price-size: 1.5rem;
+  --ck-text-price-lh: 1.2;
+  --ck-text-price-ls: -0.01em;
+  --ck-text-pullquote-size: clamp(1.5rem, 1.2rem + 1.5vw, 2rem);
+  --ck-text-pullquote-lh: 1.3;
+
+  /* spacing */
+  --ck-space-gutter: 1rem;
+  --ck-space-section-y: clamp(5rem, 10vw, 10rem);
+  --ck-space-card: 1.25rem;
+  --ck-space-stack-xs: 0.25rem;
+  --ck-space-stack-sm: 0.5rem;
+  --ck-space-stack-md: 1rem;
+  --ck-space-stack-lg: 1.5rem;
+  --ck-space-stack-xl: 2.5rem;
+  --ck-space-inline-sm: 0.5rem;
+  --ck-space-inline-md: 0.75rem;
+  --ck-space-inline-lg: 1rem;
+  --ck-space-admin-page: 1.5rem;
+
+  /* radius, borders */
+  --ck-radius-xs: 2px;
+  --ck-radius-sm: 4px;
+  --ck-radius-md: 6px;
+  --ck-radius-lg: 8px;
+  --ck-radius-xl: 12px;
+  --ck-radius-2xl: 16px;
+  --ck-radius-full: 9999px;
+  --ck-border-hairline: 1px solid var(--ck-color-border);
+  --ck-border-input: 1px solid var(--ck-color-border-strong);
+  --ck-border-focus: 2px solid var(--ck-color-ring);
+  --ck-border-glass: 1px solid rgba(23, 24, 28, 0.08);
+  --ck-border-accent: 2px solid var(--ck-color-accent);
+  --ck-border-rule: 1px solid var(--ck-color-fg);
+  --ck-border-highlight: none;
+
+  /* shadows, blur */
+  --ck-shadow-1: 0 1px 2px rgba(23, 24, 28, 0.06);
+  --ck-shadow-2: 0 2px 8px rgba(23, 24, 28, 0.08), 0 1px 2px rgba(23, 24, 28, 0.04);
+  --ck-shadow-3: 0 8px 24px rgba(23, 24, 28, 0.1), 0 2px 6px rgba(23, 24, 28, 0.05);
+  --ck-shadow-4: 0 20px 48px rgba(23, 24, 28, 0.14);
+  --ck-shadow-glow: 0 0 0 1px rgba(63, 53, 214, 0.18), 0 6px 20px rgba(63, 53, 214, 0.16);
+  --ck-shadow-glow-hover: 0 0 0 1px rgba(63, 53, 214, 0.3), 0 10px 28px rgba(63, 53, 214, 0.22);
+  --ck-shadow-glow-soft: 0 0 0 1px rgba(63, 53, 214, 0.1), 0 4px 14px rgba(63, 53, 214, 0.1);
+  --ck-blur-glass: 12px;
+  --ck-blur-header: 12px;
+  --ck-blur-overlay: 2px;
+  --ck-glass-saturate: 110%;
+
+  /* z-index */
+  --ck-z-below: -1;
+  --ck-z-base: 0;
+  --ck-z-raised: 10;
+  --ck-z-sticky: 100;
+  --ck-z-header: 200;
+  --ck-z-dropdown: 300;
+  --ck-z-drawer: 400;
+  --ck-z-overlay: 500;
+  --ck-z-modal: 600;
+  --ck-z-toast: 700;
+  --ck-z-tooltip: 800;
+  --ck-z-skip: 900;
+
+  /* motion */
+  --ck-motion-duration-xs: 100ms;
+  --ck-motion-duration-sm: 180ms;
+  --ck-motion-duration-md: 280ms;
+  --ck-motion-duration-lg: 480ms;
+  --ck-motion-duration-xl: 800ms;
+  --ck-motion-duration-hero: 1400ms;
+  --ck-motion-ease-standard: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ck-motion-ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+  --ck-motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ck-motion-ease-gsap: "power2.out";
+  --ck-motion-spring-ui: '{"type":"spring","stiffness":300,"damping":34,"mass":1}';
+  --ck-motion-spring-hero: '{"type":"spring","stiffness":140,"damping":28,"mass":1.2}';
+  --ck-motion-stagger-sm: 50ms;
+  --ck-motion-stagger-md: 90ms;
+  --ck-motion-stagger-lg: 130ms;
+  --ck-motion-hover-lift: translateY(-2px);
+  --ck-motion-parallax-max: 6%;
+  --ck-motion-reveal-y: 16px;
+  --ck-motion-poster-zoom: 0s;
+}
+
+@media (min-width: 48rem) {
+  [data-theme="light-editorial"] {
+    --ck-space-gutter: 1.5rem;
+    --ck-space-card: 1.75rem;
+  }
+}
+@media (min-width: 64rem) {
+  [data-theme="light-editorial"] {
+    --ck-space-gutter: 2.5rem;
+  }
+}
+@media (max-width: 63.98rem) {
+  [data-theme="light-editorial"] {
+    --ck-motion-reveal-y: 8px;
+    --ck-motion-stagger-md: 45ms;
+    --ck-motion-stagger-lg: 65ms;
+  }
+}
+
+[data-theme="light-editorial"] body {
+  background: var(--ck-color-canvas);
+  color: var(--ck-color-fg);
+  font-feature-settings: var(--ck-font-features-body);
+}
+[data-theme="light-editorial"] ::selection {
+  background: var(--ck-color-accent);
+  color: var(--ck-color-accent-fg);
+}
+[data-theme="light-editorial"] .font-display {
+  font-optical-sizing: auto;
+  font-variation-settings:
+    "SOFT" 0,
+    "WONK" 0;
+}
+[data-theme="light-editorial"] .chapter-number,
+[data-theme="light-editorial"] blockquote {
+  font-style: italic;
+}
