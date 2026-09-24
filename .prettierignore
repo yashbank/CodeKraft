@@ -1,0 +1,7 @@
+node_modules
+.next
+.pg
+pnpm-lock.yaml
+*.md
+drizzle/migrations
+public

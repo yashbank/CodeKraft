@@ -10,7 +10,7 @@ Phase gates (master plan §6) are recorded in the "Phase gates" table at the bot
 
 | Task | Title | Owner | Status | Branch | Commit | Tests (CI URL) | AC | Notes |
 |------|-------|-------|--------|--------|--------|----------------|----|-------|
-| P1.1 | Repository scaffold, toolchain, Docker | | todo | | | | 0/5 | |
+| P1.1 | Repository scaffold, toolchain, Docker | claude-code | done | phase-01 | (see git log P1.1) | local: lint+typecheck+unit+build green | 4/5 | Docker image build not verifiable locally (no Docker); CI `build` job covers it. Local DB via `pnpm db:local` (embedded Postgres 17) added as Docker-free fallback. Node 22 required (jsdom 30). |
 | P1.2 | Design tokens, Theme 1 live, Theme 2 sheet, Tailwind v4 bridge | | todo | | | | 0/4 | |
 | P1.3 | shadcn base components + `/dev/ui` kitchen sink | | todo | | | | 0/4 | |
 | P1.4 | Database client, env validation, core libs | | todo | | | | 0/4 | |

@@ -2,7 +2,9 @@
 
 Premium software-studio website + company-owned digital-product marketplace, specified end to end for AI-assisted implementation.
 
-**Start here:** [`MASTER_SPEC.md`](MASTER_SPEC.md) — the canonical entry point, terminology, design rules, document map and resolution table.
+**New machine or new agent?** Read [`AGENT-RUNBOOK.md`](AGENT-RUNBOOK.md) (prerequisites, first run, how to continue).
+
+**Start here for the spec:** [`MASTER_SPEC.md`](MASTER_SPEC.md) — the canonical entry point, terminology, design rules, document map and resolution table.
 
 ## Repository layout
 
@@ -18,6 +20,21 @@ Premium software-studio website + company-owned digital-product marketplace, spe
 | `implementation/` | Dependency-aware master plan, phase files P1–P9 (release 1) and V1.1, progress board, issues |
 | `prompts/` | Orchestrator prompts for Antigravity and Claude Code |
 | `CHANGELOG.md` | Documentation and implementation change history |
+
+## Quick start (development)
+
+```
+nvm use                # Node 22 (.nvmrc)
+corepack enable pnpm   # pnpm 12 (packageManager)
+pnpm install
+cp .env.example .env.local
+pnpm db:local          # Postgres 17 without Docker (or: docker compose up -d postgres)
+pnpm db:migrate && pnpm db:seed
+pnpm dev               # site http://localhost:3000, admin http://admin.localhost:3000
+pnpm lint && pnpm typecheck && pnpm test && pnpm build
+```
+
+`pnpm db:local` downloads Postgres binaries once and keeps data in `.pg/`. On machines with Docker, `docker compose up -d postgres` (add `--profile storage --profile mail` for MinIO and Mailpit) is equivalent.
 
 ## Reading order for implementers
 1. `MASTER_SPEC.md`

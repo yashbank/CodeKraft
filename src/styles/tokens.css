@@ -1,0 +1,428 @@
+/*
+ * CodeKraft design tokens — docs/08-DESIGN-SYSTEM.md §4–§5, §7.4, §14.
+ *
+ * Layer 1: primitive palette on :root (--ck-p-*). Never consumed by components.
+ * Layer 2: semantic tokens (--ck-*) live in src/styles/themes/*.css under [data-theme].
+ * Layer 3: components consume semantic tokens only, through the Tailwind v4 bridge below
+ *          (bg-surface, text-fg, border-border, bg-accent, …) or the shadcn alias block.
+ *
+ * Colour literals are allowed in src/styles/** only (eslint codekraft/no-hardcoded-colors).
+ */
+
+/* ---------------------------------------------------------------------------
+ * 1. Primitive palette (docs/08 §5.1) — theme-independent
+ * ------------------------------------------------------------------------- */
+:root {
+  /* ink (cool near-black) — Theme 1 backgrounds and text */
+  --ck-p-ink-950: #0a0b10;
+  --ck-p-ink-900: #12141c;
+  --ck-p-ink-850: #1a1d27;
+  --ck-p-ink-800: #1e2130;
+  --ck-p-ink-700: #262a38;
+  --ck-p-ink-600: #3a3f52;
+  --ck-p-ink-500: #626a8a;
+  --ck-p-ink-400: #7c8294;
+  --ck-p-ink-300: #a3a9b8;
+  --ck-p-ink-200: #d5d9e2;
+  --ck-p-ink-100: #f2f4f8;
+
+  /* paper (warm off-white) — Theme 2 backgrounds and text */
+  --ck-p-paper-50: #ffffff;
+  --ck-p-paper-100: #faf8f3;
+  --ck-p-paper-200: #f3f0e8;
+  --ck-p-paper-300: #e4e0d6;
+  --ck-p-paper-400: #c9c4b8;
+  --ck-p-paper-500: #86827a;
+  --ck-p-paper-600: #676a72;
+  --ck-p-paper-700: #5d6068;
+  --ck-p-paper-800: #4a4d55;
+  --ck-p-paper-900: #2a2c33;
+  --ck-p-paper-950: #17181c;
+
+  /* violet (brand accent) */
+  --ck-p-violet-100: #e9e7fb;
+  --ck-p-violet-200: #c4bbff;
+  --ck-p-violet-300: #b5abff;
+  --ck-p-violet-400: #9d8fff;
+  --ck-p-violet-500: #8b7cff;
+  --ck-p-violet-600: #7c6cff;
+  --ck-p-violet-700: #5e4ee6;
+  --ck-p-violet-800: #4e3ed4;
+  --ck-p-violet-850: #3f35d6;
+  --ck-p-violet-900: #3128b8;
+  --ck-p-violet-950: #241c8f;
+  --ck-p-violet-tint-dark: #1c1838;
+
+  /* cyan (secondary accent) */
+  --ck-p-cyan-300: #4fe3e0;
+  --ck-p-cyan-600: #0b7a76;
+  --ck-p-cyan-700: #0a6e6a;
+  --ck-p-cyan-tint-dark: #0e2a2c;
+
+  /* amber */
+  --ck-p-amber-300: #fbbf24;
+  --ck-p-amber-400: #f5b83d;
+  --ck-p-amber-700: #9a5b00;
+  --ck-p-amber-tint-dark: #2a2210;
+  --ck-p-amber-tint-light: #fcf0dc;
+
+  /* terracotta (Theme 2 editorial accent) */
+  --ck-p-terracotta-600: #b4502e;
+
+  /* green */
+  --ck-p-green-300: #4ade80;
+  --ck-p-green-700: #176f42;
+  --ck-p-green-tint-dark: #10241a;
+  --ck-p-green-tint-light: #e4f3ea;
+
+  /* rose */
+  --ck-p-rose-300: #fb7185;
+  --ck-p-rose-600: #e11d48;
+  --ck-p-rose-700: #c8203a;
+  --ck-p-rose-800: #a81a30;
+  --ck-p-rose-tint-dark: #2a1219;
+  --ck-p-rose-tint-light: #fbe7ea;
+
+  /* blue */
+  --ck-p-blue-300: #60a5fa;
+  --ck-p-blue-700: #1d5fbf;
+  --ck-p-blue-tint-dark: #101c2e;
+  --ck-p-blue-tint-light: #e3ecfa;
+
+  /* magenta (chart series only) */
+  --ck-p-magenta-300: #e879f9;
+  --ck-p-magenta-700: #8a2ba8;
+
+  /*
+   * Font primitives (docs/08 §5.3). next/font/google (src/lib/fonts.ts) defines
+   * --font-space-grotesk / --font-fraunces / --font-inter / --font-jetbrains-mono on <html>;
+   * the literal family name is the fallback when the loader class is absent (tests, emails).
+   */
+  --ck-p-font-space-grotesk: var(--font-space-grotesk, "Space Grotesk");
+  --ck-p-font-fraunces: var(--font-fraunces, "Fraunces");
+  --ck-p-font-inter: var(--font-inter, "Inter");
+  --ck-p-font-jetbrains-mono: var(--font-jetbrains-mono, "JetBrains Mono");
+
+  /* Containers (docs/08 §5.11) — static, shared by both themes */
+  --ck-container: calc(100% - 2rem);
+  --ck-container-md: 720px;
+  --ck-container-lg: 960px;
+  --ck-container-xl: 1200px;
+  --ck-container-2xl: 1400px;
+  --ck-container-tv: 1600px;
+
+  /* Reduced-motion crossfade ceiling (docs/08 §7.4) */
+  --ck-motion-crossfade-max: 200ms;
+}
+
+/* ---------------------------------------------------------------------------
+ * 2. Tailwind v4 bridge (docs/08 §4.3) — utilities resolve the semantic variable at runtime
+ * ------------------------------------------------------------------------- */
+@theme inline {
+  /* colours → bg-*, text-*, border-*, ring-*, fill-* */
+  --color-canvas: var(--ck-color-canvas);
+  --color-surface: var(--ck-color-surface);
+  --color-elevated: var(--ck-color-elevated);
+  --color-glass: var(--ck-color-glass);
+  --color-overlay: var(--ck-color-overlay);
+  --color-border: var(--ck-color-border);
+  --color-border-strong: var(--ck-color-border-strong);
+  --color-fg: var(--ck-color-fg);
+  --color-fg-muted: var(--ck-color-fg-muted);
+  --color-fg-subtle: var(--ck-color-fg-subtle);
+  --color-fg-serif-muted: var(--ck-color-fg-serif-muted);
+  --color-accent: var(--ck-color-accent);
+  --color-accent-fg: var(--ck-color-accent-fg);
+  --color-accent-hover: var(--ck-color-accent-hover);
+  --color-accent-active: var(--ck-color-accent-active);
+  --color-accent-soft: var(--ck-color-accent-soft);
+  --color-accent-text: var(--ck-color-accent-text);
+  --color-accent-solid: var(--ck-color-accent-solid);
+  --color-secondary: var(--ck-color-secondary);
+  --color-secondary-fg: var(--ck-color-secondary-fg);
+  --color-secondary-soft: var(--ck-color-secondary-soft);
+  --color-tertiary: var(--ck-color-tertiary);
+  --color-success: var(--ck-color-success);
+  --color-success-fg: var(--ck-color-success-fg);
+  --color-success-soft: var(--ck-color-success-soft);
+  --color-warning: var(--ck-color-warning);
+  --color-warning-fg: var(--ck-color-warning-fg);
+  --color-warning-soft: var(--ck-color-warning-soft);
+  --color-danger: var(--ck-color-danger);
+  --color-danger-fg: var(--ck-color-danger-fg);
+  --color-danger-soft: var(--ck-color-danger-soft);
+  --color-danger-solid: var(--ck-color-danger-solid);
+  --color-info: var(--ck-color-info);
+  --color-info-fg: var(--ck-color-info-fg);
+  --color-info-soft: var(--ck-color-info-soft);
+  --color-ring: var(--ck-color-ring);
+  --color-inverse: var(--ck-color-inverse);
+  --color-inverse-fg: var(--ck-color-inverse-fg);
+  --color-inverse-fg-muted: var(--ck-color-inverse-fg-muted);
+  --color-scrollbar: var(--ck-color-scrollbar);
+  --color-chart-1: var(--ck-chart-1);
+  --color-chart-2: var(--ck-chart-2);
+  --color-chart-3: var(--ck-chart-3);
+  --color-chart-4: var(--ck-chart-4);
+  --color-chart-5: var(--ck-chart-5);
+  --color-chart-6: var(--ck-chart-6);
+  --color-chart-7: var(--ck-chart-7);
+  --color-chart-grid: var(--ck-chart-grid);
+  --color-chart-axis: var(--ck-chart-axis);
+
+  /* shadcn class names (bg-background, text-muted-foreground, …) → alias block below */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary-foreground: var(--ck-color-secondary-fg);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent-foreground: var(--ck-color-accent-fg);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-input: var(--input);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* typography → font-display, font-body, font-mono (font-sans = body) */
+  --font-display: var(--ck-font-display);
+  --font-body: var(--ck-font-body);
+  --font-sans: var(--ck-font-body);
+  --font-mono: var(--ck-font-mono);
+
+  /* type scale → text-display-xl … text-price (size + line-height + tracking + weight) */
+  --text-display-xl: var(--ck-text-display-xl-size);
+  --text-display-xl--line-height: var(--ck-text-display-xl-lh);
+  --text-display-xl--letter-spacing: var(--ck-text-display-xl-ls);
+  --text-display-xl--font-weight: var(--ck-display-weight);
+  --text-display-lg: var(--ck-text-display-lg-size);
+  --text-display-lg--line-height: var(--ck-text-display-lg-lh);
+  --text-display-lg--letter-spacing: var(--ck-text-display-lg-ls);
+  --text-display-lg--font-weight: var(--ck-display-weight);
+  --text-h1: var(--ck-text-h1-size);
+  --text-h1--line-height: var(--ck-text-h1-lh);
+  --text-h1--letter-spacing: var(--ck-text-h1-ls);
+  --text-h1--font-weight: var(--ck-display-weight);
+  --text-h2: var(--ck-text-h2-size);
+  --text-h2--line-height: var(--ck-text-h2-lh);
+  --text-h2--letter-spacing: var(--ck-text-h2-ls);
+  --text-h2--font-weight: var(--ck-heading-weight);
+  --text-h3: var(--ck-text-h3-size);
+  --text-h3--line-height: var(--ck-text-h3-lh);
+  --text-h3--letter-spacing: var(--ck-text-h3-ls);
+  --text-h3--font-weight: var(--ck-heading-weight);
+  --text-h4: var(--ck-text-h4-size);
+  --text-h4--line-height: var(--ck-text-h4-lh);
+  --text-h4--letter-spacing: var(--ck-text-h4-ls);
+  --text-h4--font-weight: 600;
+  --text-body-lg: var(--ck-text-body-lg-size);
+  --text-body-lg--line-height: var(--ck-text-body-lg-lh);
+  --text-body: var(--ck-text-body-size);
+  --text-body--line-height: var(--ck-text-body-lh);
+  --text-body-sm: var(--ck-text-body-sm-size);
+  --text-body-sm--line-height: var(--ck-text-body-sm-lh);
+  --text-caption: var(--ck-text-caption-size);
+  --text-caption--line-height: var(--ck-text-caption-lh);
+  --text-caption--letter-spacing: var(--ck-text-caption-ls);
+  --text-caption--font-weight: 500;
+  --text-overline: var(--ck-text-overline-size);
+  --text-overline--line-height: var(--ck-text-overline-lh);
+  --text-overline--letter-spacing: var(--ck-text-overline-ls);
+  --text-overline--font-weight: 600;
+  --text-mono: var(--ck-text-mono-size);
+  --text-mono--line-height: var(--ck-text-mono-lh);
+  --text-price: var(--ck-text-price-size);
+  --text-price--line-height: var(--ck-text-price-lh);
+  --text-price--letter-spacing: var(--ck-text-price-ls);
+  --text-price--font-weight: 600;
+  --text-pullquote: var(--ck-text-pullquote-size);
+  --text-pullquote--line-height: var(--ck-text-pullquote-lh);
+
+  /* radius → rounded-xs … rounded-2xl */
+  --radius-xs: var(--ck-radius-xs);
+  --radius-sm: var(--ck-radius-sm);
+  --radius-md: var(--ck-radius-md);
+  --radius-lg: var(--ck-radius-lg);
+  --radius-xl: var(--ck-radius-xl);
+  --radius-2xl: var(--ck-radius-2xl);
+
+  /* shadows → shadow-1 … shadow-4, shadow-glow, shadow-glow-hover, shadow-glow-soft */
+  --shadow-1: var(--ck-shadow-1);
+  --shadow-2: var(--ck-shadow-2);
+  --shadow-3: var(--ck-shadow-3);
+  --shadow-4: var(--ck-shadow-4);
+  --shadow-glow: var(--ck-shadow-glow);
+  --shadow-glow-hover: var(--ck-shadow-glow-hover);
+  --shadow-glow-soft: var(--ck-shadow-glow-soft);
+
+  /* blur → blur-glass, blur-header, blur-overlay */
+  --blur-glass: var(--ck-blur-glass);
+  --blur-header: var(--ck-blur-header);
+  --blur-overlay: var(--ck-blur-overlay);
+
+  /* motion → ease-standard, ease-emphasized, ease-exit */
+  --ease-standard: var(--ck-motion-ease-standard);
+  --ease-emphasized: var(--ck-motion-ease-emphasized);
+  --ease-exit: var(--ck-motion-ease-exit);
+}
+
+@theme {
+  /* static (theme-independent) */
+  --spacing: 0.25rem; /* 4 px base; p-4 = 1rem */
+  --breakpoint-sm: 40rem; /* 640  phone-landscape / small tablet */
+  --breakpoint-md: 48rem; /* 768  tablet */
+  --breakpoint-lg: 64rem; /* 1024 laptop */
+  --breakpoint-xl: 80rem; /* 1280 desktop */
+  --breakpoint-2xl: 96rem; /* 1536 large */
+  --breakpoint-tv: 120rem; /* 1920 TV / wall */
+}
+
+/* Tailwind's `dark:` variant is neutralised (docs/08 §4.3): themes are attributes, never variants. */
+@custom-variant dark (&:where([data-theme="__never__"] *));
+
+/* ---------------------------------------------------------------------------
+ * 3. shadcn/ui bridge (docs/08 §4.4) — copied-in components need no edits
+ * ------------------------------------------------------------------------- */
+:root,
+[data-theme] {
+  --background: var(--ck-color-canvas);
+  --foreground: var(--ck-color-fg);
+  --card: var(--ck-color-surface);
+  --card-foreground: var(--ck-color-fg);
+  --popover: var(--ck-color-elevated);
+  --popover-foreground: var(--ck-color-fg);
+  --primary: var(--ck-color-accent);
+  --primary-foreground: var(--ck-color-accent-fg);
+  --secondary: var(--ck-color-elevated);
+  --secondary-foreground: var(--ck-color-fg);
+  --muted: var(--ck-color-surface);
+  --muted-foreground: var(--ck-color-fg-muted);
+  --accent: var(--ck-color-accent-soft);
+  --accent-foreground: var(--ck-color-accent-text);
+  --destructive: var(--ck-color-danger);
+  --destructive-foreground: var(--ck-color-danger-fg);
+  --border: var(--ck-color-border);
+  --input: var(--ck-color-border-strong);
+  --ring: var(--ck-color-ring);
+  --radius: var(--ck-radius-md);
+  --chart-1: var(--ck-chart-1);
+  --chart-2: var(--ck-chart-2);
+  --chart-3: var(--ck-chart-3);
+  --chart-4: var(--ck-chart-4);
+  --chart-5: var(--ck-chart-5);
+  --sidebar: var(--ck-color-surface);
+  --sidebar-foreground: var(--ck-color-fg);
+  --sidebar-primary: var(--ck-color-accent);
+  --sidebar-primary-foreground: var(--ck-color-accent-fg);
+  --sidebar-accent: var(--ck-color-accent-soft);
+  --sidebar-accent-foreground: var(--ck-color-accent-text);
+  --sidebar-border: var(--ck-color-border);
+  --sidebar-ring: var(--ck-color-ring);
+}
+
+/* ---------------------------------------------------------------------------
+ * 4. Base styles shared by both themes (docs/08 §5.3 root size, §5.6 focus, §9)
+ * ------------------------------------------------------------------------- */
+@layer base {
+  html {
+    font-size: 16px;
+    font-family: var(--ck-font-body);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    scrollbar-color: var(--ck-color-scrollbar) var(--ck-color-canvas);
+    scrollbar-width: thin;
+  }
+  @media (min-width: 96rem) {
+    html {
+      font-size: 17px;
+    }
+  }
+  @media (min-width: 120rem) {
+    html {
+      font-size: 18px;
+    }
+  }
+  body {
+    min-height: 100svh;
+    background: var(--ck-color-canvas);
+    color: var(--ck-color-fg);
+  }
+  *,
+  ::before,
+  ::after {
+    border-color: var(--ck-color-border);
+  }
+  :focus-visible {
+    outline: var(--ck-border-focus);
+    outline-offset: 2px;
+  }
+  .font-display,
+  h1,
+  h2,
+  h3 {
+    font-family: var(--ck-font-display);
+    font-weight: var(--ck-display-weight);
+    font-style: var(--ck-display-style);
+  }
+  code,
+  kbd,
+  pre,
+  samp {
+    font-family: var(--ck-font-mono);
+  }
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * 5. Reduced motion (docs/08 §7.4, D-907, MASTER_SPEC §7 "Reduced motion")
+ *    All motion-based animation (transforms, parallax, scrub, shimmer, smooth scroll) is removed.
+ *    Opacity-only crossfades ≤ 200 ms are retained through the `.ck-crossfade` opt-in so state
+ *    changes (toast, tab panel, dialog) stay comprehensible. The same path is forced by the
+ *    in-app switch via <html data-motion="reduce"> (cookie ck_motion=reduce).
+ * ------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+  .ck-crossfade {
+    transition-property: opacity !important;
+    transition-duration: min(
+      var(--ck-motion-duration-md),
+      var(--ck-motion-crossfade-max)
+    ) !important;
+    transition-timing-function: linear !important;
+  }
+}
+[data-motion="reduce"] *,
+[data-motion="reduce"] *::before,
+[data-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0ms !important;
+  scroll-behavior: auto !important;
+}
+[data-motion="reduce"] .ck-crossfade {
+  transition-property: opacity !important;
+  transition-duration: min(var(--ck-motion-duration-md), var(--ck-motion-crossfade-max)) !important;
+  transition-timing-function: linear !important;
+}
