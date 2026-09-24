@@ -1,0 +1,27 @@
+[
+  {
+    "name": "first-load JS: / (site landing)",
+    "path": [
+      ".next/static/chunks/webpack-*.js",
+      ".next/static/chunks/main-app-*.js",
+      ".next/static/chunks/[0-9a-f]*-*.js",
+      ".next/static/chunks/app/layout-*.js",
+      ".next/static/chunks/app/page-*.js",
+      "!.next/static/chunks/framework-*.js"
+    ],
+    "gzip": true,
+    "limit": "200 KB"
+  },
+  {
+    "name": "first-load CSS: / (site landing)",
+    "path": [".next/static/css/*.css"],
+    "gzip": true,
+    "limit": "40 KB"
+  },
+  {
+    "name": "polyfills (legacy browsers only)",
+    "path": [".next/static/chunks/polyfills-*.js"],
+    "gzip": true,
+    "limit": "40 KB"
+  }
+]

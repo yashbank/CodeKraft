@@ -1,0 +1,181 @@
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+  CI: "1"
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      heavy: ${{ steps.decide.outputs.heavy }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - id: decide
+        # e2e/axe/lhci run on main and on non-draft PRs (docs/12 §4.2 minutes budget)
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ] || { [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ github.event.pull_request.draft }}" = "false" ]; }; then echo "heavy=true" >> "$GITHUB_OUTPUT"; else echo "heavy=false" >> "$GITHUB_OUTPUT"; fi
+
+  lint:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - uses: gitleaks/gitleaks-action@v2
+        env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+
+  typecheck:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+
+  unit:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm vitest run --project unit --coverage
+      - uses: actions/upload-artifact@v4
+        with: { name: coverage-unit, path: coverage, retention-days: 7 }
+
+  integration:
+    needs: setup
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: codekraft, POSTGRES_PASSWORD: codekraft, POSTGRES_DB: codekraft }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U codekraft -d codekraft" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL_TEST: postgres://codekraft:codekraft@localhost:5432/codekraft
+      DATABASE_URL: postgres://codekraft:codekraft@localhost:5432/codekraft
+      DATABASE_URL_UNPOOLED: postgres://codekraft:codekraft@localhost:5432/codekraft
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: psql "$DATABASE_URL" -c "CREATE EXTENSION IF NOT EXISTS citext; CREATE EXTENSION IF NOT EXISTS pgcrypto;"
+      - run: '[ -d drizzle/migrations ] && pnpm db:migrate || echo "no migrations yet (P2)"'
+      - run: pnpm vitest run --project integration
+
+  build:
+    needs: [lint, typecheck]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**') }}
+          restore-keys: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+      - run: cp .env.example .env.local
+      - run: pnpm build
+      - run: pnpm size
+      - uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: |
+            .next/standalone
+            .next/static
+            public
+          retention-days: 3
+      - name: docker build
+        run: docker build -t codekraft:ci .
+
+  e2e:
+    needs: [build, setup]
+    if: needs.setup.outputs.heavy == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: codekraft, POSTGRES_PASSWORD: codekraft, POSTGRES_DB: codekraft }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U codekraft -d codekraft" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgres://codekraft:codekraft@localhost:5432/codekraft
+      DATABASE_URL_UNPOOLED: postgres://codekraft:codekraft@localhost:5432/codekraft
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: cp .env.example .env.local
+      - run: echo "127.0.0.1 admin.localhost" | sudo tee -a /etc/hosts
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: '[ -d drizzle/migrations ] && pnpm db:migrate && pnpm db:seed || echo "no migrations yet (P2)"'
+      - run: pnpm e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: playwright-report, path: playwright-report, retention-days: 7 }
+
+  axe:
+    needs: [build, setup]
+    if: needs.setup.outputs.heavy == 'true'
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgres://codekraft:codekraft@localhost:5432/codekraft
+      DATABASE_URL_UNPOOLED: postgres://codekraft:codekraft@localhost:5432/codekraft
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: cp .env.example .env.local
+      - run: echo "127.0.0.1 admin.localhost" | sudo tee -a /etc/hosts
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm e2e --grep @axe
+
+  lhci:
+    needs: [build, setup]
+    if: needs.setup.outputs.heavy == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: cp .env.example .env.local
+      - run: pnpm build
+      - run: pnpm lhci
+        env: { LHCI_GITHUB_APP_TOKEN: "${{ secrets.LHCI_GITHUB_APP_TOKEN }}" }

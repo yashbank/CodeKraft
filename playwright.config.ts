@@ -61,5 +61,9 @@ export default defineConfig({
     stdout: "ignore",
     stderr: "pipe",
     env: { PORT: String(PORT) },
+    // pnpm's native launcher runs the script in its own process group, so Playwright's default
+    // SIGKILL on the wrapper orphans `next dev` and the run hangs on the open stderr pipe.
+    // SIGTERM first lets pnpm forward the signal down to next; SIGKILL follows after 5 s.
+    gracefulShutdown: { signal: "SIGTERM", timeout: 5_000 },
   },
 });
