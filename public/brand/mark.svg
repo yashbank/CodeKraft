@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="ck-mark-title ck-mark-desc" fill="currentColor">
+  <title id="ck-mark-title">CodeKraft</title>
+  <desc id="ck-mark-desc">CodeKraft monogram: the chevron K inside a rounded square.</desc>
+  <!-- Monogram (docs/08 §3.1): rounded square (radius 22 % of side) in currentColor with the chevron-K knocked out,
+       so the background shows through the K. Give the element color: var(--ck-color-accent) for the accent tile. -->
+  <path fill-rule="evenodd" d="M14 0H50A14 14 0 0 1 64 14V50A14 14 0 0 1 50 64H14A14 14 0 0 1 0 50V14A14 14 0 0 1 14 0ZM15.37 16H23.37V48H15.37ZM24.5 24.23L35.1 32L24.5 39.77L29.23 46.23L48.63 32L29.23 17.77Z"/>
+</svg>

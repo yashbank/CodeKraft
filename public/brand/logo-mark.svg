@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="CodeKraft">
-  <!-- Monogram: redrawn K inside a rounded square (radius 22% of side). Accent fill, ink chevron. -->
-  <title>CodeKraft</title>
-  <rect width="64" height="64" rx="14" fill="var(--ck-color-accent, #9D8FFF)"/>
-  <rect x="18" y="16" width="8" height="32" fill="var(--ck-color-accent-fg, #0A0B10)"/>
-  <path d="M30 20 L46 32 L30 44" fill="none" stroke="var(--ck-color-accent-fg, #0A0B10)" stroke-width="8" stroke-linejoin="miter"/>
-</svg>
