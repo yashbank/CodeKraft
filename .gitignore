@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+dist
+.pg
+.env
+.env.local
+.env.*.local
+*.log
+coverage
+playwright-report
+test-results
+.lighthouseci
+.DS_Store
+next-env.d.ts
+tsconfig.tsbuildinfo
