@@ -97,6 +97,10 @@ export type MarkReadInput = z.infer<typeof markReadSchema>;
 export const markAllReadSchema = z.object({}).strict();
 export type MarkAllReadInput = z.infer<typeof markAllReadSchema>;
 
+/** API-NOTIF-04 `getNotificationPreferences` (read; no input). P6.1 additive fix: `defineAction` needs a schema. */
+export const getNotificationPreferencesSchema = z.object({}).strict();
+export type GetNotificationPreferencesInput = z.infer<typeof getNotificationPreferencesSchema>;
+
 /**
  * API-NOTIF-04 preferences (`customer_profiles.notification_prefs`): `orderUpdates` is locked on,
  * `marketing` is absent in R1 (always false). Admin channel is in-app only (X-012).

@@ -1,6 +1,14 @@
 /**
- * `audit` Server Actions — owned by P3 (master plan §3 ownership map). Intentionally empty in P2.8:
- * Every export must be created with `defineAction` / `definePublicAction`
- * (`tests/static/actions-use-define-action.test.ts`, SA-07).
+ * `audit` Server Actions — API-ADM-05 `exportAuditLogs` (`audit.export`). The export writes a CSV
+ * to the documents bucket and audits itself inside the same transaction (D-1104).
  */
-export {};
+import { defineAction } from "@/lib/actions/envelope";
+import { auditService } from "./service";
+import { exportAuditLogsInput } from "./types";
+
+export const exportAuditLogs = defineAction({
+  name: "API-ADM-05 audit.export",
+  permission: "audit.export",
+  input: exportAuditLogsInput,
+  handler: (input, ctx) => auditService.exportAuditLogs(ctx, input),
+});
