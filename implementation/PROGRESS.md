@@ -11,15 +11,15 @@ Phase gates (master plan §6) are recorded in the "Phase gates" table at the bot
 | Task | Title | Owner | Status | Branch | Commit | Tests (CI URL) | AC | Notes |
 |------|-------|-------|--------|--------|--------|----------------|----|-------|
 | P1.1 | Repository scaffold, toolchain, Docker | claude-code | done | phase-01 | (see git log P1.1) | local: lint+typecheck+unit+build green | 4/5 | Docker image build not verifiable locally (no Docker); CI `build` job covers it. Local DB via `pnpm db:local` (embedded Postgres 17) added as Docker-free fallback. Node 22 required (jsdom 30). |
-| P1.2 | Design tokens, Theme 1 live, Theme 2 sheet, Tailwind v4 bridge | | todo | | | | 0/4 | |
-| P1.3 | shadcn base components + `/dev/ui` kitchen sink | | todo | | | | 0/4 | |
-| P1.4 | Database client, env validation, core libs | | todo | | | | 0/4 | |
+| P1.2 | Design tokens, Theme 1 live, Theme 2 sheet, Tailwind v4 bridge | claude-code | done | phase-01 | ff75386 | local green | 4/4 | tokens parity + 32 contrast pairs pass; wordmark SVGs |
+| P1.3 | shadcn base components + `/dev/ui` kitchen sink | claude-code | done | phase-01 | 71e0f26 | local green | 4/4 | 28 shadcn components, /dev/ui, 9 unit tests, axe clean both themes; tailwind-merge font-size fix |
+| P1.4 | Database client, env validation, core libs | claude-code | done | phase-01 | 4bf3afb | local green | 4/4 | env guards, drizzle client, pino redaction; money.ts 100% coverage; 102 lib tests |
 | P1.5 | Better Auth integration | | todo | | | | 0/6 | |
-| P1.6 | RBAC library, permission list, `requireContext`, action envelope | | todo | | | | 0/4 | |
+| P1.6 | RBAC library, permission list, `requireContext`, action envelope | claude-code | done | phase-01 | a703cf4 | local green | 0/4 | 51 permissions, matrix, scopes, defineAction; 100% coverage |
 | P1.7 | `middleware.ts`, route-group layouts, theme attribute, health endpoint | | todo | | | | 0/5 | |
 | P1.8 | Sentry, email transport, analytics placeholder | | todo | | | | 0/3 | |
-| P1.9 | Test harness | | todo | | | | 0/4 | |
-| P1.10 | GitHub Actions `ci.yml`, lefthook, branch protection | | todo | | | | 0/4 | |
+| P1.9 | Test harness | claude-code | done | phase-01 | c2443a9 | local green | 0/4 | unit+integration (embedded PG), 12 e2e both hosts, size 103/200 KB, LHCI config |
+| P1.10 | GitHub Actions `ci.yml`, lefthook, branch protection | claude-code | in-progress | phase-01 | c2443a9 | local green | 0/4 | ci.yml, CODEOWNERS, branch-protection doc done; lefthook pending; CI not yet run (repo not pushed) |
 | P1.11 | Progress board, issues, changelog, seed skeleton | | todo | | | | 0/3 | |
 | P1.12 | Phase-1 e2e gate and reviewer audit | | todo | | | | 0/3 | |
 

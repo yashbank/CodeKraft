@@ -267,7 +267,7 @@ export function parseMinor(input: string, currency: Currency): number {
     .replace(/[\s,]/g, "");
   const m = /^([+-])?(\d*)(?:\.(\d{0,2}))?$/.exec(cleaned);
   if (m === null) throw new TypeError(`invalid amount: ${JSON.stringify(input)}`);
-  const whole = m[2] ?? "";
+  const whole = m[2] as string; // `(\d*)` always participates (possibly empty)
   const fraction = m[3] ?? "";
   if (whole === "" && fraction === "")
     throw new TypeError(`invalid amount: ${JSON.stringify(input)}`);

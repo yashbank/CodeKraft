@@ -32,11 +32,13 @@ module.exports = {
       },
     },
     assert: {
-      aggregationMethod: "median",
+      // `aggregationMethod` cannot sit beside `assertMatrix` (LHCI rejects the config), so each
+      // matrix entry carries it: median of the 3 runs (docs/10 §9).
       assertMatrix: [
         {
           // Story landing (`/`): performance ≥ 0.85, everything else at the public thresholds.
           matchingUrlPattern: "^https?://[^/]+/$",
+          aggregationMethod: "median",
           assertions: {
             "categories:performance": ["error", { minScore: 0.85 }],
             "categories:accessibility": ["error", { minScore: 0.95 }],
@@ -55,6 +57,7 @@ module.exports = {
         {
           // Every other public route: performance ≥ 0.90.
           matchingUrlPattern: "^https?://[^/]+/.+",
+          aggregationMethod: "median",
           assertions: {
             "categories:performance": ["error", { minScore: 0.9 }],
             "categories:accessibility": ["error", { minScore: 0.95 }],
