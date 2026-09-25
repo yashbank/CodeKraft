@@ -1,5 +1,13 @@
 /**
- * `ownership` read-only queries — owned by P3 (master plan §3 ownership map). Intentionally empty in P2.8:
- * Queries are `definePublicAction` / `defineAction` reads that never mutate.
+ * Ownership read-only queries (docs/06 API-CAT-19, SA-07, PHASE-03 P3.8).
+ * Queries are wrapped with defineAction.
  */
-export {};
+import { defineAction } from "@/lib/actions";
+import { listOwnershipVersionsSchema } from "./contracts";
+import { ownershipService } from "./service";
+
+export const listOwnershipVersionsQuery = defineAction({
+  name: "API-CAT-19 listOwnershipVersions",
+  input: listOwnershipVersionsSchema,
+  handler: (input, ctx) => ownershipService.listVersions(ctx, input),
+});

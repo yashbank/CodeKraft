@@ -150,9 +150,9 @@ Deliver the complete admin-side domain for everything a founder edits before sel
 - Expected files/modules: `src/modules/ownership/{service,actions,queries,apply}.ts`.
 - Tests required: unit `tests/unit/ownership/validation.test.ts`; integration `tests/integration/ownership/{propose-approve-apply,reject-deletes-pending,second-pending-refused,sum-trigger,supersede-keeps-allocations}.test.ts` (S-10 steps 1, 3, 5 server side; FI-03).
 - Acceptance criteria:
-  - [ ] lines summing ≠ 10000 rejected at service and DB
-  - [ ] apply supersedes the old version and sets `effective_from`; existing `allocations` rows untouched (asserted with a fixture allocation)
-  - [ ] single 100 % partner allowed
+  - [x] lines summing ≠ 10000 rejected at service and DB
+  - [x] apply supersedes the old version and sets `effective_from`; existing `allocations` rows untouched (asserted with a fixture allocation)
+  - [x] single 100 % partner allowed
 - Definition of Done: code + tests (≥ 95 % coverage) + PROGRESS row + CI green.
 - Potential risks and mitigations: publish apply needing an active ownership while the ownership request is still pending → P3.9 refuses with `STATE_INVALID` and the message names the pending request.
 

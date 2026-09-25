@@ -1,6 +1,13 @@
 /**
- * `ownership` Server Actions — owned by P3 (master plan §3 ownership map). Intentionally empty in P2.8:
- * Every export must be created with `defineAction` / `definePublicAction`
- * (`tests/static/actions-use-define-action.test.ts`, SA-07).
+ * Ownership Server Actions (docs/06 API-CAT-16, SA-07, PHASE-03 P3.8).
+ * Every action is wrapped with defineAction.
  */
-export {};
+import { defineAction } from "@/lib/actions";
+import { proposeOwnershipSchema } from "./contracts";
+import { ownershipService } from "./service";
+
+export const proposeOwnershipAction = defineAction({
+  name: "API-CAT-16 proposeOwnership",
+  input: proposeOwnershipSchema,
+  handler: (input, ctx) => ownershipService.proposeOwnership(ctx, input),
+});
