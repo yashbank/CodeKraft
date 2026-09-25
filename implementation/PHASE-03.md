@@ -180,9 +180,9 @@ Deliver the complete admin-side domain for everything a founder edits before sel
 - Expected files/modules: as listed + `src/modules/blog/{service,actions,queries}.ts`.
 - Tests required: unit `tests/unit/content/render.test.ts` (`<script>`, `onerror`, `javascript:` stripped; allowed embeds kept; SA-19 `@security`), `plain-text.test.ts`; integration `tests/integration/blog/{one-per-product,publish-requires-published-product,slug-redirect,public-reads}.test.ts`.
 - Acceptance criteria:
-  - [ ] SA-19 fixtures render inert
-  - [ ] second blog for a product refused (`CONFLICT`)
-  - [ ] blog publish refused while product not published
+  - [x] SA-19 fixtures render inert
+  - [x] second blog for a product refused (`CONFLICT`)
+  - [x] blog publish refused while product not published
 - Definition of Done: code + tests + PROGRESS row + CI green.
 - Potential risks and mitigations: `@tiptap/html` needs the same extension set as the admin editor (P8) → export `tiptapExtensions` from `render.ts` for reuse.
 
