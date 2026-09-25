@@ -4,12 +4,8 @@
  * (`modules/delivery`, caller `delivery.tasks.write`, admin scope: own products).
  */
 import { z } from "zod";
-import {
-  isoDateTime,
-  listParams,
-  provisioningNotesSchema,
-  uuid,
-} from "@/modules/entitlements/types";
+import { isoDateTimeSchema as isoDateTime, uuidSchema as uuid } from "@/modules/_shared/zod";
+import { listParams, provisioningNotesSchema } from "@/modules/entitlements/types";
 
 export const DELIVERY_TASK_KINDS = ["provision", "revoke_external"] as const;
 export type DeliveryTaskKind = (typeof DELIVERY_TASK_KINDS)[number];

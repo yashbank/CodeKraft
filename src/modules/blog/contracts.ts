@@ -12,9 +12,9 @@ import {
   listParams,
   richTextSchema,
   slugSchema,
-  text,
   uuidSchema,
-} from "../catalog/contracts";
+} from "@/modules/_shared/zod";
+import { text } from "../catalog/contracts";
 import type { BlogCard, BlogDetail, ProductBlog } from "./types";
 
 /** API-CAT-10 `upsertProductBlog` (one per product; a slug change on a published blog writes `slug_redirects`). */

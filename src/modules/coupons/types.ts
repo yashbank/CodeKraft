@@ -6,15 +6,15 @@ import { z } from "zod";
 import { type Money, mulBps } from "@/lib/money";
 import type { Coupon } from "../../../drizzle/schema/commerce";
 import {
-  zBps,
-  zCouponCode,
-  zCurrency,
-  zIsoTimestamp,
-  zListParams,
-  zMoney,
-  zPositiveMinor,
-  zUuid,
-} from "@/modules/orders/types";
+  bpsSchema as zBps,
+  currencySchema as zCurrency,
+  isoDateTimeSchema as zIsoTimestamp,
+  listParams as zListParams,
+  moneySchema as zMoney,
+  positiveMinorUnitsSchema as zPositiveMinor,
+  uuidSchema as zUuid,
+} from "@/modules/_shared/zod";
+import { zCouponCode } from "@/modules/orders/types";
 
 export const COUPON_KINDS = ["percent", "fixed"] as const;
 export type CouponKind = (typeof COUPON_KINDS)[number];

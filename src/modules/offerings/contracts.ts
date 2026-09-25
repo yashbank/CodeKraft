@@ -6,14 +6,8 @@ import { z } from "zod";
 import type { RequestContext } from "@/lib/authz/context";
 import type { DbOrTx, TxCtx } from "@/lib/db";
 import type { Currency } from "@/lib/money";
-import {
-  currencySchema,
-  positionSchema,
-  richTextSchema,
-  slugSchema,
-  text,
-  uuidSchema,
-} from "../catalog/contracts";
+import { currencySchema, richTextSchema, slugSchema, uuidSchema } from "@/modules/_shared/zod";
+import { positionSchema, text } from "../catalog/contracts";
 import {
   BILLING_INTERVALS,
   DELIVERY_TYPES,

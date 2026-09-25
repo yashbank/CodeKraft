@@ -4,9 +4,9 @@
  * D-1503 (12-month retention), MASTER_SPEC §7 "Chatbot contact menu".
  */
 import { z } from "zod";
+import { isoDateTimeSchema as isoDateTime, uuidSchema as uuid } from "@/modules/_shared/zod";
 
-export const uuid = z.uuid();
-export const isoDateTime = z.iso.datetime({ offset: true });
+export { uuidSchema as uuid, isoDateTimeSchema as isoDateTime } from "@/modules/_shared/zod";
 
 export const CHAT_ROLES = ["user", "assistant", "system", "menu"] as const;
 export type ChatRole = (typeof CHAT_ROLES)[number];

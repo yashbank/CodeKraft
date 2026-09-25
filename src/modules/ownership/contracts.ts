@@ -14,7 +14,7 @@ import {
   isoDateTimeSchema,
   listParams,
   uuidSchema,
-} from "../catalog/contracts";
+} from "@/modules/_shared/zod";
 import {
   OWNERSHIP_STATUSES,
   OWNERSHIP_TOTAL_BPS,

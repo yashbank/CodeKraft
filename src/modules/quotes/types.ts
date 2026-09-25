@@ -5,15 +5,14 @@
 import { z } from "zod";
 import type { CustomQuote, QuoteStatus } from "../../../drizzle/schema/commerce";
 import {
-  zBilling,
-  zCurrency,
-  zIsoTimestamp,
-  zListParams,
-  zManualPaymentMethod,
-  zPositiveMinor,
-  zTrimmed,
-  zUuid,
-} from "@/modules/orders/types";
+  currencySchema as zCurrency,
+  isoDateTimeSchema as zIsoTimestamp,
+  listParams as zListParams,
+  positiveMinorUnitsSchema as zPositiveMinor,
+  trimmedString as zTrimmed,
+  uuidSchema as zUuid,
+} from "@/modules/_shared/zod";
+import { zBilling, zManualPaymentMethod } from "@/modules/orders/types";
 
 export const QUOTE_STATUSES = [
   "draft",

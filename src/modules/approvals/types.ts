@@ -16,12 +16,12 @@ import type {
   ApprovalType,
 } from "../../../drizzle/schema/approvals";
 import {
-  zIsoTimestamp,
-  zListParams,
-  zTrimmed,
-  zUuid,
-  projectOrderSplitPayload,
-} from "@/modules/orders/types";
+  isoDateTimeSchema as zIsoTimestamp,
+  listParams as zListParams,
+  trimmedString as zTrimmed,
+  uuidSchema as zUuid,
+} from "@/modules/_shared/zod";
+import { projectOrderSplitPayload } from "@/modules/orders/types";
 import { refundIssuePayload } from "@/modules/payments/types";
 import { ledgerAdjustmentPayload, payoutRecordPayload } from "@/modules/finance/types";
 

@@ -4,7 +4,8 @@ import path from "node:path";
 
 /**
  * Test harness (P1.9, docs/10 §1, §12).
- *  - `unit`        jsdom, tests/unit + tests/property (fast-check), Testing Library + jest-dom
+ *  - `unit`        jsdom, tests/unit + tests/property (fast-check) + tests/static (source scans),
+ *                  Testing Library + jest-dom
  *  - `integration` node, real Postgres from tests/setup/global-db.ts, files run serially
  * Coverage thresholds follow docs/10 §12; per-glob entries only bite once matching files exist
  * (an empty glob reports 100 %), so they are safe to declare before the modules land.
@@ -52,7 +53,11 @@ export default defineConfig({
         extends: true,
         test: {
           name: "unit",
-          include: ["tests/unit/**/*.test.{ts,tsx}", "tests/property/**/*.test.{ts,tsx}"],
+          include: [
+            "tests/unit/**/*.test.{ts,tsx}",
+            "tests/property/**/*.test.{ts,tsx}",
+            "tests/static/**/*.test.{ts,tsx}",
+          ],
           environment: "jsdom",
           setupFiles: ["tests/setup/unit.ts"],
         },

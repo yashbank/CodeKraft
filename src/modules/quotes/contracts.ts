@@ -1,7 +1,8 @@
 /** Custom quotes service contract (docs/06 §2.3 API-COM-09, API-COM-10). */
 import type { TxCtx } from "@/lib/db";
 import type { Context, RequestContext } from "@/lib/authz/context";
-import type { CreateOrderResult, ListResult } from "@/modules/orders/types";
+import type { ListResult } from "@/modules/_shared/zod";
+import type { CreateOrderResult } from "@/modules/orders/types";
 import type {
   AcceptCustomQuoteInput,
   CancelCustomQuoteInput,

@@ -4,9 +4,9 @@
  * (escalation), D-1002 (email on admin reply), FR-LEAD-09 (auto-close after 7 d).
  */
 import { z } from "zod";
+import { isoDateTimeSchema as isoDateTime, uuidSchema as uuid } from "@/modules/_shared/zod";
 
-export const uuid = z.uuid();
-export const isoDateTime = z.iso.datetime({ offset: true });
+export { uuidSchema as uuid, isoDateTimeSchema as isoDateTime } from "@/modules/_shared/zod";
 
 export const QUERY_SOURCES = ["form", "chatbot", "order", "dashboard", "email", "manual"] as const;
 export type QuerySource = (typeof QUERY_SOURCES)[number];

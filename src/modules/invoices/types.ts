@@ -11,7 +11,8 @@ import type {
   InvoiceLine,
   SellerSnapshot,
 } from "../../../drizzle/schema/invoices";
-import { zDateRange, zFyLabel, zListParams, zUuid } from "@/modules/orders/types";
+import { listParams as zListParams, uuidSchema as zUuid } from "@/modules/_shared/zod";
+import { zDateRange, zFyLabel } from "@/modules/orders/types";
 
 /** `CK/2026-27/0001` (BR-16). */
 export const zInvoiceNo = z.string().regex(/^CK\/\d{4}-\d{2}\/\d{4,}$/, "invoice number");

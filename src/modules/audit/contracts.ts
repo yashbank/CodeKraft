@@ -8,7 +8,7 @@
  */
 import type { TxCtx } from "@/lib/db";
 import type { RequestContext } from "@/lib/authz/context";
-import type { ListResult } from "@/modules/orders/types";
+import type { ListResult } from "@/modules/_shared/zod";
 import type {
   AuditAction,
   AuditActor,

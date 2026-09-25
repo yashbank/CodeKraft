@@ -1,17 +1,28 @@
 /**
  * Orders — Zod input schemas and output types (docs/06 §2.3 API-COM-01..07, API-COM-14).
  *
- * Domain-B shared primitives (`zUuid`, `zMoney`, `zBps`, list params) live at the top of this
- * file until P2.5's `src/modules/_shared/zod.ts` lands; every other domain-B module imports them
- * from here (orders is the root entity of commerce, so the runtime import graph stays acyclic:
- * orders ← payments / coupons / quotes / invoices / finance ← approvals).
+ * Domain-B shared primitives (`zUuid`, `zMoney`, `zBps`, list params) are the canonical set in
+ * `src/modules/_shared/zod.ts` (P2.8), re-exported here under the domain-B names so the P2.6
+ * public surface is unchanged (orders is the root entity of commerce: orders ← payments /
+ * coupons / quotes / invoices / finance ← approvals).
  *
  * Conventions (docs/06 §1.3, §1.9): inputs are `.strict()`; strings are trimmed; money is
  * `{ amountMinor, currency }` in integer minor units; ids are UUIDs; dates are `YYYY-MM-DD` and
  * timestamps ISO-8601.
  */
 import { z } from "zod";
-import { CURRENCIES, type Currency } from "@/lib/money";
+import type { Currency } from "@/lib/money";
+import {
+  bpsSchema as zBps,
+  currencySchema as zCurrency,
+  isoDateSchema as zIsoDate,
+  listParams as zListParams,
+  minorUnitsSchema as zMinor,
+  moneySchema as zMoney,
+  positiveMinorUnitsSchema as zPositiveMinor,
+  trimmedString as zTrimmed,
+  uuidSchema as zUuid,
+} from "@/modules/_shared/zod";
 import type {
   BillingSnapshot,
   Order,
@@ -25,25 +36,23 @@ import type {
 import type { PaymentInstructions } from "@/modules/payments/provider";
 
 // ---------------------------------------------------------------------------------------------
-// Shared primitives (docs/06 §1.3, §1.8, §1.9)
+// Shared primitives (docs/06 §1.3, §1.8, §1.9) — canonical set in `_shared/zod.ts`
 // ---------------------------------------------------------------------------------------------
 
-export const zUuid = z.uuid();
-export const zCurrency = z.enum(CURRENCIES);
-/** Non-negative integer minor units (paise / cents). */
-export const zMinor = z.number().int().nonnegative();
-/** Strictly positive minor units (amounts that must be > 0). */
-export const zPositiveMinor = z.number().int().positive();
-/** Signed minor units (adjustments, ledger amounts). */
-export const zSignedMinor = z.number().int();
-export const zMoney = z.object({ amountMinor: zMinor, currency: zCurrency }).strict();
-/** Basis points 0..10000. */
-export const zBps = z.number().int().min(0).max(10_000);
-/** `YYYY-MM-DD` (payout `paidOn`, expense `incurredOn`, payment `receivedOn`). */
-export const zIsoDate = z.iso.date();
-/** ISO-8601 timestamp, e.g. `2026-09-24T10:15:00.000Z`. */
-export const zIsoTimestamp = z.iso.datetime({ offset: true });
-export const zTrimmed = (min: number, max: number) => z.string().trim().min(min).max(max);
+export {
+  uuidSchema as zUuid,
+  currencySchema as zCurrency,
+  minorUnitsSchema as zMinor,
+  positiveMinorUnitsSchema as zPositiveMinor,
+  signedMinorUnitsSchema as zSignedMinor,
+  moneySchema as zMoney,
+  bpsSchema as zBps,
+  isoDateSchema as zIsoDate,
+  isoDateTimeSchema as zIsoTimestamp,
+  trimmedString as zTrimmed,
+  listParams as zListParams,
+  type ListResult,
+} from "@/modules/_shared/zod";
 export const zEmail = z.email().trim().max(254);
 /** ISO-3166 alpha-2, upper-case. */
 export const zCountry = z
@@ -59,29 +68,6 @@ export const zPublicOrderNo = z
 
 export type Money = z.infer<typeof zMoney>;
 export type { Currency };
-
-/** docs/06 §1.8 — every list query takes this shape; `sort` and `filters` are per list. */
-export function zListParams<
-  const S extends readonly [string, ...string[]],
-  F extends z.ZodObject = z.ZodObject<Record<string, never>>,
->(sortFields: S, filters?: F) {
-  const sortValues = sortFields.flatMap((f) => [`${f}:asc`, `${f}:desc`]) as [string, ...string[]];
-  return z
-    .object({
-      cursor: z.string().min(1).max(512).optional(),
-      limit: z.number().int().min(1).max(100).default(25),
-      sort: z.enum(sortValues).optional(),
-      filters: (filters ?? z.object({}).strict()).optional(),
-      q: z.string().trim().max(200).optional(),
-    })
-    .strict();
-}
-
-export interface ListResult<T> {
-  items: T[];
-  nextCursor: string | null;
-  total?: number;
-}
 
 /** Date-range filter fragment shared by admin lists. */
 export const zDateRange = {

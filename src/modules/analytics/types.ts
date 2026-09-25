@@ -6,9 +6,9 @@
  * domain-C module's job method uses — `job_runs` is an ops table (docs/05 §11).
  */
 import { z } from "zod";
+import { isoDateTimeSchema as isoDateTime, uuidSchema as uuid } from "@/modules/_shared/zod";
 
-export const uuid = z.uuid();
-export const isoDateTime = z.iso.datetime({ offset: true });
+export { uuidSchema as uuid, isoDateTimeSchema as isoDateTime } from "@/modules/_shared/zod";
 
 // ---------------------------------------------------------------------------------------------
 // Event names (D-1302; docs/06 API-OPS-01; docs/11 §B10 `web_vital`)

@@ -8,13 +8,8 @@ import { z } from "zod";
 import type { RequestContext } from "@/lib/authz/context";
 import type { DbOrTx, TxCtx } from "@/lib/db";
 import { PASSWORD_MAX } from "../auth/password-policy";
-import {
-  type ListResult,
-  currencySchema,
-  listParams,
-  text,
-  uuidSchema,
-} from "../catalog/contracts";
+import { type ListResult, currencySchema, listParams, uuidSchema } from "@/modules/_shared/zod";
+import { text } from "../catalog/contracts";
 import {
   bankDetailsSchema,
   countryCodeSchema,

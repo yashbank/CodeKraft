@@ -5,7 +5,7 @@
 import type { Context, RequestContext } from "@/lib/authz/context";
 import type { TxCtx } from "@/lib/db";
 import type { JobContext, JobOutcome } from "@/modules/analytics/types";
-import type { ListResult } from "@/modules/entitlements/types";
+import type { ListResult } from "@/modules/_shared/zod";
 import type {
   AssignQueryInput,
   CloseQueryInput,

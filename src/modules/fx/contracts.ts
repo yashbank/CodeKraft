@@ -8,7 +8,7 @@ import type { RequestContext } from "@/lib/authz/context";
 import type { DbOrTx, TxCtx } from "@/lib/db";
 import type { Currency } from "@/lib/money";
 import type { FxQuote } from "@/lib/fx";
-import { currencySchema, isoDateSchema } from "../catalog/contracts";
+import { currencySchema, isoDateSchema } from "@/modules/_shared/zod";
 import { FX_REFRESH_JOB_KEY, FX_SOURCES, type FxRateView, type FxRefreshResult } from "./types";
 
 export {

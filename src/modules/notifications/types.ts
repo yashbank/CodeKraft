@@ -4,10 +4,10 @@
  * customer events + admin digest, channels `inapp | email | whatsapp(flag)`), D-707, D-1002, X-012.
  */
 import { z } from "zod";
+import { isoDateTimeSchema as isoDateTime, uuidSchema as uuid } from "@/modules/_shared/zod";
 import type { EmailTemplate } from "@/lib/email/types";
 
-export const uuid = z.uuid();
-export const isoDateTime = z.iso.datetime({ offset: true });
+export { uuidSchema as uuid, isoDateTimeSchema as isoDateTime } from "@/modules/_shared/zod";
 
 /**
  * `notifications.type` — the list in docs/06 §2.11 (29 entries) plus `finance.reconcile_failed`

@@ -6,7 +6,8 @@
 import { z } from "zod";
 import type { Context, RequestContext } from "@/lib/authz/context";
 import type { DbOrTx, TxCtx } from "@/lib/db";
-import { positionSchema, text, uuidSchema } from "../catalog/contracts";
+import { uuidSchema } from "@/modules/_shared/zod";
+import { positionSchema, text } from "../catalog/contracts";
 import {
   EMBED_HOSTS,
   IMAGE_MEDIA_KINDS,

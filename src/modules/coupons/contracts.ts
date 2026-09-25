@@ -1,7 +1,7 @@
 /** Coupons service contract (docs/06 §2.3 API-COM-08 + validation used by API-COM-01/02). */
 import type { TxCtx } from "@/lib/db";
 import type { RequestContext } from "@/lib/authz/context";
-import type { ListResult } from "@/modules/orders/types";
+import type { ListResult } from "@/modules/_shared/zod";
 import type {
   Coupon,
   CouponValidation,

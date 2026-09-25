@@ -5,13 +5,13 @@
 import { z } from "zod";
 import type { Order, Payment, PaymentStatus, Refund } from "../../../drizzle/schema/commerce";
 import {
-  zIsoDate,
-  zIsoTimestamp,
-  zMinor,
-  zPositiveMinor,
-  zTrimmed,
-  zUuid,
-} from "@/modules/orders/types";
+  isoDateSchema as zIsoDate,
+  isoDateTimeSchema as zIsoTimestamp,
+  minorUnitsSchema as zMinor,
+  positiveMinorUnitsSchema as zPositiveMinor,
+  trimmedString as zTrimmed,
+  uuidSchema as zUuid,
+} from "@/modules/_shared/zod";
 import type { PaymentInstructions } from "./provider";
 
 export const PAYMENT_STATUSES = [

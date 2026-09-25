@@ -18,19 +18,17 @@ import type {
   Payout,
 } from "../../../drizzle/schema/finance";
 import {
-  zBps,
-  zCurrency,
-  zDateRange,
-  zIsoDate,
-  zListParams,
-  zMinor,
-  zPositiveMinor,
-  zPublicOrderNo,
-  zSignedMinor,
-  zSplitLine,
-  zTrimmed,
-  zUuid,
-} from "@/modules/orders/types";
+  bpsSchema as zBps,
+  currencySchema as zCurrency,
+  isoDateSchema as zIsoDate,
+  listParams as zListParams,
+  minorUnitsSchema as zMinor,
+  positiveMinorUnitsSchema as zPositiveMinor,
+  signedMinorUnitsSchema as zSignedMinor,
+  trimmedString as zTrimmed,
+  uuidSchema as zUuid,
+} from "@/modules/_shared/zod";
+import { zDateRange, zPublicOrderNo, zSplitLine } from "@/modules/orders/types";
 
 // ---------------------------------------------------------------------------------------------
 // Enums mirrored from drizzle/schema/finance (docs/05 §7)

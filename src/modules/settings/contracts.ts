@@ -8,7 +8,8 @@ import type { Context, RequestContext } from "@/lib/authz/context";
 import type { DbOrTx } from "@/lib/db";
 import { FLAG_KEYS } from "@/lib/feature-flags";
 import { THEMES } from "@/lib/theme";
-import { bpsSchema, currencySchema, text } from "../catalog/contracts";
+import { bpsSchema, currencySchema } from "@/modules/_shared/zod";
+import { text } from "../catalog/contracts";
 import { paymentMethodSchema } from "../offerings/contracts";
 import type { PublicSettings, SiteSettings } from "./types";
 

@@ -8,7 +8,12 @@ import { z } from "zod";
 import type { AuditEvent } from "@/lib/audit-port";
 import type { Context } from "@/lib/authz/context";
 import type { AuditLog } from "../../../drizzle/schema/audit";
-import { zDateRange, zListParams, zTrimmed, zUuid } from "@/modules/orders/types";
+import {
+  listParams as zListParams,
+  trimmedString as zTrimmed,
+  uuidSchema as zUuid,
+} from "@/modules/_shared/zod";
+import { zDateRange } from "@/modules/orders/types";
 
 /**
  * `action` = API id + dotted verb for admin/customer actions (`API-CAT-03 product.update`), or a

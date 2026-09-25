@@ -23,7 +23,7 @@ import type {
   SetFollowUpInput,
   UpdateLeadStatusInput,
 } from "./types";
-import type { ListResult } from "@/modules/entitlements/types";
+import type { ListResult } from "@/modules/_shared/zod";
 
 export interface LeadsService {
   /**

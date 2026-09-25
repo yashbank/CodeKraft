@@ -6,7 +6,8 @@
  * (`orders.expires_at = subscriptions.grace_until`).
  */
 import { z } from "zod";
-import { isoDateTime, SUBSCRIPTION_STATUSES, uuid } from "@/modules/entitlements/types";
+import { isoDateTimeSchema as isoDateTime, uuidSchema as uuid } from "@/modules/_shared/zod";
+import { SUBSCRIPTION_STATUSES } from "@/modules/entitlements/types";
 
 export { SUBSCRIPTION_STATUSES };
 export type { SubscriptionStatus, SubscriptionView } from "@/modules/entitlements/types";

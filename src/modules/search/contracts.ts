@@ -12,8 +12,8 @@ import {
   cursorSchema,
   limitSchema,
   slugSchema,
-  text,
-} from "../catalog/contracts";
+} from "@/modules/_shared/zod";
+import { text } from "../catalog/contracts";
 import type { ProductCard } from "../catalog/types";
 import { deliveryTypeSchema, purchaseModelSchema } from "../offerings/contracts";
 import { PRODUCT_SORTS, PRODUCT_SORT_DEFAULT, type FilterFacets } from "./types";

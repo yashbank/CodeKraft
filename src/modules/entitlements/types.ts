@@ -8,45 +8,33 @@
  * (delivery) and P7 (customer dashboard) consume one inferred type (PHASE-02 P2.7 risk note).
  */
 import { z } from "zod";
+import {
+  isoDateTimeSchema as isoDateTime,
+  listParams as sharedListParams,
+  uuidSchema as uuid,
+} from "@/modules/_shared/zod";
 import type { DeliveryTypeValue, UpdatePolicyValue } from "../../../drizzle/schema/offerings";
 
 // ---------------------------------------------------------------------------------------------
-// Primitives (local until `_shared/zod.ts` from P2.5 lands; same shapes as docs/06 §1.3, §1.8)
+// Primitives — canonical set in `_shared/zod.ts` (P2.8), re-exported under the domain-C names
 // ---------------------------------------------------------------------------------------------
 
-export const uuid = z.uuid();
-export const isoDateTime = z.iso.datetime({ offset: true });
+export {
+  uuidSchema as uuid,
+  isoDateTimeSchema as isoDateTime,
+  type ListResult,
+} from "@/modules/_shared/zod";
 
-type SortValue<F extends string> = `${F}:asc` | `${F}:desc`;
-
-function sortEnum<const F extends readonly [string, ...string[]]>(fields: F) {
-  const values = fields.flatMap((f) => [`${f}:asc`, `${f}:desc`]) as [
-    SortValue<F[number]>,
-    ...SortValue<F[number]>[],
-  ];
-  return z.enum(values);
-}
-
-/** docs/06 §1.8 list params: cursor, limit 1–100 (default 25), `field:asc|desc`, typed filters, q. */
+/**
+ * docs/06 §1.8 list params: cursor, limit 1–100 (default 25), `field:asc|desc`, typed filters, q.
+ * Domain-C spelling of `_shared/zod.ts` `listParams` (takes a raw filter shape, wraps it in a
+ * `strictObject`).
+ */
 export function listParams<const F extends readonly [string, ...string[]], S extends z.ZodRawShape>(
   sortFields: F,
   filters: S,
 ) {
-  return z
-    .object({
-      cursor: z.string().min(1).optional(),
-      limit: z.number().int().min(1).max(100).default(25),
-      sort: sortEnum(sortFields).optional(),
-      filters: z.object(filters).strict().optional(),
-      q: z.string().trim().max(200).optional(),
-    })
-    .strict();
-}
-
-export interface ListResult<T> {
-  items: T[];
-  nextCursor: string | null;
-  total?: number;
+  return sharedListParams(sortFields, z.strictObject(filters));
 }
 
 // ---------------------------------------------------------------------------------------------

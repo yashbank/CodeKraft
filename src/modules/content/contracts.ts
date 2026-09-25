@@ -7,14 +7,12 @@ import type { Context, RequestContext } from "@/lib/authz/context";
 import type { DbOrTx } from "@/lib/db";
 import {
   type ListResult,
-  httpUrlSchema,
   listParams,
-  positionSchema,
   richTextSchema,
   slugSchema,
-  text,
   uuidSchema,
-} from "../catalog/contracts";
+} from "@/modules/_shared/zod";
+import { httpUrlSchema, positionSchema, text } from "../catalog/contracts";
 import { embedUrlSchema } from "../media/contracts";
 import {
   FAQ_SCOPES,

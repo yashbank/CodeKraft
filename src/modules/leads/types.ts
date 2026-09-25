@@ -4,9 +4,9 @@
  * D-1204 (Turnstile on public forms), R-701 (daily overdue digest).
  */
 import { z } from "zod";
+import { isoDateTimeSchema as isoDateTime, uuidSchema as uuid } from "@/modules/_shared/zod";
 
-export const uuid = z.uuid();
-export const isoDateTime = z.iso.datetime({ offset: true });
+export { uuidSchema as uuid, isoDateTimeSchema as isoDateTime } from "@/modules/_shared/zod";
 
 export const LEAD_SOURCES = ["inquiry_form", "product_cta", "chatbot", "manual"] as const;
 export type LeadSource = (typeof LEAD_SOURCES)[number];
