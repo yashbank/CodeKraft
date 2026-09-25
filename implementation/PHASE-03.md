@@ -119,10 +119,10 @@ Deliver the complete admin-side domain for everything a founder edits before sel
 - Expected files/modules: `src/modules/catalog/{service,actions,queries,public-queries,slugs,redirects,wishlist}.ts`, `src/modules/search/{service,queries,parser}.ts`.
 - Tests required: unit `tests/unit/catalog/{slug,status-guards,filters}.test.ts`, `tests/unit/search/parser.test.ts`; integration `tests/integration/catalog/{crud,category-depth,slug-redirect,public-visibility,search,facets,wishlist,admin-scope}.test.ts`; BR-02 test asserts `getProductBySlug` output has no `ownership` key at any depth.
 - Acceptance criteria:
-  - [ ] unlisted products absent from lists/search, reachable by slug (S-11 step 5 server side)
-  - [ ] slug change 301 data recorded; old slug resolves
-  - [ ] public product payload contains no partner/ownership data (BR-02)
-  - [ ] `partner@` (admin role) sees only own products (S-19 step 3 server side)
+  - [x] unlisted products absent from lists/search, reachable by slug (S-11 step 5 server side)
+  - [x] slug change 301 data recorded; old slug resolves
+  - [x] public product payload contains no partner/ownership data (BR-02)
+  - [x] `partner@` (admin role) sees only own products (S-19 step 3 server side)
 - Definition of Done: code + tests + PROGRESS row + CI green.
 - Potential risks and mitigations: full-text ranking over Tiptap JSON → index a plain-text projection column maintained by the update path; price filter across currencies → convert filter bounds to base once per query.
 
