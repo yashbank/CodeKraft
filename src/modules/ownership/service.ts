@@ -303,7 +303,10 @@ export class DefaultOwnershipService implements OwnershipService {
     if (active) return;
 
     const [pending] = await tx
-      .select({ id: productOwnerships.id })
+      .select({
+        id: productOwnerships.id,
+        approvalRequestId: productOwnerships.approvalRequestId,
+      })
       .from(productOwnerships)
       .where(
         and(eq(productOwnerships.productId, productId), eq(productOwnerships.status, "pending")),
@@ -314,6 +317,13 @@ export class DefaultOwnershipService implements OwnershipService {
       throw new AppError(
         ErrorCode.STATE_INVALID,
         "Cannot publish product: no active or pending ownership version exists",
+      );
+    }
+
+    if (pending.approvalRequestId) {
+      throw new AppError(
+        ErrorCode.STATE_INVALID,
+        `Cannot publish product: ownership approval request ${pending.approvalRequestId} is still pending`,
       );
     }
 

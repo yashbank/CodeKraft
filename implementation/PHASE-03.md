@@ -165,9 +165,9 @@ Deliver the complete admin-side domain for everything a founder edits before sel
 - Expected files/modules: as listed.
 - Tests required: unit `tests/unit/catalog/readiness.test.ts`, `state-machine.test.ts` (docs/03 §3.3 table, every illegal transition rejected); integration `tests/integration/catalog/{submit-approve-publish,schedule-then-cron,reject-back-to-draft,archive,delete-refused-with-orders,delete-clean}.test.ts` (S-11 steps 1–4 server side), `tests/integration/jobs/publish.test.ts` (runs twice with same `now`, same state).
 - Acceptance criteria:
-  - [ ] submit refused with field-level errors when readiness fails
-  - [ ] approved with future `publishAt` → `scheduled`; job flips to `published` and revalidates tags (spy)
-  - [ ] delete with any order item refused; archive works from any status except archived
+  - [x] submit refused with field-level errors when readiness fails
+  - [x] approved with future `publishAt` → `scheduled`; job flips to `published` and revalidates tags (spy)
+  - [x] delete with any order item refused; archive works from any status except archived
 - Definition of Done: code + tests + PROGRESS row + CI green; master plan §6 "product lifecycle incl. approval" satisfied.
 - Potential risks and mitigations: revalidation outside a request context in the job → `revalidateTag` wrapped in `lib/revalidate.ts` that no-ops safely in tests and jobs.
 

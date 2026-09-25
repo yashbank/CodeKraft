@@ -811,6 +811,10 @@ export class DefaultCatalogService implements CatalogService {
       throw new AppError(ErrorCode.NOT_FOUND, "Product not found");
     }
 
+    // Verify active ownership or activate pending v1 ownership (API-CAT-12)
+    const { ownershipService } = await import("@/modules/ownership/service");
+    await ownershipService.activateForPublish(payload.productId, tx);
+
     const isFuture = Boolean(
       payload.publishAt && new Date(payload.publishAt).getTime() > Date.now(),
     );
