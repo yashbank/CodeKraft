@@ -6,23 +6,6 @@
   "engines": {
     "node": ">=20.19.0"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "cpu-features",
-      "protobufjs",
-      "ssh2",
-      "esbuild",
-      "embedded-postgres",
-      "@embedded-postgres/darwin-arm64",
-      "@embedded-postgres/darwin-x64",
-      "@embedded-postgres/linux-x64",
-      "@embedded-postgres/linux-arm64",
-      "sharp",
-      "argon2",
-      "@tailwindcss/oxide",
-      "unrs-resolver"
-    ]
-  },
   "type": "module",
   "scripts": {
     "dev": "next dev",
