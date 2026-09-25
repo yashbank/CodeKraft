@@ -16,6 +16,8 @@ if (mediaBase) {
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Native / worker-thread packages must not be bundled (pino transports, argon2)
+  serverExternalPackages: ["pino", "pino-pretty", "thread-stream", "argon2", "embedded-postgres"],
   reactStrictMode: true,
   poweredByHeader: false,
   images: { remotePatterns, formats: ["image/avif", "image/webp"] },

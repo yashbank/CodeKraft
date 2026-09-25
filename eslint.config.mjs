@@ -48,7 +48,10 @@ export default tseslint.config(
   },
   {
     files: ["eslint-rules/**/*.js", "scripts/**/*.ts", "tests/**/*.ts", "tests/**/*.tsx"],
-    rules: { "@typescript-eslint/no-explicit-any": "off", "@typescript-eslint/no-non-null-assertion": "off" },
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-non-null-assertion": "off",
+    },
   },
   prettier,
 );
