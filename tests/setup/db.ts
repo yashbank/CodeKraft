@@ -34,19 +34,30 @@ export async function closeTestDb(): Promise<void> {
   await c.end({ timeout: 5 });
 }
 
-/** Tables never truncated: migration bookkeeping (drizzle keeps its own schema, kept for safety). */
-const PROTECTED_TABLES = /^(__drizzle_migrations|schema_migrations|migrations)$/;
+/**
+ * Tables never truncated: migration bookkeeping (drizzle keeps its own schema, kept for safety)
+ * and `roles`, the reference rows seeded by migration 0000 (docs/05 §14).
+ */
+const PROTECTED_TABLES = /^(__drizzle_migrations|schema_migrations|migrations|roles)$/;
 
-/** TRUNCATE every table in `public` (except migration tables), restarting identities. */
+/**
+ * TRUNCATE every table in `public` (except migration tables), restarting identities.
+ * The append-only tables carry a BEFORE TRUNCATE trigger (docs/05 §12); the harness connects as
+ * the cluster superuser, so user triggers are switched off for this one statement with
+ * `session_replication_role = replica` (FK triggers too — CASCADE already covers them).
+ */
 export async function truncateAll(sql: Sql = getTestDb()): Promise<string[]> {
   const rows = await sql<{ tablename: string }[]>`
     select tablename from pg_tables where schemaname = 'public' order by tablename
   `;
   const tables = rows.map((r) => r.tablename).filter((t) => !PROTECTED_TABLES.test(t));
   if (tables.length === 0) return [];
-  await sql.unsafe(
-    `TRUNCATE TABLE ${tables.map((t) => `"public"."${t}"`).join(", ")} RESTART IDENTITY CASCADE`,
-  );
+  await sql.begin(async (tx) => {
+    await tx.unsafe("SET LOCAL session_replication_role = replica");
+    await tx.unsafe(
+      `TRUNCATE TABLE ${tables.map((t) => `"public"."${t}"`).join(", ")} RESTART IDENTITY CASCADE`,
+    );
+  });
   return tables;
 }
 

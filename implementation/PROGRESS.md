@@ -27,17 +27,17 @@ Phase gates (master plan §6) are recorded in the "Phase gates" table at the bot
 
 | Task | Title | Owner | Status | Branch | Commit | Tests (CI URL) | AC | Notes |
 |------|-------|-------|--------|--------|--------|----------------|----|-------|
-| P2.1 | Schema domain A — identity, catalog, offerings, ownership, content, settings | | todo | | | | 0/3 | |
-| P2.2 | Schema domain B — commerce, payments, invoices, finance, approvals, audit | | todo | | | | 0/3 | |
-| P2.3 | Schema domain C — delivery, subscriptions, leads, queries, chat, notifications, ops | | todo | | | | 0/2 | |
-| P2.4 | Integrator — merged migration set, custom SQL, enums, indexes | | todo | | | | 0/4 | |
-| P2.5 | Contracts A | | todo | | | | 0/2 | |
-| P2.6 | Contracts B | | todo | | | | 0/2 | |
-| P2.7 | Contracts C | | todo | | | | 0/2 | |
-| P2.8 | Cross-phase contract stubs and contract tests | | todo | | | | 0/2 | |
-| P2.9 | Factories | | todo | | | | 0/2 | |
-| P2.10 | Full seed per docs/05 §14 | | todo | | | | 0/3 | |
-| P2.11 | Migration & trigger test suite, phase gate | | todo | | | | 0/3 | |
+| P2.1 | Schema domain A — identity, catalog, offerings, ownership, content, settings | claude-code | done | phase-02 | (see git log) | local green | all | domain A: 33 tables |
+| P2.2 | Schema domain B — commerce, payments, invoices, finance, approvals, audit | claude-code | done | phase-02 | (see git log) | local green | all | domain B: 20 tables + trigger/view SQL |
+| P2.3 | Schema domain C — delivery, subscriptions, leads, queries, chat, notifications, ops | claude-code | done | phase-02 | (see git log) | local green | all | domain C: 21 tables |
+| P2.4 | Integrator — merged migration set, custom SQL, enums, indexes | claude-code | done | phase-02 | (see git log) | local green | all | migration 0001: 74 tables, 43 enums, 7 triggers, 2 views; 26 cross-domain FKs; 17 migration tests |
+| P2.5 | Contracts A | claude-code | done | phase-02 | (see git log) | local green | all | 10 modules, 37 tests |
+| P2.6 | Contracts B | claude-code | done | phase-02 | (see git log) | local green | all | 8 modules incl. PaymentProvider, computeAllocation reference (fast-check), 53 tests |
+| P2.7 | Contracts C | claude-code | done | phase-02 | (see git log) | local green | all | 9 modules incl. DeliveryHandler, LLMProvider, 97 schemas, 30 tests |
+| P2.8 | Cross-phase contract stubs and contract tests | claude-code | done | phase-02 | (see git log) | local green | all | _shared/zod, NotImplemented skeletons for 27 modules, freeze suite 57 tests, SA-07 scanner |
+| P2.9 | Factories | claude-code | done | phase-02 | (see git log) | local green | all | factories + EXAMPLE_CATALOG, 19 tests |
+| P2.10 | Full seed per docs/05 §14 | claude-code | done | phase-02 | (see git log) | local green | all | runSeed full/production, db:anonymise, 6 tests; local DB seeded (297 rows) |
+| P2.11 | Migration & trigger test suite, phase gate | claude-code | done | phase-02 | (see git log) | local green | all | gate 2026-09-25: 522 unit+integration, lint/typecheck/build clean, first-load 102 KB |
 
 ### P3 — Catalog, content, media, ownership, approvals, audit, settings, FX, search
 
