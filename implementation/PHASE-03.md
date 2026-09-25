@@ -135,9 +135,9 @@ Deliver the complete admin-side domain for everything a founder edits before sel
 - Expected files/modules: `src/modules/offerings/{service,actions,queries,pricing,media,versions}.ts`.
 - Tests required: unit `tests/unit/offerings/{validation,pricing}.test.ts` (fallback to FX when no explicit price; compare-at display rule); integration `tests/integration/offerings/{crud,prices-base-required,methods-flag-gated,version-release-file,media-visibility}.test.ts`.
 - Acceptance criteria:
-  - [ ] offering without base-currency price cannot be saved as `active`
-  - [ ] `razorpay` method refused while `provider_razorpay` flag is off
-  - [ ] new version notifies entitlement holders only when policy allows (contract stub asserts call)
+  - [x] offering without base-currency price cannot be saved as `active`
+  - [x] `razorpay` method refused while `provider_razorpay` flag is off
+  - [x] new version notifies entitlement holders only when policy allows (contract stub asserts call)
 - Definition of Done: code + tests + PROGRESS row + CI green.
 - Potential risks and mitigations: `delivery_config` shape loosely typed → Zod discriminated union per `deliveryType` in `types.ts` (frozen in P2; extend only additively).
 

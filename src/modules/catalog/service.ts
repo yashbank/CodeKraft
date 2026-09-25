@@ -39,6 +39,7 @@ import { orderItems } from "../../../drizzle/schema/commerce";
 import { media } from "../../../drizzle/schema/media";
 import { users } from "../../../drizzle/schema/auth";
 import { partners } from "../../../drizzle/schema/users-ext";
+import { releaseFiles } from "../../../drizzle/schema/delivery";
 import type {
   CatalogService,
   CreateProductInput,
@@ -416,6 +417,16 @@ export class DefaultCatalogService implements CatalogService {
 
       if (!pv) {
         throw new AppError(ErrorCode.INTERNAL, "Failed to create product version");
+      }
+
+      // Insert release file if provided
+      if (input.releaseFile) {
+        await actionTx.insert(releaseFiles).values({
+          productId: input.productId,
+          version: input.version,
+          mediaId: input.releaseFile.mediaId,
+          notes: input.releaseFile.notes ?? null,
+        });
       }
 
       // Update current_version on product
