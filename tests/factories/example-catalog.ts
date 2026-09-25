@@ -337,6 +337,11 @@ export function ownershipLinesTotal(ownership: ExampleOwnership): number {
 export interface SeedExampleCatalogOptions {
   /** Existing partners keyed like `EXAMPLE_CATALOG.partners`; default: found by email or created. */
   partners?: Record<ExamplePartnerKey, Partner>;
+  /**
+   * Addresses to look up / create the CEO and CFO under instead of `EXAMPLE_CATALOG.partners`
+   * (scripts/seed.ts passes its `SEED_ADMIN_EMAILS`, which already exist as Super Admins).
+   */
+  partnerEmails?: Record<ExamplePartnerKey, string>;
   /** Product status; default `published` (P2.10 uses `draft` in production). */
   status?: ProductWithOwnership["status"];
 }
@@ -358,11 +363,12 @@ export interface SeededExampleCatalog {
 async function ensurePartnerUser(
   key: ExamplePartnerKey,
   db: FactoryDb,
+  email: string = EXAMPLE_CATALOG.partners[key].email,
 ): Promise<{ user: User; partner: Partner }> {
   const spec = EXAMPLE_CATALOG.partners[key];
   const user =
-    (await findUserByEmail(spec.email, db)) ??
-    (await createSuperAdmin({ email: spec.email, name: spec.name, emailVerified: true }, db));
+    (await findUserByEmail(email, db)) ??
+    (await createSuperAdmin({ email, name: spec.name, emailVerified: true }, db));
   const partner =
     (await findPartnerByUserId(user.id, db)) ??
     (await createPartner({ user, displayName: spec.displayName }, db));
@@ -391,8 +397,8 @@ export async function seedExampleCatalog(
   opts: SeedExampleCatalogOptions = {},
   db: FactoryDb = toFactoryDb(),
 ): Promise<SeededExampleCatalog> {
-  const ceo = await ensurePartnerUser("ceo", db);
-  const cfo = await ensurePartnerUser("cfo", db);
+  const ceo = await ensurePartnerUser("ceo", db, opts.partnerEmails?.ceo);
+  const cfo = await ensurePartnerUser("cfo", db, opts.partnerEmails?.cfo);
   const users = { ceo: ceo.user, cfo: cfo.user };
   const partners = opts.partners ?? { ceo: ceo.partner, cfo: cfo.partner };
 
