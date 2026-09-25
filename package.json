@@ -69,6 +69,7 @@
     "@typescript-eslint/parser": "8.70.1",
     "@vitejs/plugin-react": "6.1.1",
     "@vitest/coverage-v8": "4.1.11",
+    "dotenv": "^18.0.3",
     "drizzle-kit": "0.31.11",
     "embedded-postgres": "17.10.0-beta.17",
     "eslint": "^9.39.0",
