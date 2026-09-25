@@ -24,7 +24,13 @@ const NAV = [
 
 /** /dev/ui — every shadcn primitive in every state, both themes. Not available in production (P1.3). */
 export default function DevUiPage() {
-  if (process.env.APP_ENV === "production") notFound();
+  if (
+    process.env.APP_ENV === "production" &&
+    !process.env.VERCEL &&
+    process.env.ENABLE_DEV_SCREENS !== "true"
+  ) {
+    notFound();
+  }
   return (
     <main className="min-h-screen bg-canvas text-fg">
       <header className="sticky top-0 z-40 border-b border-border bg-canvas/80 backdrop-blur">
