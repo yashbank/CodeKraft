@@ -16,7 +16,9 @@ describe("cn()", () => {
   it("FONT_SIZE_TOKENS matches the --text-* tokens in tokens.css", () => {
     const css = readFileSync("src/styles/tokens.css", "utf8");
     const names = new Set(
-      [...css.matchAll(/^\s*--text-([a-z0-9-]+?)(?:--[a-z-]+)?:/gm)].map((m) => m[1]),
+      [...css.matchAll(/^\s*--text-([a-z0-9-]+?)(?:--[a-z-]+)?:/gm)].flatMap((m) =>
+        m[1] ? [m[1]] : [],
+      ),
     );
     for (const t of FONT_SIZE_TOKENS) expect(names.has(t), t).toBe(true);
     for (const n of names)
