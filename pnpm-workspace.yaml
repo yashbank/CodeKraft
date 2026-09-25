@@ -1,19 +1,5 @@
 packages:
   - "."
-onlyBuiltDependencies:
-  - cpu-features
-  - protobufjs
-  - ssh2
-  - esbuild
-  - embedded-postgres
-  - "@embedded-postgres/darwin-arm64"
-  - "@embedded-postgres/darwin-x64"
-  - "@embedded-postgres/linux-x64"
-  - "@embedded-postgres/linux-arm64"
-  - sharp
-  - argon2
-  - "@tailwindcss/oxide"
-  - unrs-resolver
 minimumReleaseAgeExclude:
   - "@better-auth/core@1.7.6"
   - "@better-auth/drizzle-adapter@1.7.6"
@@ -23,3 +9,17 @@ minimumReleaseAgeExclude:
   - "@better-auth/prisma-adapter@1.7.6"
   - "@better-auth/telemetry@1.7.6"
   - better-auth@1.7.6
+allowBuilds:
+  '@embedded-postgres/darwin-arm64': true
+  '@embedded-postgres/darwin-x64': true
+  '@embedded-postgres/linux-arm64': true
+  '@embedded-postgres/linux-x64': true
+  '@tailwindcss/oxide': true
+  argon2: true
+  cpu-features: true
+  embedded-postgres: true
+  esbuild: true
+  protobufjs: true
+  sharp: true
+  ssh2: true
+  unrs-resolver: true
