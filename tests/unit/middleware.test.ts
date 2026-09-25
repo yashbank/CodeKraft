@@ -6,9 +6,9 @@ process.env.ADMIN_HOST = "admin.localhost:3000";
 process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
 process.env.APP_ENV = "local";
 
-let middleware: typeof import("../../middleware").middleware;
+let middleware: typeof import("../../src/middleware").middleware;
 beforeAll(async () => {
-  ({ middleware } = await import("../../middleware"));
+  ({ middleware } = await import("../../src/middleware"));
 });
 
 const req = (url: string, host: string) => new NextRequest(url, { headers: { host } });
@@ -26,6 +26,11 @@ describe("middleware host matrix (docs/04 §8, docs/09 §3.5)", () => {
       req("http://admin.localhost:3000/api/auth/get-session", "admin.localhost:3000"),
     );
     expect(res.headers.get("x-middleware-rewrite")).toBeNull();
+  });
+  it("serves /auth/* unrewritten on the admin host (shared sign-in screens)", () => {
+    const res = middleware(req("http://admin.localhost:3000/auth/login", "admin.localhost:3000"));
+    expect(res.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(res.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
   });
   it("hides /admin on the public host", () => {
     const res = middleware(req("http://localhost:3000/admin/orders", "localhost:3000"));

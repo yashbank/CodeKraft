@@ -40,7 +40,13 @@ export function middleware(req: NextRequest): NextResponse {
 
   let res: NextResponse;
   if (kind === "admin") {
-    if (pathname.startsWith("/api/") || pathname.startsWith("/admin")) {
+    // Auth screens and APIs are shared by both hosts; everything else lives under /admin
+    if (
+      pathname.startsWith("/api/") ||
+      pathname.startsWith("/admin") ||
+      pathname === "/auth" ||
+      pathname.startsWith("/auth/")
+    ) {
       res = NextResponse.next({ request: { headers: reqHeaders } });
     } else {
       const url = req.nextUrl.clone();
