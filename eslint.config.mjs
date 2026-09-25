@@ -47,8 +47,11 @@ export default tseslint.config(
     languageOptions: { sourceType: "commonjs", globals: { ...globals.node } },
   },
   {
-    files: ["eslint-rules/**/*.js", "scripts/**/*.ts", "tests/**/*.ts"],
-    rules: { "@typescript-eslint/no-explicit-any": "off" },
+    files: ["eslint-rules/**/*.js", "scripts/**/*.ts", "tests/**/*.ts", "tests/**/*.tsx"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-non-null-assertion": "off",
+    },
   },
   prettier,
 );

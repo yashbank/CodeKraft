@@ -21,6 +21,9 @@ const full = process.env.E2E_FULL === "1";
 const desktopChrome = devices["Desktop Chrome"];
 const mobileChrome = devices["Pixel 7"];
 
+/** Specs that only make sense on the public host (dev kitchen sink, site sign-in); admin projects skip them. */
+const SITE_ONLY_SPECS = [/dev-ui\.spec\.ts$/, /foundation\/login-logout\.spec\.ts$/];
+
 export default defineConfig({
   testDir: "tests/e2e",
   testMatch: /.*\.spec\.ts$/,
@@ -42,14 +45,22 @@ export default defineConfig({
   projects: [
     { name: "site", use: { ...desktopChrome, baseURL: SITE_URL } },
     { name: "site-mobile", use: { ...mobileChrome, baseURL: SITE_URL } },
-    { name: "admin", use: { ...desktopChrome, baseURL: ADMIN_URL } },
-    { name: "admin-mobile", use: { ...mobileChrome, baseURL: ADMIN_URL } },
+    { name: "admin", use: { ...desktopChrome, baseURL: ADMIN_URL }, testIgnore: SITE_ONLY_SPECS },
+    {
+      name: "admin-mobile",
+      use: { ...mobileChrome, baseURL: ADMIN_URL },
+      testIgnore: SITE_ONLY_SPECS,
+    },
     ...(full
       ? [
           { name: "site-webkit", use: { ...devices["Desktop Safari"], baseURL: SITE_URL } },
           { name: "site-firefox", use: { ...devices["Desktop Firefox"], baseURL: SITE_URL } },
           { name: "site-mobile-safari", use: { ...devices["iPhone 14"], baseURL: SITE_URL } },
-          { name: "admin-webkit", use: { ...devices["Desktop Safari"], baseURL: ADMIN_URL } },
+          {
+            name: "admin-webkit",
+            use: { ...devices["Desktop Safari"], baseURL: ADMIN_URL },
+            testIgnore: SITE_ONLY_SPECS,
+          },
         ]
       : []),
   ],
