@@ -47,7 +47,11 @@ export function bootstrapPorts(): void {
         break;
     }
   });
-  setActionErrorReporter(
-    (err, ctx) => Sentry.captureException(err, { extra: { action: ctx?.name } }) ?? undefined,
+  setActionErrorReporter((err, report) =>
+    Sentry.captureException(err, {
+      tags: { action: report.action },
+      extra: { incidentId: report.incidentId, requestId: report.requestId },
+      user: report.userId ? { id: report.userId } : undefined,
+    }),
   );
 }
