@@ -10,7 +10,6 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";
 
 import type { TxCtx } from "@/lib/db";
-import { AppError, ErrorCode } from "@/lib/errors";
 import { PERMISSIONS, isPermission } from "@/lib/authz/permissions";
 
 import { FINANCE_POSTING_METHODS, type FinanceService } from "@/modules/finance/contracts";
@@ -162,17 +161,6 @@ describe("entitlements contract (master plan §5)", () => {
       Promise<RevokeEntitlementResult>
     >();
   });
-
-  it("the P2.8 skeleton rejects both with INTERNAL", async () => {
-    await expect(svc.grantForOrder("o", tx)).rejects.toMatchObject({
-      code: ErrorCode.INTERNAL,
-      message: "entitlements.grantForOrder not implemented (P5)",
-    });
-    await expect(svc.revoke("e", "refund", tx)).rejects.toMatchObject({
-      code: ErrorCode.INTERNAL,
-      message: "entitlements.revoke not implemented (P5)",
-    });
-  });
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -245,13 +233,6 @@ describe("approvals contract (master plan §5)", () => {
       expect(approvalPayloadSchemas[type].safeParse({ unexpected: true }).success).toBe(false);
     }
   });
-
-  it("the P2.8 skeleton throws INTERNAL for the registry and rejects for request/decide/execute", async () => {
-    expect(() => svc.registerApplyHandler("payout.record", async () => undefined)).toThrow(
-      "approvals.registerApplyHandler not implemented (P3)",
-    );
-    await expect(svc.execute("r", tx)).rejects.toMatchObject({ code: ErrorCode.INTERNAL });
-  });
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -275,18 +256,6 @@ describe("notifications.emit contract (master plan §5)", () => {
     expectTypeOf<"admins">().toExtend<NotificationTarget>();
     expectTypeOf<string>().toExtend<NotificationTarget>();
   });
-
-  it("the P2.8 skeleton rejects emit with INTERNAL", async () => {
-    await expect(
-      svc.emit(
-        "admins",
-        "approval.requested" as NotificationType,
-        {} as NotificationPayload,
-        undefined,
-        tx,
-      ),
-    ).rejects.toMatchObject({ message: "notifications.emit not implemented (P6)" });
-  });
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -302,22 +271,6 @@ describe("audit.log contract (master plan §5)", () => {
     expectTypeOf<ReturnType<AuditService["log"]>>().toEqualTypeOf<
       Promise<{ auditLogId: string }>
     >();
-  });
-
-  it("the P2.8 skeleton rejects log with INTERNAL", async () => {
-    await expect(
-      svc.log(
-        { kind: "system", name: "system" } satisfies AuditActor,
-        "x.y" as AuditAction,
-        { type: "t", id: "i" },
-        null,
-        null,
-        tx,
-      ),
-    ).rejects.toMatchObject({
-      code: ErrorCode.INTERNAL,
-      message: "audit.log not implemented (P3)",
-    });
   });
 });
 
