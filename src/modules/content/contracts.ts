@@ -221,8 +221,8 @@ export const CONTENT_CACHE_TAGS = {
   publishLegalPage: ["content"],
 } as const satisfies Record<string, readonly string[]>;
 
-type Id = z.infer<typeof contentIdSchema>;
-type Reorder = z.infer<typeof reorderSchema>;
+export type Id = z.infer<typeof contentIdSchema>;
+export type Reorder = z.infer<typeof reorderSchema>;
 
 export interface ContentService {
   /** API-CONT-01 */

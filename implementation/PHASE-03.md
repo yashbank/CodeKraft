@@ -195,9 +195,9 @@ Deliver the complete admin-side domain for everything a founder edits before sel
 - Expected files/modules: `src/modules/content/{service,actions,queries,landing,services,case-studies,testimonials,logos,faqs,legal}.ts`, `src/lib/revalidate.ts`.
 - Tests required: integration `tests/integration/content/{landing-keys,featured-limit,services-reorder,case-study-publish-redirect,legal-versioning,public-reads-published-only,revalidate-tags}.test.ts` (tags asserted via spy).
 - Acceptance criteria:
-  - [ ] legal page publish increments version and retains the prior version
-  - [ ] unknown landing key rejected; featured > 8 or unpublished rejected
-  - [ ] each save/publish calls the documented tag set (master plan §6 "content publish revalidation")
+  - [x] legal page publish increments version and retains the prior version
+  - [x] unknown landing key rejected; featured > 8 or unpublished rejected
+  - [x] each save/publish calls the documented tag set (master plan §6 "content publish revalidation")
 - Definition of Done: code + tests + PROGRESS row + CI green.
 - Potential risks and mitigations: legal-page edits racing a customer's acceptance → versions are immutable rows; the public page serves only the latest published version (FR-CONT-04).
 

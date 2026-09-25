@@ -26,10 +26,35 @@ export function caseStudyTag(slug: string): string {
   return `case-study:${slug}`;
 }
 
+export function contentTag(): string {
+  return "content";
+}
+
+export function settingsTag(): string {
+  return "settings";
+}
+
+export function sitemapTag(): string {
+  return "sitemap";
+}
+
+const revalidatedTagsHistory: string[] = [];
+
+/** For testing cache invalidation in unit / integration tests */
+export function getRevalidatedTags(): readonly string[] {
+  return [...revalidatedTagsHistory];
+}
+
+/** Clear revalidation history for test isolation */
+export function resetRevalidatedTags(): void {
+  revalidatedTagsHistory.length = 0;
+}
+
 /**
  * Revalidates a cache tag safely. No-ops in non-Next environments or background jobs.
  */
 export function revalidateTagSafe(tag: string): void {
+  revalidatedTagsHistory.push(tag);
   try {
     revalidateTag(tag);
   } catch {
