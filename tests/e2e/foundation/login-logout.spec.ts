@@ -38,7 +38,7 @@ test.describe("login / logout (S-00, docs/09 §3)", () => {
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill(PW);
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page.getByRole("alert")).toContainText(/invalid/i);
+    await expect(page.locator("form [role=alert]")).toContainText(/invalid/i);
   });
 
   test("wrong password shows an error, never a session", async ({ page }) => {
@@ -46,7 +46,7 @@ test.describe("login / logout (S-00, docs/09 §3)", () => {
     await page.getByLabel("Email").fill("nobody@example.com");
     await page.getByLabel("Password").fill("definitely-not-the-password");
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page.getByRole("alert")).toBeVisible();
+    await expect(page.locator("form [role=alert]")).toBeVisible();
     await expect(page).toHaveURL(/\/auth\/login/);
   });
 });
