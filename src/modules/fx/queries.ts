@@ -1,5 +1,23 @@
+"use server";
+
 /**
- * `fx` read-only queries — owned by P3 (master plan §3 ownership map). Intentionally empty in P2.8:
- * Queries are `definePublicAction` / `defineAction` reads that never mutate.
+ * FX read-only queries — docs/06 API-FIN-12, PHASE-03 P3.12.
+ * Wrapped in defineAction / definePublicAction (SA-07).
  */
-export {};
+import { defineAction, definePublicAction } from "@/lib/actions/envelope";
+import { z } from "zod";
+import { getFxRateSchema } from "./contracts";
+import { fxService } from "./service";
+
+export const listRatesQuery = defineAction({
+  name: "API-FIN-12 listRates",
+  input: z.object({}),
+  permission: "settings.read",
+  handler: (_input, ctx) => fxService.listRates(ctx),
+});
+
+export const getFxRateQuery = definePublicAction({
+  name: "API-FIN-12 getFxRate",
+  input: getFxRateSchema,
+  handler: (input) => fxService.getRate(input),
+});

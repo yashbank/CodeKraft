@@ -1,7 +1,7 @@
 /**
- * FX provider port — docs/04 §7.8, D-502, D-515. Rates are decimal strings with eight decimals
+ * FX provider port — docs/04 §7.8, D-502, D-515, PHASE-03 P3.12. Rates are decimal strings with eight decimals
  * (`numeric(18,8)`), never floats; convert with `lib/money.toInrMinor` / `convertMinor`.
- * `StaticFxProvider` is the fixed table used until P3.12 wires `open.er-api.com` + `fx_rates`.
+ * Backed by `DatabaseFxProvider` reading `fx_rates` with fallback to `StaticFxProvider`.
  */
 import type { Currency } from "./money";
 import { isoDate } from "./dates";
@@ -51,7 +51,15 @@ export class StaticFxProvider implements FxProvider {
   }
 }
 
-let provider: FxProvider = new StaticFxProvider();
+export class DatabaseFxProvider implements FxProvider {
+  async getRate(base: Currency, quote: Currency, asOf: Date = new Date()): Promise<FxQuote> {
+    const day = isoDate(asOf);
+    const { fxService } = await import("@/modules/fx/service");
+    return fxService.getRate({ base, quote, asOf: day });
+  }
+}
+
+let provider: FxProvider = new DatabaseFxProvider();
 
 export function setFxProvider(next: FxProvider): void {
   provider = next;

@@ -6,7 +6,7 @@
 import { z } from "zod";
 import type { RequestContext } from "@/lib/authz/context";
 import type { DbOrTx, TxCtx } from "@/lib/db";
-import type { Currency } from "@/lib/money";
+import type { Currency, Money } from "@/lib/money";
 import type { FxQuote } from "@/lib/fx";
 import { currencySchema, isoDateSchema } from "@/modules/_shared/zod";
 import { FX_REFRESH_JOB_KEY, FX_SOURCES, type FxRateView, type FxRefreshResult } from "./types";
@@ -90,4 +90,13 @@ export interface FxService {
   ): Promise<{ rates: FxRateView[]; lastSuccessAt: string | null; stale: boolean }>;
   /** `FxProvider.getRate` backed by `fx_rates` (D-502); falls back to the static table when no row exists. */
   getRate(input: z.infer<typeof getFxRateSchema>, tx?: DbOrTx): Promise<FxQuote>;
+  /** Convert money for display in the target currency with approx: true flag. */
+  convertDisplay(
+    money: Money,
+    to: Currency,
+    asOf?: Date,
+    tx?: DbOrTx,
+  ): Promise<{ money: Money; approx: boolean; rate: string }>;
+  /** Look up rate to INR on a given date for P4 ledger entries (D-515). */
+  rateToInrOn(currency: Currency, date: string | Date, tx?: DbOrTx): Promise<string>;
 }

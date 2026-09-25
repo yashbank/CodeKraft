@@ -210,9 +210,9 @@ Deliver the complete admin-side domain for everything a founder edits before sel
 - Expected files/modules: `src/modules/fx/{service,actions,queries,client}.ts`, `src/jobs/fx.ts`.
 - Tests required: unit `tests/unit/fx/{parse,bounds,stale,convert}.test.ts` (±20 % rejection; stale > 3 days; rounding half-up in minor units); integration `tests/integration/jobs/fx.test.ts` (mock HTTP; idempotent per day; override wins for its date).
 - Acceptance criteria:
-  - [ ] stale rate flagged and admin notified once per day
-  - [ ] poisoned response outside bounds rejected and alerted (TM-13)
-  - [ ] conversion never uses floats (lint) and returns `approx: true`
+  - [x] stale rate flagged and admin notified once per day
+  - [x] poisoned response outside bounds rejected and alerted (TM-13)
+  - [x] conversion never uses floats (lint) and returns `approx: true`
 - Definition of Done: code + tests + PROGRESS row + CI green.
 - Potential risks and mitigations: provider outage → last cached rate served; `fx_rates` empty on fresh install → seed inserts a bootstrap row set.
 
