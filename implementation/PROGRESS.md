@@ -45,7 +45,7 @@ Phase gates (master plan §6) are recorded in the "Phase gates" table at the bot
 |------|-------|-------|--------|--------|--------|----------------|----|-------|
 | P3.1 | Audit module | claude-code | done | main | (current) | local green: 535 tests | 3/3 | Atomic audit log writing, diff builder, credential redaction, cursor-paginated listAuditLogs, CSV exportAuditLogs presigned, SA-23 helper expectAuditRow, P1 setAuditSink wired to DB |
 | P3.2 | Approvals engine | antigravity | done | main | (current) | local green: 547 tests | 4/4 | Generic approvals engine, approver set computation with min 2 active admins, in-memory apply/reject handler registry, self-approval prevention (BR-13/SA-08), cancel, idempotent replay, retry on failure |
-| P3.3 | Settings module, base-currency lock, DB-backed flags, public settings | | todo | | | | 0/4 | |
+| P3.3 | Settings module, base-currency lock, DB-backed flags, public settings | antigravity | done | main | (current) | local green: 571 tests | 4/4 | Base-currency lock once paid orders exist, effectiveTaxRateBps 0 until GSTIN set, DB-backed feature flags with env > DB precedence, encrypted bank details with read-only masking, customer settings & visitor preferences |
 | P3.4 | Users module: customers ops, admin users via approval, partners | | todo | | | | 0/4 | |
 | P3.5 | Media module: upload intents, R2 client, complete, serving | | todo | | | | 0/3 | |
 | P3.6 | Catalog core | | todo | | | | 0/4 | |

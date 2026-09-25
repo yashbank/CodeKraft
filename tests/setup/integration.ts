@@ -6,6 +6,7 @@ process.env.APP_ENV ??= "test";
 process.env.EMAIL_TRANSPORT ??= "outbox";
 process.env.LLM_PROVIDER ??= "fake";
 process.env.TZ ??= "UTC";
+process.env.APP_ENCRYPTION_KEY ??= "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
 afterAll(async () => {
   await closeTestDb();
