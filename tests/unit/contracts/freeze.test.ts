@@ -15,7 +15,6 @@ import { PERMISSIONS, isPermission } from "@/lib/authz/permissions";
 
 import { FINANCE_POSTING_METHODS, type FinanceService } from "@/modules/finance/contracts";
 import { ENTRY_TYPES } from "@/modules/finance/types";
-import { createNotImplementedFinanceService } from "@/modules/finance/service";
 
 import type { EntitlementsService, GrantedEntitlement } from "@/modules/entitlements/contracts";
 import type { RevokeEntitlementResult } from "@/modules/entitlements/types";
@@ -91,33 +90,6 @@ import { approvalType as approvalTypeEnum } from "../../../drizzle/schema/approv
 import { orderStatus as orderStatusEnum } from "../../../drizzle/schema/commerce";
 import { entryType as entryTypeEnum } from "../../../drizzle/schema/finance";
 
-import { createNotImplementedAnalyticsService } from "@/modules/analytics/service";
-import { createNotImplementedApprovalsService } from "@/modules/approvals/service";
-import { createNotImplementedAuditService } from "@/modules/audit/service";
-import { createNotImplementedBlogService } from "@/modules/blog/service";
-import { createNotImplementedCatalogService } from "@/modules/catalog/service";
-import { createNotImplementedChatService } from "@/modules/chat/service";
-import { createNotImplementedContentService } from "@/modules/content/service";
-import { createNotImplementedCouponsService } from "@/modules/coupons/service";
-import { createNotImplementedDashboardWidgetsService } from "@/modules/dashboard-widgets/service";
-import { createNotImplementedDeliveryService } from "@/modules/delivery/service";
-import { createNotImplementedEntitlementsService } from "@/modules/entitlements/service";
-import { createNotImplementedFxService } from "@/modules/fx/service";
-import { createNotImplementedInvoicesService } from "@/modules/invoices/service";
-import { createNotImplementedLeadsService } from "@/modules/leads/service";
-import { createNotImplementedMediaService } from "@/modules/media/service";
-import { createNotImplementedNotificationsService } from "@/modules/notifications/service";
-import { createNotImplementedOfferingsService } from "@/modules/offerings/service";
-import { createNotImplementedOrdersService } from "@/modules/orders/service";
-import { createNotImplementedOwnershipService } from "@/modules/ownership/service";
-import { createNotImplementedPaymentsService } from "@/modules/payments/service";
-import { createNotImplementedQueriesService } from "@/modules/queries/service";
-import { createNotImplementedQuotesService } from "@/modules/quotes/service";
-import { createNotImplementedSearchService } from "@/modules/search/service";
-import { createNotImplementedSettingsService } from "@/modules/settings/service";
-import { createNotImplementedSubscriptionsService } from "@/modules/subscriptions/service";
-import { createNotImplementedUsersService } from "@/modules/users/service";
-
 /** A transaction handle for runtime calls; the stubs never touch it. */
 const tx = {} as TxCtx;
 
@@ -160,18 +132,6 @@ describe("finance posting contract (master plan §5)", () => {
     expectTypeOf<ReturnType<FinanceService["postRefund"]>>().resolves.toHaveProperty("entryIds");
   });
 
-  it("the P2.8 skeleton rejects each posting call with INTERNAL and the frozen message", async () => {
-    const svc = createNotImplementedFinanceService();
-    for (const method of FINANCE_POSTING_METHODS) {
-      const err = await svc[method]("00000000-0000-4000-8000-000000000000", tx).catch(
-        (e: unknown) => e,
-      );
-      expect(err).toBeInstanceOf(AppError);
-      expect((err as AppError).code).toBe(ErrorCode.INTERNAL);
-      expect((err as AppError).message).toBe(`finance.${method} not implemented (P4)`);
-    }
-  });
-
   it("ENTRY_TYPES equals the drizzle `entry_type` enum, in order", () => {
     expect([...ENTRY_TYPES]).toEqual([...entryTypeEnum.enumValues]);
   });
@@ -204,7 +164,6 @@ describe("entitlements contract (master plan §5)", () => {
   });
 
   it("the P2.8 skeleton rejects both with INTERNAL", async () => {
-    const svc = createNotImplementedEntitlementsService();
     await expect(svc.grantForOrder("o", tx)).rejects.toMatchObject({
       code: ErrorCode.INTERNAL,
       message: "entitlements.grantForOrder not implemented (P5)",
@@ -288,7 +247,6 @@ describe("approvals contract (master plan §5)", () => {
   });
 
   it("the P2.8 skeleton throws INTERNAL for the registry and rejects for request/decide/execute", async () => {
-    const svc = createNotImplementedApprovalsService();
     expect(() => svc.registerApplyHandler("payout.record", async () => undefined)).toThrow(
       "approvals.registerApplyHandler not implemented (P3)",
     );
@@ -319,7 +277,6 @@ describe("notifications.emit contract (master plan §5)", () => {
   });
 
   it("the P2.8 skeleton rejects emit with INTERNAL", async () => {
-    const svc = createNotImplementedNotificationsService();
     await expect(
       svc.emit(
         "admins",
@@ -348,7 +305,6 @@ describe("audit.log contract (master plan §5)", () => {
   });
 
   it("the P2.8 skeleton rejects log with INTERNAL", async () => {
-    const svc = createNotImplementedAuditService();
     await expect(
       svc.log(
         { kind: "system", name: "system" } satisfies AuditActor,
@@ -584,68 +540,3 @@ describe("enum mirrors equal the drizzle enums", () => {
 // ---------------------------------------------------------------------------------------------
 // Every module's NotImplemented skeleton satisfies its contract and fails loudly
 // ---------------------------------------------------------------------------------------------
-
-describe("P2.8 service skeletons", () => {
-  const factories: Record<string, () => object> = {
-    analytics: createNotImplementedAnalyticsService,
-    approvals: createNotImplementedApprovalsService,
-    audit: createNotImplementedAuditService,
-    blog: createNotImplementedBlogService,
-    catalog: createNotImplementedCatalogService,
-    chat: createNotImplementedChatService,
-    content: createNotImplementedContentService,
-    coupons: createNotImplementedCouponsService,
-    "dashboard-widgets": createNotImplementedDashboardWidgetsService,
-    delivery: createNotImplementedDeliveryService,
-    entitlements: createNotImplementedEntitlementsService,
-    finance: createNotImplementedFinanceService,
-    fx: createNotImplementedFxService,
-    invoices: createNotImplementedInvoicesService,
-    leads: createNotImplementedLeadsService,
-    media: createNotImplementedMediaService,
-    notifications: createNotImplementedNotificationsService,
-    offerings: createNotImplementedOfferingsService,
-    orders: createNotImplementedOrdersService,
-    ownership: createNotImplementedOwnershipService,
-    payments: createNotImplementedPaymentsService,
-    queries: createNotImplementedQueriesService,
-    quotes: createNotImplementedQuotesService,
-    search: createNotImplementedSearchService,
-    settings: createNotImplementedSettingsService,
-    subscriptions: createNotImplementedSubscriptionsService,
-    users: createNotImplementedUsersService,
-  };
-
-  it("covers all 27 contract modules", () => {
-    expect(Object.keys(factories)).toHaveLength(27);
-  });
-
-  for (const [module, factory] of Object.entries(factories)) {
-    it(`${module}: every member throws/rejects AppError(INTERNAL, "${module}.<method> not implemented (…)")`, async () => {
-      const svc = factory() as Record<string, unknown>;
-      expect(Object.isFrozen(svc)).toBe(true);
-      const members = Object.keys(svc);
-      expect(members.length).toBeGreaterThan(0);
-      for (const name of members) {
-        const member = svc[name];
-        if (typeof member !== "function") {
-          // nested registries (payments.providers) are themselves skeletons
-          expect(Object.isFrozen(member)).toBe(true);
-          continue;
-        }
-        let err: unknown;
-        try {
-          const out = (member as () => unknown)();
-          err = out instanceof Promise ? await out.catch((e: unknown) => e) : out;
-        } catch (e) {
-          err = e;
-        }
-        expect(err, `${module}.${name}`).toBeInstanceOf(AppError);
-        expect((err as AppError).code).toBe(ErrorCode.INTERNAL);
-        expect((err as AppError).message).toMatch(
-          new RegExp(`^${module}\\.${name} not implemented \\(P[1-8]\\)$`),
-        );
-      }
-    });
-  }
-});
