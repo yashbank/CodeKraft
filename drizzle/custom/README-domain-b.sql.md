@@ -1,3 +1,11 @@
+> **Superseded (P2.4).** The reviewed, canonical SQL lives in `drizzle/custom/triggers.sql` and
+> `drizzle/custom/views.sql` and is applied by `drizzle/migrations/0001_daffy_turbo.sql`. Corrections
+> made during integration: `refunded` payments are fully frozen (the draft still let
+> `amount_refunded_minor` grow after the terminal transition); the `ownership_lines_sum` deferred
+> constraint trigger and the `category_depth` trigger were added; `-SUM(x) FILTER` became
+> `SUM(-x) FILTER`; `credit_inr_minor` rounds explicitly. This file is kept as the domain B handover
+> record only.
+
 # Domain B custom SQL (P2.2 → P2.4)
 
 Trigger functions, triggers and views for the commerce / finance / approvals / audit tables

@@ -18,6 +18,8 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { users } from "./auth";
+import { products } from "./catalog";
+import { orders } from "./commerce";
 
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 
@@ -44,8 +46,8 @@ export const analyticsEvents = pgTable(
     name: text("name").notNull(),
     userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
     anonId: text("anon_id"),
-    productId: uuid("product_id"), // FK → products.id (P2.4)
-    orderId: uuid("order_id"), // FK → orders.id (P2.4)
+    productId: uuid("product_id").references(() => products.id, { onDelete: "set null" }),
+    orderId: uuid("order_id").references(() => orders.id, { onDelete: "set null" }),
     props: jsonb("props"),
     createdAt: ts("created_at").notNull().defaultNow(),
   },

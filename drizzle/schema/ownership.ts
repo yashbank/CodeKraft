@@ -16,6 +16,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { approvalRequests } from "./approvals";
 import { users } from "./auth";
 import { products } from "./catalog";
 import { partners } from "./users-ext";
@@ -38,8 +39,10 @@ export const productOwnerships = pgTable(
     companyCutBps: integer("company_cut_bps").notNull().default(0),
     status: ownershipStatus("status").notNull().default("pending"),
     effectiveFrom: ts("effective_from"),
-    /** FK → approval_requests.id (added by P2.4 integrator; domain B table) */
-    approvalRequestId: uuid("approval_request_id"),
+    /** The `ownership.change` request that activated this version (docs/05 §4); history → restrict. */
+    approvalRequestId: uuid("approval_request_id").references(() => approvalRequests.id, {
+      onDelete: "restrict",
+    }),
     createdBy: uuid("created_by")
       .notNull()
       .references(() => users.id),

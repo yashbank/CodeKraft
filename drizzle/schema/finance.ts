@@ -8,10 +8,9 @@
  * from the perspective of `party_type`. `partner_allocation` and `sale` are positive credits;
  * `refund_*`, `payout`, `expense`, `discount`, `gateway_fee`, `bank_charge` are negative.
  *
- * `partner_id` (→ partners), `allocations.ownership_id` (→ product_ownerships),
- * `expenses.product_id` (→ products) and `expenses.receipt_media_id` (→ media) are domain A
- * targets: plain `uuid` here, constraints added by the integrator. `fx_rates` is owned by
- * domain A (fx/settings), not this file.
+ * Domain A targets (`partners`, `product_ownerships`, `products`, `media`) are wired with
+ * `restrict` (financial history) except the optional receipt attachment (`set null`). `fx_rates`
+ * is owned by domain A (settings.ts), not this file.
  */
 import { sql } from "drizzle-orm";
 import {
@@ -33,7 +32,11 @@ import {
 
 import { approvalRequests } from "./approvals";
 import { users } from "./auth";
+import { products } from "./catalog";
 import { orderItems, orders, payments, refunds } from "./commerce";
+import { media } from "./media";
+import { productOwnerships } from "./ownership";
+import { partners } from "./users-ext";
 
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 const money = (name: string) => bigint(name, { mode: "number" });
@@ -85,7 +88,9 @@ export const payouts = pgTable(
     id: uuid("id")
       .primaryKey()
       .default(sql`gen_random_uuid()`),
-    partnerId: uuid("partner_id").notNull(), // FK → partners.id (P2.4)
+    partnerId: uuid("partner_id")
+      .notNull()
+      .references(() => partners.id, { onDelete: "restrict" }),
     amountMinor: money("amount_minor").notNull(),
     currency: currency().notNull(),
     paidOn: date("paid_on", { mode: "string" }).notNull(),
@@ -114,7 +119,7 @@ export const expenses = pgTable(
       .primaryKey()
       .default(sql`gen_random_uuid()`),
     /** Null = company-level expense (not shared with partners). */
-    productId: uuid("product_id"), // FK → products.id (P2.4)
+    productId: uuid("product_id").references(() => products.id, { onDelete: "restrict" }),
     category: text("category").notNull(),
     description: text("description"),
     amountMinor: money("amount_minor").notNull(),
@@ -122,7 +127,7 @@ export const expenses = pgTable(
     incurredOn: date("incurred_on", { mode: "string" }).notNull(),
     /** When true the expense is split across the product's active ownership lines. */
     sharedBySplit: boolean("shared_by_split").notNull().default(true),
-    receiptMediaId: uuid("receipt_media_id"), // FK → media.id (P2.4)
+    receiptMediaId: uuid("receipt_media_id").references(() => media.id, { onDelete: "set null" }),
     createdBy: uuid("created_by").references(() => users.id),
     createdAt: ts("created_at").notNull().defaultNow(),
   },
@@ -154,7 +159,8 @@ export const ledgerEntries = pgTable(
     payoutId: uuid("payout_id").references(() => payouts.id),
     expenseId: uuid("expense_id").references(() => expenses.id),
     partyType: partyType("party_type").notNull(),
-    partnerId: uuid("partner_id"), // FK → partners.id (P2.4); set when party_type = 'partner'
+    /** Set when party_type = 'partner'. */
+    partnerId: uuid("partner_id").references(() => partners.id, { onDelete: "restrict" }),
     /** Signed, minor units, in `currency`. */
     amountMinor: money("amount_minor").notNull(),
     currency: currency().notNull(),
@@ -198,7 +204,9 @@ export const allocations = pgTable(
       .notNull()
       .references(() => orderItems.id),
     /** Null for project lines (split comes from `order_items.split_snapshot`). */
-    ownershipId: uuid("ownership_id"), // FK → product_ownerships.id (P2.4)
+    ownershipId: uuid("ownership_id").references(() => productOwnerships.id, {
+      onDelete: "restrict",
+    }),
     companyCutBps: integer("company_cut_bps").notNull(),
     /** gross − discount − tax − gateway fee − bank shortfall for this item (docs/06 §4.2). */
     distributableMinor: money("distributable_minor").notNull(),

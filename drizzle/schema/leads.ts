@@ -5,6 +5,8 @@
 import { sql } from "drizzle-orm";
 import { boolean, index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { users } from "./auth";
+import { products } from "./catalog";
+import { orders } from "./commerce";
 
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 
@@ -40,7 +42,7 @@ export const leads = pgTable(
       .primaryKey()
       .default(sql`gen_random_uuid()`),
     source: leadSource("source").notNull(),
-    productId: uuid("product_id"), // FK → products.id (P2.4)
+    productId: uuid("product_id").references(() => products.id, { onDelete: "set null" }),
     userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
     name: text("name").notNull(),
     email: text("email"),
@@ -57,7 +59,7 @@ export const leads = pgTable(
     priority: leadPriority("priority").notNull().default("normal"),
     nextFollowUpAt: ts("next_follow_up_at"),
     lostReason: text("lost_reason"),
-    wonOrderId: uuid("won_order_id"), // FK → orders.id (P2.4)
+    wonOrderId: uuid("won_order_id").references(() => orders.id, { onDelete: "set null" }),
     turnstileVerified: boolean("turnstile_verified").notNull().default(false),
     createdAt: ts("created_at").notNull().defaultNow(),
     updatedAt: ts("updated_at").notNull().defaultNow(),

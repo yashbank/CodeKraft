@@ -19,6 +19,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { orders, refunds } from "./commerce";
+import { media } from "./media";
 
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 const money = (name: string) => bigint(name, { mode: "number" });
@@ -89,8 +90,11 @@ export const invoices = pgTable(
     totalMinor: money("total_minor").notNull(),
     currency: char("currency", { length: 3 }).notNull(),
     gstBreakdown: jsonb("gst_breakdown").$type<GstBreakdown>(),
-    /** Rendered PDF; nullable because webhook-driven confirmations defer rendering (docs/06 §3). */
-    pdfMediaId: uuid("pdf_media_id"), // FK → media.id (P2.4)
+    /**
+     * Rendered PDF; nullable because webhook-driven confirmations defer rendering (docs/06 §3).
+     * `restrict`: the row is append-only, so a `set null` cascade would be rejected anyway.
+     */
+    pdfMediaId: uuid("pdf_media_id").references(() => media.id, { onDelete: "restrict" }),
     createdAt: ts("created_at").notNull().defaultNow(),
   },
   (t) => [
@@ -125,7 +129,7 @@ export const creditNotes = pgTable(
     amountMinor: money("amount_minor").notNull(),
     currency: char("currency", { length: 3 }).notNull(),
     issuedAt: ts("issued_at").notNull().defaultNow(),
-    pdfMediaId: uuid("pdf_media_id"), // FK → media.id (P2.4)
+    pdfMediaId: uuid("pdf_media_id").references(() => media.id, { onDelete: "restrict" }),
     createdAt: ts("created_at").notNull().defaultNow(),
   },
   (t) => [

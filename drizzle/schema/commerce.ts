@@ -3,8 +3,8 @@
  * payments and refunds. Money is integer minor units in `bigint` with a `char(3)` currency
  * (MASTER_SPEC §4.8); FX to INR is `numeric(18,8)` (D-515).
  *
- * Cross-domain FK targets owned by domain A (offerings, products, product_ownerships) are plain
- * `uuid` columns here; the integrator (P2.4) adds the constraints in the merged migration.
+ * Cross-domain FKs to domain A (offerings, products, product_ownerships) are wired here (P2.4):
+ * order lines are financial history → `restrict`; quote/purchase-guard links follow their parent.
  */
 import { sql } from "drizzle-orm";
 import {
@@ -27,7 +27,10 @@ import {
 
 import { approvalRequests } from "./approvals";
 import { citext, users } from "./auth";
+import { products } from "./catalog";
 import { creditNotes } from "./invoices";
+import { offerings } from "./offerings";
+import { productOwnerships } from "./ownership";
 
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 /** Integer minor units (paise/cents). Never floats. */
@@ -215,7 +218,7 @@ export const customQuotes = pgTable(
     customerId: uuid("customer_id")
       .notNull()
       .references(() => users.id),
-    offeringId: uuid("offering_id"), // FK → offerings.id (P2.4)
+    offeringId: uuid("offering_id").references(() => offerings.id, { onDelete: "set null" }),
     title: text("title").notNull(),
     description: text("description"),
     currency: currency().notNull(),
@@ -302,8 +305,10 @@ export const orderItems = pgTable(
     orderId: uuid("order_id")
       .notNull()
       .references(() => orders.id, { onDelete: "cascade" }),
-    offeringId: uuid("offering_id"), // FK → offerings.id (P2.4); null for project lines
-    productId: uuid("product_id"), // FK → products.id (P2.4); null for project lines
+    /** Null for project lines. */
+    offeringId: uuid("offering_id").references(() => offerings.id, { onDelete: "restrict" }),
+    /** Null for project lines. */
+    productId: uuid("product_id").references(() => products.id, { onDelete: "restrict" }),
     /** Free-form for project lines; offering title snapshot for product lines. */
     description: text("description").notNull(),
     quantity: integer("quantity").notNull().default(1),
@@ -315,7 +320,9 @@ export const orderItems = pgTable(
      * Product lines: ownership version captured at order creation, re-validated at confirm time
      * (docs/06 §4.2) and frozen once allocated — trigger in drizzle/custom (P2.4).
      */
-    ownershipId: uuid("ownership_id"), // FK → product_ownerships.id (P2.4)
+    ownershipId: uuid("ownership_id").references(() => productOwnerships.id, {
+      onDelete: "restrict",
+    }),
     /** Project lines: approved via `project_order.split` (MASTER_SPEC §7). */
     splitSnapshot: jsonb("split_snapshot").$type<SplitSnapshot>(),
     createdAt: ts("created_at").notNull().defaultNow(),
@@ -341,7 +348,9 @@ export const userOfferingPurchases = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    offeringId: uuid("offering_id").notNull(), // FK → offerings.id (P2.4)
+    offeringId: uuid("offering_id")
+      .notNull()
+      .references(() => offerings.id, { onDelete: "cascade" }),
     orderId: uuid("order_id")
       .notNull()
       .references(() => orders.id, { onDelete: "cascade" }),

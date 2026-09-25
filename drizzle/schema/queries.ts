@@ -17,7 +17,9 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { users } from "./auth";
+import { products } from "./catalog";
 import { conversations } from "./chat";
+import { orders } from "./commerce";
 
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 
@@ -49,8 +51,8 @@ export const queries = pgTable(
     guestEmail: text("guest_email"),
     subject: text("subject").notNull(),
     source: querySource("source").notNull(),
-    orderId: uuid("order_id"), // FK → orders.id (P2.4)
-    productId: uuid("product_id"), // FK → products.id (P2.4)
+    orderId: uuid("order_id").references(() => orders.id, { onDelete: "set null" }),
+    productId: uuid("product_id").references(() => products.id, { onDelete: "set null" }),
     status: queryStatus("status").notNull().default("open"),
     assignedTo: uuid("assigned_to").references(() => users.id, { onDelete: "set null" }),
     conversationId: uuid("conversation_id").references((): AnyPgColumn => conversations.id, {

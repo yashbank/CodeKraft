@@ -3,8 +3,8 @@
  * delivery_tasks, release_files. Decisions D-601–D-608, D-1108 (manual grants: `order_item_id` null,
  * no synthetic order), MASTER_SPEC §7 "Subscription grace" / "Renewal order expiry".
  *
- * Cross-domain FK targets (offerings, products, order_items, orders, media) are plain uuid columns; P2.4
- * wires the constraints once domains A/B are merged.
+ * Cross-domain FKs (offerings, products, order_items, orders, media) are wired (P2.4): grants and
+ * download history are `restrict`; the optional renewal-order link is `set null`.
  */
 import { sql } from "drizzle-orm";
 import {
@@ -20,8 +20,11 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { users } from "./auth";
+import { products } from "./catalog";
+import { orderItems, orders } from "./commerce";
+import { media } from "./media";
 // Shared Postgres enums are defined once on offerings (docs/05 §3); reused here, never duplicated.
-import { billingInterval, deliveryType, updatePolicy } from "./offerings";
+import { billingInterval, deliveryType, offerings, updatePolicy } from "./offerings";
 
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 
@@ -53,10 +56,14 @@ export const entitlements = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id),
-    offeringId: uuid("offering_id").notNull(), // FK → offerings.id (P2.4)
+    offeringId: uuid("offering_id")
+      .notNull()
+      .references(() => offerings.id, { onDelete: "restrict" }),
     /** null = manual admin grant (D-1108); unique when set (one entitlement per order item). */
-    orderItemId: uuid("order_item_id"), // FK → order_items.id (P2.4)
-    productId: uuid("product_id").notNull(), // FK → products.id (P2.4)
+    orderItemId: uuid("order_item_id").references(() => orderItems.id, { onDelete: "restrict" }),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "restrict" }),
     deliveryType: deliveryType("delivery_type").notNull(),
     status: entitlementStatus("status").notNull().default("pending"),
     accessStartsAt: ts("access_starts_at").notNull().defaultNow(),
@@ -104,7 +111,7 @@ export const subscriptions = pgTable(
     graceUntil: ts("grace_until"),
     status: subscriptionStatus("status").notNull().default("active"),
     cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
-    renewalOrderId: uuid("renewal_order_id"), // FK → orders.id (P2.4)
+    renewalOrderId: uuid("renewal_order_id").references(() => orders.id, { onDelete: "set null" }),
     reminderSentAt: ts("reminder_sent_at"),
     createdAt: ts("created_at").notNull().defaultNow(),
     updatedAt: ts("updated_at").notNull().defaultNow(),
@@ -145,7 +152,9 @@ export const downloads = pgTable(
     entitlementId: uuid("entitlement_id")
       .notNull()
       .references(() => entitlements.id, { onDelete: "cascade" }),
-    mediaId: uuid("media_id").notNull(), // FK → media.id (P2.4)
+    mediaId: uuid("media_id")
+      .notNull()
+      .references(() => media.id, { onDelete: "restrict" }),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id),
@@ -192,9 +201,13 @@ export const releaseFiles = pgTable(
     id: uuid("id")
       .primaryKey()
       .default(sql`gen_random_uuid()`),
-    productId: uuid("product_id").notNull(), // FK → products.id (P2.4)
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
     version: text("version").notNull(),
-    mediaId: uuid("media_id").notNull(), // FK → media.id (P2.4)
+    mediaId: uuid("media_id")
+      .notNull()
+      .references(() => media.id, { onDelete: "restrict" }),
     notes: text("notes"),
     releasedAt: ts("released_at").notNull().defaultNow(),
     createdAt: ts("created_at").notNull().defaultNow(),

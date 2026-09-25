@@ -20,3 +20,5 @@ export * from "./queries";
 export * from "./chat";
 export * from "./notifications";
 export * from "./ops";
+// cross-domain relations (P2.4)
+export * from "./relations";
