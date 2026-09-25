@@ -59,8 +59,9 @@ All four must be green before you continue any phase.
 
 Check `implementation/PROGRESS.md` (single source of truth). Summary at the time of writing:
 
-- Phase 1 (foundation) in progress: scaffold, lint rules, tokens/themes, core libs and test harness landed; auth, RBAC, middleware, Sentry/email, CI workflow still open.
-- Phases 2–9 not started. The order and the parallel waves are in `implementation/IMPLEMENTATION-MASTER-PLAN.md`.
+- Phase 1 (foundation) **complete** on 2026-09-25 and merged to `main`: scaffold, lint rules, tokens for both themes, 28 UI components + `/dev/ui`, core libs, RBAC, Better Auth (site + admin hosts), middleware, health endpoint, Sentry, email transport, seed, CI workflow. Local gate: 299 unit/integration tests, 42 e2e, first-load JS 101 KB.
+- Next: Phase 2 (full database schema, module contracts, seeds) — `implementation/PHASE-02.md`. Phases 3–9 follow per `implementation/IMPLEMENTATION-MASTER-PLAN.md`.
+- To see it: `pnpm db:local`, `pnpm db:migrate && pnpm db:seed`, `pnpm dev`, then `http://localhost:3000/dev/ui`, `/auth/login` (seeded: `ceo@codekraft.local` / `local-super-admin-passphrase-2026`), `http://admin.localhost:3000/`.
 
 ## 6. How an agent continues the work
 
