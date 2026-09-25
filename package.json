@@ -26,7 +26,7 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:reset": "tsx scripts/db-reset.ts",
     "db:studio": "drizzle-kit studio",
-    "size": "size-limit"
+    "size": "tsx scripts/size-check.ts && size-limit"
   },
   "dependencies": {
     "@react-email/components": "^1.0.12",

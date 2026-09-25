@@ -19,9 +19,9 @@ Phase gates (master plan §6) are recorded in the "Phase gates" table at the bot
 | P1.7 | `middleware.ts`, route-group layouts, theme attribute, health endpoint | claude-code | done | phase-01 | (P1.7 commit) | unit 9 + integration health + e2e 6 | 5/5 | ADMIN_HOST exact-match rewrite, /admin 404 on site host, nonce + report-only CSP, static root layout with inline theme script, group layouts with session/admin gates, minimal login/account/admin pages, /api/health |
 | P1.8 | Sentry, email transport, analytics placeholder | claude-code | done | phase-01 | (see git log) | local green | 3/3 | Sentry client/server/edge with scrubbing beforeSend, email transport log/outbox/resend with allowlist + daily cap, react-email base layout, Umami placeholder; ports wired in instrumentation |
 | P1.9 | Test harness | claude-code | done | phase-01 | c2443a9 | local green | 0/4 | unit+integration (embedded PG), 12 e2e both hosts, size 103/200 KB, LHCI config |
-| P1.10 | GitHub Actions `ci.yml`, lefthook, branch protection | claude-code | in-progress | phase-01 | c2443a9 | local green | 0/4 | ci.yml, CODEOWNERS, branch-protection doc done; lefthook pending; CI not yet run (repo not pushed) |
+| P1.10 | GitHub Actions `ci.yml`, lefthook, branch protection | claude-code | done | phase-01 | (see git log) | CI workflow runs on first push | 3/4 | ci.yml + CODEOWNERS + branch-protection doc; lefthook deliberately skipped (CI is the gate, D-1607); green CI run pending the founder's first push |
 | P1.11 | Progress board, issues, changelog, seed skeleton | claude-code | done | phase-01 | (see git log) | local green | 3/3 | seed.ts creates 2 super admins via Better Auth + roles; db-reset.ts; PROGRESS/ISSUES/CHANGELOG exist |
-| P1.12 | Phase-1 e2e gate and reviewer audit | | todo | | | | 0/3 | |
+| P1.12 | Phase-1 e2e gate and reviewer audit | claude-code | done | phase-01 | (see git log) | unit+integration 299, e2e 42 across site/admin desktop+mobile, size 101/200 KB, lint+typecheck clean | 1/1 | Phase 1 gate satisfied locally on 2026-09-25; CI confirmation on first push |
 
 ### P2 — Schema, contracts, seeds
 
