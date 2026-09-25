@@ -2,7 +2,7 @@
 
 Premium software-studio website + company-owned digital-product marketplace, specified end to end for AI-assisted implementation.
 
-**New machine or new agent?** Read [`AGENT-RUNBOOK.md`](AGENT-RUNBOOK.md) (prerequisites, first run, how to continue).
+**Continuing in Antigravity or another agent IDE?** Read [`ANTIGRAVITY-START.md`](ANTIGRAVITY-START.md) first, then [`AGENT-RUNBOOK.md`](AGENT-RUNBOOK.md).
 
 **Start here for the spec:** [`MASTER_SPEC.md`](MASTER_SPEC.md) — the canonical entry point, terminology, design rules, document map and resolution table.
 
