@@ -1,6 +1,16 @@
+"use server";
+
 /**
- * `audit` Server Actions — owned by P3 (master plan §3 ownership map). Intentionally empty in P2.8:
- * Every export must be created with `defineAction` / `definePublicAction`
- * (`tests/static/actions-use-define-action.test.ts`, SA-07).
+ * Audit Server Actions (docs/06 §2.7, API-ADM-05; PHASE-03 P3.1).
+ * Uses defineAction (SA-07).
  */
-export {};
+import { defineAction } from "@/lib/actions/envelope";
+import { exportAuditLogsInput } from "./types";
+import { auditService } from "./service";
+
+export const exportAuditLogsAction = defineAction({
+  name: "API-ADM-05 audit.export",
+  input: exportAuditLogsInput,
+  permission: "audit.export",
+  handler: (input, ctx) => auditService.exportAuditLogs(ctx, input),
+});

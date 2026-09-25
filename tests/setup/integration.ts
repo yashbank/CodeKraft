@@ -18,3 +18,10 @@ for (const line of readFileSync(".env.example", "utf8").split("\n")) {
   const m = /^([A-Z0-9_]+)=(.*)$/.exec(line);
   if (m && m[2] !== "" && process.env[m[1]!] === undefined) process.env[m[1]!] = m[2];
 }
+
+import { inject } from "vitest";
+const testDbUrl = process.env.DATABASE_URL_TEST ?? (inject("databaseUrl") as string | undefined);
+if (testDbUrl) {
+  process.env.DATABASE_URL = testDbUrl;
+  process.env.DATABASE_URL_UNPOOLED = testDbUrl;
+}

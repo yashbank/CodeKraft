@@ -1,5 +1,16 @@
+"use server";
+
 /**
- * `audit` read-only queries — owned by P3 (master plan §3 ownership map). Intentionally empty in P2.8:
- * Queries are `definePublicAction` / `defineAction` reads that never mutate.
+ * Audit read queries (docs/06 §2.7, API-ADM-05; PHASE-03 P3.1).
+ * Uses defineAction with audit.read permission.
  */
-export {};
+import { defineAction } from "@/lib/actions/envelope";
+import { listAuditLogsInput } from "./types";
+import { auditService } from "./service";
+
+export const listAuditLogsAction = defineAction({
+  name: "API-ADM-05 audit.list",
+  input: listAuditLogsInput,
+  permission: "audit.read",
+  handler: (input, ctx) => auditService.listAuditLogs(ctx, input),
+});

@@ -43,7 +43,7 @@ Phase gates (master plan §6) are recorded in the "Phase gates" table at the bot
 
 | Task | Title | Owner | Status | Branch | Commit | Tests (CI URL) | AC | Notes |
 |------|-------|-------|--------|--------|--------|----------------|----|-------|
-| P3.1 | Audit module | | todo | | | | 0/3 | |
+| P3.1 | Audit module | claude-code | done | main | (current) | local green: 535 tests | 3/3 | Atomic audit log writing, diff builder, credential redaction, cursor-paginated listAuditLogs, CSV exportAuditLogs presigned, SA-23 helper expectAuditRow, P1 setAuditSink wired to DB |
 | P3.2 | Approvals engine | | todo | | | | 0/4 | |
 | P3.3 | Settings module, base-currency lock, DB-backed flags, public settings | | todo | | | | 0/4 | |
 | P3.4 | Users module: customers ops, admin users via approval, partners | | todo | | | | 0/4 | |

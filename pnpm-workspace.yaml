@@ -10,11 +10,11 @@ minimumReleaseAgeExclude:
   - "@better-auth/telemetry@1.7.6"
   - better-auth@1.7.6
 allowBuilds:
-  '@embedded-postgres/darwin-arm64': true
-  '@embedded-postgres/darwin-x64': true
-  '@embedded-postgres/linux-arm64': true
-  '@embedded-postgres/linux-x64': true
-  '@tailwindcss/oxide': true
+  "@embedded-postgres/darwin-arm64": true
+  "@embedded-postgres/darwin-x64": true
+  "@embedded-postgres/linux-arm64": true
+  "@embedded-postgres/linux-x64": true
+  "@tailwindcss/oxide": true
   argon2: true
   cpu-features: true
   embedded-postgres: true
