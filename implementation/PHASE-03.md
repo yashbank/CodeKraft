@@ -104,9 +104,9 @@ Deliver the complete admin-side domain for everything a founder edits before sel
 - Expected files/modules: `src/modules/media/{service,actions,queries,validation,sniff}.ts`, `src/lib/storage.ts`, route files.
 - Tests required: unit `tests/unit/media/validation.test.ts` (`.svg` rejected for images, size caps per purpose, embed hosts), `sniff.test.ts` (PNG/JPEG/PDF/ZIP magic bytes; mismatch rejected); integration against MinIO `tests/integration/media/{intent-complete,mismatch-rejected,private-serve-audited}.test.ts`, `@security` SA-13.
 - Acceptance criteria:
-  - [ ] `.html`, `.svg`, `.exe`, oversized and mismatched-magic uploads rejected (SA-13)
-  - [ ] presigned GET lifetime ≤ 5 min (SA-12)
-  - [ ] public media URL uses `NEXT_PUBLIC_MEDIA_BASE_URL`; private never exposed
+  - [x] `.html`, `.svg`, `.exe`, oversized and mismatched-magic uploads rejected (SA-13)
+  - [x] presigned GET lifetime ≤ 5 min (SA-12)
+  - [x] public media URL uses `NEXT_PUBLIC_MEDIA_BASE_URL`; private never exposed
 - Definition of Done: code + tests + PROGRESS row + CI green.
 - Potential risks and mitigations: MinIO vs R2 signature differences → `forcePathStyle` toggle from env; large release files (2 GB) → multipart presign in V1.1 if needed, single PUT now (documented limit).
 
