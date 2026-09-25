@@ -121,7 +121,10 @@ export interface PartnerView {
 export type AdminUserChangePayload =
   | { op: "invite"; email: string; role: AdminInviteRole; partner?: { displayName: string } }
   | { op: "change_role"; userId: string; role: AdminInviteRole }
-  | { op: "remove"; userId: string };
+  | { op: "remove"; userId: string }
+  | { kind: "invite"; email: string; role: AdminInviteRole; partner?: { displayName: string } }
+  | { kind: "change_role"; userId: string; role: AdminInviteRole }
+  | { kind: "remove"; userId: string };
 
 /* --- API-DASH-* -------------------------------------------------------------------------- */
 

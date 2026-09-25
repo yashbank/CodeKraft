@@ -87,11 +87,11 @@ Deliver the complete admin-side domain for everything a founder edits before sel
 - Expected files/modules: `src/modules/users/{service,actions,queries,admin-users,partners,customers}.ts`.
 - Tests required: integration `tests/integration/users/{suspend-revokes-sessions,magic-link-rules,delete-account-anonymises-immediately,admin-user-change-approval,last-super-admin-refused,fewer-than-two-admins-warning,partner-bank-encrypted}.test.ts` (`@security` SA-21 on the delete test: PII replaced in the same transaction, orders/invoices/ledger/audit intact — S-21 step 1 server side); unit `admin-users.test.ts` (refusal matrix).
 - Acceptance criteria:
-  - [ ] suspension ends sessions and blocks login (S-23 step 3 server side)
-  - [ ] `admin.user_change` refuses removing the last `super_admin`; leaving fewer than two active admins is allowed with `warning: 'fewer_than_two_admins'`
-  - [ ] `deleteAccount` anonymises PII in the same transaction and keeps orders/invoices/ledger/audit rows (SA-21)
-  - [ ] magic link never returned to the admin caller
-  - [ ] every admin mutation audited (SA-23 helper)
+  - [x] suspension ends sessions and blocks login (S-23 step 3 server side)
+  - [x] `admin.user_change` refuses removing the last `super_admin`; leaving fewer than two active admins is allowed with `warning: 'fewer_than_two_admins'`
+  - [x] `deleteAccount` anonymises PII in the same transaction and keeps orders/invoices/ledger/audit rows (SA-21)
+  - [x] magic link never returned to the admin caller
+  - [x] every admin mutation audited (SA-23 helper)
 - Definition of Done: code + tests + PROGRESS row + CI green.
 - Potential risks and mitigations: Better Auth invitation flow absent → fall back to `sendMagicLink`-style one-time link with role pre-assigned on first login; documented.
 
