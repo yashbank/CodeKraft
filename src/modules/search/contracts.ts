@@ -55,6 +55,16 @@ export const listFilterFacetsSchema = z.strictObject({
   displayCurrency: currencySchema,
 });
 
+export interface RetrievedChunk {
+  chunkId: string;
+  sourceType: "product" | "offering" | "service" | "faq" | "legal" | "case_study";
+  sourceId: string;
+  title: string;
+  body: string;
+  href: string;
+  rank: number;
+}
+
 export interface SearchService {
   /** API-CAT-30 (visitor query, ISR 300 s, `T: catalog`). */
   listProducts(
@@ -70,4 +80,8 @@ export interface SearchService {
   ): Promise<FilterFacets>;
   /** Sitemap / OG helpers: every listed published product slug with `updatedAt`. */
   listPublishedSlugs(tx?: DbOrTx): Promise<{ slug: string; updatedAt: string }[]>;
+  /** Reindex knowledge chunks across all or a specific source type (docs/06 §3.3, API-CHAT-13). */
+  reindex(sourceType?: string, tx?: DbOrTx): Promise<{ chunks: number }>;
+  /** Full-text retrieval over knowledge_chunks ranked by ts_rank (docs/04 §9). */
+  retrieve(query: string, k?: number, tx?: DbOrTx): Promise<RetrievedChunk[]>;
 }

@@ -12,6 +12,7 @@ import type { ListResult } from "@/modules/_shared/zod";
 import { auditService } from "@/modules/audit/service";
 import { approvalsService } from "@/modules/approvals/service";
 import { revalidateTagSafe, revalidateTagsSafe } from "@/lib/revalidate";
+import { triggerReindexSafe } from "@/modules/search/indexer";
 import type { Currency } from "@/lib/money";
 import {
   categories,
@@ -369,6 +370,9 @@ export class DefaultCatalogService implements CatalogService {
         tagsToRevalidate.push(`product:${patch.slug}`);
       }
       revalidateTagsSafe(tagsToRevalidate);
+      if (updated.status === "published") {
+        await triggerReindexSafe("product", updated.id, actionTx);
+      }
 
       return { product: updated };
     }, outerTx);
@@ -833,6 +837,9 @@ export class DefaultCatalogService implements CatalogService {
       .where(eq(products.id, payload.productId));
 
     revalidateTagsSafe(["catalog", "sitemap", `product:${p.slug}`]);
+    if (newStatus === "published") {
+      await triggerReindexSafe("product", payload.productId, tx);
+    }
   }
 
   /**
@@ -895,6 +902,7 @@ export class DefaultCatalogService implements CatalogService {
       );
 
       revalidateTagsSafe(["catalog", "sitemap", `product:${p.slug}`]);
+      await triggerReindexSafe("product", input.productId, actionTx);
       return { product: updated };
     }, outerTx);
   }

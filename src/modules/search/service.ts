@@ -8,8 +8,9 @@ import type { Context } from "@/lib/authz/context";
 import type { ListResult } from "@/modules/_shared/zod";
 import { categories, products, productTags, tags } from "../../../drizzle/schema/catalog";
 import type { ProductCard } from "../catalog/types";
-import type { ListProductsInput, SearchService } from "./contracts";
+import type { ListProductsInput, RetrievedChunk, SearchService } from "./contracts";
 import type { FilterFacets } from "./types";
+import type { KnowledgeSource } from "./indexer";
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
 import { sanitizeSearchQuery } from "./parser";
 
@@ -211,6 +212,22 @@ export class DefaultSearchService implements SearchService {
       updatedAt: r.updatedAt.toISOString(),
     }));
   }
+
+  async reindex(sourceType?: string, tx?: DbOrTx): Promise<{ chunks: number }> {
+    const dbClient = await this.getDatabase(tx);
+    const { reindexAll, reindexSource } = await import("./indexer");
+    if (sourceType) {
+      const res = await reindexSource(dbClient, sourceType as KnowledgeSource);
+      return { chunks: res.chunksWritten };
+    }
+    return reindexAll(dbClient);
+  }
+
+  async retrieve(query: string, k = 8, tx?: DbOrTx): Promise<RetrievedChunk[]> {
+    const dbClient = await this.getDatabase(tx);
+    const { retrieveKnowledge } = await import("./retriever");
+    return retrieveKnowledge(dbClient, query, k);
+  }
 }
 
 /** Preserved for freeze and contract tests (PHASE-02 P2.8). */
@@ -219,6 +236,8 @@ export function createNotImplementedSearchService(): SearchService {
     listProducts: "async",
     listFilterFacets: "async",
     listPublishedSlugs: "async",
+    reindex: "async",
+    retrieve: "async",
   });
 }
 

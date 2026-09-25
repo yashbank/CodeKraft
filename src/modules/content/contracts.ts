@@ -111,8 +111,8 @@ export const upsertCaseStudySchema = z.strictObject({
   solutionJson: richTextSchema,
   resultsJson: richTextSchema,
   techStack: z.array(text(60)).max(30),
-  coverMediaId: uuidSchema,
-  gallery: z.array(galleryItemSchema).max(24),
+  coverMediaId: uuidSchema.optional(),
+  gallery: z.array(galleryItemSchema).max(24).optional(),
   seoTitle: text(70).optional(),
   seoDescription: text(160).optional(),
 });

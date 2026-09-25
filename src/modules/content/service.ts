@@ -18,6 +18,7 @@ import { assertPermission } from "@/lib/authz/assert";
 import type { DbOrTx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { revalidateTagsSafe } from "@/lib/revalidate";
+import { triggerReindexSafe } from "@/modules/search/indexer";
 import { getPublicMediaBaseUrl } from "@/lib/storage";
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
 import type { ListResult, RichTextDoc } from "@/modules/_shared/zod";
@@ -293,6 +294,7 @@ export class DefaultContentService implements ContentService {
     }
 
     revalidateTagsSafe(["content"]);
+    await triggerReindexSafe("service", service.id, client);
     return { service };
   }
 
@@ -301,6 +303,7 @@ export class DefaultContentService implements ContentService {
     const client = await this.getDatabase(tx);
     await client.delete(services).where(eq(services.id, input.id));
     revalidateTagsSafe(["content"]);
+    await triggerReindexSafe("service", input.id, client);
   }
 
   async reorderServices(
@@ -446,6 +449,7 @@ export class DefaultContentService implements ContentService {
 
     if (!updated) throw new AppError(ErrorCode.INTERNAL, "Failed to publish case study");
     revalidateTagsSafe(["case-studies", "sitemap", `case-study:${updated.slug}`]);
+    await triggerReindexSafe("case_study", updated.id, client);
     return { caseStudy: updated };
   }
 
@@ -476,6 +480,7 @@ export class DefaultContentService implements ContentService {
 
     if (!updated) throw new AppError(ErrorCode.INTERNAL, "Failed to unpublish case study");
     revalidateTagsSafe(["case-studies", "sitemap", `case-study:${updated.slug}`]);
+    await triggerReindexSafe("case_study", updated.id, client);
     return { caseStudy: updated };
   }
 
@@ -711,6 +716,7 @@ export class DefaultContentService implements ContentService {
     }
 
     revalidateTagsSafe(["content"]);
+    await triggerReindexSafe("faq", faq.id, client);
     return { faq };
   }
 
@@ -719,6 +725,7 @@ export class DefaultContentService implements ContentService {
     const client = await this.getDatabase(tx);
     await client.delete(faqs).where(eq(faqs.id, input.id));
     revalidateTagsSafe(["content"]);
+    await triggerReindexSafe("faq", input.id, client);
   }
 
   async reorderFaqs(ctx: RequestContext, input: Reorder, tx?: DbOrTx): Promise<{ faqs: Faq[] }> {
@@ -832,6 +839,7 @@ export class DefaultContentService implements ContentService {
       throw new AppError(ErrorCode.INTERNAL, "Failed to snapshot legal page version");
 
     revalidateTagsSafe(["content"]);
+    await triggerReindexSafe("legal", existing.id, client);
     return { page: updatedPage, version: versionRow };
   }
 

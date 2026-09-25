@@ -225,9 +225,9 @@ Deliver the complete admin-side domain for everything a founder edits before sel
 - Expected files/modules: as listed.
 - Tests required: unit `tests/unit/search/chunker.test.ts`; integration `tests/integration/search/{reindex-sources,publish-triggers-reindex,retrieve-rank,injection-text-is-plain}.test.ts` (chunk of a product description containing "Ignore previous instructions" is stored as plain text, S-15 step 7 precursor), `tests/integration/jobs/knowledge.test.ts`.
 - Acceptance criteria:
-  - [ ] publish of any source type refreshes its chunks; unpublish removes them
-  - [ ] `retrieve` returns ≤ 8 ranked chunks with source refs
-  - [ ] review file confirms P3 gate: product lifecycle incl. approval, ownership versioning, content publish revalidation, media intents
+  - [x] publish of any source type refreshes its chunks; unpublish removes them
+  - [x] `retrieve` returns ≤ 8 ranked chunks with source refs
+  - [x] review file confirms P3 gate: product lifecycle incl. approval, ownership versioning, content publish revalidation, media intents
 - Definition of Done: code + tests + review + PROGRESS statuses + CI green.
 - Potential risks and mitigations: reindex on every save too heavy → only on publish/unpublish plus nightly full rebuild.
 
