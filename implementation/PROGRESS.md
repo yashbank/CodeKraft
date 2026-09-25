@@ -14,7 +14,7 @@ Phase gates (master plan §6) are recorded in the "Phase gates" table at the bot
 | P1.2 | Design tokens, Theme 1 live, Theme 2 sheet, Tailwind v4 bridge | claude-code | done | phase-01 | ff75386 | local green | 4/4 | tokens parity + 32 contrast pairs pass; wordmark SVGs |
 | P1.3 | shadcn base components + `/dev/ui` kitchen sink | claude-code | done | phase-01 | 71e0f26 | local green | 4/4 | 28 shadcn components, /dev/ui, 9 unit tests, axe clean both themes; tailwind-merge font-size fix |
 | P1.4 | Database client, env validation, core libs | claude-code | done | phase-01 | 4bf3afb | local green | 4/4 | env guards, drizzle client, pino redaction; money.ts 100% coverage; 102 lib tests |
-| P1.5 | Better Auth integration | | todo | | | | 0/6 | |
+| P1.5 | Better Auth integration | claude-code | done | phase-01 | (P1.5 commit) | local green: 5 integration + 4 unit | 6/6 | Two Better Auth instances (site/admin), argon2id, single session, suspended gate, admin-host gate, TOTP admin-only, phone OTP flagged; drizzle migration 0000 with users/sessions/accounts/verifications/two_factor/roles/user_roles |
 | P1.6 | RBAC library, permission list, `requireContext`, action envelope | claude-code | done | phase-01 | a703cf4 | local green | 0/4 | 51 permissions, matrix, scopes, defineAction; 100% coverage |
 | P1.7 | `middleware.ts`, route-group layouts, theme attribute, health endpoint | | todo | | | | 0/5 | |
 | P1.8 | Sentry, email transport, analytics placeholder | | todo | | | | 0/3 | |
