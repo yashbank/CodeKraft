@@ -90,7 +90,7 @@ import { orderStatus as orderStatusEnum } from "../../../drizzle/schema/commerce
 import { entryType as entryTypeEnum } from "../../../drizzle/schema/finance";
 
 /** A transaction handle for runtime calls; the stubs never touch it. */
-const tx = {} as TxCtx;
+const _tx = {} as TxCtx;
 
 /** Parameter names of a (non-destructured, non-default) function, from its source text. */
 function paramNames(fn: (...args: never[]) => unknown): string[] {
