@@ -15,6 +15,9 @@ import { PasswordInput } from "./PasswordInput";
 
 export interface LoginFormProps {
   defaultNext?: string;
+  /** Which Better Auth host this form is rendered on (docs/09 §3.4). Defaults to "site" so
+   * existing previews/tests that don't pass it keep the customer behaviour. */
+  host?: "site" | "admin";
   /** SCR-AUTH-01 visuals: Google button + divider, "Remember this device", "Forgot password?". */
   designed?: boolean;
   /** Shown as the initial inline error (preview of the error state). */
@@ -35,6 +38,7 @@ export interface LoginFormProps {
  */
 export function LoginForm({
   defaultNext = "/account",
+  host = "site",
   designed = false,
   initialError = null,
   forceLoading = false,
@@ -66,6 +70,22 @@ export function LoginForm({
           if (res.error) {
             setError(res.error.message ?? "Invalid email or password.");
             return;
+          }
+          // Admin/super_admin accounts signing in on the public site still only get a
+          // customer ("ck") session — the admin subdomain issues its own ("ckadm") session
+          // (docs/09 §3.4). Hand them to the admin sign-in instead of dropping them at /account.
+          if (host === "site") {
+            try {
+              const roleRes = await fetch("/api/auth/role", { cache: "no-store" });
+              const { isAdminClass } = (await roleRes.json()) as { isAdminClass?: boolean };
+              if (isAdminClass) {
+                const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL ?? "";
+                window.location.href = `${adminUrl}/auth/login?next=/dashboard`;
+                return;
+              }
+            } catch {
+              // Role lookup failing shouldn't block a normal customer sign-in.
+            }
           }
           router.push(next);
           router.refresh();

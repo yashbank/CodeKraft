@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 
 import { LoginScreen, type LoginReason } from "@/components/account/LoginScreen";
+import { hostFromHeaders } from "@/modules/auth/service";
 
 export const metadata: Metadata = {
   title: "Sign in — CodeKraft",
@@ -13,5 +15,12 @@ interface PageProps {
 
 export default async function LoginPage({ searchParams }: PageProps) {
   const { reason } = await searchParams;
-  return <LoginScreen reason={reason as LoginReason | undefined} />;
+  const host = hostFromHeaders(await headers());
+  return (
+    <LoginScreen
+      reason={reason as LoginReason | undefined}
+      host={host}
+      defaultNext={host === "admin" ? "/dashboard" : "/account"}
+    />
+  );
 }
