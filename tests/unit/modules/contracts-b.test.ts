@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * P2.6 — domain B contracts (orders, payments, coupons, quotes, invoices, finance, approvals,
  * audit): Zod samples from the docs/06 rows, export walks, frozen-name fixtures (master plan §5,

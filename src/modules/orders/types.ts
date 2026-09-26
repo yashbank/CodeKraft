@@ -23,15 +23,16 @@ import {
   trimmedString as zTrimmed,
   uuidSchema as zUuid,
 } from "@/modules/_shared/zod";
-import type {
-  BillingSnapshot,
-  Order,
-  OrderItem,
-  OrderStatus,
-  OrderType,
-  Payment,
-  PaymentStatus,
-  SplitSnapshot,
+import {
+  type BillingSnapshot,
+  type Order,
+  type OrderItem,
+  type OrderStatus,
+  type OrderType,
+  type Payment,
+  type PaymentStatus,
+  type SplitSnapshot,
+  paymentProvider,
 } from "../../../drizzle/schema/commerce";
 import type { PaymentInstructions } from "@/modules/payments/provider";
 
@@ -90,9 +91,15 @@ export const ORDER_STATUSES = [
   "partially_refunded",
 ] as const satisfies readonly OrderStatus[];
 /** Release-1 methods a customer may pick at checkout (D-501). */
-export const MANUAL_PAYMENT_METHODS = ["manual_upi", "manual_bank"] as const;
-export type ManualPaymentMethod = (typeof MANUAL_PAYMENT_METHODS)[number];
-export const zManualPaymentMethod = z.enum(MANUAL_PAYMENT_METHODS);
+const manualProviderValues = paymentProvider.enumValues.filter((p) => p.startsWith("manual_"));
+export const MANUAL_PAYMENT_METHODS = manualProviderValues as unknown as readonly [
+  (typeof paymentProvider.enumValues)[number],
+  ...(typeof paymentProvider.enumValues)[number][],
+];
+export type ManualPaymentMethod = (typeof manualProviderValues)[number];
+export const zManualPaymentMethod = z.enum(
+  manualProviderValues as unknown as [string, ...string[]],
+) as z.ZodType<ManualPaymentMethod>;
 
 /** Pending orders expire 7 days after creation (BR-10). */
 export const ORDER_EXPIRY_DAYS = 7;
@@ -166,7 +173,10 @@ export const zSplitSnapshot = z
 export type SplitSnapshotInput = z.infer<typeof zSplitSnapshot>;
 
 /** API input (camelCase) → persisted `order_items.split_snapshot` (snake_case). */
-export function toSplitSnapshot(input: SplitSnapshotInput): SplitSnapshot {
+export function toSplitSnapshot(input: SplitSnapshotInput): SplitSnapshot;
+export function toSplitSnapshot(input?: SplitSnapshotInput | null): SplitSnapshot | null;
+export function toSplitSnapshot(input?: SplitSnapshotInput | null): SplitSnapshot | null {
+  if (!input) return null;
   return {
     company_cut_bps: input.companyCutBps,
     lines: input.lines.map((l) => ({ partner_id: l.partnerId, share_bps: l.shareBps })),
@@ -353,16 +363,26 @@ export const zManualOrderProjectLine = z
     description: zTrimmed(1, 500),
     unitMinor: zPositiveMinor,
     quantity: z.number().int().min(1).max(1000).default(1),
-    splitSnapshot: zSplitSnapshot,
+    productId: zUuid.optional(),
+    splitSnapshot: zSplitSnapshot.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((line, ctx) => {
+    if (!line.productId && !line.splitSnapshot) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["splitSnapshot"],
+        message: "project lines require either productId or splitSnapshot",
+      });
+    }
+  });
 export const zManualOrderLine = z.union([zManualOrderProductLine, zManualOrderProjectLine]);
 export type ManualOrderLine = z.infer<typeof zManualOrderLine>;
 
 export function isProjectLine(
   line: ManualOrderLine,
 ): line is z.infer<typeof zManualOrderProjectLine> {
-  return "splitSnapshot" in line;
+  return "description" in line;
 }
 
 /** Recorded up-front payment for a manual `product` order (runs API-PAY-03 in the same tx). */

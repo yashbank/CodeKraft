@@ -1,11 +1,39 @@
-export const metadata = { title: "Create account" };
+"use client";
 
-/** Placeholder until SCR-AUTH-02 (P7). Sign-up works through the API today. */
+import { useState } from "react";
+import { RegisterScreen, type RegisterState } from "@/components/account/RegisterScreen";
+import { authClient } from "@/modules/auth/client";
+
 export default function RegisterPage() {
+  const [state, setState] = useState<RegisterState>("default");
+  const [sentTo, setSentTo] = useState("");
+
+  const handleSubmit = async (values: { name: string; email: string; password: string }) => {
+    setState("loading");
+    try {
+      const { data, error } = await authClient.signUp.email({
+        email: values.email,
+        password: values.password,
+        name: values.name,
+      });
+
+      if (error) {
+        setState("error");
+        return;
+      }
+
+      setSentTo(values.email);
+      setState("sent");
+    } catch (err) {
+      setState("error");
+    }
+  };
+
   return (
-    <main className="space-y-3">
-      <h1 className="text-h2">Create account</h1>
-      <p className="text-body text-fg-muted">Registration screen arrives in Phase 7.</p>
-    </main>
+    <RegisterScreen
+      state={state}
+      sentTo={sentTo}
+      onSubmit={handleSubmit}
+    />
   );
 }

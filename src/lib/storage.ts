@@ -296,6 +296,10 @@ export function getPrivateBucketName(): string {
   return process.env.R2_BUCKET_PRIVATE ?? "codekraft-private";
 }
 
+export function getDocumentsBucketName(): string {
+  return process.env.R2_BUCKET_DOCUMENTS ?? "codekraft-documents";
+}
+
 export function getPublicMediaBaseUrl(): string {
   return (
     process.env.NEXT_PUBLIC_MEDIA_BASE_URL ??

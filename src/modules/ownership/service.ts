@@ -2,7 +2,7 @@
  * Ownership service implementation (docs/05 §4, docs/06 API-CAT-16/17, BR-05/06/07, PHASE-03 P3.8).
  * Full implementation satisfying OwnershipService contracts.
  */
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lte, sql } from "drizzle-orm";
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
 import type { DbOrTx, TxCtx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
@@ -357,7 +357,7 @@ export class DefaultOwnershipService implements OwnershipService {
         and(
           eq(productOwnerships.productId, productId),
           inArray(productOwnerships.status, ["active", "superseded"]),
-          sql`${productOwnerships.effectiveFrom} <= ${at}`,
+          lte(productOwnerships.effectiveFrom, at instanceof Date ? at : new Date(at)),
         ),
       )
       .orderBy(desc(productOwnerships.effectiveFrom), desc(productOwnerships.version))

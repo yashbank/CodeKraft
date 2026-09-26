@@ -80,14 +80,17 @@ export const confirmPaymentInput = z
     note: zTrimmed(0, 500).optional(),
     /** Confirm an `ORDER_EXPIRED` order anyway (audited). */
     overrideExpiry: z.boolean().default(false),
+    /** Drop exhausted coupon and reprice without coupon (audited). */
+    dropCoupon: z.boolean().default(false),
   })
   .strict();
-export type ConfirmPaymentInput = z.infer<typeof confirmPaymentInput>;
+export type ConfirmPaymentInput = z.input<typeof confirmPaymentInput>;
 
 export interface ConfirmPaymentResult {
   payment: Payment;
   order: Order;
   invoiceNo: string | null;
+  invoiceId?: string | null;
   entitlementIds: string[];
   ledgerEntryCount: number;
   shortfallMinor: number;

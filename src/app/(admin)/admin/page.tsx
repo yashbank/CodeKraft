@@ -1,15 +1,15 @@
-import { getSession } from "@/modules/auth/service";
-import { SignOutButton } from "@/components/account/SignOutButton";
+import { AdminDashboard } from "@/components/admin/dashboard/AdminDashboard";
+import { DASHBOARD } from "@/app/dev/screens/_fixtures/admin";
 
-export default async function AdminHome() {
-  const session = await getSession();
+export const dynamic = "force-dynamic";
+
+export default function AdminDashboardPage() {
   return (
-    <main className="mx-auto max-w-3xl space-y-4 p-8">
-      <h1 className="text-h2">Admin dashboard</h1>
-      <p className="text-body text-fg-muted">
-        Signed in as {session?.user.email}. The widget dashboard arrives in Phase 8.
-      </p>
-      <SignOutButton />
-    </main>
+    <AdminDashboard
+      data={DASHBOARD}
+      isSuperAdmin={true}
+      greeting="Welcome back, Priya"
+      dateLabel="FY 2026–27 · Today"
+    />
   );
 }

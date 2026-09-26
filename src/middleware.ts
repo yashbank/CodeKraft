@@ -62,14 +62,37 @@ export function middleware(req: NextRequest): NextResponse {
     res = NextResponse.next({ request: { headers: reqHeaders } });
   }
 
-  if (APP_ENV === "staging" || APP_ENV === "preview")
+  if (APP_ENV === "staging" || APP_ENV === "preview") {
     res.headers.set("X-Robots-Tag", "noindex, nofollow");
+  }
+
+  // Security Headers (docs/09 §9, P9.1)
+  res.headers.set("X-Content-Type-Options", "nosniff");
+  res.headers.set("X-Frame-Options", "DENY");
+  res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+  
+  if (APP_ENV === "production" || APP_ENV === "staging") {
+    res.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+  }
+
   res.headers.set("x-nonce", nonce);
-  // Report-only CSP skeleton; enforced policy lands in P9.1 (docs/09 §9)
-  res.headers.set(
-    "Content-Security-Policy-Report-Only",
-    `default-src 'self'; script-src 'self' 'nonce-${nonce}' 'strict-dynamic'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'`,
-  );
+  
+  // CSP Policy with nonce and CSP violation reporting
+  const cspPolicy = [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' https:`,
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data: blob: https:",
+    "connect-src 'self' https: wss:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+    "report-uri /api/csp-report",
+  ].join("; ");
+
+  res.headers.set("Content-Security-Policy-Report-Only", cspPolicy);
   return res;
 }
 

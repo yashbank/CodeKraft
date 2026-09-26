@@ -1,3 +1,11 @@
+// @vitest-environment node
+import { readFileSync } from "node:fs";
+for (const line of readFileSync(".env.example", "utf8").split("\n")) {
+  const m = /^([A-Z0-9_]+)=(.*)$/.exec(line);
+  if (m && m[2] !== "" && process.env[m[1]!] === undefined) process.env[m[1]!] = m[2];
+}
+process.env.APP_ENV ??= "test";
+
 /**
  * P2.7 contracts C — Zod inputs for entitlements, delivery, subscriptions, leads, queries, chat,
  * notifications, analytics, dashboard-widgets (docs/06 §2.5, §2.7 ADM-13/14, §2.8, §2.9, §2.11,

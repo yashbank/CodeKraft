@@ -1,16 +1,17 @@
-import { Suspense } from "react";
+import type { Metadata } from "next";
 
-import { LoginForm } from "@/components/account/LoginForm";
+import { LoginScreen, type LoginReason } from "@/components/account/LoginScreen";
 
-export const metadata = { title: "Sign in" };
+export const metadata: Metadata = {
+  title: "Sign in — CodeKraft",
+  description: "Sign in to access your CodeKraft products, licenses, and services.",
+};
 
-export default function LoginPage() {
-  return (
-    <main className="space-y-6">
-      <h1 className="text-h2">Sign in</h1>
-      <Suspense>
-        <LoginForm />
-      </Suspense>
-    </main>
-  );
+interface PageProps {
+  searchParams: Promise<{ reason?: string }>;
+}
+
+export default async function LoginPage({ searchParams }: PageProps) {
+  const { reason } = await searchParams;
+  return <LoginScreen reason={reason as LoginReason | undefined} />;
 }

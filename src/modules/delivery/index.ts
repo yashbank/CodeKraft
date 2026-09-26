@@ -1,5 +1,6 @@
 export * from "./types";
 export type * from "./contracts";
+export { deliveryService, DefaultDeliveryService } from "./service";
 export {
   createDeliveryHandlerRegistry,
   type CustomerDeliveryView,
@@ -11,3 +12,4 @@ export {
   type RevocationInput,
   type RevokeOutcome,
 } from "./handler";
+export { defaultDeliveryHandlerRegistry } from "./handlers";

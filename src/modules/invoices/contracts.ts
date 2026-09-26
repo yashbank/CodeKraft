@@ -58,4 +58,5 @@ export interface InvoicesService {
   /** Render (`@react-pdf/renderer`) to R2 `media(private)`; returns the media id. Ink-on-white. */
   renderInvoicePdf(invoiceId: string, tx: TxCtx): Promise<{ pdfMediaId: string }>;
   renderCreditNotePdf(creditNoteId: string, tx: TxCtx): Promise<{ pdfMediaId: string }>;
+  regeneratePending(now?: Date): Promise<{ count: number }>;
 }

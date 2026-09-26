@@ -108,7 +108,8 @@ export class DefaultAuditService implements AuditService {
 
     const entry = auditEntryFromActor(actor, validAction, subject, diffBefore, diffAfter);
 
-    const [inserted] = await tx
+    const database = await this.getDatabase(tx);
+    const [inserted] = await database
       .insert(auditLogs)
       .values({
         action: entry.action,

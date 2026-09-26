@@ -1,6 +1,17 @@
-/**
- * `invoices` Server Actions — owned by P4 (master plan §3 ownership map). Intentionally empty in P2.8:
- * Every export must be created with `defineAction` / `definePublicAction`
- * (`tests/static/actions-use-define-action.test.ts`, SA-07).
- */
-export {};
+"use server";
+
+import { defineAction } from "@/lib/actions/envelope";
+import { issueInvoiceInput } from "./types";
+import { invoicesService } from "./service";
+import { withTx } from "@/lib/db";
+
+export const issueInvoiceAction = defineAction({
+  name: "API-COM-14 invoice.issue",
+  permission: "invoices.issue",
+  input: issueInvoiceInput,
+  handler: async (input, ctx) => {
+    return await withTx(async (tx) => {
+      return await invoicesService.issueInvoice(input, { userId: ctx.userId }, tx);
+    });
+  },
+});

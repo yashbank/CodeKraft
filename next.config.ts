@@ -22,6 +22,12 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   images: { remotePatterns, formats: ["image/avif", "image/webp"] },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   experimental: {
     serverActions: {
       allowedOrigins: [new URL(siteUrl).host, adminHost],

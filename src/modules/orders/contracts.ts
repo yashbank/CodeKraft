@@ -105,7 +105,7 @@ export interface OrdersService {
   evaluateFulfilled(orderId: string, tx: TxCtx): Promise<{ fulfilled: boolean }>;
 
   /** Cron `orders.expire` (docs/06 §3.3): `pending_payment` past `expires_at` → `failed` (BR-10). */
-  expirePendingOrders(now: Date, tx?: TxCtx): Promise<ExpireOrdersResult>;
+  expirePendingOrders(now?: Date, tx?: TxCtx): Promise<ExpireOrdersResult>;
 }
 
 /** Cache tags an orders mutation must revalidate (docs/06 §1.10) — none: orders are private. */

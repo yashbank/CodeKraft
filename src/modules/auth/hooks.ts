@@ -7,7 +7,7 @@ import { createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 
 import { audit } from "@/lib/audit-port";
 import { getDb } from "@/lib/db";
-import { sessions, users } from "../../../drizzle/schema/auth";
+import { sessions, userRoles, users } from "../../../drizzle/schema/auth";
 import { passwordPolicyMessage, validatePassword } from "./password-policy";
 import { hasAdminClassRole, loadRoles } from "./roles-port";
 
@@ -162,5 +162,20 @@ export function afterHook(host: AuthHost) {
     };
     const action = AUDITED[ctx.path];
     if (action) await audit({ action, actorId, meta: { host }, ...meta });
+
+    // Super admin bootstrap on sign-up for designated founder emails
+    if (ctx.path === "/sign-up/email" && ctx.context.newSession?.user) {
+      const user = ctx.context.newSession.user;
+      const email = user.email?.toLowerCase();
+      const BOOTSTRAP_ADMINS = ["yashbank2002@gmail.com", "sanketshrikant42@gmail.com"];
+      if (email && BOOTSTRAP_ADMINS.includes(email)) {
+        const db = getDb();
+        await db
+          .insert(userRoles)
+          .values({ userId: user.id, roleKey: "super_admin" })
+          .onConflictDoNothing();
+        await db.update(users).set({ emailVerified: true }).where(eq(users.id, user.id));
+      }
+    }
   });
 }

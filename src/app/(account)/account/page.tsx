@@ -1,15 +1,45 @@
 import { getSession } from "@/modules/auth/service";
-import { SignOutButton } from "@/components/account/SignOutButton";
+import { OverviewScreen } from "@/components/account/OverviewScreen";
+import {
+  entitlements,
+  invoices,
+  queries,
+} from "@/app/dev/screens/_fixtures/account";
 
-export default async function AccountHome() {
+export const dynamic = "force-dynamic";
+
+export default async function AccountOverviewPage() {
   const session = await getSession();
+  const firstName = session?.user.name?.split(" ")[0] || "Customer";
+
   return (
-    <main className="mx-auto max-w-3xl space-y-4 p-8">
-      <h1 className="text-h2">Your account</h1>
-      <p className="text-body text-fg-muted" data-testid="account-email">
-        Signed in as {session?.user.email}. Purchases, invoices and settings arrive in Phase 7.
-      </p>
-      <SignOutButton />
-    </main>
+    <OverviewScreen
+      firstName={firstName}
+      emailVerified={true}
+      actions={[
+        {
+          id: "act-1",
+          tone: "info",
+          title: "New product updates available",
+          detail: "FitDesk Pro v3.2.0 was released with UPI autopay reconciliation.",
+          href: "/account/purchases",
+          cta: "View updates",
+        },
+      ]}
+      entitlements={entitlements}
+      invoices={invoices}
+      queries={queries}
+      wishlistCount={2}
+      now={new Date().toISOString()}
+      links={{
+        purchases: "/account/purchases",
+        entitlement: (id: string) => `/account/purchases#${id}`,
+        invoices: "/account/invoices",
+        queries: "/account/queries",
+        query: (id: string) => `/account/queries#${id}`,
+        wishlist: "/account/wishlist",
+        chat: "/account/chat",
+      }}
+    />
   );
 }

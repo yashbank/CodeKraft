@@ -1,3 +1,15 @@
+// @vitest-environment node
+import { readFileSync } from "node:fs";
+for (const line of readFileSync(".env.example", "utf8").split("\n")) {
+  const m = /^([A-Z0-9_]+)=(.*)$/.exec(line);
+  if (m && m[2] !== "" && process.env[m[1]!] === undefined) process.env[m[1]!] = m[2];
+}
+process.env.APP_ENV ??= "test";
+process.env.EMAIL_TRANSPORT ??= "outbox";
+process.env.LLM_PROVIDER ??= "fake";
+process.env.TZ ??= "UTC";
+process.env.APP_ENCRYPTION_KEY ??= "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+
 /**
  * Cross-phase contract freeze (master plan §5, docs/06 §6 "What must never change", P2.8).
  *

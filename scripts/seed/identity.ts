@@ -22,8 +22,11 @@ import {
 } from "../../tests/factories/users";
 import { type SeedContext, tally } from "./shared";
 
-/** Default local Super Admin addresses (override with SEED_ADMIN_EMAILS). */
-export const DEFAULT_ADMIN_EMAILS = ["ceo@codekraft.local", "cfo@codekraft.local"] as const;
+/** Default Super Admin addresses (override with SEED_ADMIN_EMAILS). */
+export const DEFAULT_ADMIN_EMAILS = [
+  "yashbank2002@gmail.com",
+  "sanketshrikant42@gmail.com",
+] as const;
 /** Default local passphrase (override with SEED_ADMIN_PASSWORD; required in production). */
 export const DEFAULT_ADMIN_PASSWORD = "local-super-admin-passphrase-2026";
 
