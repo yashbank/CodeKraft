@@ -178,10 +178,12 @@ export const envSchema = z
     }
     if (e.APP_ENCRYPTION_KEY === undefined) issue("APP_ENCRYPTION_KEY", "required in production");
     if (e.CRON_SECRET === undefined) issue("CRON_SECRET", "required in production");
-    if (e.EMAIL_TRANSPORT !== "resend") {
+    if (e.EMAIL_TRANSPORT !== "resend" && process.env.ALLOW_LOG_EMAIL !== "true") {
       issue("EMAIL_TRANSPORT", "must be `resend` in production");
     }
-    if (e.RESEND_API_KEY === undefined) issue("RESEND_API_KEY", "required in production");
+    if (e.EMAIL_TRANSPORT === "resend" && e.RESEND_API_KEY === undefined) {
+      issue("RESEND_API_KEY", "required in production");
+    }
   });
 
 export type Env = z.infer<typeof envSchema>;
