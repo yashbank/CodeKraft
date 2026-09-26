@@ -61,6 +61,8 @@ export interface LandingChapterView {
   title: string;
   subtitle: string | null;
   html: string;
+  /** Plain-text rendering of `html`, for surfaces (Chapter.tsx) that show body copy as plain text. */
+  plainBody: string;
   media: { poster: ImageRef | null; videoEmbedUrl: string | null; sceneVariant: string | null };
   cta: LandingChapterCta | null;
   position: number;

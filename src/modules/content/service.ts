@@ -36,7 +36,7 @@ import {
   slugRedirects,
   testimonials,
 } from "../../../drizzle/schema";
-import { renderToHtml } from "./render";
+import { renderToHtml, toPlainText } from "./render";
 import type {
   ContentService,
   Reorder,
@@ -886,6 +886,7 @@ export class DefaultContentService implements ContentService {
         title: c.title,
         subtitle: c.subtitle,
         html: renderToHtml(c.bodyJson as unknown as RichTextDoc),
+        plainBody: toPlainText(c.bodyJson as unknown as RichTextDoc),
         media: {
           poster,
           videoEmbedUrl: c.media?.videoEmbedUrl ?? null,
