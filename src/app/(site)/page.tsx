@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { anonymousContext } from "@/lib/authz/context";
 import { toneFromSlug } from "@/lib/media-tone";
 import { toServiceIcon } from "@/lib/service-icon";
+import { toProductSummary } from "@/lib/product-summary";
 import {
   getLandingContentQuery,
   listCaseStudiesQuery,
@@ -10,6 +11,7 @@ import {
   listServicesQuery,
   listTestimonialsQuery,
 } from "@/modules/content/queries";
+import { listFeaturedProductsQuery } from "@/modules/catalog/queries";
 import { LandingPage } from "@/components/site/landing/LandingPage";
 import type {
   BlogTeaser,
@@ -37,14 +39,21 @@ function chapterCopy(c: LandingChapterView | undefined) {
 
 export default async function LandingRoute() {
   const ctx = anonymousContext();
-  const [landingResult, logosResult, testimonialsResult, caseStudiesResult, servicesResult] =
-    await Promise.all([
-      getLandingContentQuery({}, ctx),
-      listClientLogosQuery({}, ctx),
-      listTestimonialsQuery({ context: "site" }, ctx),
-      listCaseStudiesQuery({ limit: 3 }, ctx),
-      listServicesQuery({}, ctx),
-    ]);
+  const [
+    landingResult,
+    logosResult,
+    testimonialsResult,
+    caseStudiesResult,
+    servicesResult,
+    featuredProductsResult,
+  ] = await Promise.all([
+    getLandingContentQuery({}, ctx),
+    listClientLogosQuery({}, ctx),
+    listTestimonialsQuery({ context: "site" }, ctx),
+    listCaseStudiesQuery({ limit: 3 }, ctx),
+    listServicesQuery({}, ctx),
+    listFeaturedProductsQuery({ limit: 8, displayCurrency: "INR" }, ctx),
+  ]);
 
   const chaptersByKey = new Map(
     landingResult.ok ? landingResult.data.chapters.map((c) => [c.key, c]) : [],
@@ -97,10 +106,11 @@ export default async function LandingRoute() {
   const logoRows = logosResult.ok ? logosResult.data : [];
   const logos: ClientLogo[] = logoRows.map((l) => ({ id: l.id, name: l.name }));
 
-  // No public "browse all products" query yet (catalog module only exposes single-product and
-  // category lookups) — an empty list is the component's own documented empty state ("Products
-  // coming soon" band), not a placeholder hack. Same for blog teasers below.
-  const featuredProducts: ProductSummary[] = [];
+  const featuredProducts: ProductSummary[] = featuredProductsResult.ok
+    ? featuredProductsResult.data.map(toProductSummary)
+    : [];
+  // Blog module isn't wired to the database yet — an empty list is the component's own
+  // documented empty state, not a placeholder hack.
   const blogTeasers: BlogTeaser[] = [];
 
   return (

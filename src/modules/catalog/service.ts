@@ -1710,6 +1710,63 @@ export class DefaultCatalogService implements CatalogService {
     return cards;
   }
 
+  /** API-CAT-33 (new): public /products browse listing — published + listed only. */
+  async listProducts(
+    ctx: Context,
+    input: { limit?: number; categorySlug?: string; displayCurrency: Currency },
+    tx?: DbOrTx,
+  ): Promise<ProductCard[]> {
+    void ctx;
+    const dbClient = await this.getDatabase(tx);
+    const max = input.limit ?? 100;
+
+    const conditions = [eq(products.status, "published"), eq(products.isUnlisted, false)];
+    if (input.categorySlug) {
+      const [cat] = await dbClient
+        .select({ id: categories.id })
+        .from(categories)
+        .where(eq(categories.slug, input.categorySlug))
+        .limit(1);
+      if (cat) conditions.push(eq(products.categoryId, cat.id));
+    }
+
+    const rows = await dbClient
+      .select({ product: products, category: categories })
+      .from(products)
+      .leftJoin(categories, eq(products.categoryId, categories.id))
+      .where(and(...conditions))
+      .orderBy(desc(products.publishedAt))
+      .limit(max);
+
+    const cards: ProductCard[] = [];
+    for (const r of rows) {
+      const p = r.product;
+      const cat = r.category;
+
+      const tagRows = await dbClient
+        .select({ id: tags.id, slug: tags.slug, name: tags.name })
+        .from(productTags)
+        .innerJoin(tags, eq(productTags.tagId, tags.id))
+        .where(eq(productTags.productId, p.id));
+
+      cards.push({
+        slug: p.slug,
+        name: p.name,
+        shortDescription: p.shortDescription,
+        coverImage: null,
+        category: cat ? { id: cat.id, slug: cat.slug, name: cat.name } : null,
+        tags: tagRows,
+        fromPrice: null,
+        purchaseModels: ["one_time"],
+        deliveryTypes: ["download"],
+        isFeatured: p.isFeatured,
+        isComingSoon: p.isComingSoon,
+        currentVersion: p.currentVersion,
+      });
+    }
+    return cards;
+  }
+
   /**
    * API-CAT-35: Toggle wishlist entry.
    */
@@ -1842,6 +1899,7 @@ export function createNotImplementedCatalogService(): CatalogService {
     getProductBySlug: "async",
     listCategories: "async",
     listFeaturedProducts: "async",
+    listProducts: "async",
     toggleWishlist: "async",
     listMyWishlist: "async",
     refreshTagNames: "async",

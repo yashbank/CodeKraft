@@ -1,131 +1,156 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import {
-  PRODUCTS,
-  PRODUCT_DETAIL,
-  SERVICE_OPTIONS,
-} from "@/app/dev/screens/_fixtures/site";
+import { SERVICE_OPTIONS } from "@/app/dev/screens/_fixtures/site";
 import { ProductDetailPage } from "@/components/site/product/ProductDetailPage";
-import type { ProductDetail } from "@/components/site/types";
-import { money } from "@/lib/money";
+import type {
+  ChangelogEntry,
+  FaqItem,
+  MediaItem,
+  OfferingView,
+  ProductDetail,
+  Testimonial,
+} from "@/components/site/types";
+import { anonymousContext } from "@/lib/authz/context";
+import { toneFromSlug } from "@/lib/media-tone";
+import { getProductBySlugQuery } from "@/modules/catalog/queries";
+import { renderToHtml, toPlainText } from "@/modules/content/render";
+import type { RichTextDoc } from "@/modules/_shared/zod";
+import type { ChangelogJson } from "../../../../../drizzle/schema/catalog";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateStaticParams() {
-  return PRODUCTS.map((p) => ({ slug: p.slug }));
+function accessPeriod(purchaseModel: string, billingInterval: string | null): string {
+  if (purchaseModel === "one_time") return "Lifetime";
+  if (billingInterval === "monthly") return "Monthly";
+  if (billingInterval === "quarterly") return "Quarterly";
+  if (billingInterval === "annual") return "Annual";
+  return "Custom";
 }
 
-function getProductDetail(slug: string): ProductDetail | undefined {
-  if (PRODUCT_DETAIL.slug === slug) {
-    return PRODUCT_DETAIL;
-  }
-  const summary = PRODUCTS.find((p) => p.slug === slug);
-  if (!summary) return undefined;
+function changelogHtml(c: ChangelogJson | null): string {
+  if (!c) return "";
+  const sections: string[] = [];
+  if (c.summary) sections.push(`<p>${c.summary}</p>`);
+  const group = (label: string, items?: string[]) =>
+    items && items.length ? `<p><strong>${label}:</strong></p><ul>${items.map((i) => `<li>${i}</li>`).join("")}</ul>` : "";
+  sections.push(group("Added", c.added));
+  sections.push(group("Changed", c.changed));
+  sections.push(group("Fixed", c.fixed));
+  sections.push(group("Breaking", c.breaking));
+  return sections.filter(Boolean).join("");
+}
+
+async function loadProduct(slug: string): Promise<ProductDetail | null> {
+  const ctx = anonymousContext();
+  const result = await getProductBySlugQuery({ slug, displayCurrency: "INR" }, ctx);
+  if (!result.ok) return null;
+  const p = result.data;
+
+  const offerings: OfferingView[] = p.offerings.map((o) => ({
+    id: o.id,
+    name: o.name,
+    purchaseModel: o.purchaseModel,
+    billingInterval: o.billingInterval ?? undefined,
+    deliveryType: o.deliveryType,
+    price: o.price?.display,
+    compareAtPrice: o.price?.compareAt ?? undefined,
+    licenseType: o.licenseType ?? undefined,
+    accessPeriod: accessPeriod(o.purchaseModel, o.billingInterval),
+    trialDays: o.trialDays ?? undefined,
+    updatePolicy: "during_access",
+    isRefundable: p.isRefundable,
+    features: [],
+  }));
+
+  const purchaseModels = Array.from(new Set(offerings.map((o) => o.purchaseModel)));
+  const deliveryTypes = Array.from(new Set(offerings.map((o) => o.deliveryType)));
+  const cheapest = offerings
+    .map((o) => o.price)
+    .filter((m): m is NonNullable<typeof m> => Boolean(m))
+    .sort((a, b) => a.amountMinor - b.amountMinor)[0];
+
+  const media: MediaItem[] = p.media.map((m) => ({
+    id: m.id,
+    kind: m.kind as MediaItem["kind"],
+    alt: m.alt,
+    caption: m.title ?? undefined,
+  }));
+
+  const faqs: FaqItem[] = p.faqs.map((f) => ({
+    id: f.id,
+    question: f.question,
+    answer: toPlainText(f.answer as unknown as RichTextDoc),
+  }));
+
+  const changelog: ChangelogEntry[] = p.versions.map((v) => ({
+    version: v.version,
+    date: v.releasedAt,
+    notesHtml: changelogHtml(v.changelog),
+  }));
+
+  const testimonials: Testimonial[] = p.testimonials.map((t) => ({
+    id: t.id,
+    quote: t.quote,
+    author: t.authorName,
+    role: t.authorTitle ?? "",
+    company: t.company ?? "",
+  }));
 
   return {
-    ...summary,
-    version: "1.0.0",
-    descriptionHtml: `<p>${summary.shortDescription}</p><p>Built with enterprise-grade stability, seamless deployment, and continuous updates backed by our team.</p>`,
-    benefits: [
-      "Rapid deployment with zero boilerplate configuration",
-      "Full source code and ownership options available",
-      "Comprehensive documentation and architectural runbooks",
-      "Dedicated integration support during onboarding",
-    ],
-    targetAudience: ["Startups", "Scale-ups", "Internal tool teams"],
-    useCases: ["Digital operations automation", "Customer workflow management", "Production ready MVP"],
-    requirements: ["Modern web browser", "Node.js 20+ or Docker runtime"],
-    features: [
-      "Postgres relational persistence with ACID compliance",
-      "Role-based access control and audited actions",
-      "Automated schema migrations and data protection",
-      "Integrated structured logging and telemetry",
-      "Automated backup strategies and disaster recovery",
-    ],
-    techStack: ["Next.js", "TypeScript", "Tailwind CSS", "PostgreSQL"],
-    media: [
-      {
-        id: "m-1",
-        kind: "image",
-        alt: summary.name,
-        caption: summary.name,
-      },
-    ],
-    faqs: [
-      {
-        id: "faq-1",
-        question: "Can I self-host this software?",
-        answer: "Yes, our self-hosted license includes Docker containers and deployment scripts.",
-      },
-    ],
-    changelog: [
-      {
-        version: "1.0.0",
-        date: "2026-09-01",
-        notesHtml: "<p>Initial production release.</p>",
-      },
-    ],
-    testimonials: [],
-    hasPresentation: false,
-    offerings: [
-      {
-        id: `offering-${summary.slug}-cloud`,
-        name: "Cloud Hosted",
-        purchaseModel: "subscription",
-        deliveryType: "saas",
-        billingInterval: "monthly",
-        price: money(499900, "INR"),
-        accessPeriod: "Monthly",
-        trialDays: 14,
-        updatePolicy: "during_access",
-        isRefundable: true,
-        features: ["Managed hosting", "Automated backups", "Security updates"],
-      },
-      {
-        id: `offering-${summary.slug}-self`,
-        name: "Self-Hosted License",
-        purchaseModel: "one_time",
-        deliveryType: "license",
-        price: money(2499900, "INR"),
-        accessPeriod: "Lifetime",
-        updatePolicy: "all_free",
-        isRefundable: false,
-        features: ["Full binary access", "Perpetual license", "Standard updates"],
-      },
-    ],
+    id: p.id,
+    slug: p.slug,
+    name: p.name,
+    shortDescription: p.shortDescription,
+    category: p.category ? { slug: p.category.slug, name: p.category.name } : { slug: "uncategorized", name: "Uncategorized" },
+    fromPrice: cheapest,
+    purchaseModels: purchaseModels.length ? purchaseModels : ["custom_quote"],
+    deliveryTypes: deliveryTypes.length ? deliveryTypes : ["custom"],
+    isFeatured: p.isFeatured,
+    isComingSoon: p.isComingSoon,
+    tags: p.tags.map((t) => t.name),
+    techStack: p.techStack,
+    industries: p.industry,
+    audiences: p.targetAudience.map((a) => a.title),
+    coverAlt: p.name,
+    coverTone: toneFromSlug(p.slug),
+    publishedAt: new Date().toISOString(),
+    popularity: 0,
+    version: p.currentVersion ?? "1.0.0",
+    descriptionHtml: renderToHtml(p.description as unknown as RichTextDoc),
+    benefits: p.benefits.map((b) => b.title),
+    targetAudience: p.targetAudience.map((a) => a.title),
+    useCases: p.useCases.map((u) => u.title),
+    requirements: p.requirements ? [toPlainText(p.requirements as unknown as RichTextDoc)].filter(Boolean) : [],
+    features: p.features.map((f) => f.title),
+    offerings,
+    media,
+    faqs,
+    changelog,
+    testimonials,
+    hasPresentation: p.media.some((m) => m.kind === "presentation"),
+    liveDemoUrl: p.liveDemoUrl ?? undefined,
   };
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProductDetail(slug);
+  const product = await loadProduct(slug);
   if (!product) return {};
 
   return {
     title: `${product.name} — Software by CodeKraft`,
     description: product.shortDescription,
-    openGraph: {
-      title: product.name,
-      description: product.shortDescription,
-    },
+    openGraph: { title: product.name, description: product.shortDescription },
   };
 }
 
 export default async function ProductPage({ params }: PageProps) {
   const { slug } = await params;
-  const product = getProductDetail(slug);
+  const product = await loadProduct(slug);
+  if (!product) notFound();
 
-  if (!product) {
-    notFound();
-  }
-
-  return (
-    <ProductDetailPage
-      product={product}
-      serviceOptions={SERVICE_OPTIONS}
-    />
-  );
+  return <ProductDetailPage product={product} serviceOptions={SERVICE_OPTIONS} />;
 }

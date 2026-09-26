@@ -276,6 +276,13 @@ export const listFeaturedProductsSchema = z.strictObject({
   displayCurrency: currencySchema,
 });
 
+/** API-CAT-33 (new) `listProducts` — public catalog browse, published + listed only. */
+export const listProductsSchema = z.strictObject({
+  limit: z.number().int().min(1).max(200).default(100),
+  categorySlug: z.string().trim().max(120).optional(),
+  displayCurrency: currencySchema,
+});
+
 /** API-CAT-35 `toggleWishlist`. */
 export const toggleWishlistSchema = z.strictObject({ productId: uuidSchema, on: z.boolean() });
 export type ToggleWishlistInput = z.infer<typeof toggleWishlistSchema>;
@@ -437,6 +444,12 @@ export interface CatalogService {
   listFeaturedProducts(
     ctx: Context,
     input: z.infer<typeof listFeaturedProductsSchema>,
+    tx?: DbOrTx,
+  ): Promise<ProductCard[]>;
+  /** API-CAT-33 (new) `listProducts` — public /products browse listing. */
+  listProducts(
+    ctx: Context,
+    input: z.infer<typeof listProductsSchema>,
     tx?: DbOrTx,
   ): Promise<ProductCard[]>;
   /** API-CAT-35 */

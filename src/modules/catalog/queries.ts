@@ -12,6 +12,7 @@ import {
   listFeaturedProductsSchema,
   listMyWishlistSchema,
   listProductsAdminSchema,
+  listProductsSchema,
 } from "./contracts";
 import { catalogService } from "./service";
 
@@ -45,6 +46,12 @@ export const listFeaturedProductsQuery = definePublicAction({
   name: "API-CAT-34 listFeaturedProducts",
   input: listFeaturedProductsSchema,
   handler: (input, ctx) => catalogService.listFeaturedProducts(ctx, input),
+});
+
+export const listProductsQuery = definePublicAction({
+  name: "API-CAT-33 listProducts",
+  input: listProductsSchema,
+  handler: (input, ctx) => catalogService.listProducts(ctx, input),
 });
 
 export const listMyWishlistQuery = defineAction({
