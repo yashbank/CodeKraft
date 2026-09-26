@@ -62,7 +62,14 @@ export function createAuth(host: AuthHost, opts: { phoneOtp?: boolean } = {}) {
     baseURL,
     basePath: "/api/auth",
     secret: env.BETTER_AUTH_SECRET,
-    trustedOrigins: [env.NEXT_PUBLIC_SITE_URL, env.NEXT_PUBLIC_ADMIN_URL],
+    trustedOrigins: [
+      env.NEXT_PUBLIC_SITE_URL,
+      env.NEXT_PUBLIC_ADMIN_URL,
+      "https://*.vercel.app",
+      ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+      ...(process.env.VERCEL_PROJECT_PRODUCTION_URL ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`] : []),
+      ...(process.env.VERCEL_BRANCH_URL ? [`https://${process.env.VERCEL_BRANCH_URL}`] : []),
+    ].filter((url): url is string => Boolean(url)),
     database: drizzleAdapter(getDb(), { provider: "pg", schema, usePlural: true }),
     emailAndPassword: {
       enabled: true,
