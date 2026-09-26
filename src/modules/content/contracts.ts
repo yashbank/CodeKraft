@@ -56,6 +56,7 @@ export const ctaLinkSchema = z.strictObject({ label: text(60), href: hrefSchema 
 /** API-CONT-01 `upsertLandingChapter` (D-801, D-802). */
 export const upsertLandingChapterSchema = z.strictObject({
   key: landingChapterKeySchema,
+  eyebrow: text(60).optional(),
   title: text(120),
   subtitle: text(200).optional(),
   bodyJson: richTextSchema,
@@ -110,6 +111,7 @@ export const upsertCaseStudySchema = z.strictObject({
   problemJson: richTextSchema,
   solutionJson: richTextSchema,
   resultsJson: richTextSchema,
+  resultHighlight: text(60).optional(),
   techStack: z.array(text(60)).max(30),
   coverMediaId: uuidSchema.optional(),
   gallery: z.array(galleryItemSchema).max(24).optional(),

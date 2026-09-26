@@ -63,6 +63,8 @@ export const landingChapters = pgTable(
       .primaryKey()
       .default(sql`gen_random_uuid()`),
     key: landingChapterKey("key").notNull().unique(),
+    /** Small label shown above the title (e.g. "Services & Engineering"). Optional. */
+    eyebrow: text("eyebrow"),
     title: text("title").notNull(),
     subtitle: text("subtitle"),
     bodyJson: jsonb("body_json").$type<TiptapDoc>(),
@@ -110,6 +112,8 @@ export const caseStudies = pgTable(
     problemJson: jsonb("problem_json").$type<TiptapDoc>(),
     solutionJson: jsonb("solution_json").$type<TiptapDoc>(),
     resultsJson: jsonb("results_json").$type<TiptapDoc>(),
+    /** Short headline stat for the case-study card (e.g. "+40% conversion"). Optional. */
+    resultHighlight: text("result_highlight"),
     techStack: text("tech_stack")
       .array()
       .notNull()

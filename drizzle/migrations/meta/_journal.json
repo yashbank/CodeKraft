@@ -15,6 +15,13 @@
       "when": 1790333780552,
       "tag": "0001_daffy_turbo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790424175960,
+      "tag": "0002_free_ultimo",
+      "breakpoints": true
     }
   ]
 }

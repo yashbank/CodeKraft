@@ -57,6 +57,7 @@ export const FEATURED_PRODUCTS_MAX = 8;
 
 export interface LandingChapterView {
   key: LandingChapterKey;
+  eyebrow: string | null;
   title: string;
   subtitle: string | null;
   html: string;
@@ -83,6 +84,7 @@ export interface CaseStudyCard {
   techStack: string[];
   cover: ImageRef | null;
   publishedAt: string | null;
+  resultHighlight: string | null;
 }
 
 export interface CaseStudyDetail extends CaseStudyCard {

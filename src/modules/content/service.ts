@@ -139,6 +139,7 @@ export class DefaultContentService implements ContentService {
       const [updated] = await client
         .update(landingChapters)
         .set({
+          eyebrow: input.eyebrow ?? null,
           title: input.title,
           subtitle: input.subtitle ?? null,
           bodyJson: input.bodyJson,
@@ -158,6 +159,7 @@ export class DefaultContentService implements ContentService {
         .insert(landingChapters)
         .values({
           key: input.key,
+          eyebrow: input.eyebrow ?? null,
           title: input.title,
           subtitle: input.subtitle ?? null,
           bodyJson: input.bodyJson,
@@ -381,6 +383,7 @@ export class DefaultContentService implements ContentService {
           problemJson: input.problemJson,
           solutionJson: input.solutionJson,
           resultsJson: input.resultsJson,
+          resultHighlight: input.resultHighlight ?? null,
           techStack: input.techStack,
           coverMediaId: input.coverMediaId,
           gallery: input.gallery,
@@ -404,6 +407,7 @@ export class DefaultContentService implements ContentService {
           problemJson: input.problemJson,
           solutionJson: input.solutionJson,
           resultsJson: input.resultsJson,
+          resultHighlight: input.resultHighlight ?? null,
           techStack: input.techStack,
           coverMediaId: input.coverMediaId,
           gallery: input.gallery,
@@ -878,6 +882,7 @@ export class DefaultContentService implements ContentService {
 
       chapters.push({
         key: c.key as LandingChapterKey,
+        eyebrow: c.eyebrow,
         title: c.title,
         subtitle: c.subtitle,
         html: renderToHtml(c.bodyJson as unknown as RichTextDoc),
@@ -1046,6 +1051,7 @@ export class DefaultContentService implements ContentService {
         techStack: r.caseStudy.techStack ?? [],
         cover: coverRef,
         publishedAt: r.caseStudy.publishedAt ? r.caseStudy.publishedAt.toISOString() : null,
+        resultHighlight: r.caseStudy.resultHighlight,
       };
     });
 
@@ -1165,6 +1171,7 @@ export class DefaultContentService implements ContentService {
       techStack: row.caseStudy.techStack ?? [],
       cover: coverRef,
       publishedAt: row.caseStudy.publishedAt ? row.caseStudy.publishedAt.toISOString() : null,
+      resultHighlight: row.caseStudy.resultHighlight,
       problemHtml: renderToHtml(row.caseStudy.problemJson as unknown as RichTextDoc),
       solutionHtml: renderToHtml(row.caseStudy.solutionJson as unknown as RichTextDoc),
       resultsHtml: renderToHtml(row.caseStudy.resultsJson as unknown as RichTextDoc),
