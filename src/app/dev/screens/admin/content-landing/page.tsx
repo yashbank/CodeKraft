@@ -14,8 +14,12 @@ export default function Page() {
       <LandingEditor
         chapters={LANDING_CHAPTERS}
         services={SERVICES}
-        publishedProducts={["FitDesk Pro", "TradeFlow", "InvoiceKit"]}
-        featured={["FitDesk Pro", "TradeFlow"]}
+        publishedProducts={[
+          { id: "FitDesk Pro", name: "FitDesk Pro" },
+          { id: "TradeFlow", name: "TradeFlow" },
+          { id: "InvoiceKit", name: "InvoiceKit" },
+        ]}
+        featuredIds={["FitDesk Pro", "TradeFlow"]}
         canPublish
       />
     </PreviewShell>

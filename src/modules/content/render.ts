@@ -83,3 +83,28 @@ export function toPlainText(doc: RichTextDoc | RichTextNode | null | undefined):
   walk(doc);
   return pieces.join(" ").replace(/\s+/g, " ").trim();
 }
+
+/**
+ * Minimal plain-text → Tiptap doc bridge for the admin RichTextField, which is a plain
+ * textarea until the real Tiptap editor lands (see RichTextField's own doc comment). Splits on
+ * blank lines into paragraphs so admin-entered text round-trips through the existing
+ * richTextSchema without needing a full editor.
+ */
+export function fromPlainText(text: string): RichTextDoc {
+  const paragraphs = text
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  if (paragraphs.length === 0) {
+    return { type: "doc", content: [] };
+  }
+
+  return {
+    type: "doc",
+    content: paragraphs.map((p) => ({
+      type: "paragraph",
+      content: [{ type: "text", text: p }],
+    })),
+  } as RichTextDoc;
+}

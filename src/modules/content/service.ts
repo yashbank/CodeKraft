@@ -35,6 +35,7 @@ import {
   services,
   slugRedirects,
   testimonials,
+  users,
 } from "../../../drizzle/schema";
 import { renderToHtml, toPlainText } from "./render";
 import type {
@@ -856,6 +857,7 @@ export class DefaultContentService implements ContentService {
     const chapterRows = await client
       .select()
       .from(landingChapters)
+      .where(eq(landingChapters.published, true))
       .orderBy(asc(landingChapters.position));
 
     const chapters: LandingChapterView[] = [];
@@ -1328,6 +1330,196 @@ export class DefaultContentService implements ContentService {
       version: page.version,
       publishedAt: page.publishedAt ? page.publishedAt.toISOString() : null,
     };
+  }
+
+  /* --- Admin reads (drafts included) -------------------------------------------------------- */
+
+  /** Admin — currently featured product ids, in position order. */
+  async getFeaturedProductIdsAdmin(ctx: RequestContext, tx?: DbOrTx): Promise<string[]> {
+    void ctx;
+    const client = await this.getDatabase(tx);
+    const rows = await client
+      .select({ productId: featuredProducts.productId })
+      .from(featuredProducts)
+      .orderBy(asc(featuredProducts.position));
+    return rows.map((r: (typeof rows)[number]) => r.productId);
+  }
+
+  /** Admin list — all services regardless of published state, for the content editor. */
+  async listServicesAdmin(ctx: RequestContext, tx?: DbOrTx) {
+    void ctx;
+    const client = await this.getDatabase(tx);
+    const rows = await client.select().from(services).orderBy(asc(services.position));
+    return rows.map((s: (typeof rows)[number]) => ({
+      id: s.id,
+      title: s.title,
+      slug: s.slug,
+      summary: s.summary ?? "",
+      icon: s.icon ?? "sparkles",
+      deliverables: s.deliverables ?? [],
+      published: s.published,
+    }));
+  }
+
+  /** Admin list — all case studies regardless of published state. */
+  async listCaseStudiesAdmin(ctx: RequestContext, tx?: DbOrTx) {
+    void ctx;
+    const client = await this.getDatabase(tx);
+    const rows = await client.select().from(caseStudies).orderBy(desc(caseStudies.updatedAt));
+    return rows.map((c: (typeof rows)[number]) => ({
+      id: c.id,
+      title: c.title,
+      slug: c.slug,
+      client: c.clientName ?? "",
+      industry: c.industry ?? "",
+      tech: c.techStack ?? [],
+      status: (c.published ? "published" : "draft") as "draft" | "published",
+      publishedAt: c.publishedAt ? c.publishedAt.toISOString() : undefined,
+      updatedAt: c.updatedAt.toISOString(),
+    }));
+  }
+
+  /** Admin list — all testimonials (both contexts), any published state. */
+  async listTestimonialsAdmin(ctx: RequestContext, tx?: DbOrTx) {
+    void ctx;
+    const client = await this.getDatabase(tx);
+    const rows = await client
+      .select({ testimonial: testimonials, productName: products.name })
+      .from(testimonials)
+      .leftJoin(products, eq(testimonials.productId, products.id))
+      .orderBy(asc(testimonials.position));
+    return rows.map((r: (typeof rows)[number]) => ({
+      id: r.testimonial.id,
+      quote: r.testimonial.quote,
+      author: r.testimonial.authorName,
+      title: r.testimonial.authorTitle ?? undefined,
+      company: r.testimonial.company ?? undefined,
+      context: r.testimonial.context,
+      product: r.productName ?? undefined,
+      published: r.testimonial.published,
+    }));
+  }
+
+  /** Admin list — all client logos, any published state. */
+  async listClientLogosAdmin(ctx: RequestContext, tx?: DbOrTx) {
+    void ctx;
+    const client = await this.getDatabase(tx);
+    const rows = await client.select().from(clientLogos).orderBy(asc(clientLogos.position));
+    return rows.map((l: (typeof rows)[number]) => ({
+      id: l.id,
+      name: l.name,
+      url: l.url ?? undefined,
+      published: l.published,
+      mediaId: l.mediaId,
+    }));
+  }
+
+  /** Admin list — all FAQs across every scope, any published state. */
+  async listFaqsAdmin(ctx: RequestContext, tx?: DbOrTx) {
+    void ctx;
+    const client = await this.getDatabase(tx);
+    const rows = await client
+      .select({ faq: faqs, productName: products.name })
+      .from(faqs)
+      .leftJoin(products, eq(faqs.productId, products.id))
+      .orderBy(asc(faqs.position));
+    return rows.map((r: (typeof rows)[number]) => ({
+      id: r.faq.id,
+      question: r.faq.question,
+      answer: toPlainText(r.faq.answerJson as unknown as RichTextDoc),
+      scope: r.faq.scope,
+      product: r.productName ?? undefined,
+      published: r.faq.published,
+    }));
+  }
+
+  /** Admin — landing chapters, any published state, for the content editor. */
+  async listLandingChaptersAdmin(ctx: RequestContext, tx?: DbOrTx) {
+    void ctx;
+    const client = await this.getDatabase(tx);
+    const rows = await client.select().from(landingChapters).orderBy(asc(landingChapters.position));
+
+    const out: Array<{
+      key: LandingChapterKey;
+      eyebrow?: string;
+      title: string;
+      subtitle?: string;
+      body: string;
+      published: boolean;
+      poster?: string;
+      ctaPrimary?: { label: string; target: string };
+      ctaSecondary?: { label: string; target: string };
+    }> = [];
+    for (const c of rows) {
+      let poster: string | undefined;
+      if (c.media?.posterMediaId) {
+        const [m] = await client
+          .select()
+          .from(media)
+          .where(eq(media.id, c.media.posterMediaId))
+          .limit(1);
+        if (m) poster = resolveMediaUrl(m) ?? undefined;
+      }
+      out.push({
+        key: c.key as LandingChapterKey,
+        eyebrow: c.eyebrow ?? undefined,
+        title: c.title,
+        subtitle: c.subtitle ?? undefined,
+        body: toPlainText(c.bodyJson as unknown as RichTextDoc),
+        published: c.published,
+        poster,
+        ctaPrimary: c.cta?.primary ? { label: c.cta.primary.label, target: c.cta.primary.href } : undefined,
+        ctaSecondary: c.cta?.secondary ? { label: c.cta.secondary.label, target: c.cta.secondary.href } : undefined,
+      });
+    }
+    return out;
+  }
+
+  /** Admin — legal pages with version history, for the content editor (Super Admin only). */
+  async listLegalPagesAdmin(ctx: RequestContext, tx?: DbOrTx) {
+    void ctx;
+    const client = await this.getDatabase(tx);
+    const pages = await client.select().from(legalPages);
+    const out: Array<{
+      key: LegalPage["key"];
+      title: string;
+      version: number;
+      publishedAt: string;
+      hasDraft: boolean;
+      body: string;
+      effectiveDate: string;
+      checklist: Array<{ label: string; done: boolean }>;
+      history: Array<{ version: number; publishedAt: string; by: string; summary: string }>;
+    }> = [];
+    for (const p of pages) {
+      const versions = await client
+        .select({ v: legalPageVersions, by: users.name })
+        .from(legalPageVersions)
+        .leftJoin(users, eq(legalPageVersions.publishedBy, users.id))
+        .where(eq(legalPageVersions.legalPageId, p.id))
+        .orderBy(desc(legalPageVersions.version));
+
+      const latest = versions[0];
+      const hasDraft = !latest || JSON.stringify(latest.v.bodyJson) !== JSON.stringify(p.bodyJson);
+
+      out.push({
+        key: p.key,
+        title: p.title,
+        version: p.version,
+        publishedAt: p.publishedAt ? p.publishedAt.toISOString() : "",
+        hasDraft,
+        body: toPlainText(p.bodyJson as unknown as RichTextDoc),
+        effectiveDate: p.publishedAt ? p.publishedAt.toISOString().slice(0, 10) : "",
+        checklist: [],
+        history: versions.map((v: (typeof versions)[number]) => ({
+          version: v.v.version,
+          publishedAt: v.v.publishedAt.toISOString(),
+          by: v.by ?? "\u2014",
+          summary: "",
+        })),
+      });
+    }
+    return out;
   }
 }
 

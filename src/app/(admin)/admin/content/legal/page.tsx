@@ -1,13 +1,11 @@
 import { LegalEditor } from "@/components/admin/content/LegalEditor";
-import { LEGAL_PAGES } from "@/app/dev/screens/_fixtures/admin";
+import { getAdminRequestContext } from "@/lib/authz/admin-request-context";
+import { contentService } from "@/modules/content/service";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminLegalEditorPage() {
-  return (
-    <LegalEditor
-      pages={LEGAL_PAGES}
-      isSuperAdmin={true}
-    />
-  );
+export default async function AdminLegalEditorPage() {
+  const ctx = await getAdminRequestContext();
+  const pages = await contentService.listLegalPagesAdmin(ctx);
+  return <LegalEditor pages={pages} isSuperAdmin={ctx.roles.includes("super_admin")} />;
 }

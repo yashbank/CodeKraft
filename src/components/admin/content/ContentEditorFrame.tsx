@@ -35,6 +35,7 @@ export function ContentEditorFrame({
   saveLabel = "Save",
   onSave,
   wide = false,
+  hideSaveBar = false,
 }: {
   title: string;
   description?: string;
@@ -50,6 +51,8 @@ export function ContentEditorFrame({
   saveLabel?: string;
   onSave?: () => void;
   wide?: boolean;
+  /** Hide the generic sticky save bar when the editor persists changes itself (per-row saves, sheets). */
+  hideSaveBar?: boolean;
 }) {
   const [dirty, setDirty] = React.useState(false);
   return (
@@ -123,6 +126,7 @@ export function ContentEditorFrame({
         </div>
         {panel ? <aside className="space-y-4">{panel}</aside> : null}
       </div>
+      {hideSaveBar ? null : (
       <div className="sticky bottom-0 mt-6 -mx-4 flex items-center gap-3 border-t border-border bg-canvas px-4 py-3 lg:-mx-6 lg:px-6">
         <span className="text-caption text-fg-muted" aria-live="polite">
           {dirty ? "Unsaved changes" : `Saved ${savedAgoSeconds} s ago`}
@@ -150,6 +154,7 @@ export function ContentEditorFrame({
           </Button>
         </span>
       </div>
+      )}
     </>
   );
 }

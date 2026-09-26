@@ -1,8 +1,11 @@
 import { CaseStudiesEditor } from "@/components/admin/content/CaseStudiesEditor";
-import { CASE_STUDIES } from "@/app/dev/screens/_fixtures/admin";
+import { getAdminRequestContext } from "@/lib/authz/admin-request-context";
+import { contentService } from "@/modules/content/service";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminCaseStudiesEditorPage() {
-  return <CaseStudiesEditor caseStudies={CASE_STUDIES} />;
+export default async function AdminCaseStudiesEditorPage() {
+  const ctx = await getAdminRequestContext();
+  const caseStudies = await contentService.listCaseStudiesAdmin(ctx);
+  return <CaseStudiesEditor caseStudies={caseStudies} />;
 }

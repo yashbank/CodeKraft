@@ -40,6 +40,7 @@ const TOOLS = [
  */
 export function RichTextField({
   id,
+  name,
   label,
   required,
   hint,
@@ -49,6 +50,8 @@ export function RichTextField({
   className,
 }: {
   id: string;
+  /** Form field name, read via FormData on submit. */
+  name?: string;
   label: string;
   required?: boolean;
   hint?: string;
@@ -88,6 +91,7 @@ export function RichTextField({
         </div>
         <Textarea
           id={id}
+          name={name}
           rows={rows}
           defaultValue={defaultValue}
           required={required}

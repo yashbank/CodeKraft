@@ -410,8 +410,8 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
       <LandingEditor
         chapters={LANDING_CHAPTERS}
         services={SERVICES}
-        publishedProducts={PRODUCTS.map((p) => p.name)}
-        featured={["FitDesk Pro", "TradeFlow"]}
+        publishedProducts={PRODUCTS.map((p) => ({ id: p.name, name: p.name }))}
+        featuredIds={["FitDesk Pro", "TradeFlow"]}
         canPublish={true}
       />
     );

@@ -726,6 +726,7 @@ export interface StatementHistoryRow {
 
 export interface LandingChapter {
   key: "who" | "build" | "sell" | "proof" | "talk";
+  eyebrow?: string;
   title: string;
   subtitle?: string;
   body: string;

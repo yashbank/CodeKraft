@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,8 +32,10 @@ import { formatDate } from "../format";
 import { Field, RichTextField } from "../RichTextField";
 import type { LegalPage } from "../types";
 import { ContentEditorFrame } from "./ContentEditorFrame";
+import { fromPlainText } from "@/modules/content/render";
+import { publishLegalPageByKey, saveLegalPage } from "@/modules/content/admin-mutations";
 
-/** SCR-ADM-28 — four versioned legal pages: rail, full Tiptap editor, clause checklist and version history (Super Admin only). */
+/** SCR-ADM-28 — four versioned legal pages: rail, plain-text editor, clause checklist and version history (Super Admin only). */
 export function LegalEditor({
   pages,
   isSuperAdmin,
@@ -40,9 +43,12 @@ export function LegalEditor({
   pages: LegalPage[];
   isSuperAdmin: boolean;
 }) {
-  const [active, setActive] = React.useState<LegalPage["key"]>("privacy");
+  const router = useRouter();
+  const [active, setActive] = React.useState<LegalPage["key"]>(pages[0]?.key ?? "privacy");
   const [publishOpen, setPublishOpen] = React.useState(false);
   const [summary, setSummary] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  const formRef = React.useRef<HTMLFormElement>(null);
   const page = pages.find((p) => p.key === active) ?? pages[0];
   if (!page) return null;
   const rail = pages.map((p) => ({
@@ -56,6 +62,38 @@ export function LegalEditor({
     ) : undefined,
   }));
 
+  async function handleSave() {
+    const form = formRef.current;
+    if (!form || !isSuperAdmin || !page) return;
+    const data = new FormData(form);
+    setSaving(true);
+    const result = await saveLegalPage({
+      key: page.key,
+      title: String(data.get("title") ?? "").trim(),
+      bodyJson: fromPlainText(String(data.get("body") ?? "")),
+    });
+    setSaving(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Draft saved");
+    router.refresh();
+  }
+
+  async function handlePublish() {
+    if (!page) return;
+    const result = await publishLegalPageByKey({ key: page.key });
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(`${page.title} v${page.version + 1} published`);
+    setPublishOpen(false);
+    setSummary("");
+    router.refresh();
+  }
+
   return (
     <ContentEditorFrame
       title="Legal pages"
@@ -66,6 +104,7 @@ export function LegalEditor({
       onSelect={(k) => setActive(k as LegalPage["key"])}
       previewHref={`/legal/${page.key}?preview=draft`}
       saveLabel="Save draft"
+      onSave={handleSave}
       headerActions={
         <Button size="sm" onClick={() => setPublishOpen(true)} disabled={!isSuperAdmin}>
           Publish new version
@@ -73,26 +112,7 @@ export function LegalEditor({
       }
       panel={
         <>
-          <section
-            aria-label="Clause checklist"
-            className="rounded-lg border border-border bg-surface p-4"
-          >
-            <h2 className="mb-2 text-h4">Checklist</h2>
-            <ul className="space-y-2">
-              {page.checklist.map((c, i) => (
-                <li key={c.label} className="flex items-start gap-2">
-                  <Checkbox id={`cl-${page.key}-${i}`} defaultChecked={c.done} />
-                  <Label htmlFor={`cl-${page.key}-${i}`} className="leading-snug font-normal">
-                    {c.label}
-                  </Label>
-                </li>
-              ))}
-            </ul>
-          </section>
-          <section
-            aria-label="Version history"
-            className="rounded-lg border border-border bg-surface"
-          >
+          <section aria-label="Version history" className="rounded-lg border border-border bg-surface">
             <h2 className="border-b border-border px-4 py-3 text-h4">Version history</h2>
             <Table>
               <TableCaption className="sr-only">Versions</TableCaption>
@@ -100,31 +120,22 @@ export function LegalEditor({
                 <TableRow>
                   <TableHead>v</TableHead>
                   <TableHead>Published</TableHead>
-                  <TableHead>Summary</TableHead>
-                  <TableHead>
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
+                  <TableHead>By</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {page.history.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-body-sm text-fg-muted">
+                      Not published yet
+                    </TableCell>
+                  </TableRow>
+                ) : null}
                 {page.history.map((h) => (
                   <TableRow key={h.version}>
                     <TableCell className="font-mono">v{h.version}</TableCell>
-                    <TableCell className="text-fg-muted">
-                      {formatDate(h.publishedAt)}
-                      <span className="block text-caption">{h.by}</span>
-                    </TableCell>
-                    <TableCell className="whitespace-normal text-fg-muted">{h.summary}</TableCell>
-                    <TableCell>
-                      <span className="flex flex-col">
-                        <Button variant="link" size="sm">
-                          View
-                        </Button>
-                        <Button variant="link" size="sm" onClick={() => toast("Loaded into draft")}>
-                          Restore as draft
-                        </Button>
-                      </span>
-                    </TableCell>
+                    <TableCell className="text-fg-muted">{formatDate(h.publishedAt)}</TableCell>
+                    <TableCell className="text-fg-muted">{h.by}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -140,9 +151,9 @@ export function LegalEditor({
       ) : null}
       <Banner tone="neutral" className="mb-4">
         No public contact details on the site; the privacy page may reference the inquiry form and
-        dashboard queries only (D-808). Invoice contact numbers are separate (D-406).
+        dashboard queries only (D-808).
       </Banner>
-      <form className="space-y-4" onSubmit={(e) => e.preventDefault()} key={page.key}>
+      <form ref={formRef} className="space-y-4" onSubmit={(e) => e.preventDefault()} key={page.key}>
         <div className="flex items-center gap-2">
           <h2 className="text-h3">{page.title}</h2>
           <Badge tone="success" size="sm">
@@ -155,27 +166,17 @@ export function LegalEditor({
           ) : null}
         </div>
         <Field id="lg-title" label="Title" required>
-          <Input id="lg-title" defaultValue={page.title} />
+          <Input id="lg-title" name="title" defaultValue={page.title} disabled={!isSuperAdmin} />
         </Field>
-        <RichTextField id="lg-body" label="Body" required defaultValue={page.body} rows={14} full />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="lg-effective" label="Effective date">
-            <Input id="lg-effective" type="date" defaultValue={page.effectiveDate} />
-          </Field>
-          <Field
-            id="lg-summary"
-            label="Change summary (internal)"
-            required
-            hint="200 chars · required to publish"
-          >
-            <Input
-              id="lg-summary"
-              maxLength={200}
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-            />
-          </Field>
-        </div>
+        <RichTextField
+          id="lg-body"
+          name="body"
+          label="Body"
+          required
+          defaultValue={page.body}
+          rows={14}
+          full
+        />
       </form>
       <Dialog open={publishOpen} onOpenChange={setPublishOpen}>
         <DialogContent>
@@ -184,27 +185,18 @@ export function LegalEditor({
               Publish {page.title} v{page.version + 1}?
             </DialogTitle>
             <DialogDescription>
-              Customers see the new effective date; checkout consent references the current version.
+              Customers see the new effective date; checkout consent references the current
+              version. Save your draft first — publishing snapshots the currently saved text.
             </DialogDescription>
           </DialogHeader>
-          {summary.trim() === "" ? (
-            <Banner tone="danger" role="alert">
-              Publish is blocked until the change summary is filled.
-            </Banner>
-          ) : null}
+          <Field id="lg-summary" label="Change summary (internal note)" hint="Not stored yet — for your own reference while reviewing.">
+            <Input id="lg-summary" maxLength={200} value={summary} onChange={(e) => setSummary(e.target.value)} />
+          </Field>
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="ghost">Cancel</Button>
             </DialogClose>
-            <Button
-              disabled={summary.trim() === ""}
-              onClick={() => {
-                toast.success(`${page.title} v${page.version + 1} published`);
-                setPublishOpen(false);
-              }}
-            >
-              Publish v{page.version + 1}
-            </Button>
+            <Button onClick={handlePublish}>Publish v{page.version + 1}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
