@@ -9,7 +9,12 @@ export default function Page() {
     <PreviewShell active="/coupons" title="Coupons" summary="6 coupons · 2 active">
       <CouponsList
         coupons={COUPONS}
-        products={["FitDesk Pro", "TradeFlow", "ShopSync", "Brand Kit Templates"]}
+        products={[
+          { id: "p-1", name: "FitDesk Pro" },
+          { id: "p-2", name: "TradeFlow" },
+          { id: "p-3", name: "ShopSync" },
+          { id: "p-4", name: "Brand Kit Templates" },
+        ]}
         ordersHref={href("/orders")}
       />
     </PreviewShell>

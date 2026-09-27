@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { CopyIcon, PlusIcon, TicketPercentIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { STATUS_ENUMS } from "@/lib/status-tone";
+import { deactivateCoupon, upsertCoupon } from "@/modules/coupons/admin-mutations";
 import { DataToolbar } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
 import { FilterChips } from "../FilterChips";
@@ -39,6 +41,11 @@ import { Field } from "../RichTextField";
 import { RowActions } from "../RowActions";
 import type { CouponRow } from "../types";
 
+export interface CouponProductOption {
+  id: string;
+  name: string;
+}
+
 /** SCR-ADM-32 — coupons table with state chips and the editor sheet + live preview line. */
 export function CouponsList({
   coupons,
@@ -46,15 +53,18 @@ export function CouponsList({
   ordersHref,
 }: {
   coupons: CouponRow[];
-  products: string[];
+  products: CouponProductOption[];
   ordersHref: string;
 }) {
+  const router = useRouter();
+  const formRef = React.useRef<HTMLFormElement>(null);
   const [state, setState] = React.useState<CouponRow["state"] | null>(null);
   const [editing, setEditing] = React.useState<CouponRow | "new" | null>(null);
   const [kind, setKind] = React.useState<"percent" | "fixed">("percent");
   const [value, setValue] = React.useState("10");
-  const [endsAt, setEndsAt] = React.useState("2026-10-31");
+  const [endsAt, setEndsAt] = React.useState("");
   const [max, setMax] = React.useState("50");
+  const [submitting, setSubmitting] = React.useState(false);
   const rows = coupons
     .filter((c) => (state ? c.state === state : true))
     .sort((a, b) => (a.state === "active" ? -1 : b.state === "active" ? 1 : 0));
@@ -79,6 +89,65 @@ export function CouponsList({
   };
 
   const preview = `${kind === "percent" ? `${value || 0}% off` : `₹${value || 0} off`} any product${endsAt ? `, until ${formatDate(endsAt)}` : ""}${max ? `, max ${max} uses` : ""}`;
+
+  async function handleDeactivate(c: CouponRow) {
+    const result = await deactivateCoupon({ id: c.id });
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(`${c.code} deactivated — orders already using it are unaffected`);
+    router.refresh();
+  }
+
+  async function handleSave() {
+    if (!formRef.current) return;
+    const fd = new FormData(formRef.current);
+    const code = String(fd.get("code") ?? "")
+      .trim()
+      .toUpperCase();
+    if (code.length < 8) {
+      toast.error("Coupon code must be at least 8 characters.");
+      return;
+    }
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue) || numericValue <= 0) {
+      toast.error("Enter a value greater than 0.");
+      return;
+    }
+    const startsAtRaw = String(fd.get("startsAt") ?? "");
+    const maxRedemptions = max.trim() ? Number(max) : undefined;
+    if (maxRedemptions !== undefined && (!Number.isInteger(maxRedemptions) || maxRedemptions <= 0)) {
+      toast.error("Max redemptions must be a whole number greater than 0.");
+      return;
+    }
+
+    const payload: Record<string, unknown> = {
+      id: editing !== "new" && editing !== null ? editing.id : undefined,
+      code,
+      kind,
+      value: Math.round(numericValue * 100),
+      firstPurchaseOnly: fd.get("firstPurchaseOnly") === "on",
+      active: fd.get("active") === "on",
+      productIds: fd.getAll("productIds").map(String),
+    };
+    if (kind === "fixed") payload.currency = "INR";
+    if (startsAtRaw) payload.startsAt = new Date(startsAtRaw).toISOString();
+    if (endsAt) payload.endsAt = new Date(endsAt).toISOString();
+    if (maxRedemptions !== undefined) payload.maxRedemptions = maxRedemptions;
+
+    setSubmitting(true);
+    const result = await upsertCoupon(payload);
+    setSubmitting(false);
+
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Coupon saved");
+    setEditing(null);
+    router.refresh();
+  }
 
   return (
     <>
@@ -181,13 +250,12 @@ export function CouponsList({
                         label={`Actions for ${c.code}`}
                         actions={[
                           { label: "Edit", onSelect: () => openEditor(c) },
-                          {
-                            label: c.state === "inactive" ? "Activate" : "Deactivate",
-                            onSelect: () =>
-                              toast.success(
-                                `${c.code} ${c.state === "inactive" ? "activated" : "deactivated — orders already using it are unaffected"}`,
-                              ),
-                          },
+                          c.state === "inactive"
+                            ? { label: "Activate", onSelect: () => openEditor(c) }
+                            : {
+                                label: "Deactivate",
+                                onSelect: () => handleDeactivate(c),
+                              },
                           { label: "Duplicate", onSelect: () => openEditor("new") },
                           { label: "View orders", href: ordersHref, separatorBefore: true },
                         ]}
@@ -211,22 +279,43 @@ export function CouponsList({
               Percentage ≤ 100; fixed amounts are in the base currency (INR).
             </SheetDescription>
           </SheetHeader>
-          <form className="space-y-5 px-4" onSubmit={(e) => e.preventDefault()}>
+          <form
+            ref={formRef}
+            className="space-y-5 px-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void handleSave();
+            }}
+          >
             <Field
               id="cp-code"
               label="Code"
               required
-              hint="Uppercase, 4–20 characters; uniqueness is checked on save."
+              hint="Uppercase, 8–20 characters; uniqueness is checked on save."
             >
               <div className="flex gap-2">
                 <Input
                   id="cp-code"
+                  name="code"
                   className="font-mono uppercase"
                   defaultValue={editing && editing !== "new" ? editing.code : ""}
                   required
                   aria-required
+                  minLength={8}
+                  maxLength={40}
                 />
-                <Button type="button" variant="secondary">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    if (formRef.current) {
+                      const input = formRef.current.elements.namedItem("code") as HTMLInputElement | null;
+                      if (input) {
+                        input.value = `CK${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+                      }
+                    }
+                  }}
+                >
                   Generate
                 </Button>
               </div>
@@ -265,15 +354,18 @@ export function CouponsList({
               <Field id="cp-starts" label="Starts at">
                 <Input
                   id="cp-starts"
+                  name="startsAt"
                   type="date"
-                  defaultValue={editing && editing !== "new" ? editing.startsAt : "2026-09-25"}
+                  defaultValue={
+                    editing && editing !== "new" ? editing.startsAt.slice(0, 10) : undefined
+                  }
                 />
               </Field>
               <Field id="cp-ends" label="Ends at" optional>
                 <Input
                   id="cp-ends"
                   type="date"
-                  value={endsAt}
+                  value={endsAt.slice(0, 10)}
                   onChange={(e) => setEndsAt(e.target.value)}
                 />
               </Field>
@@ -290,6 +382,7 @@ export function CouponsList({
             <div className="flex items-center gap-2">
               <Switch
                 id="cp-first"
+                name="firstPurchaseOnly"
                 defaultChecked={editing !== null && editing !== "new" && editing.firstPurchaseOnly}
               />
               <Label htmlFor="cp-first">First purchase only</Label>
@@ -303,23 +396,31 @@ export function CouponsList({
               <div className="flex flex-wrap gap-2">
                 {products.map((p) => (
                   <label
-                    key={p}
+                    key={p.id}
                     className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-body-sm"
                   >
                     <input
                       type="checkbox"
+                      name="productIds"
+                      value={p.id}
                       className="accent-accent"
                       defaultChecked={
-                        editing !== null && editing !== "new" && editing.products.includes(p)
+                        editing !== null &&
+                        editing !== "new" &&
+                        editing.products.includes(p.name)
                       }
                     />{" "}
-                    {p}
+                    {p.name}
                   </label>
                 ))}
               </div>
             </Field>
             <div className="flex items-center gap-2">
-              <Switch id="cp-active" defaultChecked />
+              <Switch
+                id="cp-active"
+                name="active"
+                defaultChecked={editing === "new" || editing === null ? true : editing.state !== "inactive"}
+              />
               <Label htmlFor="cp-active">Active</Label>
             </div>
             <Field id="cp-note" label="Internal note" optional>
@@ -334,16 +435,11 @@ export function CouponsList({
             </p>
           </form>
           <SheetFooter className="flex-row justify-end gap-2">
-            <Button variant="ghost" onClick={() => setEditing(null)}>
+            <Button variant="ghost" onClick={() => setEditing(null)} disabled={submitting}>
               Cancel
             </Button>
-            <Button
-              onClick={() => {
-                toast.success("Coupon saved");
-                setEditing(null);
-              }}
-            >
-              Save coupon
+            <Button onClick={() => void handleSave()} disabled={submitting}>
+              {submitting ? "Saving…" : "Save coupon"}
             </Button>
           </SheetFooter>
         </SheetContent>

@@ -175,7 +175,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
     render(
       <CouponsList
         coupons={COUPONS}
-        products={PRODUCTS.map((p) => p.name)}
+        products={PRODUCTS.map((p) => ({ id: p.id, name: p.name }))}
         ordersHref="/admin/orders"
       />
     );
