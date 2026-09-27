@@ -518,6 +518,7 @@ export async function getReport(
         currency: string;
         credit_minor: string;
         credit_inr_minor: string;
+        amount_refunded_minor: string;
       }>(sql`
         SELECT
           payment_id,
@@ -527,7 +528,8 @@ export async function getReport(
           client_email,
           currency,
           credit_minor,
-          credit_inr_minor
+          credit_inr_minor,
+          amount_refunded_minor
         FROM customer_credits
         ORDER BY credit_inr_minor DESC
       `);
@@ -545,6 +547,11 @@ export async function getReport(
           currency: r.currency,
           creditMinor: Number(r.credit_minor),
           creditInrMinor: credInr,
+          // Not a `columns` entry (not shown in the generic reports table): the admin finance
+          // reports page uses this to derive `CustomerCreditRow.state` ("refunded" once the view's
+          // `amount_refunded_minor` covers the credit, "open" otherwise -- `customer_credits` has
+          // no other state/status column, so "applied" is never derived here).
+          amountRefundedMinor: Number(r.amount_refunded_minor),
         };
       });
 
