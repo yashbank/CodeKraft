@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import {
   ArrowLeftIcon,
@@ -22,6 +23,15 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -53,11 +63,26 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
+import { fromPlainText, toPlainText } from "@/modules/content/render";
+import {
+  createProduct,
+  proposeOwnershipSplit,
+  removeProductFaq,
+  removeProductTestimonial,
+  reorderProductFaqsList,
+  requestProductArchive,
+  requestProductDelete,
+  saveProductFaq,
+  saveProductTestimonial,
+  submitProductForApproval,
+  unpublishProduct,
+  updateProduct,
+} from "@/modules/catalog/admin-mutations";
 import { ApprovalGateNotice, Banner } from "../Banner";
 import { formatDate, formatDateTime, money, percentFromBps } from "../format";
 import { RowActions } from "../RowActions";
 import { Field, RichTextField } from "../RichTextField";
-import type { ProductEditorData, ProductFlag } from "../types";
+import type { CategoryNode, FaqItem, ProductEditorData, ProductFlag, TestimonialItem } from "../types";
 import { SplitEditor, splitSummary, type SplitValue } from "./SplitEditor";
 
 const TABS = [
@@ -92,8 +117,12 @@ const FLAGS: Array<{ key: ProductFlag; label: string; hint: string }> = [
   },
 ];
 
+type LifecycleDialogKind = "unpublish" | "archive" | "delete";
+
 export interface ProductEditorProps {
   product: ProductEditorData;
+  /** Real category tree, for the Basics category picker and its ids. */
+  categories: CategoryNode[];
   approvers: string[];
   listHref: string;
   approvalsHref: string;
@@ -104,12 +133,27 @@ export interface ProductEditorProps {
   isNew?: boolean;
 }
 
+function flattenCategoryOptions(nodes: CategoryNode[]): Array<{ id: string; label: string }> {
+  const out: Array<{ id: string; label: string }> = [];
+  for (const c of nodes) {
+    out.push({ id: c.id, label: c.name });
+    for (const ch of c.children ?? []) out.push({ id: ch.id, label: `${c.name} › ${ch.name}` });
+  }
+  return out;
+}
+
 /**
  * SCR-ADM-04 — the product editor: sticky header with autosave status and approval chip, 220 px
  * vertical tab rail with completeness ticks, and the twelve tab panels.
+ *
+ * Basics / Content / SEO each save independently (their own form + `updateProduct` patch);
+ * FAQs, testimonials and the ownership split each have their own real mutation. Offerings,
+ * delivery config, media upload and the blog body/SEO fields are display-only in this pass —
+ * see the phase report for exactly what's missing and why.
  */
 export function ProductEditor({
   product,
+  categories,
   approvers,
   listHref,
   approvalsHref,
@@ -118,10 +162,28 @@ export function ProductEditor({
   initialTab = "basics",
   isNew = false,
 }: ProductEditorProps) {
+  const router = useRouter();
   const [tab, setTab] = React.useState<TabKey>(initialTab);
+  const productId = product.id;
+  const [expectedUpdatedAt, setExpectedUpdatedAt] = React.useState(product.updatedAt);
   const [flags, setFlags] = React.useState<ReadonlySet<ProductFlag>>(new Set(product.flags));
   const [slug, setSlug] = React.useState(product.slug);
-  const [offeringSheet, setOfferingSheet] = React.useState(false);
+  const [tags, setTags] = React.useState<string[]>(product.tags);
+  const [newTag, setNewTag] = React.useState("");
+  const [techStack, setTechStack] = React.useState<string[]>(product.techStack);
+  const [newTech, setNewTech] = React.useState("");
+  const [features, setFeatures] = React.useState<string[]>(product.features);
+  const [benefits, setBenefits] = React.useState<string[]>(product.benefits);
+  const [faqs, setFaqs] = React.useState<Array<FaqItem & { isNew?: boolean }>>(
+    product.faqs.map((f) => ({ ...f })),
+  );
+  const [testimonials, setTestimonials] = React.useState<
+    Array<TestimonialItem & { isNew?: boolean }>
+  >(product.testimonials.map((t) => ({ ...t })));
+  const [savingTab, setSavingTab] = React.useState<TabKey | null>(null);
+  const [lifecycleDialog, setLifecycleDialog] = React.useState<LifecycleDialogKind | null>(null);
+  const [lifecycleReason, setLifecycleReason] = React.useState("");
+  const [lifecycleBusy, setLifecycleBusy] = React.useState(false);
   const [proposing, setProposing] = React.useState(false);
   const active = product.ownership.find((o) => o.status === "active");
   const pendingOwnership = product.ownership.find((o) => o.status === "pending");
@@ -129,6 +191,7 @@ export function ProductEditor({
     companyCutBps: active?.companyCutBps ?? 10000,
     lines: active?.lines ?? [],
   });
+  const categoryOptions = flattenCategoryOptions(categories);
 
   const complete: Record<TabKey, boolean> = {
     basics: true,
@@ -145,6 +208,338 @@ export function ProductEditor({
     publish: product.status === "published",
   };
 
+  function addTag() {
+    const v = newTag.trim().toLowerCase();
+    if (v && !tags.includes(v)) setTags((l) => [...l, v]);
+    setNewTag("");
+  }
+  function addTech() {
+    const v = newTech.trim();
+    if (v && !techStack.includes(v)) setTechStack((l) => [...l, v]);
+    setNewTech("");
+  }
+
+  async function saveBasics(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    const name = String(data.get("name") ?? "").trim();
+    const shortDescription = String(data.get("shortDescription") ?? "").trim();
+    const categoryId = String(data.get("categoryId") ?? "none");
+    if (!name || !slug || !shortDescription) {
+      toast.error("Name, slug and short description are required.");
+      return;
+    }
+    setSavingTab("basics");
+    if (isNew) {
+      const result = await createProduct({
+        name,
+        slug,
+        shortDescription,
+        categoryId: categoryId === "none" ? undefined : categoryId,
+        tags,
+      });
+      setSavingTab(null);
+      if (!result.ok) {
+        toast.error(result.error.message);
+        return;
+      }
+      toast.success("Product created as a draft — continue editing below.");
+      router.push(`/admin/products/${result.data.productId}`);
+      return;
+    }
+    const result = await updateProduct({
+      productId,
+      expectedUpdatedAt,
+      patch: {
+        name,
+        slug,
+        shortDescription,
+        categoryId: categoryId === "none" ? null : categoryId,
+        tags,
+        isFeatured: flags.has("is_featured"),
+        isUnlisted: flags.has("is_unlisted"),
+        isComingSoon: flags.has("is_coming_soon"),
+        isRefundable: flags.has("is_refundable"),
+        taxEnabled: flags.has("tax_enabled"),
+      },
+    });
+    setSavingTab(null);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    setExpectedUpdatedAt(new Date(result.data.product.updatedAt).toISOString());
+    toast.success("Basics saved");
+    router.refresh();
+  }
+
+  async function saveContent(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (isNew) return;
+    const data = new FormData(e.currentTarget);
+    const description = String(data.get("description") ?? "");
+    const liveDemoUrl = String(data.get("liveDemoUrl") ?? "").trim();
+    setSavingTab("content");
+    const result = await updateProduct({
+      productId,
+      expectedUpdatedAt,
+      patch: {
+        descriptionJson: description.trim().length > 0 ? fromPlainText(description) : null,
+        features: features.map((title) => ({ title })),
+        benefits: benefits.map((title) => ({ title })),
+        techStack,
+        liveDemoUrl: liveDemoUrl.length > 0 ? liveDemoUrl : null,
+      },
+    });
+    setSavingTab(null);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    setExpectedUpdatedAt(new Date(result.data.product.updatedAt).toISOString());
+    toast.success("Content saved");
+    router.refresh();
+  }
+
+  async function saveSeo(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (isNew) return;
+    const data = new FormData(e.currentTarget);
+    const seoTitle = String(data.get("seoTitle") ?? "").trim();
+    const seoDescription = String(data.get("seoDescription") ?? "").trim();
+    const canonicalUrl = String(data.get("canonicalUrl") ?? "").trim();
+    const ogImageMediaId = String(data.get("ogImageMediaId") ?? "none");
+    setSavingTab("seo");
+    const result = await updateProduct({
+      productId,
+      expectedUpdatedAt,
+      patch: {
+        seoTitle: seoTitle.length > 0 ? seoTitle : null,
+        seoDescription: seoDescription.length > 0 ? seoDescription : null,
+        canonicalUrl: canonicalUrl.length > 0 ? canonicalUrl : null,
+        ogImageMediaId: ogImageMediaId === "none" ? null : ogImageMediaId,
+      },
+    });
+    setSavingTab(null);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    setExpectedUpdatedAt(new Date(result.data.product.updatedAt).toISOString());
+    toast.success("SEO saved");
+    router.refresh();
+  }
+
+  async function confirmLifecycle() {
+    if (!lifecycleDialog) return;
+    if (lifecycleReason.trim().length === 0) {
+      toast.error("A reason is required.");
+      return;
+    }
+    setLifecycleBusy(true);
+    const result =
+      lifecycleDialog === "unpublish"
+        ? await unpublishProduct({ productId, reason: lifecycleReason.trim() })
+        : lifecycleDialog === "archive"
+          ? await requestProductArchive({ productId, reason: lifecycleReason.trim() })
+          : await requestProductDelete({ productId, reason: lifecycleReason.trim() });
+    setLifecycleBusy(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(
+      lifecycleDialog === "unpublish"
+        ? "Unpublished"
+        : `Approval requested — waiting for ${approvers[0] ?? "another admin"}`,
+    );
+    setLifecycleDialog(null);
+    setLifecycleReason("");
+    router.refresh();
+  }
+
+  async function submitForApproval(publishAt: string) {
+    const result = await submitProductForApproval({
+      productId,
+      publishAt: publishAt.length > 0 ? new Date(publishAt).toISOString() : undefined,
+    });
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(`Submitted for approval — waiting for ${approvers[0] ?? "another admin"}`);
+    router.refresh();
+  }
+
+  async function submitOwnershipProposal(effectiveFrom: string) {
+    if (split.companyCutBps + split.lines.reduce((s, l) => s + l.bps, 0) !== 10000) return;
+    const result = await proposeOwnershipSplit({
+      productId,
+      companyCutBps: split.companyCutBps,
+      lines: split.lines
+        .filter((l) => l.partnerId)
+        .map((l) => ({ partnerId: l.partnerId, shareBps: l.bps })),
+      effectiveFrom: effectiveFrom ? new Date(effectiveFrom).toISOString() : undefined,
+    });
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(`Approval requested — waiting for ${approvers[0] ?? "another admin"}`);
+    setProposing(false);
+    router.refresh();
+  }
+
+
+  function addFaq() {
+    setFaqs((l) => [
+      ...l,
+      { id: `new-${Date.now()}`, question: "", answer: "", scope: "product", published: true, isNew: true },
+    ]);
+  }
+  function updateFaq(id: string, patch: Partial<FaqItem>) {
+    setFaqs((l) => l.map((f) => (f.id === id ? { ...f, ...patch } : f)));
+  }
+  async function saveFaqAt(index: number) {
+    const item = faqs[index];
+    if (!item) return;
+    if (item.question.trim().length === 0 || item.answer.trim().length === 0) {
+      toast.error("Question and answer are required.");
+      return;
+    }
+    const result = await saveProductFaq({
+      productId,
+      faqId: item.isNew ? undefined : item.id,
+      question: item.question.trim(),
+      answerJson: fromPlainText(item.answer),
+      position: index,
+    });
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    setFaqs(
+      result.data.faqs.map((f) => ({
+        id: f.id,
+        question: f.question,
+        answer: toPlainText(f.answer as never),
+        scope: "product",
+        published: true,
+      })),
+    );
+    toast.success("FAQ saved");
+    router.refresh();
+  }
+  async function deleteFaqAt(index: number) {
+    const item = faqs[index];
+    if (!item) return;
+    if (item.isNew) {
+      setFaqs((l) => l.filter((_, i) => i !== index));
+      return;
+    }
+    const result = await removeProductFaq({ productId, faqId: item.id });
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    setFaqs(
+      result.data.faqs.map((f) => ({
+        id: f.id,
+        question: f.question,
+        answer: toPlainText(f.answer as never),
+        scope: "product",
+        published: true,
+      })),
+    );
+    toast.success("FAQ deleted");
+    router.refresh();
+  }
+  async function moveFaq(index: number, dir: -1 | 1) {
+    const target = index + dir;
+    if (target < 0 || target >= faqs.length) return;
+    if (faqs[index]?.isNew || faqs[target]?.isNew) {
+      toast.error("Save the new FAQ before reordering.");
+      return;
+    }
+    const next = [...faqs];
+    const [moved] = next.splice(index, 1);
+    if (!moved) return;
+    next.splice(target, 0, moved);
+    const result = await reorderProductFaqsList({ productId, faqIds: next.map((f) => f.id) });
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    setFaqs(next);
+    router.refresh();
+  }
+
+  function addTestimonial() {
+    setTestimonials((l) => [
+      ...l,
+      {
+        id: `new-${Date.now()}`,
+        quote: "",
+        author: "",
+        title: undefined,
+        company: undefined,
+        context: "product",
+        published: false,
+        isNew: true,
+      },
+    ]);
+  }
+  function updateTestimonial(id: string, patch: Partial<TestimonialItem>) {
+    setTestimonials((l) => l.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  }
+  async function saveTestimonialAt(index: number) {
+    const item = testimonials[index];
+    if (!item) return;
+    if (item.author.trim().length === 0 || item.quote.trim().length === 0) {
+      toast.error("Author and quote are required.");
+      return;
+    }
+    const result = await saveProductTestimonial({
+      productId,
+      id: item.isNew ? undefined : item.id,
+      authorName: item.author.trim(),
+      authorTitle: item.title?.trim() || undefined,
+      company: item.company?.trim() || undefined,
+      quote: item.quote.trim(),
+      position: index,
+      published: item.published,
+    });
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    // `upsertProductTestimonial` returns the base `ProductTestimonialView[]` (no `published`,
+    // that's only on `ProductAdminGraph.testimonials`), so the saved list can't be trusted for
+    // publish state — keep this row's local fields, just adopt the server id / drop `isNew`.
+    const saved = result.data.testimonials[index];
+    setTestimonials((l) =>
+      l.map((t, j) => (j === index ? { ...t, id: saved?.id ?? t.id, isNew: undefined } : t)),
+    );
+    toast.success("Testimonial saved");
+    router.refresh();
+  }
+  async function deleteTestimonialAt(index: number) {
+    const item = testimonials[index];
+    if (!item) return;
+    if (item.isNew) {
+      setTestimonials((l) => l.filter((_, i) => i !== index));
+      return;
+    }
+    const result = await removeProductTestimonial({ productId, id: item.id });
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    setTestimonials((l) => l.filter((_, i) => i !== index));
+    toast.success("Testimonial deleted");
+    router.refresh();
+  }
+
   return (
     <div className="-mx-4 -mt-6 lg:-mx-6">
       <header className="sticky top-[calc(var(--admin-top)+3.5rem)] z-(--ck-z-sticky) flex flex-wrap items-center gap-3 border-b border-border bg-canvas px-4 py-3 lg:px-6">
@@ -154,31 +549,59 @@ export function ProductEditor({
           </Link>
         </Button>
         <h1 className="text-h3">{isNew ? "New product" : product.name}</h1>
-        <StatusBadge kind="products.status" value={product.status} />
+        {!isNew ? <StatusBadge kind="products.status" value={product.status} /> : null}
         {product.approval && product.approval.status === "pending" ? (
           <Link href={approvalsHref}>
             <StatusBadge kind="approval_requests.status" value="pending" size="sm" />
           </Link>
         ) : null}
-        <span className="text-caption text-fg-muted" aria-live="polite">
-          Saved {product.savedAgoSeconds} s ago
-        </span>
+        {!isNew ? (
+          <span className="text-caption text-fg-muted" aria-live="polite">
+            Saved {product.savedAgoSeconds} s ago
+          </span>
+        ) : null}
         <span className="ml-auto flex items-center gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" disabled title="Signed preview links aren't wired yet">
             <ExternalLinkIcon aria-hidden /> Preview
           </Button>
-          <Button size="sm" onClick={() => setTab("publish")}>
-            {product.status === "published" ? "Schedule update" : "Submit for approval"}
-          </Button>
-          <RowActions
-            label="More product actions"
-            actions={[
-              { label: "Unpublish", disabled: product.status !== "published" },
-              { label: "Request archive" },
-              { label: "Request delete", destructive: true },
-              { label: "Duplicate as draft", separatorBefore: true },
-            ]}
-          />
+          {!isNew ? (
+            <Button size="sm" onClick={() => setTab("publish")}>
+              {product.status === "published" ? "Schedule update" : "Submit for approval"}
+            </Button>
+          ) : null}
+          {!isNew ? (
+            <RowActions
+              label="More product actions"
+              actions={[
+                {
+                  label: "Unpublish",
+                  disabled: product.status !== "published",
+                  onSelect: () => {
+                    setLifecycleReason("");
+                    setLifecycleDialog("unpublish");
+                  },
+                },
+                {
+                  label: "Request archive",
+                  disabled: product.status === "archived",
+                  onSelect: () => {
+                    setLifecycleReason("");
+                    setLifecycleDialog("archive");
+                  },
+                },
+                {
+                  label: "Request delete",
+                  destructive: true,
+                  disabled: product.orderCount > 0,
+                  onSelect: () => {
+                    setLifecycleReason("");
+                    setLifecycleDialog("delete");
+                  },
+                },
+                { label: "Duplicate as draft", separatorBefore: true, disabled: true },
+              ]}
+            />
+          ) : null}
         </span>
       </header>
 
@@ -222,164 +645,232 @@ export function ProductEditor({
           ) : null}
 
           <TabsContent value="basics" className="space-y-5">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="p-name" label="Name" required>
-                <Input id="p-name" defaultValue={product.name} required aria-required />
-              </Field>
-              <Field
-                id="p-slug"
-                label="Slug"
-                required
-                hint={
-                  product.status === "published" && slug !== product.slug
-                    ? "The old slug will redirect (301)."
-                    : "Auto-generated from the name; editable."
-                }
-              >
-                <Input
+            <form onSubmit={saveBasics} className="space-y-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field id="p-name" label="Name" required>
+                  <Input id="p-name" name="name" defaultValue={product.name} required aria-required />
+                </Field>
+                <Field
                   id="p-slug"
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  className="font-mono"
-                />
-              </Field>
-            </div>
-            <Field
-              id="p-short"
-              label="Short description"
-              required
-              hint={`${product.shortDescription.length}/160`}
-            >
-              <Textarea
-                id="p-short"
-                defaultValue={product.shortDescription}
-                maxLength={160}
-                rows={2}
-              />
-            </Field>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="p-category" label="Category">
-                <Select defaultValue={product.category}>
-                  <SelectTrigger id="p-category">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={product.category}>{product.category}</SelectItem>
-                    <SelectItem value="SaaS › Finance">SaaS › Finance</SelectItem>
-                    <SelectItem value="Downloads › Finance">Downloads › Finance</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field id="p-tags" label="Tags" hint="Enter to add, Backspace to remove.">
-                <div className="flex min-h-10 flex-wrap items-center gap-1.5 rounded-md border border-border-strong bg-surface px-2 py-1">
-                  {product.tags.map((t) => (
-                    <Badge key={t} tone="neutral">
-                      {t}
-                    </Badge>
-                  ))}
-                  <Input id="p-tags" placeholder="Add tag" className="h-7 w-32 border-0 px-1" />
-                </div>
-              </Field>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="p-status" label="Status">
-                <Input id="p-status" readOnly value={product.status} />
-              </Field>
-              <Field id="p-version" label="Current version">
-                <Input
-                  id="p-version"
-                  readOnly
-                  value={product.currentVersion}
-                  className="font-mono"
-                />
-              </Field>
-            </div>
-            <fieldset className="space-y-3">
-              <legend className="text-body-sm font-semibold">Flags</legend>
-              {FLAGS.map((f) => (
-                <div key={f.key} className="flex items-start gap-3">
-                  <Switch
-                    id={`flag-${f.key}`}
-                    checked={flags.has(f.key)}
-                    onCheckedChange={(v) =>
-                      setFlags((prev) => {
-                        const n = new Set(prev);
-                        if (v) n.add(f.key);
-                        else n.delete(f.key);
-                        return n;
-                      })
-                    }
+                  label="Slug"
+                  required
+                  hint={
+                    product.status === "published" && slug !== product.slug
+                      ? "The old slug will redirect (301)."
+                      : "Auto-generated from the name; editable."
+                  }
+                >
+                  <Input
+                    id="p-slug"
+                    name="slug"
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value)}
+                    className="font-mono"
                   />
-                  <div>
-                    <Label htmlFor={`flag-${f.key}`}>{f.label}</Label>
-                    <p className="text-caption text-fg-muted">{f.hint}</p>
+                </Field>
+              </div>
+              <Field
+                id="p-short"
+                label="Short description"
+                required
+                hint={`${product.shortDescription.length}/160`}
+              >
+                <Textarea
+                  id="p-short"
+                  name="shortDescription"
+                  defaultValue={product.shortDescription}
+                  maxLength={160}
+                  rows={2}
+                />
+              </Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field id="p-category" label="Category">
+                  <Select name="categoryId" defaultValue={product.categoryId ?? "none"}>
+                    <SelectTrigger id="p-category">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Uncategorized</SelectItem>
+                      {categoryOptions.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field id="p-tags" label="Tags" hint="Enter to add, click × to remove.">
+                  <div className="flex min-h-10 flex-wrap items-center gap-1.5 rounded-md border border-border-strong bg-surface px-2 py-1">
+                    {tags.map((t) => (
+                      <Badge key={t} tone="neutral" className="gap-1 pr-1">
+                        {t}
+                        <button
+                          type="button"
+                          aria-label={`Remove tag ${t}`}
+                          onClick={() => setTags((l) => l.filter((x) => x !== t))}
+                          className="grid size-4 place-items-center rounded-full hover:bg-danger-soft hover:text-danger"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    ))}
+                    <Input
+                      id="p-tags"
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addTag();
+                        }
+                      }}
+                      placeholder="Add tag"
+                      className="h-7 w-32 border-0 px-1"
+                    />
                   </div>
+                </Field>
+              </div>
+              {!isNew ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field id="p-status" label="Status">
+                    <Input id="p-status" readOnly value={product.status} />
+                  </Field>
+                  <Field id="p-version" label="Current version">
+                    <Input
+                      id="p-version"
+                      readOnly
+                      value={product.currentVersion}
+                      className="font-mono"
+                    />
+                  </Field>
                 </div>
-              ))}
-            </fieldset>
+              ) : null}
+              <fieldset className="space-y-3" disabled={isNew}>
+                <legend className="text-body-sm font-semibold">
+                  Flags{isNew ? " (set after creating the product)" : ""}
+                </legend>
+                {FLAGS.map((f) => (
+                  <div key={f.key} className="flex items-start gap-3">
+                    <Switch
+                      id={`flag-${f.key}`}
+                      checked={flags.has(f.key)}
+                      onCheckedChange={(v) =>
+                        setFlags((prev) => {
+                          const n = new Set(prev);
+                          if (v) n.add(f.key);
+                          else n.delete(f.key);
+                          return n;
+                        })
+                      }
+                    />
+                    <div>
+                      <Label htmlFor={`flag-${f.key}`}>{f.label}</Label>
+                      <p className="text-caption text-fg-muted">{f.hint}</p>
+                    </div>
+                  </div>
+                ))}
+              </fieldset>
+              <Button type="submit" disabled={savingTab === "basics"}>
+                {isNew ? "Create product" : "Save changes"}
+              </Button>
+            </form>
           </TabsContent>
 
           <TabsContent value="content" className="space-y-5">
-            <RichTextField
-              id="p-desc"
-              label="Rich description"
-              required
-              defaultValue={product.description}
-              rows={6}
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              {(["Features", "Benefits", "Target audience", "Use cases"] as const).map((list) => (
-                <ListEditor
-                  key={list}
-                  id={`p-list-${list}`}
-                  label={list}
-                  items={
-                    list === "Features"
-                      ? product.features
-                      : list === "Benefits"
-                        ? product.benefits
-                        : []
-                  }
-                />
-              ))}
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="p-industry" label="Industry">
-                <Input id="p-industry" placeholder="Add industries" />
+            <form onSubmit={saveContent} className="space-y-5">
+              <RichTextField
+                id="p-desc"
+                name="description"
+                label="Rich description"
+                required
+                defaultValue={product.description}
+                rows={6}
+              />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <ListEditor id="p-list-Features" label="Features" items={features} onChange={setFeatures} />
+                <ListEditor id="p-list-Benefits" label="Benefits" items={benefits} onChange={setBenefits} />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field
+                  id="p-industry"
+                  label="Industry"
+                  optional
+                  hint="Not wired yet — the editor's data shape has no industry field."
+                >
+                  <Input id="p-industry" placeholder="Add industries" disabled />
+                </Field>
+                <Field id="p-tech" label="Tech stack" hint="Enter to add, click × to remove.">
+                  <div className="flex min-h-10 flex-wrap items-center gap-1.5 rounded-md border border-border-strong bg-surface px-2 py-1">
+                    {techStack.map((t) => (
+                      <Badge key={t} tone="accent" className="gap-1 pr-1">
+                        {t}
+                        <button
+                          type="button"
+                          aria-label={`Remove ${t}`}
+                          onClick={() => setTechStack((l) => l.filter((x) => x !== t))}
+                          className="grid size-4 place-items-center rounded-full hover:bg-danger-soft"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    ))}
+                    <Input
+                      id="p-tech"
+                      value={newTech}
+                      onChange={(e) => setNewTech(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addTech();
+                        }
+                      }}
+                      placeholder="Add"
+                      className="h-7 w-24 border-0 px-1"
+                    />
+                  </div>
+                </Field>
+              </div>
+              <Field
+                id="p-req"
+                label="Requirements"
+                optional
+                hint="Not wired yet — the editor's data shape has no requirements field."
+              >
+                <Textarea id="p-req" rows={3} disabled />
               </Field>
-              <Field id="p-tech" label="Tech stack">
-                <div className="flex min-h-10 flex-wrap items-center gap-1.5 rounded-md border border-border-strong bg-surface px-2 py-1">
-                  {product.techStack.map((t) => (
-                    <Badge key={t} tone="accent">
-                      {t}
-                    </Badge>
-                  ))}
-                  <Input id="p-tech" placeholder="Add" className="h-7 w-24 border-0 px-1" />
-                </div>
+              <Field
+                id="p-demo"
+                label="Live demo URL"
+                optional
+                hint={
+                  flags.has("is_unlisted")
+                    ? undefined
+                    : "Shown as “Try the demo” on the product page (D-805)."
+                }
+              >
+                <Input id="p-demo" name="liveDemoUrl" type="url" defaultValue={product.liveDemoUrl} />
               </Field>
-            </div>
-            <RichTextField id="p-req" label="Requirements" rows={3} />
-            <Field
-              id="p-demo"
-              label="Live demo URL"
-              optional
-              hint={
-                flags.has("is_unlisted")
-                  ? undefined
-                  : "Shown as “Try the demo” on the product page (D-805)."
-              }
-            >
-              <Input id="p-demo" type="url" defaultValue={product.liveDemoUrl} />
-            </Field>
-            {flags.has("is_unlisted") ? (
-              <Banner tone="warning">
-                A live-demo URL of an unlisted product is public once known.
-              </Banner>
-            ) : null}
+              {flags.has("is_unlisted") ? (
+                <Banner tone="warning">
+                  A live-demo URL of an unlisted product is public once known.
+                </Banner>
+              ) : null}
+              <Button type="submit" disabled={savingTab === "content"}>
+                Save content
+              </Button>
+            </form>
           </TabsContent>
 
           <TabsContent value="media" className="space-y-5">
-            <div className="rounded-lg border-2 border-dashed border-border-strong p-8 text-center">
+            <Banner tone="neutral">
+              Media upload and attach/detach aren't wired in this pass — there's no "browse
+              existing media" picker in this editor yet, so new uploads would have nowhere to
+              land. This tab shows the product's current media read-only.
+            </Banner>
+            <div
+              className="rounded-lg border-2 border-dashed border-border-strong p-8 text-center opacity-60"
+              aria-disabled
+            >
               <UploadIcon aria-hidden className="mx-auto size-8 text-fg-subtle" />
               <p className="mt-2 text-body">
                 Drop images, screenshots, video (≤ 200 MB), presentation PDF or attachments
@@ -387,7 +878,13 @@ export function ProductEditor({
               <p className="text-caption text-fg-muted">
                 Alt text is required for every image. Uploads use presigned PUT with progress.
               </p>
-              <Button variant="secondary" size="sm" className="mt-3">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="mt-3"
+                disabled
+                title="Media upload isn't wired in this pass"
+              >
                 Choose files
               </Button>
             </div>
@@ -404,18 +901,11 @@ export function ProductEditor({
               />
             </div>
             <ul className="space-y-2">
-              {product.media.map((m, i) => (
+              {product.media.map((m) => (
                 <li
                   key={m.id}
                   className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-surface p-3"
                 >
-                  <button
-                    type="button"
-                    aria-label={`Reorder ${m.fileName}`}
-                    className="cursor-grab text-fg-subtle"
-                  >
-                    <GripVerticalIcon aria-hidden className="size-4" />
-                  </button>
                   <span
                     aria-hidden
                     className="grid size-12 place-items-center rounded-sm bg-elevated text-caption text-fg-subtle"
@@ -424,92 +914,31 @@ export function ProductEditor({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-mono text-body-sm">{m.fileName}</span>
-                    <span className="block text-caption text-fg-muted">
-                      {m.sizeKb > 0 ? `${m.sizeKb} KB` : "embed"}
-                    </span>
+                    <span className="block text-caption text-fg-muted">{m.kind}</span>
                   </span>
-                  <div className="w-40 space-y-1">
-                    <Label htmlFor={`media-kind-${m.id}`} className="text-caption text-fg-muted">
-                      Kind
-                    </Label>
-                    <Select defaultValue={m.kind}>
-                      <SelectTrigger id={`media-kind-${m.id}`} size="sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[
-                          "image",
-                          "screenshot",
-                          "gallery",
-                          "video_embed",
-                          "video_file",
-                          "presentation",
-                          "attachment",
-                          "og",
-                        ].map((k) => (
-                          <SelectItem key={k} value={k}>
-                            {k.replace("_", " ")}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {m.kind === "image" || m.kind === "screenshot" ? (
-                    <div className="w-64 space-y-1">
-                      <Label
-                        htmlFor={`media-alt-${m.id}`}
-                        className="text-caption text-fg-muted"
-                        required
-                      >
-                        Alt text
-                      </Label>
-                      <Input
-                        id={`media-alt-${m.id}`}
-                        defaultValue={m.alt}
-                        className="h-8"
-                        required
-                        aria-required
-                      />
-                    </div>
+                  {m.alt ? (
+                    <span className="w-64 truncate text-caption text-fg-muted">Alt: {m.alt}</span>
                   ) : null}
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={`Move ${m.fileName} up`}
-                      disabled={i === 0}
-                    >
-                      ↑
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={`Move ${m.fileName} down`}
-                      disabled={i === product.media.length - 1}
-                    >
-                      ↓
-                    </Button>
-                  </div>
                 </li>
               ))}
+              {product.media.length === 0 ? (
+                <li className="text-body-sm text-fg-muted">No media yet.</li>
+              ) : null}
             </ul>
-            <Field
-              id="p-video-url"
-              label="Video embed URL"
-              optional
-              hint="YouTube or Vimeo (D-309)."
-            >
-              <Input id="p-video-url" type="url" placeholder="https://youtube.com/watch?v=…" />
-            </Field>
           </TabsContent>
 
           <TabsContent value="offerings" className="space-y-4">
+            <Banner tone="neutral">
+              Offering create/edit isn't wired in this pass (prices per currency, payment
+              methods and delivery config are a distinct sub-feature — the backend actions
+              exist in <code>modules/offerings</code> but this tab is read-only here).
+            </Banner>
             <div className="flex items-center justify-between">
               <p className="text-body-sm text-fg-muted">
                 “Offering”, never “plan” or “tier”. Prices are stored in minor units per enabled
                 currency.
               </p>
-              <Button size="sm" onClick={() => setOfferingSheet(true)}>
+              <Button size="sm" disabled title="Not wired in this pass">
                 <PlusIcon aria-hidden /> Add offering
               </Button>
             </div>
@@ -524,9 +953,6 @@ export function ProductEditor({
                     <TableHead>Methods</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Default</TableHead>
-                    <TableHead className="w-12">
-                      <span className="sr-only">Actions</span>
-                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -566,17 +992,6 @@ export function ProductEditor({
                         <StatusBadge kind="offerings.status" value={o.status} size="sm" />
                       </TableCell>
                       <TableCell>{o.isDefault ? "★ Default" : ""}</TableCell>
-                      <TableCell>
-                        <RowActions
-                          label={`Actions for ${o.name}`}
-                          actions={[
-                            { label: "Edit", onSelect: () => setOfferingSheet(true) },
-                            { label: "Set as default" },
-                            { label: "Deactivate" },
-                            { label: "Delete", destructive: true, disabled: true },
-                          ]}
-                        />
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -588,6 +1003,9 @@ export function ProductEditor({
           </TabsContent>
 
           <TabsContent value="delivery" className="space-y-4">
+            <Banner tone="neutral">
+              Delivery config isn't wired in this pass — shown read-only per offering.
+            </Banner>
             <Accordion type="multiple" defaultValue={[product.offerings[0]?.id ?? ""]}>
               {product.offerings.map((o) => (
                 <AccordionItem key={o.id} value={o.id}>
@@ -602,92 +1020,12 @@ export function ProductEditor({
                     </span>
                   </AccordionTrigger>
                   <AccordionContent className="grid gap-4 sm:grid-cols-2">
-                    <Field id={`dl-type-${o.id}`} label="Delivery type" required>
-                      <Select defaultValue={o.deliveryType}>
-                        <SelectTrigger id={`dl-type-${o.id}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {["saas", "hosted", "download", "license", "service", "custom"].map(
-                            (t) => (
-                              <SelectItem key={t} value={t}>
-                                {t}
-                              </SelectItem>
-                            ),
-                          )}
-                        </SelectContent>
-                      </Select>
+                    <Field id={`dl-type-${o.id}`} label="Delivery type">
+                      <Input id={`dl-type-${o.id}`} readOnly value={o.deliveryType} />
                     </Field>
-                    <Field id={`dl-prov-${o.id}`} label="Provisioning">
-                      <Select defaultValue="manual">
-                        <SelectTrigger id={`dl-prov-${o.id}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="manual">Manual</SelectItem>
-                          <SelectItem value="automated" disabled>
-                            Automated (V2)
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <Field id={`dl-model-${o.id}`} label="Purchase model">
+                      <Input id={`dl-model-${o.id}`} readOnly value={o.purchaseModel} />
                     </Field>
-                    <Field id={`dl-access-${o.id}`} label="Access period">
-                      <Select defaultValue={o.purchaseModel === "subscription" ? "12" : "lifetime"}>
-                        <SelectTrigger id={`dl-access-${o.id}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="lifetime">Lifetime</SelectItem>
-                          <SelectItem value="12">12 months</SelectItem>
-                          <SelectItem value="1">1 month</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                    <Field id={`dl-update-${o.id}`} label="Update policy">
-                      <Select defaultValue="all_free">
-                        <SelectTrigger id={`dl-update-${o.id}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all_free">All updates</SelectItem>
-                          <SelectItem value="during_access">Updates during access</SelectItem>
-                          <SelectItem value="major_paid">Major versions paid</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                    {o.deliveryType === "download" ? (
-                      <Field id={`dl-cap-${o.id}`} label="Download cap per purchase">
-                        <Input
-                          id={`dl-cap-${o.id}`}
-                          inputMode="numeric"
-                          defaultValue="5"
-                          className="w-24 font-mono"
-                        />
-                      </Field>
-                    ) : null}
-                    {o.deliveryType === "service" ? (
-                      <div className="sm:col-span-2">
-                        <ListEditor
-                          id={`dl-steps-${o.id}`}
-                          label="Service checklist steps"
-                          items={[
-                            "Kick-off call",
-                            "SSO configured",
-                            "Data imported",
-                            "Training session",
-                            "Handover",
-                          ]}
-                        />
-                      </div>
-                    ) : null}
-                    <div className="sm:col-span-2">
-                      <RichTextField
-                        id={`dl-post-${o.id}`}
-                        label="Post-purchase instructions"
-                        rows={3}
-                        hint="Shown in the customer dashboard after payment (A-601)."
-                      />
-                    </div>
                   </AccordionContent>
                 </AccordionItem>
               ))}
@@ -760,50 +1098,26 @@ export function ProductEditor({
                 </TableBody>
               </Table>
             </div>
+            {product.partners.length === 0 ? (
+              <p className="text-caption text-fg-muted">
+                No partners to propose a split with — this admin account can't list partners
+                (needs finance or user-management access), or none exist yet.
+              </p>
+            ) : null}
             {proposing ? (
-              <form
-                className="space-y-4 rounded-lg border border-accent bg-surface p-4"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  toast.success(`Approval requested — waiting for ${approvers[0]}`);
-                  setProposing(false);
-                }}
-              >
-                <h2 className="text-h4">Propose new split</h2>
-                <SplitEditor
-                  idPrefix="own"
-                  value={split}
-                  onChange={setSplit}
-                  partners={product.partners}
-                />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field id="own-effective" label="Effective date" required>
-                    <Input id="own-effective" type="date" defaultValue="2026-10-01" />
-                  </Field>
-                  <Field id="own-comment" label="Comment to approver" required>
-                    <Input id="own-comment" required aria-required />
-                  </Field>
-                </div>
-                <ApprovalGateNotice approvers={approvers} what="Changing ownership" />
-                <div className="flex gap-2">
-                  <Button
-                    type="submit"
-                    disabled={
-                      split.companyCutBps + split.lines.reduce((s, l) => s + l.bps, 0) !== 10000
-                    }
-                  >
-                    Request approval
-                  </Button>
-                  <Button type="button" variant="ghost" onClick={() => setProposing(false)}>
-                    Cancel
-                  </Button>
-                </div>
-              </form>
+              <ProposeSplitForm
+                split={split}
+                onChange={setSplit}
+                partners={product.partners}
+                approvers={approvers}
+                onCancel={() => setProposing(false)}
+                onSubmit={submitOwnershipProposal}
+              />
             ) : (
               <Button
                 variant="secondary"
                 onClick={() => setProposing(true)}
-                disabled={Boolean(pendingOwnership)}
+                disabled={Boolean(pendingOwnership) || product.partners.length === 0}
               >
                 Propose new split
               </Button>
@@ -811,89 +1125,83 @@ export function ProductEditor({
           </TabsContent>
 
           <TabsContent value="seo" className="space-y-5">
-            <Field id="seo-title" label="SEO title" hint={`${product.seo.title.length}/60`}>
-              <Input id="seo-title" defaultValue={product.seo.title} maxLength={60} />
-            </Field>
-            <Field
-              id="seo-desc"
-              label="Meta description"
-              hint={`${product.seo.description.length}/160`}
-            >
-              <Textarea
+            <form onSubmit={saveSeo} className="space-y-5">
+              <Field id="seo-title" label="SEO title" hint={`${product.seo.title.length}/60`}>
+                <Input id="seo-title" name="seoTitle" defaultValue={product.seo.title} maxLength={60} />
+              </Field>
+              <Field
                 id="seo-desc"
-                defaultValue={product.seo.description}
-                maxLength={160}
-                rows={2}
-              />
-            </Field>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="seo-canonical" label="Canonical URL" optional>
-                <Input id="seo-canonical" type="url" defaultValue={product.seo.canonical} />
+                label="Meta description"
+                hint={`${product.seo.description.length}/160`}
+              >
+                <Textarea
+                  id="seo-desc"
+                  name="seoDescription"
+                  defaultValue={product.seo.description}
+                  maxLength={160}
+                  rows={2}
+                />
               </Field>
-              <Field id="seo-og" label="OG image override" optional>
-                <Select>
-                  <SelectTrigger id="seo-og">
-                    <SelectValue placeholder="Use cover image" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {product.media
-                      .filter((m) => m.kind === "image" || m.kind === "screenshot")
-                      .map((m) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.fileName}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox id="seo-noindex" checked={flags.has("is_unlisted")} disabled />
-              <Label htmlFor="seo-noindex">noindex (automatic for unlisted products)</Label>
-            </div>
-            <div className="space-y-1">
-              <p className="text-body-sm font-semibold">JSON-LD preview</p>
-              <pre className="overflow-auto rounded-md bg-canvas p-3 font-mono text-caption text-fg-muted">{`{ "@type": "Product", "name": "${product.name}", "offers": { "@type": "Offer", "priceCurrency": "INR", "price": "999.00" } }`}</pre>
-            </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field id="seo-canonical" label="Canonical URL" optional>
+                  <Input id="seo-canonical" name="canonicalUrl" type="url" defaultValue={product.seo.canonical} />
+                </Field>
+                <Field id="seo-og" label="OG image override" optional>
+                  <Select name="ogImageMediaId" defaultValue="none">
+                    <SelectTrigger id="seo-og">
+                      <SelectValue placeholder="Use cover image" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Use cover image</SelectItem>
+                      {product.media
+                        .filter((m) => m.kind === "image" || m.kind === "screenshot")
+                        .map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.fileName}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox id="seo-noindex" checked={flags.has("is_unlisted")} disabled />
+                <Label htmlFor="seo-noindex">noindex (automatic for unlisted products)</Label>
+              </div>
+              <div className="space-y-1">
+                <p className="text-body-sm font-semibold">JSON-LD preview</p>
+                <pre className="overflow-auto rounded-md bg-canvas p-3 font-mono text-caption text-fg-muted">{`{ "@type": "Product", "name": "${product.name}" }`}</pre>
+              </div>
+              <Button type="submit" disabled={savingTab === "seo"}>
+                Save SEO
+              </Button>
+            </form>
           </TabsContent>
 
           <TabsContent value="blog" className="space-y-5">
+            <Banner tone="neutral">
+              The blog body and its own SEO fields aren't wired in this pass — the editor's data
+              shape only carries title/slug/excerpt/status, while <code>upsertProductBlog</code>
+              also needs a body and accepts optional SEO overrides. Showing current values
+              read-only.
+            </Banner>
             <div className="flex items-center gap-2">
               <StatusBadge kind="product_blogs.status" value={product.blog.status} />
-              <Button size="sm" variant="secondary" disabled={product.status !== "published"}>
+              <Button size="sm" variant="secondary" disabled title="Not wired in this pass">
                 {product.blog.status === "published" ? "Unpublish blog" : "Publish blog"}
               </Button>
-              {product.status !== "published" ? (
-                <span className="text-caption text-fg-muted">
-                  Requires the product to be published.
-                </span>
-              ) : null}
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="blog-title" label="Title" required>
-                <Input id="blog-title" defaultValue={product.blog.title} />
+              <Field id="blog-title" label="Title">
+                <Input id="blog-title" readOnly value={product.blog.title} />
               </Field>
-              <Field
-                id="blog-slug"
-                label="Slug"
-                required
-                hint="/blog/… — changing a published slug writes a 301 redirect."
-              >
-                <Input id="blog-slug" defaultValue={product.blog.slug} className="font-mono" />
+              <Field id="blog-slug" label="Slug">
+                <Input id="blog-slug" readOnly value={product.blog.slug} className="font-mono" />
               </Field>
             </div>
             <Field id="blog-excerpt" label="Excerpt">
-              <Textarea id="blog-excerpt" defaultValue={product.blog.excerpt} rows={2} />
+              <Textarea id="blog-excerpt" readOnly value={product.blog.excerpt} rows={2} />
             </Field>
-            <RichTextField id="blog-body" label="Body" rows={8} full />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="blog-seo-title" label="SEO title">
-                <Input id="blog-seo-title" />
-              </Field>
-              <Field id="blog-seo-desc" label="SEO description">
-                <Input id="blog-seo-desc" />
-              </Field>
-            </div>
           </TabsContent>
 
           <TabsContent value="versions" className="space-y-4">
@@ -901,7 +1209,7 @@ export function ProductEditor({
               <p className="text-body-sm text-fg-muted">
                 Adding a version sets `current_version` and notifies owners per update policy.
               </p>
-              <Button size="sm">
+              <Button size="sm" disabled title="Not wired in this pass — needs a changelog form">
                 <PlusIcon aria-hidden /> Add version
               </Button>
             </div>
@@ -911,7 +1219,6 @@ export function ProductEditor({
                   <TableRow>
                     <TableHead>Version</TableHead>
                     <TableHead>Released</TableHead>
-                    <TableHead>Files</TableHead>
                     <TableHead>Changelog</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -920,7 +1227,6 @@ export function ProductEditor({
                     <TableRow key={v.version}>
                       <TableCell className="font-mono">{v.version}</TableCell>
                       <TableCell>{formatDate(v.releasedAt)}</TableCell>
-                      <TableCell>{v.files}</TableCell>
                       <TableCell className="whitespace-normal text-fg-muted">
                         {v.changelog}
                       </TableCell>
@@ -934,46 +1240,77 @@ export function ProductEditor({
           <TabsContent value="testimonials" className="space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-body-sm text-fg-muted">
-                Curated by admins — there are no public reviews (D-312).
+                Curated by admins — there are no public reviews (D-312). Reordering isn't wired
+                in this pass (no reorder action for testimonials).
               </p>
-              <Button size="sm">
+              <Button size="sm" onClick={addTestimonial}>
                 <PlusIcon aria-hidden /> Add testimonial
               </Button>
             </div>
-            <ul className="space-y-2">
-              {product.testimonials.map((t) => (
+            <ul className="space-y-3">
+              {testimonials.map((t, i) => (
                 <li
                   key={t.id}
-                  className="flex items-start gap-3 rounded-md border border-border bg-surface p-3"
+                  className="space-y-2 rounded-md border border-border bg-surface p-3"
                 >
-                  <button
-                    type="button"
-                    aria-label={`Reorder testimonial by ${t.author}`}
-                    className="mt-1 cursor-grab text-fg-subtle"
-                  >
-                    <GripVerticalIcon aria-hidden className="size-4" />
-                  </button>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-body">“{t.quote}”</p>
-                    <p className="text-caption text-fg-muted">
-                      {t.author}
-                      {t.title ? `, ${t.title}` : ""}
-                      {t.company ? ` · ${t.company}` : ""}
-                    </p>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <Field id={`tm-author-${t.id}`} label="Author" required>
+                      <Input
+                        id={`tm-author-${t.id}`}
+                        value={t.author}
+                        onChange={(e) => updateTestimonial(t.id, { author: e.target.value })}
+                      />
+                    </Field>
+                    <Field id={`tm-title-${t.id}`} label="Title" optional>
+                      <Input
+                        id={`tm-title-${t.id}`}
+                        value={t.title ?? ""}
+                        onChange={(e) => updateTestimonial(t.id, { title: e.target.value })}
+                      />
+                    </Field>
+                    <Field id={`tm-company-${t.id}`} label="Company" optional>
+                      <Input
+                        id={`tm-company-${t.id}`}
+                        value={t.company ?? ""}
+                        onChange={(e) => updateTestimonial(t.id, { company: e.target.value })}
+                      />
+                    </Field>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id={`tm-${t.id}`}
-                      defaultChecked={t.published}
-                      aria-label={`Published: ${t.author}`}
+                  <Field id={`tm-quote-${t.id}`} label="Quote" required>
+                    <Textarea
+                      id={`tm-quote-${t.id}`}
+                      value={t.quote}
+                      onChange={(e) => updateTestimonial(t.id, { quote: e.target.value })}
+                      rows={2}
                     />
-                    <RowActions
-                      label={`Actions for testimonial by ${t.author}`}
-                      actions={[{ label: "Edit" }, { label: "Delete", destructive: true }]}
-                    />
+                  </Field>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id={`tm-pub-${t.id}`}
+                        checked={t.published}
+                        onCheckedChange={(v) => updateTestimonial(t.id, { published: v })}
+                        aria-label={`Published: ${t.author || "new testimonial"}`}
+                      />
+                      <Label htmlFor={`tm-pub-${t.id}`}>Published</Label>
+                    </div>
+                    <Button size="sm" onClick={() => saveTestimonialAt(i)}>
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-danger"
+                      onClick={() => deleteTestimonialAt(i)}
+                    >
+                      Delete
+                    </Button>
                   </div>
                 </li>
               ))}
+              {testimonials.length === 0 ? (
+                <li className="text-body-sm text-fg-muted">No testimonials yet.</li>
+              ) : null}
             </ul>
           </TabsContent>
 
@@ -982,36 +1319,55 @@ export function ProductEditor({
               <p className="text-body-sm text-fg-muted">
                 Product FAQs feed the assistant&rsquo;s knowledge index.
               </p>
-              <Button size="sm">
+              <Button size="sm" onClick={addFaq}>
                 <PlusIcon aria-hidden /> Add FAQ
               </Button>
             </div>
             <ul className="space-y-3">
-              {product.faqs.map((f, i) => (
+              {faqs.map((f, i) => (
                 <li key={f.id} className="space-y-2 rounded-md border border-border bg-surface p-3">
                   <Field id={`faq-q-${f.id}`} label={`Question ${i + 1}`} required>
-                    <Input id={`faq-q-${f.id}`} defaultValue={f.question} />
+                    <Input
+                      id={`faq-q-${f.id}`}
+                      value={f.question}
+                      onChange={(e) => updateFaq(f.id, { question: e.target.value })}
+                    />
                   </Field>
-                  <RichTextField
-                    id={`faq-a-${f.id}`}
-                    label="Answer"
-                    required
-                    defaultValue={f.answer}
-                    rows={2}
-                  />
+                  <Field id={`faq-a-${f.id}`} label="Answer" required>
+                    <Textarea
+                      id={`faq-a-${f.id}`}
+                      value={f.answer}
+                      onChange={(e) => updateFaq(f.id, { answer: e.target.value })}
+                      rows={2}
+                    />
+                  </Field>
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" disabled={i === 0}>
+                    <Button variant="ghost" size="sm" disabled={i === 0} onClick={() => moveFaq(i, -1)}>
                       Move up
                     </Button>
-                    <Button variant="ghost" size="sm" disabled={i === product.faqs.length - 1}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={i === faqs.length - 1}
+                      onClick={() => moveFaq(i, 1)}
+                    >
                       Move down
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-danger">
+                    <Button size="sm" onClick={() => saveFaqAt(i)}>
+                      Save
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-danger"
+                      onClick={() => deleteFaqAt(i)}
+                    >
                       Delete
                     </Button>
                   </div>
                 </li>
               ))}
+              {faqs.length === 0 ? <li className="text-body-sm text-fg-muted">No FAQs yet.</li> : null}
             </ul>
           </TabsContent>
 
@@ -1050,30 +1406,36 @@ export function ProductEditor({
                 Tax applies only once a GSTIN is configured in Settings (BR-08).
               </Banner>
             ) : null}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field
-                id="pub-at"
-                label="Publish at"
-                optional
-                hint="Leave empty to publish on approval (D-307)."
-              >
-                <Input id="pub-at" type="datetime-local" />
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const publishAt = String(new FormData(e.currentTarget).get("publishAt") ?? "");
+                void submitForApproval(publishAt);
+              }}
+            >
+              <Field id="pub-at" label="Publish at" optional hint="Leave empty to publish on approval (D-307).">
+                <Input id="pub-at" name="publishAt" type="datetime-local" />
               </Field>
-              <Field id="pub-comment" label="Comment to approver" required>
-                <Input id="pub-comment" required aria-required />
-              </Field>
-            </div>
-            <ApprovalGateNotice approvers={approvers} what="Publishing" />
-            <div className="flex gap-2">
-              <Button
-                onClick={() =>
-                  toast.success(`Submitted for approval — waiting for ${approvers[0]}`)
-                }
-              >
-                Submit for approval
-              </Button>
-              {product.status === "published" ? <Button variant="outline">Unpublish</Button> : null}
-            </div>
+              <ApprovalGateNotice approvers={approvers} what="Publishing" />
+              <div className="flex gap-2">
+                <Button type="submit" disabled={product.status === "published" || product.status === "pending_approval" || product.status === "archived"}>
+                  Submit for approval
+                </Button>
+                {product.status === "published" ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setLifecycleReason("");
+                      setLifecycleDialog("unpublish");
+                    }}
+                  >
+                    Unpublish
+                  </Button>
+                ) : null}
+              </div>
+            </form>
             {product.approval ? (
               <div className="rounded-lg border border-border bg-surface p-4">
                 <h2 className="mb-2 text-h4">Approval history</h2>
@@ -1083,7 +1445,7 @@ export function ProductEditor({
                     value={product.approval.status}
                     size="sm"
                   />{" "}
-                  by {product.approval.approver} · {formatDateTime(product.approval.at)}
+                  {formatDateTime(product.approval.at)}
                 </p>
               </div>
             ) : null}
@@ -1091,150 +1453,97 @@ export function ProductEditor({
         </div>
       </Tabs>
 
-      <Sheet open={offeringSheet} onOpenChange={setOfferingSheet}>
-        <SheetContent className="overflow-y-auto lg:w-[640px]">
-          <SheetHeader>
-            <SheetTitle>Offering</SheetTitle>
-            <SheetDescription>
-              Prices per enabled currency; the base currency price is mandatory.
-            </SheetDescription>
-          </SheetHeader>
-          <form className="space-y-4 px-4" onSubmit={(e) => e.preventDefault()}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="of-name" label="Name" required>
-                <Input id="of-name" defaultValue="Team" />
-              </Field>
-              <Field id="of-slug" label="Slug">
-                <Input id="of-slug" defaultValue="team" className="font-mono" />
-              </Field>
-              <Field id="of-model" label="Purchase model" required>
-                <Select defaultValue="subscription">
-                  <SelectTrigger id="of-model">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="one_time">One-time</SelectItem>
-                    <SelectItem value="subscription">Subscription</SelectItem>
-                    <SelectItem value="custom_quote">Custom quote</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field id="of-interval" label="Billing interval">
-                <Select defaultValue="annual">
-                  <SelectTrigger id="of-interval">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="quarterly">Quarterly</SelectItem>
-                    <SelectItem value="annual">Annual</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field id="of-trial" label="Trial days" optional>
-                <Input id="of-trial" inputMode="numeric" defaultValue="14" className="font-mono" />
-              </Field>
-              <Field id="of-license" label="License type" optional>
-                <Input id="of-license" defaultValue="Per workspace" />
-              </Field>
-            </div>
-            <fieldset className="space-y-2">
-              <legend className="text-body-sm font-semibold">Prices</legend>
-              {currencies.map((c, i) => (
-                <div key={c} className="grid grid-cols-[64px_1fr_1fr] items-center gap-2">
-                  <span className="font-mono text-body-sm">
-                    {c}
-                    {i === 0 ? " *" : ""}
-                  </span>
-                  <div>
-                    <Label htmlFor={`of-price-${c}`} className="sr-only">{`${c} base price`}</Label>
-                    <Input
-                      id={`of-price-${c}`}
-                      inputMode="decimal"
-                      placeholder="Base"
-                      className="text-right font-mono tnum"
-                      defaultValue={i === 0 ? "9,999.00" : ""}
-                      required={i === 0}
-                    />
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor={`of-compare-${c}`}
-                      className="sr-only"
-                    >{`${c} compare-at price`}</Label>
-                    <Input
-                      id={`of-compare-${c}`}
-                      inputMode="decimal"
-                      placeholder="Compare-at"
-                      className="text-right font-mono tnum"
-                    />
-                  </div>
-                </div>
-              ))}
-            </fieldset>
-            <fieldset className="space-y-2">
-              <legend className="text-body-sm font-semibold">Enabled payment methods *</legend>
-              <div className="flex gap-4">
-                <div className="flex items-center gap-2">
-                  <Checkbox id="of-upi" defaultChecked />
-                  <Label htmlFor="of-upi">UPI</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox id="of-bank" defaultChecked />
-                  <Label htmlFor="of-bank">Bank transfer</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox id="of-card" disabled />
-                  <Label htmlFor="of-card">Cards (flag off)</Label>
-                </div>
+      <Dialog open={lifecycleDialog !== null} onOpenChange={(o) => !o && setLifecycleDialog(null)}>
+        <DialogContent>
+          {lifecycleDialog ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>
+                  {lifecycleDialog === "unpublish"
+                    ? `Unpublish ${product.name}?`
+                    : lifecycleDialog === "archive"
+                      ? `Archive ${product.name}?`
+                      : `Delete ${product.name}?`}
+                </DialogTitle>
+                <DialogDescription>
+                  {lifecycleDialog === "unpublish"
+                    ? "The product page stops serving immediately. Existing customers keep access."
+                    : lifecycleDialog === "archive"
+                      ? "Existing customers keep access. Another admin must approve."
+                      : "Another admin must approve. Blocked while any orders exist."}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-1.5">
+                <Label htmlFor="pe-lifecycle-reason" required>
+                  Reason
+                </Label>
+                <Textarea
+                  id="pe-lifecycle-reason"
+                  required
+                  aria-required
+                  value={lifecycleReason}
+                  onChange={(e) => setLifecycleReason(e.target.value)}
+                />
               </div>
-            </fieldset>
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                <Switch id="of-active" defaultChecked />
-                <Label htmlFor="of-active">Active</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch id="of-default" />
-                <Label htmlFor="of-default">Default offering</Label>
-              </div>
-            </div>
-          </form>
-          <SheetFooter className="flex-row justify-end gap-2">
-            <Button variant="ghost" onClick={() => setOfferingSheet(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                toast.success("Offering saved");
-                setOfferingSheet(false);
-              }}
-            >
-              Save offering
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+              {lifecycleDialog !== "unpublish" ? (
+                <ApprovalGateNotice
+                  approvers={approvers}
+                  what={lifecycleDialog === "archive" ? "Archiving" : "Deleting"}
+                />
+              ) : null}
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="ghost">Cancel</Button>
+                </DialogClose>
+                <Button
+                  variant={lifecycleDialog === "delete" ? "destructive" : "primary"}
+                  disabled={lifecycleBusy}
+                  onClick={confirmLifecycle}
+                >
+                  {lifecycleDialog === "unpublish" ? "Unpublish" : "Request approval"}
+                </Button>
+              </DialogFooter>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-/** Repeatable short-line list with keyboard reorder buttons. */
-function ListEditor({ id, label, items }: { id: string; label: string; items: string[] }) {
-  const [list, setList] = React.useState(items);
+/** Repeatable short-line list with keyboard reorder buttons — controlled by the parent. */
+function ListEditor({
+  id,
+  label,
+  items,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  items: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [draft, setDraft] = React.useState("");
   return (
     <div className="space-y-1.5">
       <Label htmlFor={`${id}-new`}>{label}</Label>
       <ul className="space-y-1">
-        {list.map((item, i) => (
-          <li key={`${item}-${i}`} className="flex items-center gap-1">
-            <Input aria-label={`${label} ${i + 1}`} defaultValue={item} className="h-8" />
+        {items.map((item, i) => (
+          <li key={`${id}-${i}`} className="flex items-center gap-1">
+            <Input
+              aria-label={`${label} ${i + 1}`}
+              value={item}
+              onChange={(e) =>
+                onChange(items.map((v, j) => (j === i ? e.target.value : v)))
+              }
+              className="h-8"
+            />
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
               aria-label={`Remove ${label} ${i + 1}`}
-              onClick={() => setList((l) => l.filter((_, j) => j !== i))}
+              onClick={() => onChange(items.filter((_, j) => j !== i))}
             >
               ×
             </Button>
@@ -1244,20 +1553,75 @@ function ListEditor({ id, label, items }: { id: string; label: string; items: st
       <div className="flex gap-1">
         <Input
           id={`${id}-new`}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
           placeholder={`Add ${label.toLowerCase()}`}
-          className={cn("h-8")}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              const v = e.currentTarget.value.trim();
+              const v = draft.trim();
               if (v) {
-                setList((l) => [...l, v]);
-                e.currentTarget.value = "";
+                onChange([...items, v]);
+                setDraft("");
               }
             }
           }}
         />
       </div>
     </div>
+  );
+}
+
+/** "Propose new split" form (ownership tab) — its own component so the effective-date input
+ *  stays local state without adding another field to the parent's already-large state set. */
+function ProposeSplitForm({
+  split,
+  onChange,
+  partners,
+  approvers,
+  onCancel,
+  onSubmit,
+}: {
+  split: SplitValue;
+  onChange: (next: SplitValue) => void;
+  partners: Array<{ id: string; name: string }>;
+  approvers: string[];
+  onCancel: () => void;
+  onSubmit: (effectiveFrom: string) => void | Promise<void>;
+}) {
+  const [effectiveFrom, setEffectiveFrom] = React.useState("");
+  const [submitting, setSubmitting] = React.useState(false);
+  const total = split.companyCutBps + split.lines.reduce((s, l) => s + l.bps, 0);
+
+  return (
+    <form
+      className="space-y-4 rounded-lg border border-accent bg-surface p-4"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
+        await onSubmit(effectiveFrom);
+        setSubmitting(false);
+      }}
+    >
+      <h2 className="text-h4">Propose new split</h2>
+      <SplitEditor idPrefix="own" value={split} onChange={onChange} partners={partners} />
+      <Field id="own-effective" label="Effective date" optional hint="Leave empty for as soon as approved.">
+        <Input
+          id="own-effective"
+          type="date"
+          value={effectiveFrom}
+          onChange={(e) => setEffectiveFrom(e.target.value)}
+        />
+      </Field>
+      <ApprovalGateNotice approvers={approvers} what="Changing ownership" />
+      <div className="flex gap-2">
+        <Button type="submit" disabled={total !== 10000 || submitting}>
+          Request approval
+        </Button>
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </form>
   );
 }

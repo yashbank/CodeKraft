@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import {
   ChevronDownIcon,
@@ -52,6 +53,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/components/ui/_utils";
 import { STATUS_ENUMS } from "@/lib/status-tone";
+import {
+  removeCategory,
+  requestProductArchive,
+  requestProductDelete,
+  saveCategory,
+  saveTag,
+  submitProductForApproval,
+  unpublishProduct,
+} from "@/modules/catalog/admin-mutations";
 import { ApprovalGateNotice } from "../Banner";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
@@ -69,6 +79,8 @@ const FLAG_ICON: Record<ProductFlag, { Icon: typeof StarIcon; label: string }> =
   tax_enabled: { Icon: ReceiptIcon, label: "Tax enabled" },
 };
 
+type LifecycleDialogKind = "archive" | "delete" | "submit" | "unpublish";
+
 export interface ProductsListProps {
   products: ProductRow[];
   categories: CategoryNode[];
@@ -79,6 +91,15 @@ export interface ProductsListProps {
   approvers: string[];
   /** Show the categories & tags panel beside the table (`/categories`). */
   showCategories?: boolean;
+}
+
+function flattenCategoryNames(nodes: CategoryNode[]): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const c of nodes) {
+    out.set(c.id, c.name);
+    for (const ch of c.children ?? []) out.set(ch.id, `${c.name} › ${ch.name}`);
+  }
+  return out;
 }
 
 /**
@@ -96,14 +117,22 @@ export function ProductsList({
   approvers,
   showCategories = true,
 }: ProductsListProps) {
+  const router = useRouter();
   const [status, setStatus] = React.useState<ProductStatus | null>(null);
+  const [categoryFilter, setCategoryFilter] = React.useState<string | null>(null);
   const [selected, setSelected] = React.useState<ReadonlySet<string>>(new Set());
   const [flagFilter, setFlagFilter] = React.useState<ReadonlySet<ProductFlag>>(new Set());
   const [dialog, setDialog] = React.useState<{
-    kind: "archive" | "delete" | "submit";
+    kind: LifecycleDialogKind;
     product: ProductRow;
   } | null>(null);
+  const [reason, setReason] = React.useState("");
+  const [submitting, setSubmitting] = React.useState(false);
+  const [bulkBusy, setBulkBusy] = React.useState(false);
   const [panelOpen, setPanelOpen] = React.useState(showCategories);
+
+  const categoryNameById = React.useMemo(() => flattenCategoryNames(categories), [categories]);
+  const productHref = (id: string) => `${editorHref}/${id}`;
 
   const counts = STATUS_ENUMS["products.status"].map((s) => ({
     value: s,
@@ -112,8 +141,86 @@ export function ProductsList({
   }));
   const rows = products
     .filter((p) => (status ? p.status === status : p.status !== "archived"))
-    .filter((p) => [...flagFilter].every((f) => p.flags.includes(f)));
+    .filter((p) => [...flagFilter].every((f) => p.flags.includes(f)))
+    .filter((p) => !categoryFilter || p.category === categoryNameById.get(categoryFilter));
   const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
+
+  function openDialog(kind: LifecycleDialogKind, product: ProductRow) {
+    setReason("");
+    setDialog({ kind, product });
+  }
+
+  async function confirmDialog() {
+    if (!dialog) return;
+    if (dialog.kind !== "submit" && reason.trim().length === 0) {
+      toast.error("A reason is required.");
+      return;
+    }
+    setSubmitting(true);
+    const productId = dialog.product.id;
+    const result =
+      dialog.kind === "submit"
+        ? await submitProductForApproval({ productId })
+        : dialog.kind === "unpublish"
+          ? await unpublishProduct({ productId, reason: reason.trim() })
+          : dialog.kind === "archive"
+            ? await requestProductArchive({ productId, reason: reason.trim() })
+            : await requestProductDelete({ productId, reason: reason.trim() });
+    setSubmitting(false);
+
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    if (dialog.kind === "unpublish") {
+      toast.success(`${dialog.product.name} unpublished`);
+    } else {
+      toast.success(`Approval requested — waiting for ${approvers[0] ?? "another admin"}`);
+    }
+    setDialog(null);
+    router.refresh();
+  }
+
+  async function bulkSubmitForApproval() {
+    const targets = rows.filter(
+      (r) => selected.has(r.id) && (r.status === "draft" || r.status === "unpublished"),
+    );
+    if (targets.length === 0) {
+      toast.error("None of the selected products can be submitted for approval.");
+      return;
+    }
+    setBulkBusy(true);
+    let ok = 0;
+    for (const p of targets) {
+      const result = await submitProductForApproval({ productId: p.id });
+      if (result.ok) ok += 1;
+    }
+    setBulkBusy(false);
+    toast.success(`Submitted ${ok} of ${targets.length} for approval`);
+    setSelected(new Set());
+    router.refresh();
+  }
+
+  async function bulkUnpublish() {
+    const targets = rows.filter((r) => selected.has(r.id) && r.status === "published");
+    if (targets.length === 0) {
+      toast.error("None of the selected products are published.");
+      return;
+    }
+    setBulkBusy(true);
+    let ok = 0;
+    for (const p of targets) {
+      const result = await unpublishProduct({
+        productId: p.id,
+        reason: "Bulk unpublish from the products list",
+      });
+      if (result.ok) ok += 1;
+    }
+    setBulkBusy(false);
+    toast.success(`Unpublished ${ok} of ${targets.length}`);
+    setSelected(new Set());
+    router.refresh();
+  }
 
   return (
     <TooltipProvider>
@@ -131,7 +238,7 @@ export function ProductsList({
               Categories & tags
             </Button>
             <Button asChild size="sm">
-              <Link href={editorHref}>
+              <Link href={productHref("new")}>
                 <PlusIcon aria-hidden /> New product
               </Link>
             </Button>
@@ -147,11 +254,15 @@ export function ProductsList({
             filters={
               <>
                 <ToolbarField id="products-category" label="Category">
-                  <Select>
+                  <Select
+                    value={categoryFilter ?? "all"}
+                    onValueChange={(v) => setCategoryFilter(v === "all" ? null : v)}
+                  >
                     <SelectTrigger id="products-category" size="sm" className="w-44">
                       <SelectValue placeholder="All categories" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="all">All categories</SelectItem>
                       {categories.flatMap((c) => [
                         <SelectItem key={c.id} value={c.id}>
                           {c.name}
@@ -202,14 +313,10 @@ export function ProductsList({
               role="status"
             >
               <span className="font-medium text-accent-text">{selected.size} selected</span>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => toast.success(`Submitted ${selected.size} products for approval`)}
-              >
+              <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={bulkSubmitForApproval}>
                 Submit for approval
               </Button>
-              <Button size="sm" variant="secondary">
+              <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={bulkUnpublish}>
                 Unpublish
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
@@ -281,7 +388,7 @@ export function ProductsList({
                           </span>
                           <span className="min-w-0">
                             <Link
-                              href={editorHref}
+                              href={productHref(p.id)}
                               className="block truncate font-medium text-fg hover:text-accent-text"
                             >
                               {p.name}
@@ -346,36 +453,36 @@ export function ProductsList({
                         <RowActions
                           label={`Actions for ${p.name}`}
                           actions={[
-                            { label: "Edit", href: editorHref },
+                            { label: "Edit", href: productHref(p.id) },
                             {
                               label: "Preview on site",
                               onSelect: () => toast("Opens a signed preview link in a new tab"),
                             },
                             {
                               label: "Submit for approval",
-                              onSelect: () => setDialog({ kind: "submit", product: p }),
+                              onSelect: () => openDialog("submit", p),
                               disabled: p.status !== "draft" && p.status !== "unpublished",
                             },
                             {
                               label: "Unpublish",
-                              onSelect: () => toast.success(`${p.name} unpublished`),
+                              onSelect: () => openDialog("unpublish", p),
                               disabled: p.status !== "published",
                             },
                             {
                               label: "Request archive",
-                              onSelect: () => setDialog({ kind: "archive", product: p }),
+                              onSelect: () => openDialog("archive", p),
                               separatorBefore: true,
                               disabled: p.status === "archived",
                             },
                             {
                               label: "Request delete",
-                              onSelect: () => setDialog({ kind: "delete", product: p }),
+                              onSelect: () => openDialog("delete", p),
                               destructive: true,
                               disabled: p.orderCount > 0,
                             },
                             {
                               label: "Duplicate as draft",
-                              onSelect: () => toast.success(`Copied ${p.name} as a draft`),
+                              disabled: true,
                               separatorBefore: true,
                             },
                           ]}
@@ -397,7 +504,12 @@ export function ProductsList({
         {panelOpen ? <CategoriesPanel categories={categories} tags={tags} /> : null}
       </div>
 
-      <Dialog open={dialog !== null} onOpenChange={(o) => !o && setDialog(null)}>
+      <Dialog
+        open={dialog !== null}
+        onOpenChange={(o) => {
+          if (!o) setDialog(null);
+        }}
+      >
         <DialogContent>
           {dialog ? (
             <>
@@ -407,51 +519,57 @@ export function ProductsList({
                     ? `Delete ${dialog.product.name}?`
                     : dialog.kind === "archive"
                       ? `Archive ${dialog.product.name}?`
-                      : `Submit ${dialog.product.name} for approval?`}
+                      : dialog.kind === "unpublish"
+                        ? `Unpublish ${dialog.product.name}?`
+                        : `Submit ${dialog.product.name} for approval?`}
                 </DialogTitle>
                 <DialogDescription>
                   {dialog.kind === "delete"
                     ? `This product has ${dialog.product.orderCount} orders, so deletion is allowed. Another admin must approve.`
                     : dialog.kind === "archive"
                       ? `It has ${dialog.product.orderCount} orders, so it can't be deleted. Existing customers keep access. Another admin must approve.`
-                      : "Readiness: offering with base price and method ✔ · image with alt text ✔ · ownership sums to 100 % ✔."}
+                      : dialog.kind === "unpublish"
+                        ? "The product page stops serving immediately. Existing customers keep access."
+                        : "Submitting sends the product to an approver before it goes live."}
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-1.5">
-                <Label htmlFor="approval-comment" required>
-                  Comment to approver
-                </Label>
-                <Textarea
-                  id="approval-comment"
-                  required
-                  aria-required
-                  placeholder="Why now, anything to check…"
+              {dialog.kind === "submit" ? null : (
+                <div className="space-y-1.5">
+                  <Label htmlFor="lifecycle-reason" required>
+                    Reason
+                  </Label>
+                  <Textarea
+                    id="lifecycle-reason"
+                    required
+                    aria-required
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="Why now, anything to check…"
+                  />
+                </div>
+              )}
+              {dialog.kind !== "unpublish" ? (
+                <ApprovalGateNotice
+                  approvers={approvers}
+                  what={
+                    dialog.kind === "submit"
+                      ? "Publishing"
+                      : dialog.kind === "archive"
+                        ? "Archiving"
+                        : "Deleting"
+                  }
                 />
-              </div>
-              <ApprovalGateNotice
-                approvers={approvers}
-                what={
-                  dialog.kind === "submit"
-                    ? "Publishing"
-                    : dialog.kind === "archive"
-                      ? "Archiving"
-                      : "Deleting"
-                }
-              />
+              ) : null}
               <DialogFooter>
                 <DialogClose asChild>
                   <Button variant="ghost">Cancel</Button>
                 </DialogClose>
                 <Button
                   variant={dialog.kind === "delete" ? "destructive" : "primary"}
-                  onClick={() => {
-                    toast.success(
-                      `Approval requested — waiting for ${approvers[0] ?? "another admin"}`,
-                    );
-                    setDialog(null);
-                  }}
+                  disabled={submitting}
+                  onClick={confirmDialog}
                 >
-                  Request approval
+                  {dialog.kind === "unpublish" ? "Unpublish" : "Request approval"}
                 </Button>
               </DialogFooter>
             </>
@@ -481,12 +599,60 @@ export function CategoriesPanel({
   categories: CategoryNode[];
   tags: string[];
 }) {
+  const router = useRouter();
   const [open, setOpen] = React.useState<ReadonlySet<string>>(new Set(categories.map((c) => c.id)));
   const [selected, setSelected] = React.useState<CategoryNode | null>(
-    categories[0]?.children?.[0] ?? null,
+    categories[0]?.children?.[0] ?? categories[0] ?? null,
   );
+  const [creatingNew, setCreatingNew] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
   const [tagList, setTagList] = React.useState(tags);
   const [newTag, setNewTag] = React.useState("");
+  const formRef = React.useRef<HTMLFormElement>(null);
+
+  async function handleSaveCategory(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = formRef.current;
+    if (!form) return;
+    const data = new FormData(form);
+    const name = String(data.get("name") ?? "").trim();
+    const slug = String(data.get("slug") ?? "").trim();
+    const parentRaw = String(data.get("parentId") ?? "none");
+    if (!name || !slug) {
+      toast.error("Name and slug are required.");
+      return;
+    }
+    setSaving(true);
+    const result = await saveCategory({
+      id: creatingNew ? undefined : selected?.id,
+      parentId: parentRaw === "none" ? null : parentRaw,
+      name,
+      slug,
+      position: 0,
+    });
+    setSaving(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(creatingNew ? "Category created" : "Category saved");
+    setCreatingNew(false);
+    router.refresh();
+  }
+
+  async function handleDeleteCategory() {
+    if (!selected) return;
+    const result = await removeCategory({ categoryId: selected.id });
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Category deleted");
+    setSelected(null);
+    router.refresh();
+  }
+
+  const formTarget = creatingNew ? null : selected;
 
   return (
     <aside
@@ -497,7 +663,14 @@ export function CategoriesPanel({
         <h2 id="categories-title" className="text-h4">
           Categories & tags
         </h2>
-        <Button size="sm" variant="ghost">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            setSelected(null);
+            setCreatingNew(true);
+          }}
+        >
           <PlusIcon aria-hidden /> Category
         </Button>
       </div>
@@ -533,7 +706,10 @@ export function CategoriesPanel({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelected(c)}
+                  onClick={() => {
+                    setCreatingNew(false);
+                    setSelected(c);
+                  }}
                   className={cn(
                     "flex flex-1 items-center justify-between rounded-sm px-2 py-1 text-left hover:bg-accent-soft",
                     selected?.id === c.id && "bg-accent-soft text-accent-text",
@@ -549,7 +725,10 @@ export function CategoriesPanel({
                     <li key={ch.id} role="treeitem" aria-selected={selected?.id === ch.id}>
                       <button
                         type="button"
-                        onClick={() => setSelected(ch)}
+                        onClick={() => {
+                          setCreatingNew(false);
+                          setSelected(ch);
+                        }}
                         className={cn(
                           "flex w-full items-center justify-between rounded-sm px-2 py-1 text-left hover:bg-accent-soft",
                           selected?.id === ch.id && "bg-accent-soft text-accent-text",
@@ -568,16 +747,22 @@ export function CategoriesPanel({
           );
         })}
       </ul>
-      {selected ? (
+      {formTarget || creatingNew ? (
         <form
+          ref={formRef}
           className="space-y-3 border-t border-border pt-4"
-          onSubmit={(e) => e.preventDefault()}
+          onSubmit={handleSaveCategory}
         >
           <div className="space-y-1.5">
             <Label htmlFor="cat-name" required>
               Name
             </Label>
-            <Input id="cat-name" defaultValue={selected.name} key={`n-${selected.id}`} />
+            <Input
+              id="cat-name"
+              name="name"
+              defaultValue={formTarget?.name ?? ""}
+              key={`n-${formTarget?.id ?? "new"}`}
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="cat-slug" required>
@@ -585,24 +770,27 @@ export function CategoriesPanel({
             </Label>
             <Input
               id="cat-slug"
-              defaultValue={selected.slug}
-              key={`s-${selected.id}`}
+              name="slug"
+              defaultValue={formTarget?.slug ?? ""}
+              key={`s-${formTarget?.id ?? "new"}`}
               className="font-mono"
             />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="cat-parent">Parent</Label>
-            <Select defaultValue="none">
+            <Select name="parentId" defaultValue="none">
               <SelectTrigger id="cat-parent" size="sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">— top level —</SelectItem>
-                {categories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
+                {categories
+                  .filter((c) => !formTarget || c.id !== formTarget.id)
+                  .map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
             <p className="text-caption text-fg-muted">
@@ -610,41 +798,70 @@ export function CategoriesPanel({
             </p>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" type="submit">
+            <Button size="sm" type="submit" disabled={saving}>
               Save
             </Button>
-            <Button size="sm" variant="ghost" type="button" disabled={selected.productCount > 0}>
-              Delete
-            </Button>
+            {formTarget ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                type="button"
+                disabled={formTarget.productCount > 0 || saving}
+                onClick={handleDeleteCategory}
+              >
+                Delete
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="ghost"
+                type="button"
+                onClick={() => setCreatingNew(false)}
+              >
+                Cancel
+              </Button>
+            )}
           </div>
         </form>
       ) : null}
       <div className="space-y-2 border-t border-border pt-4">
         <h3 className="text-body-sm font-semibold">Tags</h3>
-        <ul className="flex flex-wrap gap-1.5">
-          {tagList.map((t) => (
-            <li key={t}>
-              <Badge tone="neutral" className="gap-1 pr-1">
-                {t}
-                <button
-                  type="button"
-                  aria-label={`Remove tag ${t}`}
-                  onClick={() => setTagList((l) => l.filter((x) => x !== t))}
-                  className="grid size-4 place-items-center rounded-full hover:bg-danger-soft hover:text-danger"
-                >
-                  ×
-                </button>
-              </Badge>
-            </li>
-          ))}
-        </ul>
+        {tagList.length === 0 ? (
+          <p className="text-caption text-fg-muted">
+            No tags to show yet — there is no list-all-tags query, so this fills in as tags are
+            added below or used on a product.
+          </p>
+        ) : (
+          <ul className="flex flex-wrap gap-1.5">
+            {tagList.map((t) => (
+              <li key={t}>
+                <Badge tone="neutral" className="gap-1 pr-1">
+                  {t}
+                </Badge>
+              </li>
+            ))}
+          </ul>
+        )}
         <form
           className="flex gap-2"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
             const v = newTag.trim().toLowerCase();
-            if (v && !tagList.includes(v)) setTagList((l) => [...l, v].sort());
+            if (!v || tagList.includes(v)) {
+              setNewTag("");
+              return;
+            }
+            const result = await saveTag({
+              name: v,
+              slug: v.replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
+            });
+            if (!result.ok) {
+              toast.error(result.error.message);
+              return;
+            }
+            setTagList((l) => [...l, v].sort());
             setNewTag("");
+            toast.success(`Tag "${v}" created`);
           }}
         >
           <Label htmlFor="new-tag" className="sr-only">
@@ -661,9 +878,6 @@ export function CategoriesPanel({
             Add
           </Button>
         </form>
-        <Button size="sm" variant="link">
-          Merge tags…
-        </Button>
       </div>
     </aside>
   );

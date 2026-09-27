@@ -160,6 +160,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
     render(
       <ProductEditor
         product={PRODUCT_EDITOR}
+        categories={CATEGORIES}
         approvers={["Priya Nair", "Arjun Patel"]}
         listHref="/admin/products"
         approvalsHref="/admin/approvals"

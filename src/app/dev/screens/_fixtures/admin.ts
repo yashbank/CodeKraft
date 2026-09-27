@@ -550,6 +550,8 @@ export const PRODUCT_EDITOR: ProductEditorData = {
   ],
   approval: { status: "applied", approver: "Arjun Mehta", at: "2026-08-02T10:00:00Z" },
   savedAgoSeconds: 12,
+  updatedAt: "2026-09-25T07:05:00Z",
+  orderCount: 3,
 };
 
 export const COUPONS: CouponRow[] = [

@@ -1,5 +1,5 @@
 import { ProductEditor } from "@/components/admin/catalog/ProductEditor";
-import { PRODUCT_EDITOR, href } from "../../_fixtures/admin";
+import { CATEGORIES, PRODUCT_EDITOR, href } from "../../_fixtures/admin";
 import { PreviewShell } from "../_shell";
 
 export const metadata = { title: "SCR-ADM-04 · Product editor" };
@@ -14,6 +14,7 @@ export default function Page() {
     >
       <ProductEditor
         product={PRODUCT_EDITOR}
+        categories={CATEGORIES}
         approvers={["Arjun Mehta"]}
         listHref={href("/products")}
         approvalsHref={href("/approvals")}

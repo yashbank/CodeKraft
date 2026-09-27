@@ -141,6 +141,8 @@ export interface ProductEditorData {
   slug: string;
   shortDescription: string;
   category: string;
+  /** Real category id for the editor's Select (`category` above is the display label). */
+  categoryId?: string;
   tags: string[];
   status: ProductStatus;
   flags: ProductFlag[];
@@ -168,6 +170,10 @@ export interface ProductEditorData {
   faqs: FaqItem[];
   approval?: { status: StatusValue<"approval_requests.status">; approver: string; at: string };
   savedAgoSeconds: number;
+  /** ISO timestamp of the last write — required as `expectedUpdatedAt` for optimistic concurrency. */
+  updatedAt: string;
+  /** Blocks "request delete" when > 0 (BR-11); mirrors `ProductAdminGraph.orderCount`. */
+  orderCount: number;
 }
 
 export interface CouponRow {
