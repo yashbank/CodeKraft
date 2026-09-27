@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import {
   AlarmClockIcon,
@@ -13,6 +14,14 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+
+import {
+  addLeadNote,
+  assignLead,
+  claimLead,
+  setFollowUp,
+  updateLeadStatus,
+} from "@/modules/leads/admin-mutations";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -75,15 +84,28 @@ export function LeadDetail({
   customerHref,
   productHref,
 }: LeadDetailProps) {
+  const router = useRouter();
   const { lead } = data;
   const [status, setStatus] = React.useState<LeadStatus>(lead.status);
   const [activities, setActivities] = React.useState(data.activities);
   const [composer, setComposer] = React.useState("");
   const [composerKind, setComposerKind] = React.useState<"note" | "call" | "email">("note");
-  const overdueDays = lead.nextFollowUpAt ? -daysUntil(lead.nextFollowUpAt, now) : 0;
+  const [nextFollowUpAt, setNextFollowUpAt] = React.useState(lead.nextFollowUpAt);
+  const [priority, setPriority] = React.useState(lead.priority);
+  const [saving, setSaving] = React.useState(false);
+  const overdueDays = nextFollowUpAt ? -daysUntil(nextFollowUpAt, now) : 0;
 
-  const addActivity = () => {
+  const addActivity = async () => {
     if (!composer.trim()) return;
+    const result = await addLeadNote({
+      leadId: lead.id,
+      kind: composerKind,
+      body: composer.trim(),
+    });
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
     setActivities((a) => [
       { id: `a-${Date.now()}`, kind: composerKind, actor: "You", at: now, text: composer.trim() },
       ...a,
@@ -94,6 +116,75 @@ export function LeadDetail({
         ? "Note added"
         : `${composerKind === "call" ? "Call" : "Email"} logged`,
     );
+    router.refresh();
+  };
+
+  const changeStatus = async (next: LeadStatus) => {
+    let lostReason: string | undefined;
+    if (next === "lost") {
+      lostReason = window.prompt("Reason for marking this lead lost?") ?? undefined;
+      if (!lostReason || !lostReason.trim()) return;
+    }
+    setSaving(true);
+    const result = await updateLeadStatus({ leadId: lead.id, status: next, lostReason });
+    setSaving(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    setStatus(next);
+    toast.success(`Status → ${STAGE_LABEL[next]}`);
+    router.refresh();
+  };
+
+  const changeAssignee = async (value: string) => {
+    setSaving(true);
+    const result =
+      value === "me"
+        ? await claimLead({ leadId: lead.id })
+        : await assignLead({ leadId: lead.id, assignedTo: value === "pool" ? null : value });
+    setSaving(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(value === "pool" ? "Returned to pool" : "Assigned");
+    router.refresh();
+  };
+
+  const changePriority = async (value: LeadDetailData["lead"]["priority"]) => {
+    setSaving(true);
+    const result = await setFollowUp({
+      leadId: lead.id,
+      nextFollowUpAt: nextFollowUpAt ?? null,
+      priority: value,
+    });
+    setSaving(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    setPriority(value);
+    router.refresh();
+  };
+
+  const saveFollowUp = async (dateValue: string, note: string) => {
+    setSaving(true);
+    const iso = dateValue ? new Date(dateValue).toISOString() : null;
+    const result = await setFollowUp({
+      leadId: lead.id,
+      nextFollowUpAt: iso,
+      note: note.trim() || undefined,
+      priority,
+    });
+    setSaving(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    setNextFollowUpAt(iso ?? undefined);
+    toast.success("Follow-up set");
+    router.refresh();
   };
 
   return (
@@ -121,7 +212,11 @@ export function LeadDetail({
               <Label htmlFor="lead-priority" className="sr-only">
                 Priority
               </Label>
-              <Select defaultValue={lead.priority}>
+              <Select
+                value={priority}
+                onValueChange={(v) => void changePriority(v as typeof priority)}
+                disabled={saving}
+              >
                 <SelectTrigger id="lead-priority" size="sm" className="w-28">
                   <SelectValue />
                 </SelectTrigger>
@@ -136,7 +231,11 @@ export function LeadDetail({
               <Label htmlFor="lead-assignee" className="sr-only">
                 Assignee
               </Label>
-              <Select defaultValue={lead.assignee?.id ?? "pool"}>
+              <Select
+                defaultValue={lead.assignee?.id ?? "pool"}
+                onValueChange={(v) => void changeAssignee(v)}
+                disabled={saving}
+              >
                 <SelectTrigger id="lead-assignee" size="sm" className="w-40">
                   <SelectValue />
                 </SelectTrigger>
@@ -154,7 +253,7 @@ export function LeadDetail({
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm">
                   <AlarmClockIcon aria-hidden />{" "}
-                  {lead.nextFollowUpAt ? formatDate(lead.nextFollowUpAt) : "Set follow-up"}
+                  {nextFollowUpAt ? formatDate(nextFollowUpAt) : "Set follow-up"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-72 space-y-3">
@@ -163,7 +262,7 @@ export function LeadDetail({
                   <Input
                     id="fu-date"
                     type="date"
-                    defaultValue={lead.nextFollowUpAt?.slice(0, 10)}
+                    defaultValue={nextFollowUpAt?.slice(0, 10)}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -175,7 +274,15 @@ export function LeadDetail({
                     defaultValue={data.followUpNote}
                   />
                 </div>
-                <Button size="sm" onClick={() => toast.success("Follow-up set")}>
+                <Button
+                  size="sm"
+                  disabled={saving}
+                  onClick={() => {
+                    const dateEl = document.getElementById("fu-date") as HTMLInputElement | null;
+                    const noteEl = document.getElementById("fu-note") as HTMLTextAreaElement | null;
+                    void saveFollowUp(dateEl?.value ?? "", noteEl?.value ?? "");
+                  }}
+                >
                   Save
                 </Button>
               </PopoverContent>
@@ -183,7 +290,7 @@ export function LeadDetail({
             <RowActions
               label="More lead actions"
               actions={[
-                { label: "Mark lost", onSelect: () => setStatus("lost") },
+                { label: "Mark lost", onSelect: () => void changeStatus("lost") },
                 { label: "Merge duplicate" },
                 {
                   label: "Delete",
@@ -212,10 +319,7 @@ export function LeadDetail({
                 type="button"
                 role="radio"
                 aria-checked={current}
-                onClick={() => {
-                  setStatus(s);
-                  toast.success(`Status → ${STAGE_LABEL[s]}`);
-                }}
+                onClick={() => void changeStatus(s)}
                 className={cn(
                   "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-body-sm font-medium",
                   current
@@ -387,7 +491,7 @@ export function LeadDetail({
           >
             <h2 className="mb-2 text-h4">Follow-up</h2>
             <p className="text-body-sm">
-              {lead.nextFollowUpAt ? formatDate(lead.nextFollowUpAt) : "None set"}
+              {nextFollowUpAt ? formatDate(nextFollowUpAt) : "None set"}
               {overdueDays > 0 ? (
                 <span className="text-danger"> · overdue by {overdueDays} d</span>
               ) : null}
@@ -428,7 +532,8 @@ export function LeadDetail({
                 variant="outline"
                 size="sm"
                 className="flex-1"
-                onClick={() => setStatus("won")}
+                disabled={saving}
+                onClick={() => void changeStatus("won")}
               >
                 Mark Won
               </Button>
@@ -436,7 +541,8 @@ export function LeadDetail({
                 variant="outline"
                 size="sm"
                 className="flex-1"
-                onClick={() => setStatus("lost")}
+                disabled={saving}
+                onClick={() => void changeStatus("lost")}
               >
                 Mark Lost
               </Button>

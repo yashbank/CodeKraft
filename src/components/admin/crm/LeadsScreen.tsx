@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import {
   AlarmClockIcon,
@@ -11,6 +12,13 @@ import {
   TargetIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+
+import {
+  assignLead,
+  claimLead,
+  createLeadManual,
+  updateLeadStatus,
+} from "@/modules/leads/admin-mutations";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -88,6 +96,8 @@ export interface LeadsScreenProps {
   detailHref: string;
   newOrderHref: string;
   initialView?: "table" | "board";
+  /** Products offered for the "Product" field on the New lead sheet (product_cta-style leads). */
+  products?: Array<{ id: string; name: string }>;
 }
 
 /** Follow-up chip: red with the number of days when overdue (D-706). */
@@ -120,8 +130,10 @@ export function LeadsScreen({
   detailHref,
   newOrderHref,
   initialView = "table",
+  products = [],
 }: LeadsScreenProps) {
   const [leads, setLeads] = React.useState(initial);
+  const router = useRouter();
   const [view, setView] = React.useState(initialView);
   const [overdueOnly, setOverdueOnly] = React.useState(false);
   const [selected, setSelected] = React.useState<ReadonlySet<string>>(new Set());
@@ -129,6 +141,11 @@ export function LeadsScreen({
   const [wonOpen, setWonOpen] = React.useState<LeadRow | null>(null);
   const [newOpen, setNewOpen] = React.useState(false);
   const [showLost, setShowLost] = React.useState(false);
+  const [submitting, setSubmitting] = React.useState(false);
+  const newLeadFormRef = React.useRef<HTMLFormElement>(null);
+  const [newProduct, setNewProduct] = React.useState<string>("none");
+  const [newPriority, setNewPriority] = React.useState<"low" | "normal" | "high">("normal");
+  const [assignToMe, setAssignToMe] = React.useState(true);
 
   const isOverdue = (l: LeadRow) =>
     Boolean(l.nextFollowUpAt && daysUntil(l.nextFollowUpAt, now) < 0);
@@ -136,21 +153,29 @@ export function LeadsScreen({
     .filter((l) => (overdueOnly ? isOverdue(l) : true))
     .filter((l) => (view === "table" ? l.status !== "won" && l.status !== "lost" : true));
 
-  const move = (lead: LeadRow, status: LeadStatus) => {
+  const move = async (lead: LeadRow, status: LeadStatus) => {
     if (status === "won") return setWonOpen(lead);
     if (status === "lost") return setLostOpen(lead);
+    const prev = lead.status;
     setLeads((ls) => ls.map((l) => (l.id === lead.id ? { ...l, status } : l)));
-    toast.success(`Moved to ${STAGE_LABEL[status]}`, {
-      action: {
-        label: "Undo",
-        onClick: () =>
-          setLeads((ls) => ls.map((l) => (l.id === lead.id ? { ...l, status: lead.status } : l))),
-      },
-    });
+    const result = await updateLeadStatus({ leadId: lead.id, status });
+    if (!result.ok) {
+      setLeads((ls) => ls.map((l) => (l.id === lead.id ? { ...l, status: prev } : l)));
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(`Moved to ${STAGE_LABEL[status]}`);
+    router.refresh();
   };
-  const claim = (lead: LeadRow) => {
+  const claim = async (lead: LeadRow) => {
+    const result = await claimLead({ leadId: lead.id });
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
     setLeads((ls) => ls.map((l) => (l.id === lead.id ? { ...l, assignee: currentUser } : l)));
     toast.success(`Assigned to ${currentUser.name.split(" ")[0]}`);
+    router.refresh();
   };
 
   return (
@@ -262,10 +287,23 @@ export function LeadsScreen({
           </Label>
           <Select
             onValueChange={(v) => {
-              toast.success(
-                `Assigned ${selected.size} leads to ${admins.find((a) => a.id === v)?.name ?? v}`,
-              );
-              setSelected(new Set());
+              void (async () => {
+                const ids = Array.from(selected);
+                const results = await Promise.all(
+                  ids.map((id) => assignLead({ leadId: id, assignedTo: v })),
+                );
+                const failed = results.filter((r) => !r.ok).length;
+                if (failed > 0) {
+                  toast.error(`${failed} of ${ids.length} assignments failed`);
+                }
+                if (failed < ids.length) {
+                  toast.success(
+                    `Assigned ${ids.length - failed} lead${ids.length - failed === 1 ? "" : "s"} to ${admins.find((a) => a.id === v)?.name ?? v}`,
+                  );
+                }
+                setSelected(new Set());
+                router.refresh();
+              })();
             }}
           >
             <SelectTrigger id="bulk-assign" size="sm" className="w-40">
@@ -352,7 +390,7 @@ export function LeadsScreen({
                       />
                     </TableCell>
                     <TableCell>
-                      <Link href={detailHref} className="font-medium hover:text-accent-text">
+                      <Link href={`${detailHref}/${l.id}`} className="font-medium hover:text-accent-text">
                         {l.name}
                       </Link>
                       {l.company ? (
@@ -420,7 +458,7 @@ export function LeadsScreen({
                       <RowActions
                         label={`Actions for ${l.name}`}
                         actions={[
-                          { label: "Open", href: detailHref },
+                          { label: "Open", href: `${detailHref}/${l.id}` },
                           { label: l.assignee ? "Assign…" : "Claim", onSelect: () => claim(l) },
                           { label: "Set follow-up" },
                           {
@@ -497,7 +535,7 @@ export function LeadsScreen({
                           )}
                         >
                           <Link
-                            href={detailHref}
+                            href={`${detailHref}/${l.id}`}
                             className="block text-body-sm font-semibold hover:text-accent-text"
                           >
                             {l.name}
@@ -578,7 +616,7 @@ export function LeadsScreen({
             <DialogDescription>A reason is required.</DialogDescription>
           </DialogHeader>
           <Field id="lost-reason" label="Reason" required>
-            <Select defaultValue="Budget">
+            <Select defaultValue="Budget" name="lostReason">
               <SelectTrigger id="lost-reason">
                 <SelectValue />
               </SelectTrigger>
@@ -600,13 +638,30 @@ export function LeadsScreen({
             </DialogClose>
             <Button
               variant="destructive"
-              onClick={() => {
-                if (lostOpen)
-                  setLeads((ls) =>
-                    ls.map((l) => (l.id === lostOpen.id ? { ...l, status: "lost" } : l)),
-                  );
+              disabled={submitting}
+              onClick={async () => {
+                if (!lostOpen) return;
+                const reasonEl = document.getElementById("lost-reason") as HTMLButtonElement | null;
+                const noteEl = document.getElementById("lost-note") as HTMLTextAreaElement | null;
+                const reason = reasonEl?.textContent?.trim() || "Budget";
+                const note = noteEl?.value?.trim();
+                setSubmitting(true);
+                const result = await updateLeadStatus({
+                  leadId: lostOpen.id,
+                  status: "lost",
+                  lostReason: note ? `${reason} — ${note}` : reason,
+                });
+                setSubmitting(false);
+                if (!result.ok) {
+                  toast.error(result.error.message);
+                  return;
+                }
+                setLeads((ls) =>
+                  ls.map((l) => (l.id === lostOpen.id ? { ...l, status: "lost" } : l)),
+                );
                 toast.success("Marked lost");
                 setLostOpen(null);
+                router.refresh();
               }}
             >
               Mark lost
@@ -623,20 +678,35 @@ export function LeadsScreen({
             </DialogDescription>
           </DialogHeader>
           <Field id="won-order" label="Order" optional>
-            <Input id="won-order" placeholder="CK-ORD-…" className="font-mono" />
+            <Input id="won-order" placeholder="Order ID (UUID), if already created" className="font-mono" />
           </Field>
           <DialogFooter>
             <Button asChild variant="secondary">
               <Link href={newOrderHref}>Create project order</Link>
             </Button>
             <Button
-              onClick={() => {
-                if (wonOpen)
-                  setLeads((ls) =>
-                    ls.map((l) => (l.id === wonOpen.id ? { ...l, status: "won" } : l)),
-                  );
+              disabled={submitting}
+              onClick={async () => {
+                if (!wonOpen) return;
+                const orderEl = document.getElementById("won-order") as HTMLInputElement | null;
+                const wonOrderId = orderEl?.value?.trim() || undefined;
+                setSubmitting(true);
+                const result = await updateLeadStatus({
+                  leadId: wonOpen.id,
+                  status: "won",
+                  wonOrderId,
+                });
+                setSubmitting(false);
+                if (!result.ok) {
+                  toast.error(result.error.message);
+                  return;
+                }
+                setLeads((ls) =>
+                  ls.map((l) => (l.id === wonOpen.id ? { ...l, status: "won" } : l)),
+                );
                 toast.success("Marked won");
                 setWonOpen(null);
+                router.refresh();
               }}
             >
               Mark won
@@ -651,38 +721,42 @@ export function LeadsScreen({
             <SheetTitle>New lead</SheetTitle>
             <SheetDescription>Source is fixed to Manual.</SheetDescription>
           </SheetHeader>
-          <form className="space-y-4 px-4" onSubmit={(e) => e.preventDefault()}>
+          <form ref={newLeadFormRef} className="space-y-4 px-4" onSubmit={(e) => e.preventDefault()}>
             <Field id="nl-name" label="Name" required>
-              <Input id="nl-name" required aria-required />
+              <Input id="nl-name" name="name" required aria-required />
             </Field>
-            <Field id="nl-email" label="Email" required>
-              <Input id="nl-email" type="email" required aria-required />
+            <Field id="nl-email" label="Email" optional>
+              <Input id="nl-email" name="email" type="email" />
             </Field>
             <Field id="nl-phone" label="Phone" optional>
-              <Input id="nl-phone" type="tel" />
+              <Input id="nl-phone" name="phone" type="tel" />
             </Field>
             <Field id="nl-company" label="Company" optional>
-              <Input id="nl-company" />
+              <Input id="nl-company" name="company" />
             </Field>
             <Field id="nl-service" label="Service interest">
-              <Input id="nl-service" placeholder="Custom software, Integrations…" />
+              <Input id="nl-service" name="serviceInterest" placeholder="Custom software, Integrations…" />
             </Field>
             <Field id="nl-product" label="Product" optional>
-              <Select>
+              <Select value={newProduct} onValueChange={setNewProduct}>
                 <SelectTrigger id="nl-product">
                   <SelectValue placeholder="None" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="fitdesk">FitDesk Pro</SelectItem>
-                  <SelectItem value="tradeflow">TradeFlow</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
+                  {products.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </Field>
             <Field id="nl-message" label="Message">
-              <Textarea id="nl-message" rows={3} />
+              <Textarea id="nl-message" name="message" rows={3} />
             </Field>
             <Field id="nl-priority" label="Priority">
-              <Select defaultValue="normal">
+              <Select value={newPriority} onValueChange={(v) => setNewPriority(v as typeof newPriority)}>
                 <SelectTrigger id="nl-priority">
                   <SelectValue />
                 </SelectTrigger>
@@ -694,18 +768,54 @@ export function LeadsScreen({
               </Select>
             </Field>
             <div className="flex items-center gap-2">
-              <Switch id="nl-assign-me" defaultChecked />
+              <Switch id="nl-assign-me" checked={assignToMe} onCheckedChange={setAssignToMe} />
               <Label htmlFor="nl-assign-me">Assign to me</Label>
             </div>
           </form>
           <SheetFooter className="flex-row justify-end gap-2">
-            <Button variant="ghost" onClick={() => setNewOpen(false)}>
+            <Button variant="ghost" onClick={() => setNewOpen(false)} disabled={submitting}>
               Cancel
             </Button>
             <Button
-              onClick={() => {
+              disabled={submitting}
+              onClick={async () => {
+                const formEl = newLeadFormRef.current;
+                if (!formEl) return;
+                const fd = new FormData(formEl);
+                const name = String(fd.get("name") ?? "").trim();
+                if (!name) {
+                  toast.error("Name is required.");
+                  return;
+                }
+                const serviceInterest = String(fd.get("serviceInterest") ?? "")
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean);
+                setSubmitting(true);
+                const result = await createLeadManual({
+                  source: "manual",
+                  name,
+                  email: String(fd.get("email") ?? "").trim() || undefined,
+                  phone: String(fd.get("phone") ?? "").trim() || undefined,
+                  company: String(fd.get("company") ?? "").trim() || undefined,
+                  message: String(fd.get("message") ?? "").trim() || undefined,
+                  serviceInterest: serviceInterest.length > 0 ? serviceInterest : undefined,
+                  productId: newProduct !== "none" ? newProduct : undefined,
+                  priority: newPriority,
+                  assignedTo: assignToMe ? currentUser.id : undefined,
+                });
+                setSubmitting(false);
+                if (!result.ok) {
+                  toast.error(result.error.message);
+                  return;
+                }
                 toast.success("Lead created");
                 setNewOpen(false);
+                formEl.reset();
+                setNewProduct("none");
+                setNewPriority("normal");
+                setAssignToMe(true);
+                router.refresh();
               }}
             >
               Create lead
