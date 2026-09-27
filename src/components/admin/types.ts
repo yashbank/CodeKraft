@@ -563,6 +563,8 @@ export interface TranscriptTurn {
 }
 
 export interface PromptVersionRow {
+  /** Real `prompt_versions.id`, needed to call activate/rollback for real. */
+  promptVersionId: string;
   version: string;
   name: string;
   active: boolean;
@@ -885,7 +887,7 @@ export interface AdminUserRow {
   name: string;
   email: string;
   role: AdminRole;
-  partner?: { displayName: string; activeShares: number };
+  partner?: { id: string; displayName: string; activeShares: number; active: boolean };
   totp: boolean;
   lastSignInAt?: string;
   status: "active" | "invited" | "pending_change";

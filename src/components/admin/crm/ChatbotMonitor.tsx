@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { ChevronDownIcon, RefreshCwIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -38,9 +39,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
 import { Banner } from "../Banner";
+import {
+  activatePromptVersion,
+  createPromptVersion,
+  getTranscript,
+} from "@/modules/chat/admin-mutations";
 import { BarChart } from "../charts/BarChart";
 import { Gauge } from "../charts/Gauge";
-import { formatDateTime, inr, plainNumber } from "../format";
+import { formatDateTime, plainNumber } from "../format";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
 import { StatTile } from "../StatTile";
@@ -72,13 +78,72 @@ export function ChatbotMonitor({
   leadsHref,
   initialTab = "conversations",
 }: ChatbotMonitorProps) {
+  const router = useRouter();
   const [selectedConv, setSelectedConv] = React.useState(data.transcript.id);
+  const [transcript, setTranscript] = React.useState(data.transcript);
+  const [transcriptLoading, setTranscriptLoading] = React.useState(false);
   const [openSources, setOpenSources] = React.useState<number | null>(null);
   const activePrompt = data.prompts.find((p) => p.active) ?? data.prompts[0];
   const [selectedPrompt, setSelectedPrompt] = React.useState(activePrompt?.version ?? "");
   const [activateOpen, setActivateOpen] = React.useState(false);
+  const [activateSubmitting, setActivateSubmitting] = React.useState(false);
+  const [savingVersion, setSavingVersion] = React.useState(false);
+  const promptBodyRef = React.useRef<HTMLTextAreaElement>(null);
   const prompt = data.prompts.find((p) => p.version === selectedPrompt) ?? activePrompt;
   const u = data.usage;
+
+  async function handleSelectConversation(id: string) {
+    setSelectedConv(id);
+    setTranscriptLoading(true);
+    const result = await getTranscript({ conversationId: id });
+    setTranscriptLoading(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    setTranscript({
+      id: result.data.conversation.conversationId,
+      turns: result.data.messages
+        .slice()
+        .reverse()
+        .map((m) => ({
+          role: m.role,
+          text: m.content,
+          ...(m.retrievedChunks.length > 0
+            ? { sources: m.retrievedChunks.map((c) => c.title) }
+            : {}),
+          ...(m.role === "assistant" ? { tokens: m.tokensIn + m.tokensOut } : {}),
+        })),
+    });
+  }
+
+  async function handleActivate() {
+    if (!prompt) return;
+    setActivateSubmitting(true);
+    const result = await activatePromptVersion({ promptVersionId: prompt.promptVersionId });
+    setActivateSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(`${prompt.version} activated`);
+    setActivateOpen(false);
+    router.refresh();
+  }
+
+  async function handleSaveAsNewVersion() {
+    if (!prompt) return;
+    const systemPrompt = promptBodyRef.current?.value ?? prompt.body;
+    setSavingVersion(true);
+    const result = await createPromptVersion({ name: prompt.name, systemPrompt });
+    setSavingVersion(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(`Saved as v${result.data.version} (inactive until activated)`);
+    router.refresh();
+  }
 
   return (
     <>
@@ -155,7 +220,7 @@ export function ChatbotMonitor({
                         <button
                           type="button"
                           className="text-left hover:text-accent-text"
-                          onClick={() => setSelectedConv(c.id)}
+                          onClick={() => handleSelectConversation(c.id)}
                         >
                           {formatDateTime(c.startedAt)}
                         </button>
@@ -192,6 +257,9 @@ export function ChatbotMonitor({
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <h2 className="text-h4">
                   Transcript <span className="font-mono text-fg-muted">{selectedConv}</span>
+                  {transcriptLoading ? (
+                    <span className="ml-2 text-caption text-fg-muted">Loading…</span>
+                  ) : null}
                 </h2>
                 <span className="ml-auto flex gap-1">
                   <Button asChild size="sm" variant="ghost">
@@ -204,14 +272,15 @@ export function ChatbotMonitor({
                     size="sm"
                     variant="ghost"
                     className="text-danger"
-                    onClick={() => toast("Purge is audited — confirm dialog in Phase 8")}
+                    disabled
+                    title="Not available yet — no single-conversation purge action exists in this phase"
                   >
                     Purge now
                   </Button>
                 </span>
               </div>
               <ol role="log" aria-label="Transcript" className="space-y-2">
-                {data.transcript.turns.map((t, i) => (
+                {transcript.turns.map((t, i) => (
                   <li
                     key={i}
                     className={cn(
@@ -292,10 +361,14 @@ export function ChatbotMonitor({
             <StatTile label="30-day messages" value={plainNumber(u.monthMessages)} />
             <StatTile
               label="Estimated cost"
-              value={inr(u.estimatedCostInr)}
-              hint="Estimate based on configured model pricing"
+              value="Not tracked"
+              hint="No per-model pricing is configured in this phase"
             />
-            <StatTile label="Fallback rate" value={`${Math.round(u.fallbackRate * 100)} %`} />
+            <StatTile
+              label="Fallback rate"
+              value="Not tracked"
+              hint="No fallback-hit flag is stored in this phase"
+            />
             <StatTile label="Escalation rate" value={`${Math.round(u.escalationRate * 100)} %`} />
           </div>
           <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
@@ -410,10 +483,15 @@ export function ChatbotMonitor({
                   size="sm"
                   variant="secondary"
                   className="mt-2"
-                  onClick={() => toast.success(`Index rebuilt (${data.indexChunks} chunks)`)}
+                  disabled
+                  title="Not available yet — the content re-indexing pipeline isn't implemented in this phase"
                 >
                   <RefreshCwIcon aria-hidden /> Rebuild knowledge index
                 </Button>
+                <p className="mt-1 text-caption text-fg-muted">
+                  Rebuilding isn&apos;t wired yet — re-indexing published content is out of this
+                  phase&apos;s scope.
+                </p>
               </div>
               <div className="rounded-lg border border-border bg-surface p-4">
                 <h2 className="mb-2 text-h4">Try a message</h2>
@@ -426,11 +504,7 @@ export function ChatbotMonitor({
                 </Label>
                 <div className="flex gap-2">
                   <Input id="pt-msg" placeholder="Can I get a refund?" />
-                  <Button
-                    size="md"
-                    variant="secondary"
-                    onClick={() => toast("Answer + sources appear here")}
-                  >
+                  <Button size="md" variant="secondary" disabled title="Not available yet — a dry-run endpoint isn't implemented in this phase">
                     Run
                   </Button>
                 </div>
@@ -448,18 +522,14 @@ export function ChatbotMonitor({
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => toast.success("Saved as v5")}
+                    disabled={savingVersion || !prompt}
+                    onClick={handleSaveAsNewVersion}
                   >
                     Save as new version
                   </Button>
                   {prompt && !prompt.active ? (
                     <Button size="sm" onClick={() => setActivateOpen(true)}>
                       Activate
-                    </Button>
-                  ) : null}
-                  {prompt && !prompt.active ? (
-                    <Button size="sm" variant="outline" onClick={() => setActivateOpen(true)}>
-                      Roll back to this version
                     </Button>
                   ) : null}
                 </span>
@@ -471,6 +541,7 @@ export function ChatbotMonitor({
               >
                 <Textarea
                   id="pt-body"
+                  ref={promptBodyRef}
                   rows={9}
                   defaultValue={prompt?.body}
                   key={prompt?.version}
@@ -513,12 +584,7 @@ export function ChatbotMonitor({
             <DialogClose asChild>
               <Button variant="ghost">Cancel</Button>
             </DialogClose>
-            <Button
-              onClick={() => {
-                toast.success(`${prompt?.version} activated`);
-                setActivateOpen(false);
-              }}
-            >
+            <Button onClick={handleActivate} disabled={activateSubmitting}>
               Activate
             </Button>
           </DialogFooter>

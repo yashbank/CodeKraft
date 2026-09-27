@@ -1921,6 +1921,7 @@ export const CHATBOT: ChatbotMonitorData = {
   },
   prompts: [
     {
+      promptVersionId: "prompt-v4",
       version: "v4",
       name: "Grounded assistant",
       active: true,
@@ -1930,6 +1931,7 @@ export const CHATBOT: ChatbotMonitorData = {
       body: "You are the CodeKraft assistant. Answer only from the provided site content. Never quote contact details. If the user asks about refunds, explain that admins review refunds and gateway payments are non-refundable. Offer to escalate to a human when unsure.",
     },
     {
+      promptVersionId: "prompt-v3",
       version: "v3",
       name: "Grounded assistant",
       active: false,
@@ -1939,6 +1941,7 @@ export const CHATBOT: ChatbotMonitorData = {
       body: "You are the CodeKraft assistant. Answer only from the provided site content. Offer to capture a lead when the user shows purchase intent.",
     },
     {
+      promptVersionId: "prompt-v2",
       version: "v2",
       name: "Menu-first",
       active: false,
@@ -3189,7 +3192,7 @@ export const ADMIN_USERS: AdminUserRow[] = [
     name: "Priya Nair",
     email: "priya@codekraft.in",
     role: "super_admin",
-    partner: { displayName: "Priya Nair", activeShares: 4 },
+    partner: { id: "partner-priya", displayName: "Priya Nair", activeShares: 4, active: true },
     totp: true,
     lastSignInAt: "2026-09-25T06:02:00Z",
     status: "active",
@@ -3199,7 +3202,7 @@ export const ADMIN_USERS: AdminUserRow[] = [
     name: "Arjun Mehta",
     email: "arjun@codekraft.in",
     role: "super_admin",
-    partner: { displayName: "Arjun Mehta", activeShares: 4 },
+    partner: { id: "partner-arjun", displayName: "Arjun Mehta", activeShares: 4, active: true },
     totp: true,
     lastSignInAt: "2026-09-25T07:00:00Z",
     status: "active",

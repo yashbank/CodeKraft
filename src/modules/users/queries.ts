@@ -6,7 +6,12 @@
  */
 import { z } from "zod";
 import { defineAction } from "@/lib/actions/envelope";
-import { getCustomerSchema, listCustomersSchema, listPartnersSchema } from "./contracts";
+import {
+  getCustomerSchema,
+  listAdminUsersSchema,
+  listCustomersSchema,
+  listPartnersSchema,
+} from "./contracts";
 import { usersService } from "./service";
 
 const emptyQueryInput = z.strictObject({});
@@ -37,6 +42,13 @@ export const getCustomerQuery = defineAction({
   input: getCustomerSchema,
   permission: "customers.read",
   handler: (input, ctx) => usersService.getCustomer(ctx, input),
+});
+
+export const listAdminUsersQuery = defineAction({
+  name: "API-ADM-11 admin_user.list",
+  input: listAdminUsersSchema,
+  permission: "users.admin.manage",
+  handler: (input, ctx) => usersService.listAdminUsers(ctx, input),
 });
 
 export const listPartnersQuery = defineAction({

@@ -1,12 +1,14 @@
 import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import type { RequestContext } from "@/lib/authz/context";
 import { type TxCtx, getDb } from "@/lib/db";
-import { AppError } from "@/lib/errors";
+import { AppError, ErrorCode } from "@/lib/errors";
 import { users } from "../../../drizzle/schema/auth";
 import {
   type Conversation,
+  type PromptVersion,
   chatMessages,
   conversations,
+  knowledgeChunks,
   promptVersions,
 } from "../../../drizzle/schema/chat";
 import { queries } from "../../../drizzle/schema/queries";
@@ -399,6 +401,29 @@ export class DefaultChatService implements ChatService {
       );
   }
 
+  /** Real per-conversation message count / latest preview / token total (fixes a P2.8 stub that hardcoded `1` / "Chat session"). */
+  private async statsForConversations(
+    ids: string[],
+  ): Promise<Map<string, { messageCount: number; lastMessagePreview: string | null; totalTokens: number }>> {
+    if (ids.length === 0) return new Map();
+    const rows = await this.db
+      .select({
+        conversationId: chatMessages.conversationId,
+        messageCount: sql<number>`count(*)::int`,
+        lastMessagePreview: sql<string | null>`(array_agg(${chatMessages.content} order by ${chatMessages.createdAt} desc))[1]`,
+        totalTokens: sql<number>`coalesce(sum(${chatMessages.tokensIn} + ${chatMessages.tokensOut}), 0)::int`,
+      })
+      .from(chatMessages)
+      .where(inArray(chatMessages.conversationId, ids))
+      .groupBy(chatMessages.conversationId);
+    return new Map(
+      rows.map((r: { conversationId: string; messageCount: number; lastMessagePreview: string | null; totalTokens: number }) => [
+        r.conversationId,
+        r,
+      ]),
+    );
+  }
+
   async listMyConversations(
     ctx: RequestContext,
     input: ListMyConversationsInput,
@@ -412,14 +437,15 @@ export class DefaultChatService implements ChatService {
 
     const hasNext = rows.length > (input.limit ?? 25);
     const selected = hasNext ? rows.slice(0, input.limit ?? 25) : rows;
+    const stats = await this.statsForConversations(selected.map((c: Conversation) => c.id));
 
-    const items: ConversationSummary[] = selected.map((c) => ({
+    const items: ConversationSummary[] = selected.map((c: Conversation) => ({
       conversationId: c.id,
       startedAt: c.startedAt.toISOString(),
       endedAt: c.endedAt ? c.endedAt.toISOString() : null,
       escalatedQueryId: c.escalatedQueryId,
-      messageCount: 1,
-      lastMessagePreview: "Chat session",
+      messageCount: stats.get(c.id)?.messageCount ?? 0,
+      lastMessagePreview: stats.get(c.id)?.lastMessagePreview ?? null,
     }));
 
     return {
@@ -432,24 +458,42 @@ export class DefaultChatService implements ChatService {
   async listConversationsAdmin(
     ctx: RequestContext,
     input: ListConversationsAdminInput,
-  ): Promise<ListResult<ConversationSummary & { userId: string }>> {
+  ): Promise<
+    ListResult<
+      ConversationSummary & {
+        userId: string;
+        customerEmail: string | null;
+        model: string;
+        promptVersionId: string;
+        totalTokens: number;
+      }
+    >
+  > {
     const rows = await this.db
-      .select()
+      .select({ conversation: conversations, customerEmail: users.email })
       .from(conversations)
+      .leftJoin(users, eq(conversations.userId, users.id))
       .orderBy(desc(conversations.startedAt))
       .limit((input.limit ?? 25) + 1);
 
     const hasNext = rows.length > (input.limit ?? 25);
     const selected = hasNext ? rows.slice(0, input.limit ?? 25) : rows;
+    const stats = await this.statsForConversations(
+      selected.map((r: { conversation: Conversation; customerEmail: string | null }) => r.conversation.id),
+    );
 
-    const items = selected.map((c) => ({
+    const items = selected.map(({ conversation: c, customerEmail }: { conversation: Conversation; customerEmail: string | null }) => ({
       conversationId: c.id,
       userId: c.userId,
+      customerEmail: customerEmail ?? null,
       startedAt: c.startedAt.toISOString(),
       endedAt: c.endedAt ? c.endedAt.toISOString() : null,
       escalatedQueryId: c.escalatedQueryId,
-      messageCount: 1,
-      lastMessagePreview: "Chat session",
+      messageCount: stats.get(c.id)?.messageCount ?? 0,
+      lastMessagePreview: stats.get(c.id)?.lastMessagePreview ?? null,
+      model: c.model,
+      promptVersionId: c.promptVersionId,
+      totalTokens: stats.get(c.id)?.totalTokens ?? 0,
     }));
 
     return {
@@ -565,7 +609,7 @@ export class DefaultChatService implements ChatService {
   async activatePromptVersion(
     ctx: RequestContext,
     input: ActivatePromptVersionInput,
-  ): Promise<PromptVersionRow> {
+  ): Promise<PromptVersionsResult> {
     // Single active version invariant: set all false first, then set one true
     await this.db
       .update(promptVersions)
@@ -580,31 +624,45 @@ export class DefaultChatService implements ChatService {
 
     if (!row) throw new AppError("NOT_FOUND", "Prompt version not found");
 
-    return {
-      promptVersionId: row.id,
-      name: row.name,
-      version: row.version,
-      isActive: row.isActive,
-      systemPrompt: row.systemPrompt,
-      createdAt: row.createdAt.toISOString(),
-    };
+    return await this.listPromptVersions(ctx, {});
   }
 
+  /**
+   * "Previously active" (docs/04 §9) has no dedicated history table -- there is only the current
+   * `is_active` flag -- so this uses the best available proxy: among the OTHER versions sharing
+   * `name`, the highest-numbered one that isn't currently active. `STATE_INVALID` when there is
+   * no other version to fall back to.
+   */
   async rollbackPromptVersion(
     ctx: RequestContext,
     input: RollbackPromptVersionInput,
-  ): Promise<PromptVersionRow> {
-    return await this.activatePromptVersion(ctx, { promptVersionId: input.targetPromptVersionId });
+  ): Promise<PromptVersionsResult> {
+    const rows = await this.db
+      .select()
+      .from(promptVersions)
+      .where(eq(promptVersions.name, input.name))
+      .orderBy(desc(promptVersions.version));
+
+    const target = rows.find((r: PromptVersion) => !r.isActive);
+    if (!target) {
+      throw new AppError(ErrorCode.STATE_INVALID, "No previous version to roll back to");
+    }
+
+    return await this.activatePromptVersion(ctx, { promptVersionId: target.id });
   }
 
+  /**
+   * The real rebuild pipeline (re-deriving `knowledge_chunks` from published products / offerings
+   * / services / FAQs / legal pages / case studies) is out of this phase's scope -- it touches
+   * several content modules this phase doesn't own. This returns the current chunk count honestly
+   * rather than fabricating a rebuild; the admin UI disables the "Rebuild" action and says so.
+   */
   async reindexKnowledge(
     ctx: RequestContext,
     input: ReindexKnowledgeInput,
   ): Promise<ReindexResult> {
-    return {
-      indexed: 0,
-      errors: 0,
-    };
+    const rows = await this.db.select({ id: knowledgeChunks.id }).from(knowledgeChunks);
+    return { chunks: rows.length };
   }
 
   async runRetentionPurgeJob(

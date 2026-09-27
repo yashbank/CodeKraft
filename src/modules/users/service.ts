@@ -25,6 +25,7 @@ import { notifications } from "../../../drizzle/schema/notifications";
 import type {
   AccountSettings,
   AdminUserChangePayload,
+  AdminUserRow,
   CustomerDetail,
   CustomerProfileView,
   CustomerRow,
@@ -39,6 +40,7 @@ import type {
 import {
   type AdminUserChangeResult,
   type DeleteAccountInput,
+  type ListAdminUsersInput,
   type ListCustomersInput,
   type UpdateAccountSettingsInput,
   type UpdateCustomerNotesInput,
@@ -70,7 +72,13 @@ import {
   toUserView,
   updateCustomerNotes,
 } from "./customers";
-import { applyAdminUserChange, changeAdminRole, inviteAdmin, removeAdmin } from "./admin-users";
+import {
+  applyAdminUserChange,
+  changeAdminRole,
+  inviteAdmin,
+  listAdminUsers,
+  removeAdmin,
+} from "./admin-users";
 import { listPartners, updatePartner } from "./partners";
 import type { Currency } from "@/lib/money";
 import type { ThemeName } from "@/lib/theme";
@@ -100,6 +108,7 @@ export function createNotImplementedUsersService(): UsersService {
     changeAdminRole: "async",
     removeAdmin: "async",
     applyAdminUserChange: "async",
+    listAdminUsers: "async",
     listPartners: "async",
     updatePartner: "async",
     getDashboardOverview: "async",
@@ -660,6 +669,15 @@ export class DefaultUsersService implements UsersService {
 
   async applyAdminUserChange(payload: AdminUserChangePayload, tx: TxCtx): Promise<void> {
     await applyAdminUserChange(payload, tx);
+  }
+
+  async listAdminUsers(
+    ctx: RequestContext,
+    input: ListAdminUsersInput,
+    tx?: DbOrTx,
+  ): Promise<ListResult<AdminUserRow>> {
+    const db = await this.getDatabase(tx);
+    return await listAdminUsers(ctx, input, db);
   }
 
   /* --- API-ADM-12 partners ------------------------------------------------------------------- */

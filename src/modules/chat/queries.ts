@@ -1,5 +1,51 @@
+"use server";
+
 /**
- * `chat` read-only queries — owned by P6 (master plan §3 ownership map). Intentionally empty in P2.8:
- * Queries are `definePublicAction` / `defineAction` reads that never mutate.
+ * `chat` read-only queries (docs/06 §2.9 API-CHAT-11/12; PHASE-06). Uses `defineAction` — reads
+ * that never mutate.
  */
-export {};
+import { z } from "zod";
+import { defineAction } from "@/lib/actions/envelope";
+import {
+  getTranscriptSchema,
+  listConversationsAdminSchema,
+  listPromptVersionsSchema,
+} from "./types";
+import { getDb } from "@/lib/db";
+import { chatService } from "./service";
+import { getChatUsageOverview, getKnowledgeIndexStatus } from "./admin-usage";
+
+export const listConversationsAdminQuery = defineAction({
+  name: "API-CHAT-11 conversation.list_admin",
+  input: listConversationsAdminSchema,
+  permission: "chat.transcripts.read",
+  handler: (input, ctx) => chatService.listConversationsAdmin(ctx, input),
+});
+
+export const getTranscriptQuery = defineAction({
+  name: "API-CHAT-11 conversation.transcript",
+  input: getTranscriptSchema,
+  permission: "chat.transcripts.read",
+  handler: (input, ctx) => chatService.getTranscript(ctx, input),
+});
+
+export const listPromptVersionsQuery = defineAction({
+  name: "API-CHAT-12 prompt_version.list",
+  input: listPromptVersionsSchema,
+  permission: "chat.prompts.write",
+  handler: (input, ctx) => chatService.listPromptVersions(ctx, input),
+});
+
+export const getChatUsageOverviewQuery = defineAction({
+  name: "chat.usage_overview",
+  input: z.strictObject({}),
+  permission: "chat.transcripts.read",
+  handler: async (_input, ctx) => getChatUsageOverview(ctx, getDb()),
+});
+
+export const getKnowledgeIndexStatusQuery = defineAction({
+  name: "chat.knowledge_index_status",
+  input: z.strictObject({}),
+  permission: "chat.prompts.write",
+  handler: async (_input, ctx) => getKnowledgeIndexStatus(ctx, getDb()),
+});

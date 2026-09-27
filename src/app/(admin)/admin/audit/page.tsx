@@ -1,17 +1,20 @@
 import { AuditLog } from "@/components/admin/system/AuditLog";
-import {
-  ADMINS,
-  AUDIT_ROWS,
-} from "@/app/dev/screens/_fixtures/admin";
+import { getAdminRequestContext } from "@/lib/authz/admin-request-context";
+import { mapAuditRow } from "@/lib/admin/audit-view";
+import { listAuditLogsAction } from "@/modules/audit/queries";
+import { listAdminUsersQuery } from "@/modules/users/queries";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminAuditLogPage() {
-  return (
-    <AuditLog
-      rows={AUDIT_ROWS}
-      admins={ADMINS.map((a) => a.name)}
-      approvalsHref="/admin/approvals"
-    />
-  );
+export default async function AdminAuditLogPage() {
+  const ctx = await getAdminRequestContext();
+  const [logsResult, adminsResult] = await Promise.all([
+    listAuditLogsAction({ limit: 100 }, ctx),
+    listAdminUsersQuery({}, ctx),
+  ]);
+
+  const rows = logsResult.ok ? logsResult.data.items.map(mapAuditRow) : [];
+  const admins = adminsResult.ok ? adminsResult.data.items.map((a) => a.name) : [];
+
+  return <AuditLog rows={rows} admins={admins} approvalsHref="/admin/approvals" />;
 }

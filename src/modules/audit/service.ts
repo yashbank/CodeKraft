@@ -11,6 +11,7 @@
  */
 import { and, desc, eq, gte, ilike, like, lte, or, sql } from "drizzle-orm";
 import { auditLogs, type AuditLog } from "../../../drizzle/schema/audit";
+import { users } from "../../../drizzle/schema/auth";
 import type { DbOrTx, TxCtx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { assertPermission } from "@/lib/authz/assert";
@@ -60,11 +61,12 @@ function decodeCursor(cursor: string): { epochMs: number; id: string } | null {
   }
 }
 
-function mapRowToAuditLogRow(row: AuditLog): AuditLogRow {
+function mapRowToAuditLogRow(row: AuditLog & { actorName?: string | null }): AuditLogRow {
   return {
     id: row.id,
     actorId: row.actorId,
     actorRole: row.actorRole,
+    actorName: row.actorName ?? null,
     action: row.action,
     subject: {
       type: row.subjectType,
@@ -193,8 +195,23 @@ export class DefaultAuditService implements AuditService {
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const rows = await database
-      .select()
+      .select({
+        id: auditLogs.id,
+        actorId: auditLogs.actorId,
+        actorRole: auditLogs.actorRole,
+        actorName: users.name,
+        action: auditLogs.action,
+        subjectType: auditLogs.subjectType,
+        subjectId: auditLogs.subjectId,
+        before: auditLogs.before,
+        after: auditLogs.after,
+        ip: auditLogs.ip,
+        userAgent: auditLogs.userAgent,
+        requestId: auditLogs.requestId,
+        createdAt: auditLogs.createdAt,
+      })
       .from(auditLogs)
+      .leftJoin(users, eq(auditLogs.actorId, users.id))
       .where(whereClause)
       .orderBy(desc(auditLogs.createdAt), desc(auditLogs.id))
       .limit(limit + 1);

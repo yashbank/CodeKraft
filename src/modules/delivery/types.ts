@@ -87,7 +87,11 @@ export interface DeliveryTaskRow {
   kind: DeliveryTaskKind;
   status: DeliveryTaskStatus;
   entitlementId: string;
+  entitlementStatus: string;
   product: { id: string; name: string };
+  offeringName: string | null;
+  /** Null for a manually-granted entitlement (no order behind it, D-1108). */
+  order: { id: string; orderNo: string } | null;
   customer: { id: string; email: string; name: string | null };
   assignedTo: { id: string; name: string | null } | null;
   note: string | null;

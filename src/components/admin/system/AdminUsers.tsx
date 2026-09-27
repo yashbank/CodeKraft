@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { KeyRoundIcon, PlusIcon, ShieldCheckIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -39,6 +40,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ApprovalGateNotice, Banner } from "../Banner";
+import {
+  changeAdminRole,
+  inviteAdmin,
+  removeAdmin,
+  updatePartner,
+} from "@/modules/users/admin-mutations";
 import { formatDateTime, initials } from "../format";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
@@ -79,15 +86,103 @@ export function AdminUsers({
   productHref,
   auditHref,
 }: AdminUsersProps) {
+  const router = useRouter();
   const [inviteOpen, setInviteOpen] = React.useState(false);
   const [invitePartner, setInvitePartner] = React.useState(false);
+  const [inviteRole, setInviteRole] = React.useState<AdminRole>("admin");
+  const [inviteSubmitting, setInviteSubmitting] = React.useState(false);
   const [securityOpen, setSecurityOpen] = React.useState(false);
   const [partnerSheet, setPartnerSheet] = React.useState<AdminUserRow | null>(null);
+  const [partnerSubmitting, setPartnerSubmitting] = React.useState(false);
   const [confirm, setConfirm] = React.useState<{
     kind: "role" | "remove";
     user: AdminUserRow;
   } | null>(null);
+  const [confirmRole, setConfirmRole] = React.useState<AdminRole>("admin");
+  const [confirmSubmitting, setConfirmSubmitting] = React.useState(false);
   const [reveal, setReveal] = React.useState(false);
+
+  function openConfirm(kind: "role" | "remove", user: AdminUserRow) {
+    setConfirmRole(user.role === "admin" ? "super_admin" : "admin");
+    setConfirm({ kind, user });
+  }
+
+  async function handleInviteSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const email = String(form.get("email") ?? "").trim();
+    const partnerName = String(form.get("partnerName") ?? "").trim();
+    if (!email) {
+      toast.error("Email is required.");
+      return;
+    }
+    if (invitePartner && !partnerName) {
+      toast.error("Partner display name is required.");
+      return;
+    }
+    setInviteSubmitting(true);
+    const result = await inviteAdmin({
+      email,
+      role: inviteRole,
+      ...(invitePartner ? { partner: { displayName: partnerName } } : {}),
+    });
+    setInviteSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(
+      result.data.warning === "fewer_than_two_admins"
+        ? "Invite approval requested — this will still leave fewer than two active admins."
+        : "Invite approval requested",
+    );
+    setInviteOpen(false);
+    setInvitePartner(false);
+    router.refresh();
+  }
+
+  async function handleConfirmSubmit() {
+    if (!confirm) return;
+    setConfirmSubmitting(true);
+    const result =
+      confirm.kind === "remove"
+        ? await removeAdmin({ userId: confirm.user.id })
+        : await changeAdminRole({ userId: confirm.user.id, role: confirmRole });
+    setConfirmSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(
+      result.data.warning === "fewer_than_two_admins"
+        ? "Approval requested — this will leave fewer than two active admins."
+        : "Approval requested",
+    );
+    setConfirm(null);
+    router.refresh();
+  }
+
+  async function handlePartnerSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!partnerSheet?.partner) return;
+    const form = new FormData(e.currentTarget);
+    const displayName = String(form.get("displayName") ?? "").trim();
+    const active = form.get("active") === "on";
+    setPartnerSubmitting(true);
+    const result = await updatePartner({
+      partnerId: partnerSheet.partner.id,
+      displayName,
+      active,
+    });
+    setPartnerSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Partner updated");
+    setPartnerSheet(null);
+    router.refresh();
+  }
   const activeAdmins = users.filter(
     (u) => u.status === "active" && (u.role === "admin" || u.role === "super_admin"),
   );
@@ -226,23 +321,23 @@ export function AdminUsers({
                       actions={[
                         {
                           label: "Change role",
-                          onSelect: () => setConfirm({ kind: "role", user: u }),
+                          onSelect: () => openConfirm("role", u),
                         },
                         {
                           label: "Edit partner details",
                           onSelect: () => setPartnerSheet(u),
                           disabled: !u.partner,
                         },
-                        { label: "Resend invite", disabled: u.status !== "invited" },
+                        { label: "Resend invite", disabled: true },
                         {
                           label: "Revoke sessions",
-                          onSelect: () => toast.success(`Sessions revoked for ${u.name} (audited)`),
+                          disabled: true,
                           separatorBefore: true,
                         },
                         {
                           label: "Remove access",
                           destructive: true,
-                          onSelect: () => setConfirm({ kind: "remove", user: u }),
+                          onSelect: () => openConfirm("remove", u),
                           disabled: lastSuper,
                         },
                       ]}
@@ -255,6 +350,10 @@ export function AdminUsers({
         </Table>
       </div>
       <p className="mt-3 text-caption text-fg-muted">
+        Resend invite and Revoke sessions are not wired to a backend yet and stay disabled. TOTP
+        setup below is a preview only (Phase 6 gap — see Security dialog).
+      </p>
+      <p className="mt-1 text-caption text-fg-muted">
         Removing the last Super Admin is not allowed. A partner holding active shares must have
         ownership reassigned first (
         <Link href={productHref} className="text-accent-text hover:underline">
@@ -269,50 +368,53 @@ export function AdminUsers({
 
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
         <DialogContent size="md">
-          <DialogHeader>
-            <DialogTitle>Invite admin</DialogTitle>
-            <DialogDescription>
-              The other admin(s) must approve before the invite is sent (BR-13). The email mentions
-              the admin host and recommends TOTP.
-            </DialogDescription>
-          </DialogHeader>
-          <Field id="inv-email" label="Email" required>
-            <Input id="inv-email" type="email" required aria-required />
-          </Field>
-          <fieldset className="space-y-2">
-            <legend className="text-body-sm font-semibold">Role *</legend>
-            <RadioGroup defaultValue="admin" className="grid gap-2">
-              {(["super_admin", "admin", "staff"] as AdminRole[]).map((r) => (
-                <RadioGroupCard key={r} value={r} disabled={r === "staff"}>
-                  <span className="text-body font-semibold">{ROLE_LABEL[r]}</span>
-                  <span className="text-caption text-fg-muted">{ROLE_SUMMARY[r]}</span>
-                </RadioGroupCard>
-              ))}
-            </RadioGroup>
-          </fieldset>
-          <div className="flex items-center gap-2">
-            <Switch id="inv-partner" checked={invitePartner} onCheckedChange={setInvitePartner} />
-            <Label htmlFor="inv-partner">Also a partner</Label>
-          </div>
-          {invitePartner ? (
-            <Field id="inv-partner-name" label="Partner display name" required>
-              <Input id="inv-partner-name" required aria-required />
+          <form onSubmit={handleInviteSubmit}>
+            <DialogHeader>
+              <DialogTitle>Invite admin</DialogTitle>
+              <DialogDescription>
+                The other admin(s) must approve before the invite is sent (BR-13). The email mentions
+                the admin host and recommends TOTP.
+              </DialogDescription>
+            </DialogHeader>
+            <Field id="inv-email" label="Email" required>
+              <Input id="inv-email" name="email" type="email" required aria-required />
             </Field>
-          ) : null}
-          <ApprovalGateNotice approvers={approvers} what="Inviting an admin" />
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="ghost">Cancel</Button>
-            </DialogClose>
-            <Button
-              onClick={() => {
-                toast.success("Invite approval requested");
-                setInviteOpen(false);
-              }}
-            >
-              Request approval
-            </Button>
-          </DialogFooter>
+            <fieldset className="space-y-2">
+              <legend className="text-body-sm font-semibold">Role *</legend>
+              <RadioGroup
+                value={inviteRole}
+                onValueChange={(v) => setInviteRole(v as AdminRole)}
+                className="grid gap-2"
+              >
+                {(["super_admin", "admin", "staff"] as AdminRole[]).map((r) => (
+                  <RadioGroupCard key={r} value={r} disabled={r === "staff"}>
+                    <span className="text-body font-semibold">{ROLE_LABEL[r]}</span>
+                    <span className="text-caption text-fg-muted">{ROLE_SUMMARY[r]}</span>
+                  </RadioGroupCard>
+                ))}
+              </RadioGroup>
+            </fieldset>
+            <div className="flex items-center gap-2">
+              <Switch id="inv-partner" checked={invitePartner} onCheckedChange={setInvitePartner} />
+              <Label htmlFor="inv-partner">Also a partner</Label>
+            </div>
+            {invitePartner ? (
+              <Field id="inv-partner-name" label="Partner display name" required>
+                <Input id="inv-partner-name" name="partnerName" required aria-required />
+              </Field>
+            ) : null}
+            <ApprovalGateNotice approvers={approvers} what="Inviting an admin" />
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="ghost">
+                  Cancel
+                </Button>
+              </DialogClose>
+              <Button type="submit" disabled={inviteSubmitting}>
+                Request approval
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
@@ -339,7 +441,8 @@ export function AdminUsers({
           {confirm?.kind === "role" ? (
             <Field id="role-new" label="New role">
               <RadioGroup
-                defaultValue={confirm.user.role === "admin" ? "super_admin" : "admin"}
+                value={confirmRole}
+                onValueChange={(v) => setConfirmRole(v as AdminRole)}
                 className="grid gap-2"
               >
                 {(["super_admin", "admin"] as AdminRole[]).map((r) => (
@@ -358,16 +461,14 @@ export function AdminUsers({
             <Button
               variant={confirm?.kind === "remove" ? "destructive" : "primary"}
               disabled={Boolean(
-                confirm &&
-                ((confirm.user.role === "super_admin" && superAdmins.length === 1) ||
-                  (confirm.kind === "remove" &&
-                    confirm.user.partner &&
-                    confirm.user.partner.activeShares > 0)),
+                confirmSubmitting ||
+                (confirm &&
+                  ((confirm.user.role === "super_admin" && superAdmins.length === 1) ||
+                    (confirm.kind === "remove" &&
+                      confirm.user.partner &&
+                      confirm.user.partner.activeShares > 0))),
               )}
-              onClick={() => {
-                toast.success("Approval requested");
-                setConfirm(null);
-              }}
+              onClick={handleConfirmSubmit}
             >
               Request approval
             </Button>
@@ -383,39 +484,53 @@ export function AdminUsers({
               Bank details are encrypted at rest; revealing them is audited.
             </SheetDescription>
           </SheetHeader>
-          <form className="space-y-4 px-4" onSubmit={(e) => e.preventDefault()}>
+          <form id="partner-form" className="space-y-4 px-4" onSubmit={handlePartnerSubmit}>
             <Field id="pt-name" label="Display name" required>
-              <Input id="pt-name" defaultValue={partnerSheet?.partner?.displayName} />
+              <Input
+                id="pt-name"
+                name="displayName"
+                key={partnerSheet?.id}
+                defaultValue={partnerSheet?.partner?.displayName}
+                required
+              />
             </Field>
+            <p className="text-caption text-fg-muted">
+              Bank details aren&apos;t editable here yet — no reveal/decrypt endpoint exists in this
+              phase, so the fields below are read-only placeholders.
+            </p>
             <Field id="pt-acct" label="Account number">
               <span className="flex gap-2">
                 <Input
                   id="pt-acct"
                   readOnly
+                  disabled
                   value={reveal ? "0012 9876 5432" : "•••• •••• 5432"}
                   className="font-mono"
                 />
                 <Button
                   type="button"
                   variant="secondary"
+                  disabled
                   aria-pressed={reveal}
-                  onClick={() => {
-                    setReveal((v) => !v);
-                    if (!reveal) toast("Reveal recorded in the audit log");
-                  }}
+                  onClick={() => setReveal((v) => !v)}
                 >
                   {reveal ? "Hide" : "Reveal"}
                 </Button>
               </span>
             </Field>
             <Field id="pt-ifsc" label="IFSC">
-              <Input id="pt-ifsc" defaultValue="HDFC0000123" className="font-mono" />
+              <Input id="pt-ifsc" readOnly disabled defaultValue="HDFC0000123" className="font-mono" />
             </Field>
             <Field id="pt-bank" label="Bank name">
-              <Input id="pt-bank" defaultValue="HDFC Bank" />
+              <Input id="pt-bank" readOnly disabled defaultValue="HDFC Bank" />
             </Field>
             <div className="flex items-center gap-2">
-              <Switch id="pt-active" defaultChecked />
+              <Switch
+                id="pt-active"
+                name="active"
+                key={`active-${partnerSheet?.id}`}
+                defaultChecked={partnerSheet?.partner?.active ?? true}
+              />
               <Label htmlFor="pt-active">Active</Label>
             </div>
           </form>
@@ -423,12 +538,7 @@ export function AdminUsers({
             <Button variant="ghost" onClick={() => setPartnerSheet(null)}>
               Cancel
             </Button>
-            <Button
-              onClick={() => {
-                toast.success("Partner updated");
-                setPartnerSheet(null);
-              }}
-            >
+            <Button type="submit" form="partner-form" disabled={partnerSubmitting}>
               Save
             </Button>
           </SheetFooter>
@@ -444,6 +554,10 @@ export function AdminUsers({
               somewhere safe — each works once.
             </DialogDescription>
           </DialogHeader>
+          <Banner tone="info">
+            Preview only in this phase: enabling TOTP for real needs a password-confirmation step
+            this dialog doesn&apos;t collect yet, so the buttons below are disabled.
+          </Banner>
           <div className="grid gap-4 sm:grid-cols-[160px_1fr]">
             <div
               className="grid size-40 place-items-center rounded-md bg-inverse-fg text-caption text-inverse"
@@ -474,23 +588,13 @@ export function AdminUsers({
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => toast("Disabling TOTP requires your password and a current code")}
-            >
+            <Button variant="ghost" disabled>
               Disable TOTP
             </Button>
-            <Button variant="secondary" onClick={() => toast.success("Backup codes downloaded")}>
+            <Button variant="secondary" disabled>
               Download backup codes
             </Button>
-            <Button
-              onClick={() => {
-                toast.success("TOTP enabled");
-                setSecurityOpen(false);
-              }}
-            >
-              Enable TOTP
-            </Button>
+            <Button disabled>Enable TOTP</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

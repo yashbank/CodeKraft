@@ -22,6 +22,7 @@ import {
   USER_STATUSES,
   type AccountSettings,
   type AdminUserChangePayload,
+  type AdminUserRow,
   type CustomerDetail,
   type CustomerProfileView,
   type CustomerRow,
@@ -154,6 +155,10 @@ export const changeAdminRoleSchema = z.strictObject({
 });
 /** API-ADM-11 `removeAdmin`. */
 export const removeAdminSchema = z.strictObject({ userId: uuidSchema });
+/** Admin users list read (no numbered API row; companion to API-ADM-11). */
+export const listAdminUsersSchema = z.strictObject({});
+export type ListAdminUsersInput = z.infer<typeof listAdminUsersSchema>;
+
 
 /** `admin.user_change` payload validated before apply. */
 export const adminUserChangePayloadSchema = z.discriminatedUnion("op", [
@@ -306,6 +311,8 @@ export interface UsersService {
   ): Promise<AdminUserChangeResult>;
   /** API-ADM-11 apply handler for `admin.user_change`: `user_roles`, `partners`, invitation email. */
   applyAdminUserChange(payload: AdminUserChangePayload, tx: TxCtx): Promise<void>;
+  /** Admin users list read (no numbered API row). */
+  listAdminUsers(ctx: RequestContext, input: ListAdminUsersInput, tx?: DbOrTx): Promise<ListResult<AdminUserRow>>;
   /** API-ADM-12 (query). */
   listPartners(
     ctx: RequestContext,

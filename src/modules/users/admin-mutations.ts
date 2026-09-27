@@ -12,11 +12,15 @@ import type { ActionResult } from "@/lib/actions/envelope";
 import { fail } from "@/lib/actions/envelope";
 import type { Context } from "@/lib/authz/context";
 import {
+  changeAdminRoleAction,
+  inviteAdminAction,
   reinstateCustomerAction,
+  removeAdminAction,
   sendMagicLinkAction,
   sendResetLinkAction,
   suspendCustomerAction,
   updateCustomerNotesAction,
+  updatePartnerAction,
 } from "./actions";
 
 async function withCtx<T>(
@@ -55,4 +59,20 @@ export async function sendResetLink(raw: unknown) {
 
 export async function sendMagicLink(raw: unknown) {
   return withCtx(sendMagicLinkAction, raw);
+}
+
+export async function inviteAdmin(raw: unknown) {
+  return withCtx(inviteAdminAction, raw);
+}
+
+export async function changeAdminRole(raw: unknown) {
+  return withCtx(changeAdminRoleAction, raw);
+}
+
+export async function removeAdmin(raw: unknown) {
+  return withCtx(removeAdminAction, raw);
+}
+
+export async function updatePartner(raw: unknown) {
+  return withCtx(updatePartnerAction, raw);
 }

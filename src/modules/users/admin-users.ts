@@ -1,7 +1,7 @@
 /**
  * Admin user operations with dual-admin approval workflows (API-ADM-11, MASTER_SPEC §7, PHASE-03 P3.4).
  */
-import { and, count, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray, max } from "drizzle-orm";
 import type { DbOrTx, TxCtx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { assertPermission } from "@/lib/authz/assert";
@@ -9,17 +9,20 @@ import type { RequestContext } from "@/lib/authz/context";
 import { approvalsService } from "@/modules/approvals/service";
 import { countActiveAdmins } from "@/modules/approvals/approver-set";
 import type { ApprovalPayloadMap } from "@/modules/approvals/types";
-import { sessions, userRoles, users } from "../../../drizzle/schema/auth";
+import { sessions, twoFactor, userRoles, users } from "../../../drizzle/schema/auth";
 import { partners } from "../../../drizzle/schema/users-ext";
 import { productOwnershipLines, productOwnerships } from "../../../drizzle/schema/ownership";
 import { leads } from "../../../drizzle/schema/leads";
-import type { AdminUserChangePayload } from "./types";
+import { approvalRequests } from "../../../drizzle/schema/approvals";
+import type { AdminUserChangePayload, AdminUserRow } from "./types";
 import type {
   AdminUserChangeResult,
   changeAdminRoleSchema,
   inviteAdminSchema,
+  ListAdminUsersInput,
   removeAdminSchema,
 } from "./contracts";
+import type { ListResult } from "@/modules/_shared/zod";
 import type { z } from "zod";
 
 function getOuterTx(db: DbOrTx): TxCtx | undefined {
@@ -57,6 +60,146 @@ export async function hasActiveProductOwnershipShare(
     );
 
   return Number(activeShare?.count ?? 0) > 0;
+}
+
+const ADMIN_ROLE_RANK: Record<string, number> = { super_admin: 3, admin: 2, staff: 1 };
+
+/**
+ * Admin users list (SCR-ADM-31 companion read; no numbered API row).
+ *
+ * Known gaps vs. a fully-populated screen (see the phase report):
+ *  - `status` only ever comes back `"active"`, `"invited"` or `"pending_change"` — a `suspended`
+ *    admin-class user (rare; admins aren't normally suspended) is shown as `active` because the
+ *    component prop type has no `suspended` state.
+ *  - `invited` rows are synthetic: an `admin.user_change` invite payload has no real user row
+ *    until it is approved (the approval's `subjectId` is a fresh random id, not a user id), so the
+ *    row's `id` is the approval request id rather than a user id.
+ *  - A user with more than one admin-class role (not created by this UI) is shown once, under the
+ *    highest-ranked role (`super_admin` > `admin` > `staff`).
+ */
+export async function listAdminUsers(
+  ctx: RequestContext,
+  _input: ListAdminUsersInput,
+  database: DbOrTx,
+): Promise<ListResult<AdminUserRow>> {
+  assertPermission(ctx, "users.admin.manage");
+
+  const roleRows = await database
+    .select({ userId: userRoles.userId, roleKey: userRoles.roleKey })
+    .from(userRoles)
+    .where(inArray(userRoles.roleKey, ["super_admin", "admin", "staff"]));
+
+  const roleByUser = new Map<string, "super_admin" | "admin" | "staff">();
+  for (const r of roleRows) {
+    const role = r.roleKey as "super_admin" | "admin" | "staff";
+    const current = roleByUser.get(r.userId);
+    if (!current || ADMIN_ROLE_RANK[role]! > ADMIN_ROLE_RANK[current]!) {
+      roleByUser.set(r.userId, role);
+    }
+  }
+  const userIds = [...roleByUser.keys()];
+
+  if (userIds.length === 0) {
+    return { items: [], total: 0, nextCursor: null };
+  }
+
+  const userRows = await database
+    .select()
+    .from(users)
+    .where(and(inArray(users.id, userIds), inArray(users.status, ["active", "suspended"])));
+
+  const partnerRows = await database.select().from(partners).where(inArray(partners.userId, userIds));
+  const partnerByUser = new Map(partnerRows.map((p) => [p.userId, p]));
+  const partnerIds = partnerRows.map((p) => p.id);
+
+  const shareCountByPartner = new Map<string, number>();
+  if (partnerIds.length > 0) {
+    const shareRows = await database
+      .select({
+        partnerId: productOwnershipLines.partnerId,
+        count: count(productOwnershipLines.ownershipId),
+      })
+      .from(productOwnershipLines)
+      .innerJoin(productOwnerships, eq(productOwnershipLines.ownershipId, productOwnerships.id))
+      .where(
+        and(
+          inArray(productOwnershipLines.partnerId, partnerIds),
+          eq(productOwnerships.status, "active"),
+        ),
+      )
+      .groupBy(productOwnershipLines.partnerId);
+    for (const r of shareRows) shareCountByPartner.set(r.partnerId, Number(r.count));
+  }
+
+  const totpRows = await database
+    .select({ userId: twoFactor.userId })
+    .from(twoFactor)
+    .where(and(inArray(twoFactor.userId, userIds), eq(twoFactor.verified, true)));
+  const totpUsers = new Set(totpRows.map((r) => r.userId));
+
+  const sessionRows = await database
+    .select({ userId: sessions.userId, lastSignInAt: max(sessions.createdAt) })
+    .from(sessions)
+    .where(inArray(sessions.userId, userIds))
+    .groupBy(sessions.userId);
+  const lastSignInByUser = new Map(sessionRows.map((r) => [r.userId, r.lastSignInAt]));
+
+  const pendingRows = await database
+    .select()
+    .from(approvalRequests)
+    .where(and(eq(approvalRequests.type, "admin.user_change"), eq(approvalRequests.status, "pending")));
+
+  const pendingByUser = new Map<string, string>();
+  const inviteRows: AdminUserRow[] = [];
+  for (const r of pendingRows) {
+    const payload = r.payload as Record<string, unknown>;
+    const op = (payload.op ?? payload.kind) as string | undefined;
+    if (op === "invite") {
+      inviteRows.push({
+        id: r.id,
+        name: String(payload.email ?? "Invited admin").split("@")[0] ?? "Invited admin",
+        email: String(payload.email ?? ""),
+        role: (payload.role as "super_admin" | "admin" | "staff") ?? "staff",
+        totp: false,
+        status: "invited",
+        pendingApprovalId: r.id,
+      });
+    } else if (op === "change_role" || op === "remove") {
+      const userId = payload.userId as string | undefined;
+      if (userId) pendingByUser.set(userId, r.id);
+    }
+  }
+
+  const items: AdminUserRow[] = userRows.map((u) => {
+    const role = roleByUser.get(u.id) ?? "staff";
+    const partner = partnerByUser.get(u.id);
+    const pendingApprovalId = pendingByUser.get(u.id);
+    const lastSignInAt = lastSignInByUser.get(u.id);
+    return {
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role,
+      ...(partner
+        ? {
+            partner: {
+              id: partner.id,
+              displayName: partner.displayName,
+              activeShares: shareCountByPartner.get(partner.id) ?? 0,
+              active: partner.active,
+            },
+          }
+        : {}),
+      totp: totpUsers.has(u.id),
+      ...(lastSignInAt ? { lastSignInAt: lastSignInAt.toISOString() } : {}),
+      status: pendingApprovalId ? "pending_change" : "active",
+      ...(pendingApprovalId ? { pendingApprovalId } : {}),
+    };
+  });
+
+  const all = [...items, ...inviteRows].sort((a, b) => a.name.localeCompare(b.name));
+
+  return { items: all, total: all.length, nextCursor: null };
 }
 
 export async function inviteAdmin(

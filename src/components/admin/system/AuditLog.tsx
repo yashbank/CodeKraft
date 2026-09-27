@@ -38,6 +38,7 @@ import { cn } from "@/components/ui/_utils";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
 import { formatDateTime, initials } from "../format";
+import { exportAuditLogs } from "@/modules/audit/admin-mutations";
 import { PageHeader } from "../PageHeader";
 import type { AuditRow } from "../types";
 
@@ -67,6 +68,19 @@ export function AuditLog({
   const [expanded, setExpanded] = React.useState<string | null>(null);
   const [drawer, setDrawer] = React.useState<AuditRow | null>(null);
   const [live, setLive] = React.useState(false);
+  const [exporting, setExporting] = React.useState(false);
+
+  async function handleExport() {
+    setExporting(true);
+    const result = await exportAuditLogs({});
+    setExporting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(`Export ready — ${result.data.filename}`);
+    window.open(result.data.url, "_blank", "noopener,noreferrer");
+  }
 
   return (
     <>
@@ -84,13 +98,7 @@ export function AuditLog({
               <Switch id="audit-live" size="sm" checked={live} onCheckedChange={setLive} />
               <Label htmlFor="audit-live">Live tail (10 s)</Label>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                toast("Export queued — header line records the filter and generated-by")
-              }
-            >
+            <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting}>
               <DownloadIcon aria-hidden /> Export CSV
             </Button>
           </>
@@ -299,8 +307,11 @@ export function AuditLog({
             </TableBody>
           </Table>
           <div className="flex items-center justify-between border-t border-border px-3 py-2 text-body-sm text-fg-muted">
-            <span>{rows.length} events · last 7 days</span>
-            <span>cursor pagination</span>
+            <span>{rows.length} events (most recent 100)</span>
+            <span className="text-caption">
+              Date/actor/action/subject filters above are not wired to the query yet — export and
+              expand work on the current page of rows.
+            </span>
           </div>
         </div>
       )}

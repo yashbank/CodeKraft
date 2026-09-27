@@ -1,6 +1,23 @@
+"use server";
+
 /**
- * `delivery` Server Actions — owned by P5 (master plan §3 ownership map). Intentionally empty in P2.8:
- * Every export must be created with `defineAction` / `definePublicAction`
- * (`tests/static/actions-use-define-action.test.ts`, SA-07).
+ * Delivery Server Actions (docs/06 §2.5 API-DEL-10 `completeDeliveryTask` / assign; PHASE-06).
+ * Uses defineAction (SA-07).
  */
-export {};
+import { defineAction } from "@/lib/actions/envelope";
+import { assignDeliveryTaskSchema, completeDeliveryTaskSchema } from "./types";
+import { deliveryService } from "./service";
+
+export const completeDeliveryTaskAction = defineAction({
+  name: "API-DEL-10 delivery_task.complete",
+  input: completeDeliveryTaskSchema,
+  permission: "delivery.tasks.write",
+  handler: (input, ctx) => deliveryService.completeDeliveryTask(ctx, input),
+});
+
+export const assignDeliveryTaskAction = defineAction({
+  name: "API-DEL-10 delivery_task.assign",
+  input: assignDeliveryTaskSchema,
+  permission: "delivery.tasks.write",
+  handler: (input, ctx) => deliveryService.assignDeliveryTask(ctx, input),
+});

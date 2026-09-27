@@ -126,6 +126,19 @@ export type AdminUserChangePayload =
   | { kind: "change_role"; userId: string; role: AdminInviteRole }
   | { kind: "remove"; userId: string };
 
+/** Admin users list row (SCR-ADM-31) — API-ADM-11 companion read; no numbered API row of its own. */
+export interface AdminUserRow {
+  id: string;
+  name: string;
+  email: string;
+  role: "super_admin" | "admin" | "staff";
+  partner?: { id: string; displayName: string; activeShares: number; active: boolean };
+  totp: boolean;
+  lastSignInAt?: string;
+  status: "active" | "invited" | "pending_change";
+  pendingApprovalId?: string;
+}
+
 /* --- API-DASH-* -------------------------------------------------------------------------- */
 
 export interface UpcomingRenewal {

@@ -1,5 +1,6 @@
+import { alias } from "drizzle-orm/pg-core";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
-import { type TxCtx, getDb, withTx } from "@/lib/db";
+import { type DbOrTx, type TxCtx, getDb, withTx } from "@/lib/db";
 import { assertPermission } from "@/lib/authz/assert";
 import type { RequestContext } from "@/lib/authz/context";
 import { AppError, ErrorCode } from "@/lib/errors";
@@ -11,8 +12,9 @@ import {
   serviceProgress,
 } from "../../../drizzle/schema/delivery";
 import { orders, orderItems } from "../../../drizzle/schema/commerce";
-import { products } from "../../../drizzle/schema/catalog";
 import { offerings } from "../../../drizzle/schema/offerings";
+
+import { products } from "../../../drizzle/schema/catalog";
 import { users } from "../../../drizzle/schema/auth";
 import type { DeliveryService } from "./contracts";
 import { defaultDeliveryHandlerRegistry } from "./handlers";
@@ -291,17 +293,25 @@ export class DefaultDeliveryService implements DeliveryService {
       }
     }
 
+    const assignee = alias(users, "assignee");
     const rows = await db
       .select({
         task: deliveryTasks,
         entitlement: entitlements,
         product: products,
         customer: users,
+        offering: offerings,
+        order: { id: orders.id, orderNo: orders.orderNo },
+        assignee: { id: assignee.id, name: assignee.name },
       })
       .from(deliveryTasks)
       .innerJoin(entitlements, eq(deliveryTasks.entitlementId, entitlements.id))
       .innerJoin(products, eq(entitlements.productId, products.id))
       .innerJoin(users, eq(entitlements.userId, users.id))
+      .leftJoin(offerings, eq(entitlements.offeringId, offerings.id))
+      .leftJoin(orderItems, eq(entitlements.orderItemId, orderItems.id))
+      .leftJoin(orders, eq(orderItems.orderId, orders.id))
+      .leftJoin(assignee, eq(deliveryTasks.assignedTo, assignee.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(deliveryTasks.createdAt))
       .limit(input.limit + 1);
@@ -312,9 +322,12 @@ export class DefaultDeliveryService implements DeliveryService {
       kind: r.task.kind,
       status: r.task.status,
       entitlementId: r.task.entitlementId,
+      entitlementStatus: r.entitlement.status,
       product: { id: r.product.id, name: r.product.name },
+      offeringName: r.offering?.name ?? null,
+      order: r.order?.id ? { id: r.order.id, orderNo: r.order.orderNo! } : null,
       customer: { id: r.customer.id, email: r.customer.email, name: r.customer.name },
-      assignedTo: r.task.assignedTo ? { id: r.task.assignedTo, name: null } : null,
+      assignedTo: r.task.assignedTo ? { id: r.task.assignedTo, name: r.assignee?.name ?? null } : null,
       note: r.task.note,
       createdAt: r.task.createdAt.toISOString(),
       doneAt: r.task.doneAt ? r.task.doneAt.toISOString() : null,
@@ -393,15 +406,21 @@ export class DefaultDeliveryService implements DeliveryService {
         .select()
         .from(users)
         .where(eq(users.id, ent!.userId));
+      const extras = await hydrateTaskExtras(tx, ent!, updatedTask!.assignedTo);
 
       return {
         taskId: updatedTask!.id,
         kind: updatedTask!.kind,
         status: updatedTask!.status,
         entitlementId: updatedTask!.entitlementId,
+        entitlementStatus: ent!.status,
         product: { id: prod!.id, name: prod!.name },
+        offeringName: extras.offeringName,
+        order: extras.order,
         customer: { id: cust!.id, email: cust!.email, name: cust!.name },
-        assignedTo: updatedTask!.assignedTo ? { id: updatedTask!.assignedTo, name: null } : null,
+        assignedTo: updatedTask!.assignedTo
+          ? { id: updatedTask!.assignedTo, name: extras.assigneeName }
+          : null,
         note: updatedTask!.note,
         createdAt: updatedTask!.createdAt.toISOString(),
         doneAt: updatedTask!.doneAt ? updatedTask!.doneAt.toISOString() : null,
@@ -448,15 +467,21 @@ export class DefaultDeliveryService implements DeliveryService {
         .select()
         .from(users)
         .where(eq(users.id, ent!.userId));
+      const extras = await hydrateTaskExtras(tx, ent!, updatedTask!.assignedTo);
 
       return {
         taskId: updatedTask!.id,
         kind: updatedTask!.kind,
         status: updatedTask!.status,
         entitlementId: updatedTask!.entitlementId,
+        entitlementStatus: ent!.status,
         product: { id: prod!.id, name: prod!.name },
+        offeringName: extras.offeringName,
+        order: extras.order,
         customer: { id: cust!.id, email: cust!.email, name: cust!.name },
-        assignedTo: updatedTask!.assignedTo ? { id: updatedTask!.assignedTo, name: null } : null,
+        assignedTo: updatedTask!.assignedTo
+          ? { id: updatedTask!.assignedTo, name: extras.assigneeName }
+          : null,
         note: updatedTask!.note,
         createdAt: updatedTask!.createdAt.toISOString(),
         doneAt: updatedTask!.doneAt ? updatedTask!.doneAt.toISOString() : null,
@@ -566,6 +591,42 @@ export class DefaultDeliveryService implements DeliveryService {
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
 
 export const deliveryService = new DefaultDeliveryService();
+
+/**
+ * Resolves the offering name, order (via `entitlements.orderItemId`, null for a manual grant) and
+ * assignee display name for one delivery task's row -- fields `DeliveryTaskRow` needs that aren't
+ * on `deliveryTasks`/`entitlements` themselves. Used by `completeDeliveryTask`/`assignDeliveryTask`
+ * (single row); `listDeliveryTasks` does the equivalent as a bulk join for efficiency.
+ */
+async function hydrateTaskExtras(
+  db: DbOrTx,
+  ent: { offeringId: string; orderItemId: string | null; status: string },
+  assignedTo: string | null,
+): Promise<{
+  offeringName: string | null;
+  order: { id: string; orderNo: string } | null;
+  assigneeName: string | null;
+}> {
+  const [offering] = await db.select().from(offerings).where(eq(offerings.id, ent.offeringId));
+
+  let order: { id: string; orderNo: string } | null = null;
+  if (ent.orderItemId) {
+    const [row] = await db
+      .select({ id: orders.id, orderNo: orders.orderNo })
+      .from(orderItems)
+      .innerJoin(orders, eq(orderItems.orderId, orders.id))
+      .where(eq(orderItems.id, ent.orderItemId));
+    order = row ?? null;
+  }
+
+  let assigneeName: string | null = null;
+  if (assignedTo) {
+    const [assignee] = await db.select({ name: users.name }).from(users).where(eq(users.id, assignedTo));
+    assigneeName = assignee?.name ?? null;
+  }
+
+  return { offeringName: offering?.name ?? null, order, assigneeName };
+}
 
 export function createNotImplementedDeliveryService(): DeliveryService {
   return createNotImplemented<DeliveryService>("delivery", "P5", {

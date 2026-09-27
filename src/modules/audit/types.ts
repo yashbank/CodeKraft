@@ -119,6 +119,8 @@ export interface AuditLogRow {
   id: string;
   actorId: string | null;
   actorRole: string | null;
+  /** Joined from `users.name` when `actorId` is set; not persisted on the row itself. */
+  actorName?: string | null;
   action: string;
   subject: AuditSubject;
   before: unknown;
