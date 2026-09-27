@@ -1,13 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { DownloadIcon, PlusIcon, ShoppingCartIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -25,7 +36,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
+import { confirmPayment, failPayment } from "@/modules/payments/admin-mutations";
 import { Banner } from "../Banner";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
@@ -64,8 +77,13 @@ export function OrdersList({
   approvalsHref,
   notificationsHref,
 }: OrdersListProps) {
+  const router = useRouter();
   const [queue, setQueue] = React.useState<Queue | null>("awaiting");
   const [confirming, setConfirming] = React.useState<OrderRow | null>(null);
+  const [confirmBusy, setConfirmBusy] = React.useState(false);
+  const [failing, setFailing] = React.useState<OrderRow | null>(null);
+  const [failReason, setFailReason] = React.useState("");
+  const [failBusy, setFailBusy] = React.useState(false);
   const awaiting = orders.filter((o) => o.awaitingConfirmation);
   const rows =
     queue === "awaiting" ? awaiting : queue ? orders.filter((o) => o.status === queue) : orders;
@@ -88,6 +106,64 @@ export function OrdersList({
     })),
   ];
 
+  async function handleConfirmPayment(result: {
+    receivedMinor: number;
+    reference: string;
+    note: string;
+    receivedOn: string;
+  }) {
+    if (!confirming) return;
+    const paymentId = confirming.payment.paymentId;
+    if (!paymentId) {
+      toast.error("No payment record to confirm on this order yet.");
+      return;
+    }
+    setConfirmBusy(true);
+    const res = await confirmPayment({
+      paymentId,
+      amountReceivedMinor: result.receivedMinor,
+      reference: result.reference,
+      receivedOn: result.receivedOn,
+      note: result.note || undefined,
+    });
+    setConfirmBusy(false);
+    if (!res.ok) {
+      toast.error(res.error.message);
+      return;
+    }
+    toast.success(
+      res.data.invoiceNo
+        ? `${confirming.number} marked Paid · invoice ${res.data.invoiceNo}`
+        : `${confirming.number} marked Paid`,
+    );
+    setConfirming(null);
+    router.refresh();
+  }
+
+  async function handleFailPayment() {
+    if (!failing) return;
+    const paymentId = failing.payment.paymentId;
+    if (!paymentId) {
+      toast.error("No payment record to fail on this order yet.");
+      return;
+    }
+    if (failReason.trim().length === 0) {
+      toast.error("A reason is required.");
+      return;
+    }
+    setFailBusy(true);
+    const res = await failPayment({ paymentId, reason: failReason.trim() });
+    setFailBusy(false);
+    if (!res.ok) {
+      toast.error(res.error.message);
+      return;
+    }
+    toast.success(`${failing.number} payment marked failed`);
+    setFailing(null);
+    setFailReason("");
+    router.refresh();
+  }
+
   const confirmDialog = confirming ? (
     <ConfirmPaymentDialog
       key={confirming.id}
@@ -96,9 +172,42 @@ export function OrdersList({
       orderNumber={confirming.number}
       due={confirming.total}
       customerReference={confirming.payment.reference}
-      onConfirm={() => toast.success(`${confirming.number} marked Paid · invoice CK/2026-27/0007`)}
+      busy={confirmBusy}
+      onConfirm={handleConfirmPayment}
     />
   ) : null;
+
+  const failDialog = (
+    <Dialog open={failing !== null} onOpenChange={(o) => !o && setFailing(null)}>
+      <DialogContent size="sm">
+        <DialogHeader>
+          <DialogTitle>Mark payment failed{failing ? ` · ${failing.number}` : ""}</DialogTitle>
+          <DialogDescription>
+            The order stays pending_payment so the customer can retry (D-416).
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Label htmlFor="fail-reason">Reason</Label>
+          <Textarea
+            id="fail-reason"
+            rows={2}
+            value={failReason}
+            onChange={(e) => setFailReason(e.target.value)}
+            required
+            aria-required
+          />
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="ghost">Cancel</Button>
+          </DialogClose>
+          <Button variant="destructive" onClick={handleFailPayment} disabled={failBusy}>
+            Mark failed
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 
   return (
     <>
@@ -246,7 +355,7 @@ export function OrdersList({
                       <TableRow key={o.id}>
                         <TableCell>
                           <Link
-                            href={detailHref}
+                            href={`${detailHref}/${o.id}`}
                             className="font-mono font-medium text-fg hover:text-accent-text"
                           >
                             {o.number}
@@ -316,7 +425,7 @@ export function OrdersList({
                           <RowActions
                             label={`Actions for ${o.number}`}
                             actions={[
-                              { label: "Open", href: detailHref },
+                              { label: "Open", href: `${detailHref}/${o.id}` },
                               {
                                 label: "Confirm payment",
                                 onSelect: () => setConfirming(o),
@@ -325,7 +434,14 @@ export function OrdersList({
                                   o.payment.status === "initiated"
                                 ),
                               },
-                              { label: "Mark failed", disabled: o.status !== "pending_payment" },
+                              {
+                                label: "Mark failed",
+                                onSelect: () => {
+                                  setFailReason("");
+                                  setFailing(o);
+                                },
+                                disabled: o.status !== "pending_payment" || !o.payment.paymentId,
+                              },
                               {
                                 label: "Cancel",
                                 destructive: true,
@@ -354,6 +470,7 @@ export function OrdersList({
         </div>
       </div>
       {confirmDialog}
+      {failDialog}
     </>
   );
 }

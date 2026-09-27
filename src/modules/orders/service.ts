@@ -27,9 +27,12 @@ import {
   type OrderItem,
   type OrderStatus,
   type Payment,
+  coupons,
+  customQuotes,
   orderItems,
   orders,
   payments,
+  refunds,
   userOfferingPurchases,
 } from "../../../drizzle/schema/commerce";
 import { offerings, offeringPrices, offeringPaymentMethods } from "../../../drizzle/schema/offerings";
@@ -37,6 +40,8 @@ import { products } from "../../../drizzle/schema/catalog";
 import { users } from "../../../drizzle/schema/auth";
 import { customerProfiles } from "../../../drizzle/schema/users-ext";
 import { emailOutbox, notifications } from "../../../drizzle/schema/notifications";
+import { approvalRequests } from "../../../drizzle/schema/approvals";
+import { creditNotes, invoices } from "../../../drizzle/schema/invoices";
 import { nextOrderNo } from "./numbering";
 import { createManualOrder } from "./manual";
 import { applyProjectOrderSplit } from "./project-split";
@@ -706,14 +711,23 @@ export class DefaultOrdersService implements OrdersService {
       instructions: p.instructions as any,
       customerReference: p.customerReference,
       customerSubmittedAt: p.customerSubmittedAt ? p.customerSubmittedAt.toISOString() : null,
+      bankShortfall: p.bankShortfallMinor ? money(p.bankShortfallMinor, p.currency as Currency) : null,
+      customerCredit: p.customerCreditMinor ? money(p.customerCreditMinor, p.currency as Currency) : null,
+      confirmedByName: null,
+      confirmedAt: p.confirmedAt ? p.confirmedAt.toISOString() : null,
+      failureReason: p.failureReason,
+      createdAt: p.createdAt.toISOString(),
     }));
 
     return {
       order,
       items,
+      itemMeta: {},
       payments: paymentViews,
       entitlements: [],
       instructionsHtml: "<p>Thank you for your order.</p>",
+      refunds: [],
+      customerExtra: { tags: [], notes: null },
     };
   }
 
@@ -740,31 +754,105 @@ export class DefaultOrdersService implements OrdersService {
         expiresAt: orders.expiresAt,
         billingSnapshot: orders.billingSnapshot,
         userId: orders.userId,
+        splitApprovalRequestId: orders.splitApprovalRequestId,
       })
       .from(orders)
       .orderBy(desc(orders.createdAt))
       .limit(pageSize);
 
-    const items: OrderAdminRow[] = rows.map((r) => ({
-      orderId: r.id,
-      orderNo: r.orderNo,
-      type: r.type,
-      status: r.status,
-      total: money(r.totalMinor, r.currency as Currency),
-      itemCount: 1,
-      createdAt: r.createdAt.toISOString(),
-      paidAt: r.paidAt ? r.paidAt.toISOString() : null,
-      expiresAt: r.expiresAt ? r.expiresAt.toISOString() : null,
-      customer: {
-        userId: r.userId,
-        name: r.billingSnapshot?.name || "Customer",
-        email: r.billingSnapshot?.email || "",
-      },
-      paymentStatus: "initiated",
-      shortfallMinor: null,
-      customerCreditMinor: null,
-      splitApprovalRequestId: null,
-    }));
+    const orderIds = rows.map((r) => r.id);
+
+    // Real item count + descriptions per order (was hardcoded to 1) -- one batched query against
+    // the same `order_items` table already used elsewhere in this file.
+    const itemRows =
+      orderIds.length > 0
+        ? await db
+            .select({
+              orderId: orderItems.orderId,
+              description: orderItems.description,
+            })
+            .from(orderItems)
+            .where(inArray(orderItems.orderId, orderIds))
+            .orderBy(orderItems.createdAt)
+        : [];
+    const itemsByOrder = new Map<string, string[]>();
+    for (const it of itemRows) {
+      const list = itemsByOrder.get(it.orderId) ?? [];
+      list.push(it.description);
+      itemsByOrder.set(it.orderId, list);
+    }
+
+    // Real payment status per order (was hardcoded to "initiated") -- latest `payments` row per
+    // order, picked in JS from a single query sorted desc by `created_at` (first row seen per
+    // `orderId` while scanning in that order is the latest one for that order).
+    const paymentRows =
+      orderIds.length > 0
+        ? await db
+            .select({
+              orderId: payments.orderId,
+              id: payments.id,
+              provider: payments.provider,
+              status: payments.status,
+              customerReference: payments.customerReference,
+              bankShortfallMinor: payments.bankShortfallMinor,
+              customerCreditMinor: payments.customerCreditMinor,
+              createdAt: payments.createdAt,
+            })
+            .from(payments)
+            .where(inArray(payments.orderId, orderIds))
+            .orderBy(desc(payments.createdAt))
+        : [];
+    const latestPaymentByOrder = new Map<string, (typeof paymentRows)[number]>();
+    for (const p of paymentRows) {
+      if (!latestPaymentByOrder.has(p.orderId)) latestPaymentByOrder.set(p.orderId, p);
+    }
+
+    // Invoice numbers for orders that have one (paid+) -- cheap batched lookup, `invoices.order_id`
+    // is unique so at most one row per order.
+    const paidOrderIds = rows
+      .filter((r) => r.status !== "pending_payment" && r.status !== "cancelled" && r.status !== "failed")
+      .map((r) => r.id);
+    const invoiceRows =
+      paidOrderIds.length > 0
+        ? await db
+            .select({ orderId: invoices.orderId, invoiceNo: invoices.invoiceNo })
+            .from(invoices)
+            .where(inArray(invoices.orderId, paidOrderIds))
+        : [];
+    const invoiceByOrder = new Map(invoiceRows.map((i) => [i.orderId, i.invoiceNo]));
+
+    const items: OrderAdminRow[] = rows.map((r) => {
+      const payment = latestPaymentByOrder.get(r.id) ?? null;
+      const descriptions = itemsByOrder.get(r.id) ?? [];
+      return {
+        orderId: r.id,
+        orderNo: r.orderNo,
+        type: r.type,
+        status: r.status,
+        total: money(r.totalMinor, r.currency as Currency),
+        itemCount: descriptions.length,
+        createdAt: r.createdAt.toISOString(),
+        paidAt: r.paidAt ? r.paidAt.toISOString() : null,
+        expiresAt: r.expiresAt ? r.expiresAt.toISOString() : null,
+        customer: {
+          userId: r.userId,
+          name: r.billingSnapshot?.name || "Customer",
+          email: r.billingSnapshot?.email || "",
+        },
+        paymentStatus: payment?.status ?? null,
+        paymentId: payment?.id ?? null,
+        paymentProvider: payment?.provider ?? null,
+        paymentReference: payment?.customerReference ?? null,
+        paymentCreatedAt: payment?.createdAt ? payment.createdAt.toISOString() : null,
+        itemDescriptions: descriptions,
+        invoiceNumber: invoiceByOrder.get(r.id) ?? null,
+        // Only meaningful once a payment has been confirmed -- null before that (genuinely no
+        // data yet, not a placeholder).
+        shortfallMinor: payment?.bankShortfallMinor ?? null,
+        customerCreditMinor: payment?.customerCreditMinor ?? null,
+        splitApprovalRequestId: r.splitApprovalRequestId,
+      };
+    });
 
     return {
       items,
@@ -799,6 +887,51 @@ export class DefaultOrdersService implements OrdersService {
       .where(eq(payments.orderId, order.id))
       .orderBy(desc(payments.createdAt));
 
+    // Item metadata not on `order_items` itself: product name (catalog) for product lines,
+    // delivery type (offerings) for product lines. Project lines have neither id and stay null.
+    const productIds = Array.from(
+      new Set(items.map((i) => i.productId).filter((id): id is string => id !== null)),
+    );
+    const offeringIds = Array.from(
+      new Set(items.map((i) => i.offeringId).filter((id): id is string => id !== null)),
+    );
+    const [productRows, offeringRows] = await Promise.all([
+      productIds.length > 0
+        ? db
+            .select({ id: products.id, name: products.name })
+            .from(products)
+            .where(inArray(products.id, productIds))
+        : Promise.resolve([] as { id: string; name: string }[]),
+      offeringIds.length > 0
+        ? db
+            .select({ id: offerings.id, deliveryType: offerings.deliveryType })
+            .from(offerings)
+            .where(inArray(offerings.id, offeringIds))
+        : Promise.resolve([] as { id: string; deliveryType: string }[]),
+    ]);
+    const productNameById = new Map(productRows.map((p) => [p.id, p.name]));
+    const offeringDeliveryById = new Map(offeringRows.map((o) => [o.id, o.deliveryType]));
+    const itemMeta: OrderDetail["itemMeta"] = {};
+    for (const it of items) {
+      itemMeta[it.id] = {
+        productName: it.productId ? (productNameById.get(it.productId) ?? null) : null,
+        deliveryType: it.offeringId ? (offeringDeliveryById.get(it.offeringId) ?? null) : null,
+      };
+    }
+
+    // "Confirmed by" display names -- resolved once per distinct admin, not per payment.
+    const confirmedByIds = Array.from(
+      new Set(paymentRows.map((p) => p.confirmedBy).filter((id): id is string => id !== null)),
+    );
+    const confirmedByRows =
+      confirmedByIds.length > 0
+        ? await db
+            .select({ id: users.id, name: users.name })
+            .from(users)
+            .where(inArray(users.id, confirmedByIds))
+        : [];
+    const confirmedByName = new Map(confirmedByRows.map((u) => [u.id, u.name]));
+
     const paymentViews: OrderPaymentView[] = paymentRows.map((p) => ({
       paymentId: p.id,
       method: p.provider,
@@ -808,14 +941,107 @@ export class DefaultOrdersService implements OrdersService {
       instructions: p.instructions as any,
       customerReference: p.customerReference,
       customerSubmittedAt: p.customerSubmittedAt ? p.customerSubmittedAt.toISOString() : null,
+      bankShortfall: p.bankShortfallMinor ? money(p.bankShortfallMinor, p.currency as Currency) : null,
+      customerCredit: p.customerCreditMinor ? money(p.customerCreditMinor, p.currency as Currency) : null,
+      confirmedByName: p.confirmedBy ? (confirmedByName.get(p.confirmedBy) ?? null) : null,
+      confirmedAt: p.confirmedAt ? p.confirmedAt.toISOString() : null,
+      failureReason: p.failureReason,
+      createdAt: p.createdAt.toISOString(),
     }));
+
+    // Refunds for this order (docs/06 API-PAY-05/06), most recent first, with approval status
+    // and credit note number where issued.
+    const refundRows = await db
+      .select({
+        id: refunds.id,
+        amountMinor: refunds.amountMinor,
+        currency: refunds.currency,
+        reason: refunds.reason,
+        createdAt: refunds.createdAt,
+        approvalStatus: approvalRequests.status,
+        creditNoteNo: creditNotes.creditNo,
+      })
+      .from(refunds)
+      .leftJoin(approvalRequests, eq(refunds.approvalRequestId, approvalRequests.id))
+      .leftJoin(creditNotes, eq(refunds.creditNoteId, creditNotes.id))
+      .where(eq(refunds.orderId, order.id))
+      .orderBy(desc(refunds.createdAt));
+
+    const refundViews: OrderDetail["refunds"] = refundRows.map((r) => ({
+      refundId: r.id,
+      amountMinor: r.amountMinor,
+      currency: r.currency as Currency,
+      status: r.approvalStatus ?? "pending",
+      creditNoteNo: r.creditNoteNo,
+      reason: r.reason,
+      createdAt: r.createdAt.toISOString(),
+    }));
+
+    // Project orders: the split approval gating payment confirmation / invoice issue.
+    let splitApproval: OrderDetail["splitApproval"];
+    if (order.type === "project" && order.splitApprovalRequestId) {
+      const [approval] = await db
+        .select({ status: approvalRequests.status })
+        .from(approvalRequests)
+        .where(eq(approvalRequests.id, order.splitApprovalRequestId))
+        .limit(1);
+      if (approval) {
+        splitApproval = { status: approval.status, approvalRequestId: order.splitApprovalRequestId };
+      }
+    }
+
+    // Coupon / custom quote snapshot, when the order used one.
+    let coupon: OrderDetail["coupon"];
+    if (order.couponId) {
+      const [c] = await db
+        .select({ code: coupons.code })
+        .from(coupons)
+        .where(eq(coupons.id, order.couponId))
+        .limit(1);
+      if (c) coupon = { code: c.code, discountMinor: order.discountMinor };
+    }
+    let quote: OrderDetail["quote"];
+    if (order.customQuoteId) {
+      const [q] = await db
+        .select({ title: customQuotes.title })
+        .from(customQuotes)
+        .where(eq(customQuotes.id, order.customQuoteId))
+        .limit(1);
+      if (q) quote = { id: order.customQuoteId, title: q.title };
+    }
+
+    // Invoice, when one has been issued (payment confirmed).
+    const [invoiceRow] = await db
+      .select({ id: invoices.id, invoiceNo: invoices.invoiceNo })
+      .from(invoices)
+      .where(eq(invoices.orderId, order.id))
+      .limit(1);
+
+    // `customer_profiles` fields not carried on the order's own billing snapshot (tags, internal
+    // notes). Guest / no-profile orders keep the empty default.
+    let customerExtra: OrderDetail["customerExtra"] = { tags: [], notes: null };
+    if (order.userId) {
+      const [profile] = await db
+        .select({ tags: customerProfiles.tags, internalNotes: customerProfiles.internalNotes })
+        .from(customerProfiles)
+        .where(eq(customerProfiles.userId, order.userId))
+        .limit(1);
+      if (profile) customerExtra = { tags: profile.tags, notes: profile.internalNotes };
+    }
 
     return {
       order,
       items,
+      itemMeta,
       payments: paymentViews,
+      invoice: invoiceRow ? { invoiceId: invoiceRow.id, invoiceNo: invoiceRow.invoiceNo } : undefined,
       entitlements: [],
       instructionsHtml: "",
+      refunds: refundViews,
+      splitApproval,
+      coupon,
+      quote,
+      customerExtra,
     };
   }
 

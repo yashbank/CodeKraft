@@ -34,6 +34,7 @@ import {
   type SplitSnapshot,
   paymentProvider,
 } from "../../../drizzle/schema/commerce";
+import type { ApprovalStatus } from "../../../drizzle/schema/approvals";
 import type { PaymentInstructions } from "@/modules/payments/provider";
 
 // ---------------------------------------------------------------------------------------------
@@ -298,16 +299,50 @@ export interface OrderPaymentView {
   instructions: PaymentInstructions | null;
   customerReference: string | null;
   customerSubmittedAt: string | null;
+  /** `payments.bank_shortfall_minor` -- set once confirmed with less than due received. */
+  bankShortfall: Money | null;
+  /** `payments.customer_credit_minor` -- set once confirmed with more than due received. */
+  customerCredit: Money | null;
+  confirmedByName: string | null;
+  confirmedAt: string | null;
+  failureReason: string | null;
+  createdAt: string;
+}
+
+/** Per-item display metadata not on `order_items` itself (product name, offering delivery type). */
+export interface OrderItemMeta {
+  productName: string | null;
+  deliveryType: string | null;
+}
+
+export interface OrderRefundView {
+  refundId: string;
+  amountMinor: number;
+  currency: Currency;
+  status: ApprovalStatus;
+  creditNoteNo: string | null;
+  reason: string;
+  createdAt: string;
 }
 
 export interface OrderDetail {
   order: Order;
   items: OrderItem[];
+  /** Keyed by `order_items.id` -- product name + delivery type looked up from catalog/offerings. */
+  itemMeta: Record<string, OrderItemMeta>;
   payments: OrderPaymentView[];
   invoice?: { invoiceId: string; invoiceNo: string };
   entitlements: { entitlementId: string; deliveryType: string; status: string }[];
   /** Sanitised delivery instructions rendered server-side (A-601). */
   instructionsHtml: string;
+  /** `refunds` rows for this order (docs/06 API-PAY-05/06), most recent first. */
+  refunds: OrderRefundView[];
+  /** Project orders only -- the `project_order.split` approval request gating payment/invoice. */
+  splitApproval?: { status: ApprovalStatus; approvalRequestId: string };
+  coupon?: { code: string; discountMinor: number };
+  quote?: { id: string; title: string };
+  /** `customer_profiles` fields not on `orders.billing_snapshot` (D-410). Empty for guest orders. */
+  customerExtra: { tags: string[]; notes: string | null };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -334,6 +369,16 @@ export type GetOrderAdminInput = z.infer<typeof getOrderAdminInput>;
 export interface OrderAdminRow extends OrderSummary {
   customer: { userId: string | null; name: string; email: string };
   paymentStatus: PaymentStatus | null;
+  /** Latest payment row for this order, or null when none has been created yet. */
+  paymentId: string | null;
+  paymentProvider: Payment["provider"] | null;
+  paymentReference: string | null;
+  /** `payments.created_at` of the latest payment row, for the "awaiting confirmation" age rule. */
+  paymentCreatedAt: string | null;
+  /** `order_items.description` for every line, in creation order. */
+  itemDescriptions: string[];
+  /** Set once `invoices` has a row for this order (payment confirmed). */
+  invoiceNumber: string | null;
   shortfallMinor: number | null;
   customerCreditMinor: number | null;
   /** Present once `finance.postOrderPaid` ran. */

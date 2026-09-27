@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { CircleCheckIcon, CircleIcon, DownloadIcon, LockIcon } from "lucide-react";
 import { toast } from "sonner";
+
+import { confirmPayment, failPayment, proposeRefund } from "@/modules/payments/admin-mutations";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,10 +69,108 @@ export function OrderDetail({
   approvalsHref,
   queriesHref,
 }: OrderDetailProps) {
+  const router = useRouter();
   const { order, payment, splitApproval } = data;
   const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [confirmBusy, setConfirmBusy] = React.useState(false);
   const [refundOpen, setRefundOpen] = React.useState(false);
+  const [refundAmount, setRefundAmount] = React.useState(() => (order.total.amountMinor / 100).toFixed(2));
+  const [refundReason, setRefundReason] = React.useState("");
+  const [refundQueryId, setRefundQueryId] = React.useState("");
+  const [refundRevoke, setRefundRevoke] = React.useState(true);
+  const [refundException, setRefundException] = React.useState(false);
+  const [refundBusy, setRefundBusy] = React.useState(false);
+  const [failOpen, setFailOpen] = React.useState(false);
+  const [failReason, setFailReason] = React.useState("");
+  const [failBusy, setFailBusy] = React.useState(false);
   const [revokeOpen, setRevokeOpen] = React.useState(false);
+
+  async function handleConfirmPayment(result: {
+    receivedMinor: number;
+    reference: string;
+    note: string;
+    receivedOn: string;
+  }) {
+    if (!payment.paymentId) {
+      toast.error("No payment record to confirm on this order yet.");
+      return;
+    }
+    setConfirmBusy(true);
+    const res = await confirmPayment({
+      paymentId: payment.paymentId,
+      amountReceivedMinor: result.receivedMinor,
+      reference: result.reference,
+      receivedOn: result.receivedOn,
+      note: result.note || undefined,
+    });
+    setConfirmBusy(false);
+    if (!res.ok) {
+      toast.error(res.error.message);
+      return;
+    }
+    toast.success(
+      res.data.invoiceNo ? `${order.number} marked Paid · invoice ${res.data.invoiceNo}` : `${order.number} marked Paid`,
+    );
+    setConfirmOpen(false);
+    router.refresh();
+  }
+
+  async function handleFailPayment() {
+    if (!payment.paymentId) {
+      toast.error("No payment record to fail on this order yet.");
+      return;
+    }
+    if (failReason.trim().length === 0) {
+      toast.error("A reason is required.");
+      return;
+    }
+    setFailBusy(true);
+    const res = await failPayment({ paymentId: payment.paymentId, reason: failReason.trim() });
+    setFailBusy(false);
+    if (!res.ok) {
+      toast.error(res.error.message);
+      return;
+    }
+    toast.success(`${order.number} payment marked failed`);
+    setFailOpen(false);
+    setFailReason("");
+    router.refresh();
+  }
+
+  async function handleProposeRefund() {
+    if (!payment.paymentId) {
+      toast.error("No payment record to refund on this order.");
+      return;
+    }
+    const amountMinor = Math.round(Number.parseFloat(refundAmount || "0") * 100);
+    if (!Number.isFinite(amountMinor) || amountMinor <= 0) {
+      toast.error("Enter a valid refund amount.");
+      return;
+    }
+    if (refundReason.trim().length === 0) {
+      toast.error("A reason is required.");
+      return;
+    }
+    setRefundBusy(true);
+    const res = await proposeRefund({
+      orderId: order.id,
+      paymentId: payment.paymentId,
+      amountMinor,
+      reason: refundReason.trim(),
+      revokeEntitlements: refundRevoke,
+      queryId: refundQueryId.trim() || undefined,
+      policyException: refundException,
+    });
+    setRefundBusy(false);
+    if (!res.ok) {
+      toast.error(res.error.message);
+      return;
+    }
+    toast.success(`Refund approval requested from ${approvers[0] ?? "another admin"}`);
+    setRefundOpen(false);
+    router.refresh();
+  }
+
   const paid = order.status === "paid" || order.status === "fulfilled";
   const splitBlocked = order.type === "project" && splitApproval?.status !== "applied";
   const primary =
@@ -100,7 +201,14 @@ export function OrderDetail({
             <RowActions
               label="More order actions"
               actions={[
-                { label: "Mark failed", disabled: paid },
+                {
+                  label: "Mark failed",
+                  onSelect: () => {
+                    setFailReason("");
+                    setFailOpen(true);
+                  },
+                  disabled: paid || !payment.paymentId,
+                },
                 { label: "Cancel", disabled: paid },
                 { label: "Resend instructions email", disabled: paid },
                 {
@@ -212,7 +320,16 @@ export function OrderDetail({
                 <Button onClick={() => setConfirmOpen(true)} disabled={payment.status === "failed"}>
                   Confirm payment
                 </Button>
-                <Button variant="outline">Mark failed</Button>
+                <Button
+                  variant="outline"
+                  disabled={!payment.paymentId}
+                  onClick={() => {
+                    setFailReason("");
+                    setFailOpen(true);
+                  }}
+                >
+                  Mark failed
+                </Button>
               </div>
             ) : null}
           </Card>
@@ -537,12 +654,13 @@ export function OrderDetail({
         orderNumber={order.number}
         due={payment.due}
         customerReference={payment.customerReference}
+        busy={confirmBusy}
         blockedReason={
           splitBlocked
             ? "Project order: the split must be approved before payment can be confirmed."
             : undefined
         }
-        onConfirm={() => toast.success(`${order.number} marked Paid · invoice CK/2026-27/0007`)}
+        onConfirm={handleConfirmPayment}
       />
 
       <Dialog open={refundOpen} onOpenChange={setRefundOpen}>
@@ -559,24 +677,41 @@ export function OrderDetail({
               <Input
                 id="rf-amount"
                 inputMode="decimal"
-                defaultValue={(order.total.amountMinor / 100).toFixed(2)}
+                value={refundAmount}
+                onChange={(e) => setRefundAmount(e.target.value)}
                 className="text-right font-mono tnum"
               />
             </Field>
             <Field id="rf-query" label="Related query" optional>
-              <Input id="rf-query" placeholder="Query id" />
+              <Input
+                id="rf-query"
+                placeholder="Query id"
+                value={refundQueryId}
+                onChange={(e) => setRefundQueryId(e.target.value)}
+              />
             </Field>
             <Field id="rf-reason" label="Reason" required className="sm:col-span-2">
-              <Textarea id="rf-reason" rows={2} required aria-required />
+              <Textarea
+                id="rf-reason"
+                rows={2}
+                required
+                aria-required
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+              />
             </Field>
           </div>
           <div className="flex items-center gap-2">
-            <Switch id="rf-revoke" defaultChecked />
+            <Switch id="rf-revoke" checked={refundRevoke} onCheckedChange={setRefundRevoke} />
             <Label htmlFor="rf-revoke">Revoke entitlements</Label>
           </div>
           {!data.refundable ? (
             <div className="flex items-start gap-2">
-              <Checkbox id="rf-exception" />
+              <Checkbox
+                id="rf-exception"
+                checked={refundException}
+                onCheckedChange={(v) => setRefundException(v === true)}
+              />
               <Label htmlFor="rf-exception" className="leading-snug">
                 Policy exception — this product is not refundable
               </Label>
@@ -587,13 +722,37 @@ export function OrderDetail({
             <DialogClose asChild>
               <Button variant="ghost">Cancel</Button>
             </DialogClose>
-            <Button
-              onClick={() => {
-                toast.success(`Refund approval requested from ${approvers[0]}`);
-                setRefundOpen(false);
-              }}
-            >
+            <Button onClick={handleProposeRefund} disabled={refundBusy}>
               Request approval
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={failOpen} onOpenChange={setFailOpen}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle>Mark payment failed · {order.number}</DialogTitle>
+            <DialogDescription>
+              The order stays pending_payment so the customer can retry (D-416).
+            </DialogDescription>
+          </DialogHeader>
+          <Field id="fail-reason" label="Reason" required>
+            <Textarea
+              id="fail-reason"
+              rows={2}
+              required
+              aria-required
+              value={failReason}
+              onChange={(e) => setFailReason(e.target.value)}
+            />
+          </Field>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="ghost">Cancel</Button>
+            </DialogClose>
+            <Button variant="destructive" onClick={handleFailPayment} disabled={failBusy}>
+              Mark failed
             </Button>
           </DialogFooter>
         </DialogContent>

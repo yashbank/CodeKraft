@@ -1,5 +1,24 @@
+"use server";
+
 /**
- * `orders` read-only queries — owned by P4 (master plan §3 ownership map). Intentionally empty in P2.8:
- * Queries are `definePublicAction` / `defineAction` reads that never mutate.
+ * `orders` read-only queries (API-COM-06 listOrdersAdmin / getOrderAdmin, PHASE-04).
+ * Queries are `defineAction` reads that never mutate; the underlying service methods already
+ * assert `orders.read`.
  */
-export {};
+import { defineAction } from "@/lib/actions/envelope";
+import { getOrderAdminInput, listOrdersAdminInput } from "./types";
+import { ordersService } from "./service";
+
+export const listOrdersAdminQuery = defineAction({
+  name: "API-COM-06 listOrdersAdmin",
+  permission: "orders.read",
+  input: listOrdersAdminInput,
+  handler: (input, ctx) => ordersService.listOrdersAdmin(ctx, input),
+});
+
+export const getOrderAdminQuery = defineAction({
+  name: "API-COM-06 getOrderAdmin",
+  permission: "orders.read",
+  input: getOrderAdminInput,
+  handler: (input, ctx) => ordersService.getOrderAdmin(ctx, input),
+});

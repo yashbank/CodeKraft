@@ -239,6 +239,8 @@ export interface OrderRow {
     provider: StatusValue<"payments.provider">;
     status: PaymentStatus;
     reference?: string;
+    /** Backing `payments.id`, when a payment exists yet -- required to confirm/fail it. */
+    paymentId?: string;
   };
   status: OrderStatus;
   expiresAt?: string;
@@ -316,6 +318,8 @@ export interface OrderDetailData {
     confirmedBy?: string;
     confirmedAt?: string;
     previousFailed: Array<{ at: string; reason: string }>;
+    /** Backing `payments.id` for the current/latest payment -- required to confirm/fail it. */
+    paymentId?: string;
   };
   items: OrderItemDetail[];
   ledger: LedgerEntry[];
@@ -343,6 +347,7 @@ export interface OrderDetailData {
     status: ApprovalStatus;
     creditNote?: string;
     at: string;
+    reason?: string;
   }>;
   refundable: boolean;
   linkedQueries: Array<{ id: string; subject: string; status: StatusValue<"queries.status"> }>;

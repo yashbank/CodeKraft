@@ -30,7 +30,14 @@ export interface ConfirmPaymentDialogProps {
   customerReference?: string;
   /** Project orders cannot be confirmed until the split is applied. */
   blockedReason?: string;
-  onConfirm?: (result: { receivedMinor: number; reference: string; note: string }) => void;
+  /** True while the confirm mutation is in flight -- disables the primary button. */
+  busy?: boolean;
+  onConfirm?: (result: {
+    receivedMinor: number;
+    reference: string;
+    note: string;
+    receivedOn: string;
+  }) => void;
 }
 
 /**
@@ -45,12 +52,14 @@ export function ConfirmPaymentDialog({
   due,
   customerReference,
   blockedReason,
+  busy = false,
   onConfirm,
 }: ConfirmPaymentDialogProps) {
   const [received, setReceived] = React.useState(() => (due.amountMinor / 100).toFixed(2));
   const [reference, setReference] = React.useState(customerReference ?? "");
   const [note, setNote] = React.useState("");
   const [verified, setVerified] = React.useState(false);
+  const [receivedOn, setReceivedOn] = React.useState(() => new Date().toISOString().slice(0, 10));
   const receivedMinor = React.useMemo(() => {
     try {
       return parseMinor(received, due.currency);
@@ -102,7 +111,8 @@ export function ConfirmPaymentDialog({
             <Input
               id="cp-received-on"
               type="date"
-              defaultValue="2026-09-25"
+              value={receivedOn}
+              onChange={(e) => setReceivedOn(e.target.value)}
               required
               aria-required
             />
@@ -190,14 +200,14 @@ export function ConfirmPaymentDialog({
               !valid ||
               reference.trim() === "" ||
               (credit !== null && note.trim() === "") ||
-              Boolean(blockedReason)
+              Boolean(blockedReason) ||
+              busy
             }
             onClick={() => {
-              onConfirm?.({ receivedMinor, reference, note });
-              onOpenChange(false);
+              onConfirm?.({ receivedMinor, reference, note, receivedOn });
             }}
           >
-            Confirm and mark Paid
+            {busy ? "Confirming…" : "Confirm and mark Paid"}
           </Button>
         </DialogFooter>
       </DialogContent>
