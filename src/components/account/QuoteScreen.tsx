@@ -3,6 +3,8 @@
 import Link from "next/link";
 import * as React from "react";
 
+import { toast } from "sonner";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,10 +12,14 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { add, format } from "@/lib/money";
+import { mapBillingToOrderInput } from "@/lib/account/checkout-view";
+import { acceptCustomQuote } from "@/modules/quotes/customer-mutations";
+import type { CreateOrderResult } from "@/modules/orders/types";
 import { Banner } from "./Banner";
 import { BillingFields, PaymentMethodChoice } from "./CheckoutScreen";
 import { DELIVERY_LABELS } from "./DeliveryTypeIcon";
 import { formatDate, timeUntil } from "./format";
+import { PaymentInstructionsPanel } from "./PaymentInstructionsPanel";
 import { ProductCover } from "./ProductCover";
 import type { BillingDetails, PaymentProvider, QuoteView } from "./types";
 
@@ -36,16 +42,48 @@ export function QuoteScreen({
   customerEmail: string;
   canAccept: boolean;
   now: string;
-  links: { newQuery: string; switchAccount: string };
+  links: { newQuery: string; switchAccount: string; dashboard: string };
   loading?: boolean;
 }) {
   const [bill, setBill] = React.useState<BillingDetails>(billing);
   const [editBilling, setEditBilling] = React.useState(!billing.country || !billing.name);
   const [method, setMethod] = React.useState<PaymentProvider>(q.paymentMethods[0] ?? "manual_upi");
   const [consent, setConsent] = React.useState(false);
+  const [accepting, setAccepting] = React.useState(false);
+  const [order, setOrder] = React.useState<CreateOrderResult | null>(null);
   const total = q.tax ? add(q.amount, q.tax) : q.amount;
   const remaining = timeUntil(q.validUntil, now);
   const payable = q.status === "sent" && canAccept && !!remaining;
+
+  async function handleAccept(e: React.FormEvent) {
+    e.preventDefault();
+    if (!consent || accepting) return;
+    setAccepting(true);
+    const result = await acceptCustomQuote({
+      token: q.token,
+      paymentMethod: method,
+      billing: mapBillingToOrderInput(bill, customerEmail),
+    });
+    setAccepting(false);
+    if (result.ok) {
+      setOrder(result.data);
+      toast.success(`Order ${result.data.orderNo} placed`);
+    } else {
+      toast.error(result.error.message);
+    }
+  }
+
+  if (order) {
+    return (
+      <PaymentInstructionsPanel
+        orderNo={order.orderNo}
+        paymentId={order.payment.paymentId}
+        instructions={order.payment.instructions}
+        expiresAt={order.expiresAt}
+        dashboardHref={links.dashboard}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -196,7 +234,7 @@ export function QuoteScreen({
         </section>
 
         {payable ? (
-          <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-6" onSubmit={handleAccept}>
             <section aria-labelledby="quote-pay" className="space-y-3">
               <h2 id="quote-pay" className="text-h4 text-fg">
                 Payment method
@@ -255,8 +293,8 @@ export function QuoteScreen({
               </Label>
             </div>
             <div className="sticky bottom-0 -mx-6 flex flex-col gap-2 border-t border-border bg-surface/95 p-4 backdrop-blur sm:static sm:m-0 sm:flex-row sm:border-0 sm:bg-transparent sm:p-0">
-              <Button type="submit" size="lg" disabled={!consent}>
-                Accept &amp; pay {format(total)}
+              <Button type="submit" size="lg" disabled={!consent || accepting}>
+                {accepting ? "Placing order…" : `Accept & pay ${format(total)}`}
               </Button>
               <Button type="button" size="lg" variant="ghost" asChild>
                 <Link href={links.newQuery}>Ask a question</Link>

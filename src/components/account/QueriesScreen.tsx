@@ -2,7 +2,9 @@
 
 import { ChevronRightIcon, MessageSquareIcon, PaperclipIcon, PlusIcon } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +30,8 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
+import { fromPlainText } from "@/modules/content/render";
+import { createQuery } from "@/modules/queries/customer-mutations";
 import { EmptyState } from "./EmptyState";
 import { formatDate, formatDateTime, relativeTime } from "./format";
 import type { ChatTranscript, QueryStatus, QuerySummary } from "./types";
@@ -39,16 +43,46 @@ const STATUS_LABEL: Record<QueryStatus, string> = {
   closed: "Closed",
 };
 
-/** "New query" sheet: subject, related-to select, message, up to 3 attachments. */
-export function NewQuerySheet({
-  related,
-  trigger,
-}: {
-  related: { value: string; label: string }[];
-  trigger: React.ReactNode;
-}) {
+/**
+ * "New query" sheet: subject + message, real `createQuery` wiring (`support.self`).
+ *
+ * The fixture-era "Related to" picker is dropped -- it listed two hardcoded orders/entitlements
+ * that don't exist for the signed-in customer; this screen has no real order/entitlement list to
+ * offer instead, so every query created here is `source: "dashboard"` with no `orderId`. Same for
+ * attachments: `createQuery` takes already-uploaded media ids, and there's no upload endpoint
+ * wired to this screen, so the file input is disabled rather than silently dropping picked files.
+ */
+export function NewQuerySheet({ trigger }: { trigger: React.ReactNode }) {
+  const router = useRouter();
+  const [open, setOpen] = React.useState(false);
+  const [pending, setPending] = React.useState(false);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    const subject = String(data.get("subject") ?? "").trim();
+    const message = String(data.get("message") ?? "").trim();
+    if (!subject || !message) return;
+    setPending(true);
+    const result = await createQuery({
+      subject,
+      bodyJson: fromPlainText(message),
+      source: "dashboard",
+    });
+    setPending(false);
+    if (result.ok) {
+      toast.success(result.data.existing ? "You already have an open thread for this" : "Query sent — we'll reply within a working day");
+      setOpen(false);
+      form.reset();
+      router.refresh();
+    } else {
+      toast.error(result.error.message);
+    }
+  }
+
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetContent className="z-(--ck-z-modal) overflow-y-auto">
         <SheetHeader>
@@ -57,45 +91,29 @@ export function NewQuerySheet({
             We usually reply within 1 working day — by email and here.
           </SheetDescription>
         </SheetHeader>
-        <form className="space-y-4 px-4 pb-4" onSubmit={(e) => e.preventDefault()}>
+        <form className="space-y-4 px-4 pb-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="nq-subject" required>
               Subject
             </Label>
-            <Input id="nq-subject" required maxLength={200} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="nq-related">Related to</Label>
-            <Select defaultValue="none">
-              <SelectTrigger id="nq-related" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {related.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>
-                    {r.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input id="nq-subject" name="subject" required maxLength={200} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="nq-message" required>
               Message
             </Label>
-            <Textarea id="nq-message" required maxLength={4000} rows={6} />
+            <Textarea id="nq-message" name="message" required maxLength={4000} rows={6} />
             <p className="text-caption text-fg-muted">Up to 4000 characters.</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="nq-files">Attachments (optional)</Label>
-            <Input id="nq-files" type="file" multiple accept="image/*,.pdf,.zip" />
+            <Input id="nq-files" type="file" multiple accept="image/*,.pdf,.zip" disabled />
             <p className="text-caption text-fg-muted">
-              Up to 3 files, 10 MB each — images, PDF or zip.
+              Attachment upload isn&apos;t wired up yet — mention files in your message and we&apos;ll ask for them.
             </p>
           </div>
-          <Button type="submit" className="w-full">
-            Send
+          <Button type="submit" className="w-full" disabled={pending}>
+            {pending ? "Sending…" : "Send"}
           </Button>
         </form>
       </SheetContent>
@@ -121,13 +139,8 @@ export function QueriesScreen({
     "all",
   );
   const rows = queries.filter((q) => filter === "all" || q.status === filter);
-  const related = [
-    { value: "ord_13", label: "Order CK-ORD-000013" },
-    { value: "ent_license", label: "Purchase · Ledgerly Desktop" },
-  ];
   const newQuery = (
     <NewQuerySheet
-      related={related}
       trigger={
         <Button>
           <PlusIcon aria-hidden /> New query

@@ -63,7 +63,7 @@ export class DefaultChatService implements ChatService {
     input: StartConversationInput,
   ): Promise<StartConversationResult> {
     if (!ctx.userId) {
-      throw new AppError("UNAUTHORIZED", "Authentication required to use AI chat");
+      throw new AppError(ErrorCode.UNAUTHENTICATED, "Authentication required to use AI chat");
     }
 
     const userRow = await this.db
@@ -73,7 +73,7 @@ export class DefaultChatService implements ChatService {
       .limit(1);
 
     if (!userRow[0] || !userRow[0].emailVerified) {
-      throw new AppError("EMAIL_UNVERIFIED", "Please verify your email before using chat");
+      throw new AppError(ErrorCode.EMAIL_UNVERIFIED, "Please verify your email before using chat");
     }
 
     // Active prompt version
@@ -183,7 +183,7 @@ export class DefaultChatService implements ChatService {
       .limit(1);
 
     if (conv.length === 0 || conv[0].userId !== ctx.userId) {
-      throw new AppError("NOT_FOUND", "Conversation not found");
+      throw new AppError(ErrorCode.NOT_FOUND, "Conversation not found");
     }
 
     // Record user message
@@ -302,15 +302,17 @@ export class DefaultChatService implements ChatService {
     const conv = await this.db
       .select()
       .from(conversations)
-      .where(eq(conversations.id, input.conversationId))
+      .where(
+        and(eq(conversations.id, input.conversationId), eq(conversations.userId, ctx.userId)),
+      )
       .limit(1);
 
     if (conv.length === 0) {
-      throw new AppError("NOT_FOUND", "Conversation not found");
+      throw new AppError(ErrorCode.NOT_FOUND, "Conversation not found");
     }
 
     if (conv[0].escalatedQueryId) {
-      throw new AppError("STATE_INVALID", "Conversation already escalated");
+      throw new AppError(ErrorCode.STATE_INVALID, "Conversation already escalated");
     }
 
     // Get recent messages for excerpt
@@ -354,15 +356,17 @@ export class DefaultChatService implements ChatService {
     const conv = await this.db
       .select()
       .from(conversations)
-      .where(eq(conversations.id, input.conversationId))
+      .where(
+        and(eq(conversations.id, input.conversationId), eq(conversations.userId, ctx.userId)),
+      )
       .limit(1);
 
     if (conv.length === 0) {
-      throw new AppError("NOT_FOUND", "Conversation not found");
+      throw new AppError(ErrorCode.NOT_FOUND, "Conversation not found");
     }
 
     if (conv[0].endedAt) {
-      throw new AppError("STATE_INVALID", "Conversation has ended");
+      throw new AppError(ErrorCode.STATE_INVALID, "Conversation has ended");
     }
 
     const leadRes = await leadsService.createFromChatbot(
@@ -514,7 +518,7 @@ export class DefaultChatService implements ChatService {
       .limit(1);
 
     if (conv.length === 0) {
-      throw new AppError("NOT_FOUND", "Conversation not found");
+      throw new AppError(ErrorCode.NOT_FOUND, "Conversation not found");
     }
 
     const msgs = await this.db
@@ -622,7 +626,7 @@ export class DefaultChatService implements ChatService {
       .where(eq(promptVersions.id, input.promptVersionId))
       .returning();
 
-    if (!row) throw new AppError("NOT_FOUND", "Prompt version not found");
+    if (!row) throw new AppError(ErrorCode.NOT_FOUND, "Prompt version not found");
 
     return await this.listPromptVersions(ctx, {});
   }

@@ -28,10 +28,10 @@ export function Preview({ state }: { state: string }) {
         : (state as CheckoutPageState);
   return (
     <CheckoutScreen
+      offeringId="off_preview"
       offering={offering}
       customerEmail={customer.email}
       billing={customer.billing}
-      coupon={{ code: "SAVE10", percentBps: 1000 }}
       state={pageState}
       links={{ dashboard: DEV_LINKS.overview, verify: DEV_LINKS.verify }}
     />

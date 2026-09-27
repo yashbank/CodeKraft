@@ -19,6 +19,14 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
+import { buildGreeting, mapMenuMessagesToChat, mapMenuNodesToChips } from "@/lib/account/chat-view";
+import {
+  confirmLeadCapture,
+  escalateConversation,
+  menuIntent as menuIntentMutation,
+  startConversation,
+} from "@/modules/chat/customer-mutations";
+import type { MenuIntent, MenuNode } from "@/modules/chat/types";
 import { Banner } from "./Banner";
 import { formatDate } from "./format";
 import type { ChatCard, ChatMessage, ChatTranscript } from "./types";
@@ -85,25 +93,49 @@ function DataCard({ card }: { card: ChatCard }) {
   }
 }
 
+/** One SSE frame ("event: x\ndata: {...}") -> its event name + parsed payload, or null if malformed. */
+function parseSseChunk(chunk: string): { event: string; data: any } | null {
+  const evMatch = chunk.match(/^event: (.+)$/m);
+  const dataMatch = chunk.match(/^data: (.+)$/m);
+  const event = evMatch?.[1];
+  const dataStr = dataMatch?.[1];
+  if (!event || !dataStr) return null;
+  try {
+    return { event, data: JSON.parse(dataStr) };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * SCR-ACC-06 — assistant chat: header with usage chip, "New conversation" and "History" sheet;
  * `role="log"` message list with menu chips, data cards, citations; composer with Stop while
  * streaming; cap-reached banner; "Talk to a human" escalation confirm; lead-capture card.
+ *
+ * Real backend wiring (P7): `conversationId` and `menuIntents` are only set by the real page —
+ * without them (e.g. the dev screen gallery, which has no session) quick replies and "New
+ * conversation" fall back to the old canned local behaviour rather than erroring.
  */
 export function ChatScreen({
   firstName,
   messages: initial,
   menu,
+  menuIntents,
+  conversationId: initialConversationId,
   transcripts,
-  messagesLeft,
-  capReached = false,
-  streaming = false,
+  messagesLeft: initialMessagesLeft,
+  capReached: initialCapReached = false,
+  streaming: forcedStreaming = false,
   connectionLost = false,
   links,
 }: {
   firstName: string;
   messages: ChatMessage[];
   menu: string[];
+  /** Chip label -> backend `MenuIntent`, for the real quick-reply/menu wiring. */
+  menuIntents?: Partial<Record<string, MenuIntent>>;
+  /** Real conversation row id from `startConversation`. Absent in the dev screen gallery. */
+  conversationId?: string;
   transcripts: ChatTranscript[];
   messagesLeft: number;
   capReached?: boolean;
@@ -115,29 +147,210 @@ export function ChatScreen({
   const [draft, setDraft] = React.useState("");
   const [escalate, setEscalate] = React.useState(false);
   const [summary, setSummary] = React.useState("");
+  const [conversationId, setConversationId] = React.useState(initialConversationId);
+  const [messagesLeft, setMessagesLeft] = React.useState(initialMessagesLeft);
+  const [capReached, setCapReached] = React.useState(initialCapReached);
+  const [sending, setSending] = React.useState(false);
+  const [pendingLead, setPendingLead] = React.useState<{
+    name?: string;
+    email?: string;
+    need: string;
+  } | null>(null);
   const logRef = React.useRef<HTMLOListElement>(null);
+  const streaming = forcedStreaming || sending;
 
   React.useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
-  }, [messages.length, escalate]);
+  }, [messages.length, escalate, pendingLead]);
 
   function push(m: Omit<ChatMessage, "id" | "at">) {
     setMessages((prev) => [
       ...prev,
-      { ...m, id: `local-${prev.length}`, at: new Date().toISOString() },
+      { ...m, id: `local-${prev.length}-${Date.now()}`, at: new Date().toISOString() },
     ]);
   }
 
-  function quickReply(chip: string) {
+  async function newConversation() {
+    const result = await startConversation({});
+    if (result.ok) {
+      setConversationId(result.data.conversationId);
+      setMessagesLeft(result.data.usage.userRemaining);
+      setCapReached(false);
+      setMessages(buildGreeting(firstName, result.data.menu));
+      return;
+    }
+    // No session (dev preview) — keep the screen usable with the static menu it was given.
+    setMessages([
+      {
+        id: "open",
+        role: "assistant",
+        text: `Hi ${firstName}. I can check your orders, downloads and renewals, or answer questions about our products and services. What do you need?`,
+        at: new Date().toISOString(),
+      },
+      { id: "open-menu", role: "menu", chips: menu, at: new Date().toISOString() },
+    ]);
+  }
+
+  async function quickReply(chip: string) {
     push({ role: "user", text: chip });
-    if (chip === "Contact" || chip === "Talk to a human") {
+    const intent = menuIntents?.[chip];
+    if (
+      intent === "talk_to_human" ||
+      intent === "contact" ||
+      (!intent && (chip === "Contact" || chip === "Talk to a human"))
+    ) {
       setEscalate(true);
       return;
     }
-    push({
-      role: "assistant",
-      text: `Quick action "${chip}" runs against your account data — no AI credits used.`,
+    if (!intent || !conversationId) {
+      push({
+        role: "assistant",
+        text: `Quick action "${chip}" runs against your account data — no AI credits used.`,
+      });
+      return;
+    }
+    const result = await menuIntentMutation({ conversationId, intent });
+    if (result.ok) {
+      setMessages((prev) => [...prev, ...mapMenuMessagesToChat(result.data.messages)]);
+    } else {
+      push({
+        role: "assistant",
+        text: "Sorry, I couldn't load that just now.",
+        interrupted: true,
+      });
+    }
+  }
+
+  async function sendChatMessage(text: string) {
+    push({ role: "user", text });
+    if (!conversationId) {
+      push({
+        role: "assistant",
+        text: "This conversation isn't connected to your account, so I can't send that. Try reloading the page.",
+        interrupted: true,
+      });
+      return;
+    }
+    setSending(true);
+    const assistantId = `assistant-${Date.now()}`;
+    setMessages((prev) => [
+      ...prev,
+      { id: assistantId, role: "assistant", text: "", at: new Date().toISOString() },
+    ]);
+
+    const patch = (fn: (m: ChatMessage) => ChatMessage) =>
+      setMessages((prev) => prev.map((m) => (m.id === assistantId ? fn(m) : m)));
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId, content: text }),
+      });
+      if (!res.ok || !res.body) throw new Error(`chat request failed (${res.status})`);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let assistantText = "";
+      let gotAnyDelta = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let idx: number;
+        while ((idx = buf.indexOf("\n\n")) !== -1) {
+          const frame = parseSseChunk(buf.slice(0, idx));
+          buf = buf.slice(idx + 2);
+          if (!frame) continue;
+          if (frame.event === "meta") {
+            setMessagesLeft(frame.data.usage.userRemaining);
+          } else if (frame.event === "delta") {
+            gotAnyDelta = true;
+            assistantText += frame.data.text;
+            const text2 = assistantText;
+            patch((m) => ({ ...m, text: text2 }));
+          } else if (frame.event === "citations") {
+            const citations = frame.data.chunks.map((c: { title: string; href: string }) => ({
+              label: c.title,
+              href: c.href,
+            }));
+            patch((m) => ({ ...m, citations }));
+          } else if (frame.event === "lead_intent") {
+            setPendingLead({ name: frame.data.name, email: frame.data.email, need: frame.data.need });
+          } else if (frame.event === "fallback") {
+            if (frame.data.reason === "limit") setCapReached(true);
+            if (!gotAnyDelta) {
+              patch((m) => ({
+                ...m,
+                text:
+                  frame.data.message ??
+                  "I couldn't find that in our site content. Try one of these, or talk to a human.",
+              }));
+            }
+            const chips = mapMenuNodesToChips(frame.data.menu as MenuNode[]);
+            setMessages((prev) => [
+              ...prev,
+              { id: `fallback-menu-${Date.now()}`, role: "menu", chips, at: new Date().toISOString() },
+            ]);
+          } else if (frame.event === "error") {
+            patch((m) => ({ ...m, interrupted: true }));
+          }
+        }
+      }
+    } catch {
+      patch((m) => ({ ...m, interrupted: true }));
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleEscalateSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!conversationId) {
+      setEscalate(false);
+      push({
+        role: "assistant",
+        card: { kind: "lead_capture", summary: summary || "Conversation handed over", queryHref: links.queries },
+      });
+      toast.success("Query created");
+      setSummary("");
+      return;
+    }
+    const result = await escalateConversation({ conversationId, summary: summary || undefined });
+    if (result.ok) {
+      setEscalate(false);
+      push({
+        role: "assistant",
+        card: { kind: "lead_capture", summary: summary || "Conversation handed over", queryHref: links.queries },
+      });
+      toast.success("Query created");
+      setSummary("");
+    } else {
+      toast.error(result.error.message);
+    }
+  }
+
+  async function confirmLead() {
+    if (!pendingLead) return;
+    if (!conversationId) {
+      setPendingLead(null);
+      return;
+    }
+    const result = await confirmLeadCapture({
+      conversationId,
+      name: pendingLead.name,
+      email: pendingLead.email,
+      need: pendingLead.need,
     });
+    if (result.ok) {
+      push({ role: "assistant", card: { kind: "lead_capture", summary: pendingLead.need } });
+      toast.success("Sent to our team");
+    } else {
+      toast.error(result.error.message);
+    }
+    setPendingLead(null);
   }
 
   return (
@@ -149,21 +362,7 @@ export function ChatScreen({
           {messagesLeft} messages left today
         </Badge>
         <div className="ml-auto flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() =>
-              setMessages([
-                {
-                  id: "open",
-                  role: "assistant",
-                  text: `Hi ${firstName}. I can check your orders, downloads and renewals, or answer questions about our products and services. What do you need?`,
-                  at: new Date().toISOString(),
-                },
-                { id: "open-menu", role: "menu", chips: menu, at: new Date().toISOString() },
-              ])
-            }
-          >
+          <Button variant="ghost" size="sm" onClick={newConversation}>
             <PlusIcon aria-hidden /> New conversation
           </Button>
           <Sheet>
@@ -260,7 +459,11 @@ export function ChatScreen({
                     {m.interrupted ? (
                       <span className="mt-2 block text-caption text-danger">
                         Connection lost —{" "}
-                        <button type="button" className="underline">
+                        <button
+                          type="button"
+                          className="underline"
+                          onClick={() => sendChatMessage(m.text ?? "")}
+                        >
                           Retry
                         </button>
                       </span>
@@ -308,24 +511,26 @@ export function ChatScreen({
             Thinking…
           </li>
         ) : null}
+        {pendingLead ? (
+          <li className="flex justify-start">
+            <div className="max-w-[85%] space-y-3 rounded-lg border border-border bg-surface p-4 text-body-sm">
+              <p className="text-fg">
+                Want us to follow up on &ldquo;{pendingLead.need}&rdquo;?
+              </p>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={confirmLead}>
+                  Send to our team
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setPendingLead(null)}>
+                  Not now
+                </Button>
+              </div>
+            </div>
+          </li>
+        ) : null}
         {escalate ? (
           <li className="flex justify-start">
-            <form
-              className="max-w-[85%] space-y-3 rounded-lg border border-border bg-surface p-4 text-body-sm"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setEscalate(false);
-                push({
-                  role: "assistant",
-                  card: {
-                    kind: "lead_capture",
-                    summary: summary || "Conversation handed over",
-                    queryHref: links.queries,
-                  },
-                });
-                toast.success("Query created");
-              }}
-            >
+            <form className="max-w-[85%] space-y-3 rounded-lg border border-border bg-surface p-4 text-body-sm" onSubmit={handleEscalateSubmit}>
               <p className="text-fg">
                 I&apos;ll hand this to the team as a query. Add a short summary?
               </p>
@@ -356,9 +561,10 @@ export function ChatScreen({
         className="space-y-2 border-t border-border pt-3"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!draft.trim()) return;
-          push({ role: "user", text: draft.trim() });
+          if (!draft.trim() || sending) return;
+          const text = draft.trim();
           setDraft("");
+          void sendChatMessage(text);
         }}
       >
         <div className="flex items-end gap-2">
@@ -390,7 +596,7 @@ export function ChatScreen({
             />
           </div>
           {streaming ? (
-            <Button type="button" variant="secondary" size="icon-md" aria-label="Stop generating">
+            <Button type="button" variant="secondary" size="icon-md" aria-label="Stop generating" disabled>
               <SquareIcon aria-hidden />
             </Button>
           ) : (

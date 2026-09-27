@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,9 +27,13 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/components/ui/_utils";
-import { add, format, money, mulBps, sub, type Money } from "@/lib/money";
+import { add, format, money, type Money } from "@/lib/money";
+import { mapBillingToOrderInput } from "@/lib/account/checkout-view";
+import { createOrder, previewCheckout } from "@/modules/orders/customer-mutations";
+import type { CreateOrderResult } from "@/modules/orders/types";
 import { Banner } from "./Banner";
 import { DELIVERY_LABELS } from "./DeliveryTypeIcon";
+import { PaymentInstructionsPanel } from "./PaymentInstructionsPanel";
 import { ProductCover } from "./ProductCover";
 import type { BillingDetails, CheckoutOffering, PaymentProvider } from "./types";
 
@@ -247,41 +252,129 @@ export function PaymentMethodChoice({
  * charge currency with a display-currency estimate. Phase 7 wires `previewOrder`/`createOrder`.
  */
 export function CheckoutScreen({
+  offeringId,
   offering,
   customerEmail,
   billing,
-  coupon,
   state = "default",
   links,
 }: {
+  /** The offering being bought -- needed to call `previewCheckout`/`createOrder` for real. */
+  offeringId: string;
   offering: CheckoutOffering;
   customerEmail: string;
   billing: BillingDetails;
-  /** Coupon known to the server (applied when the typed code matches). */
-  coupon?: CheckoutCoupon;
   state?: CheckoutPageState;
   links: { dashboard: string; verify: string };
 }) {
   const [bill, setBill] = React.useState<BillingDetails>(billing);
   const [save, setSave] = React.useState(true);
   const [code, setCode] = React.useState("");
-  const [applied, setApplied] = React.useState<CheckoutCoupon | null>(null);
+  const [appliedCode, setAppliedCode] = React.useState<string | null>(null);
   const [couponError, setCouponError] = React.useState<string | null>(null);
+  const [checkingCoupon, setCheckingCoupon] = React.useState(false);
   const [method, setMethod] = React.useState<PaymentProvider>(
     offering.enabledMethods[0] ?? "manual_upi",
   );
   const [consent, setConsent] = React.useState(false);
   const [summaryOpen, setSummaryOpen] = React.useState(false);
+  const [placing, setPlacing] = React.useState(false);
+  const [order, setOrder] = React.useState<CreateOrderResult | null>(null);
 
-  const subtotal = offering.unit;
-  const discount = applied
-    ? applied.percentBps
-      ? mulBps(subtotal, applied.percentBps)
-      : (applied.fixed ?? money(0, subtotal.currency))
-    : money(0, subtotal.currency);
-  const taxable = sub(subtotal, discount);
-  const tax = offering.tax ? mulBps(taxable, 1800) : null;
-  const total = tax ? add(taxable, tax) : taxable;
+  /**
+   * Real server-computed totals, seeded from the `previewCheckout` the page already ran and
+   * replaced wholesale by another `previewCheckout` call when a coupon is applied/removed --
+   * never recomputed client-side (no hardcoded tax rate; `previewCheckout` already applies the
+   * product's real rate and the coupon's real discount, docs/06 API-COM-01).
+   */
+  const [numbers, setNumbers] = React.useState<{
+    subtotal: Money;
+    discount: Money;
+    tax: Money | null;
+    total: Money;
+  }>({
+    subtotal: offering.unit,
+    discount: money(0, offering.unit.currency),
+    tax: offering.tax,
+    total: offering.tax ? add(offering.unit, offering.tax) : offering.unit,
+  });
+  const { subtotal, discount, tax, total } = numbers;
+
+  async function applyCoupon() {
+    if (!code || checkingCoupon) return;
+    setCheckingCoupon(true);
+    setCouponError(null);
+    const result = await previewCheckout({ offeringId, couponCode: code });
+    setCheckingCoupon(false);
+    if (!result.ok) {
+      setCouponError(result.error.message);
+      return;
+    }
+    if (!result.data.coupon) {
+      setCouponError(result.data.warnings[0] ?? "That code isn't valid for this offering.");
+      return;
+    }
+    setAppliedCode(result.data.coupon.code);
+    setNumbers({
+      subtotal: result.data.subtotal,
+      discount: result.data.discount,
+      tax: offering.tax ? result.data.tax : null,
+      total: result.data.total,
+    });
+  }
+
+  async function removeCoupon() {
+    setAppliedCode(null);
+    setCode("");
+    setCouponError(null);
+    const result = await previewCheckout({ offeringId });
+    setNumbers(
+      result.ok
+        ? {
+            subtotal: result.data.subtotal,
+            discount: result.data.discount,
+            tax: offering.tax ? result.data.tax : null,
+            total: result.data.total,
+          }
+        : {
+            subtotal: offering.unit,
+            discount: money(0, offering.unit.currency),
+            tax: offering.tax,
+            total: offering.tax ? add(offering.unit, offering.tax) : offering.unit,
+          },
+    );
+  }
+
+  async function handlePlaceOrder(e: React.FormEvent) {
+    e.preventDefault();
+    if (!consent || placing) return;
+    setPlacing(true);
+    const result = await createOrder({
+      offeringId,
+      couponCode: appliedCode ?? undefined,
+      paymentMethod: method,
+      billing: mapBillingToOrderInput(bill, customerEmail),
+    });
+    setPlacing(false);
+    if (result.ok) {
+      setOrder(result.data);
+      toast.success(`Order ${result.data.orderNo} placed`);
+    } else {
+      toast.error(result.error.message);
+    }
+  }
+
+  if (order) {
+    return (
+      <PaymentInstructionsPanel
+        orderNo={order.orderNo}
+        paymentId={order.payment.paymentId}
+        instructions={order.payment.instructions}
+        expiresAt={order.expiresAt}
+        dashboardHref={links.dashboard}
+      />
+    );
+  }
 
   if (state === "duplicate") {
     return (
@@ -331,7 +424,7 @@ export function CheckoutScreen({
   }
 
   const loading = state === "loading";
-  const submitting = state === "submitting";
+  const submitting = state === "submitting" || placing;
 
   return (
     <div className="space-y-6">
@@ -368,7 +461,7 @@ export function CheckoutScreen({
         <form
           className="space-y-6 lg:col-span-7"
           aria-busy={submitting || undefined}
-          onSubmit={(e) => e.preventDefault()}
+          onSubmit={handlePlaceOrder}
         >
           <Step n={1} title="Billing details">
             <BillingFields value={bill} onChange={setBill} emailReadOnly={customerEmail} />
@@ -392,7 +485,7 @@ export function CheckoutScreen({
                   id="coupon"
                   className="font-mono uppercase"
                   value={code}
-                  disabled={!!applied}
+                  disabled={!!appliedCode}
                   aria-invalid={!!couponError || undefined}
                   aria-describedby={couponError ? "coupon-error" : undefined}
                   onChange={(e) => {
@@ -406,16 +499,13 @@ export function CheckoutScreen({
                   </p>
                 ) : null}
               </div>
-              {applied ? (
+              {appliedCode ? (
                 <Badge tone="success" className="h-10 gap-2 px-3 text-body-sm">
-                  −{format(discount)} ({applied.code})
+                  −{format(discount)} ({appliedCode})
                   <button
                     type="button"
-                    aria-label={`Remove coupon ${applied.code}`}
-                    onClick={() => {
-                      setApplied(null);
-                      setCode("");
-                    }}
+                    aria-label={`Remove coupon ${appliedCode}`}
+                    onClick={() => void removeCoupon()}
                   >
                     <XIcon aria-hidden className="size-3.5" />
                   </button>
@@ -424,13 +514,10 @@ export function CheckoutScreen({
                 <Button
                   type="button"
                   variant="secondary"
-                  disabled={!code}
-                  onClick={() => {
-                    if (coupon && code === coupon.code) setApplied(coupon);
-                    else setCouponError("That code isn't valid for this offering.");
-                  }}
+                  disabled={!code || checkingCoupon}
+                  onClick={() => void applyCoupon()}
                 >
-                  Apply
+                  {checkingCoupon ? "Checking…" : "Apply"}
                 </Button>
               )}
             </div>
@@ -465,7 +552,7 @@ export function CheckoutScreen({
                   </td>
                   <td className="py-3 text-right font-mono tnum">{format(subtotal)}</td>
                   <td className="py-3 text-right font-mono tnum text-fg-muted">
-                    {applied ? `−${format(discount)}` : "—"}
+                    {appliedCode ? `−${format(discount)}` : "—"}
                   </td>
                   <td className="py-3 text-right text-fg-muted">
                     {tax ? `${offering.taxLabel} · ${format(tax)}` : "No tax"}
@@ -560,9 +647,9 @@ export function CheckoutScreen({
                     <dt className="text-fg-muted">Subtotal</dt>
                     <dd className="font-mono tnum">{format(subtotal)}</dd>
                   </div>
-                  {applied ? (
+                  {appliedCode ? (
                     <div className="flex justify-between text-success">
-                      <dt>Discount ({applied.code})</dt>
+                      <dt>Discount ({appliedCode})</dt>
                       <dd className="font-mono tnum">−{format(discount)}</dd>
                     </div>
                   ) : null}

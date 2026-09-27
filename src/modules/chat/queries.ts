@@ -9,6 +9,7 @@ import { defineAction } from "@/lib/actions/envelope";
 import {
   getTranscriptSchema,
   listConversationsAdminSchema,
+  listMyConversationsSchema,
   listPromptVersionsSchema,
 } from "./types";
 import { getDb } from "@/lib/db";
@@ -48,4 +49,12 @@ export const getKnowledgeIndexStatusQuery = defineAction({
   input: z.strictObject({}),
   permission: "chat.prompts.write",
   handler: async (_input, ctx) => getKnowledgeIndexStatus(ctx, getDb()),
+});
+
+/** API-CHAT-10 `listMyConversations` — `chat.use`, own rows only (service filters by `ctx.userId`). */
+export const listMyConversationsQuery = defineAction({
+  name: "API-CHAT-10 conversation.list_mine",
+  input: listMyConversationsSchema,
+  permission: "chat.use",
+  handler: (input, ctx) => chatService.listMyConversations(ctx, input),
 });

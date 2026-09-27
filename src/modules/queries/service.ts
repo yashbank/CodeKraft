@@ -1,7 +1,7 @@
 import { and, desc, eq, gt, inArray, isNull, lt, notInArray, or, sql } from "drizzle-orm";
 import type { Context, RequestContext } from "@/lib/authz/context";
 import { type TxCtx, getDb } from "@/lib/db";
-import { AppError } from "@/lib/errors";
+import { AppError, ErrorCode } from "@/lib/errors";
 import { assertTurnstileVerified, verifyTurnstile } from "@/lib/turnstile";
 import { notificationsService } from "@/modules/notifications/service";
 import type { JobContext, JobOutcome } from "@/modules/analytics/types";
@@ -85,7 +85,7 @@ export class DefaultQueriesService implements QueriesService {
     }
 
     if (!ctx.userId) {
-      throw new AppError("UNAUTHORIZED", "Authentication required");
+      throw new AppError(ErrorCode.UNAUTHENTICATED, "Authentication required");
     }
 
     // Refund request single-open thread check (BR-09)
@@ -232,7 +232,7 @@ export class DefaultQueriesService implements QueriesService {
     input: ListMyQueriesInput,
   ): Promise<ListResult<QueryRow>> {
     if (!ctx.userId) {
-      throw new AppError("UNAUTHORIZED", "Authentication required");
+      throw new AppError(ErrorCode.UNAUTHENTICATED, "Authentication required");
     }
 
     const conditions: any[] = [eq(queries.userId, ctx.userId)];
@@ -244,9 +244,11 @@ export class DefaultQueriesService implements QueriesService {
       .select({
         query: queries,
         assigneeName: users.name,
+        orderNo: orders.orderNo,
       })
       .from(queries)
       .leftJoin(users, eq(queries.assignedTo, users.id))
+      .leftJoin(orders, eq(queries.orderId, orders.id))
       .where(and(...conditions))
       .orderBy(desc(queries.updatedAt))
       .limit((input.limit ?? 25) + 1);
@@ -259,7 +261,19 @@ export class DefaultQueriesService implements QueriesService {
       .from(queries)
       .where(and(...conditions));
 
-    const items: QueryRow[] = selected.map((r) => this.toQueryRow(r.query, r.assigneeName));
+    // Every row belongs to the calling customer -- one lookup, not a per-row join.
+    const [me] = await this.db
+      .select({ id: users.id, email: users.email, name: users.name })
+      .from(users)
+      .where(eq(users.id, ctx.userId))
+      .limit(1);
+    const customerRef = me
+      ? { id: me.id, email: me.email, name: me.name }
+      : { id: ctx.userId, email: "", name: null };
+
+    const items: QueryRow[] = selected.map((r) =>
+      this.toQueryRow(r.query, r.assigneeName, customerRef, r.orderNo ?? null),
+    );
 
     return {
       items,
@@ -270,7 +284,7 @@ export class DefaultQueriesService implements QueriesService {
 
   async getMyQuery(ctx: RequestContext, input: GetMyQueryInput): Promise<QueryThread> {
     if (!ctx.userId) {
-      throw new AppError("UNAUTHORIZED", "Authentication required");
+      throw new AppError(ErrorCode.UNAUTHENTICATED, "Authentication required");
     }
 
     const rows = await this.db
@@ -284,7 +298,7 @@ export class DefaultQueriesService implements QueriesService {
       .limit(1);
 
     if (rows.length === 0) {
-      throw new AppError("NOT_FOUND", "Query not found");
+      throw new AppError(ErrorCode.NOT_FOUND, "Query not found");
     }
 
     return await this.buildThread(rows[0].query, rows[0].assigneeName);
@@ -301,12 +315,12 @@ export class DefaultQueriesService implements QueriesService {
       .limit(1);
 
     if (existing.length === 0) {
-      throw new AppError("NOT_FOUND", "Query not found");
+      throw new AppError(ErrorCode.NOT_FOUND, "Query not found");
     }
 
     const query = existing[0];
     if (query.status === "closed") {
-      throw new AppError("STATE_INVALID", "Cannot reply to a closed query");
+      throw new AppError(ErrorCode.STATE_INVALID, "Cannot reply to a closed query");
     }
 
     const isAdmin = ctx.roles.some((r) => ["admin", "super_admin"].includes(r));
@@ -441,7 +455,7 @@ export class DefaultQueriesService implements QueriesService {
       .limit(1);
 
     if (rows.length === 0) {
-      throw new AppError("NOT_FOUND", "Query not found");
+      throw new AppError(ErrorCode.NOT_FOUND, "Query not found");
     }
 
     return await this.buildThread(rows[0].query, rows[0].assigneeName);
@@ -460,7 +474,7 @@ export class DefaultQueriesService implements QueriesService {
       .where(eq(queries.id, input.queryId))
       .returning();
 
-    if (!query) throw new AppError("NOT_FOUND", "Query not found");
+    if (!query) throw new AppError(ErrorCode.NOT_FOUND, "Query not found");
     return this.toQueryRow(query, null);
   }
 
@@ -477,7 +491,7 @@ export class DefaultQueriesService implements QueriesService {
       .where(eq(queries.id, input.queryId))
       .returning();
 
-    if (!query) throw new AppError("NOT_FOUND", "Query not found");
+    if (!query) throw new AppError(ErrorCode.NOT_FOUND, "Query not found");
 
     if (query.userId) {
       await notificationsService.emit(
@@ -508,7 +522,7 @@ export class DefaultQueriesService implements QueriesService {
       .where(eq(queries.id, input.queryId))
       .returning();
 
-    if (!query) throw new AppError("NOT_FOUND", "Query not found");
+    if (!query) throw new AppError(ErrorCode.NOT_FOUND, "Query not found");
     return this.toQueryRow(query, null);
   }
 
@@ -592,7 +606,7 @@ export class DefaultQueriesService implements QueriesService {
         .where(eq(orders.id, query.orderId))
         .limit(1);
       if (o[0]) {
-        linkedOrder = { orderId: o[0].id, orderNo: o[0].orderNumber };
+        linkedOrder = { orderId: o[0].id, orderNo: o[0].orderNo };
       }
     }
 
@@ -609,7 +623,7 @@ export class DefaultQueriesService implements QueriesService {
     }
 
     return {
-      query: this.toQueryRow(query, assigneeName),
+      query: this.toQueryRow(query, assigneeName, customer, linkedOrder?.orderNo ?? null),
       messages: messages.map((m) => ({
         messageId: m.msg.id,
         authorKind: m.msg.authorKind as any,
@@ -633,18 +647,32 @@ export class DefaultQueriesService implements QueriesService {
     };
   }
 
-  private toQueryRow(query: Query, assigneeName: string | null): QueryRow {
+  /**
+   * `QueryRow.customer` / `.orderNo` need a `users` / `orders` join the callers below already
+   * have in scope (or, for `assignQuery`/`closeQuery`/`reopenQuery`, don't need per-row -- those
+   * pass no override and fall back to the bare `userId`/`guestEmail` on the row). `refundRequest`
+   * is accepted on `createQuery`'s input for its BR-09 check but has no column on `queries` -- and
+   * there's no read-tracking column for `unreadForCaller` either -- so both are always `false`
+   * rather than fabricated (docs gap, flagged instead of invented).
+   */
+  private toQueryRow(
+    query: Query,
+    assigneeName: string | null,
+    customer?: { id: string | null; email: string; name: string | null },
+    orderNo?: string | null,
+  ): QueryRow {
     return {
       queryId: query.id,
       subject: query.subject,
       source: query.source as any,
       status: query.status as any,
-      guestEmail: query.guestEmail,
-      orderId: query.orderId,
-      productId: query.productId,
       assignedTo: query.assignedTo ? { id: query.assignedTo, name: assigneeName } : null,
-      messageCount: 1,
+      customer: customer ?? { id: query.userId, email: query.guestEmail ?? "", name: null },
+      orderNo: orderNo ?? null,
+      productId: query.productId,
+      refundRequest: false,
       lastMessageAt: query.updatedAt.toISOString(),
+      unreadForCaller: false,
       createdAt: query.createdAt.toISOString(),
       updatedAt: query.updatedAt.toISOString(),
     };

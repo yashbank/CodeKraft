@@ -10,6 +10,7 @@ import {
   assignQuerySchema,
   closeQuerySchema,
   createQueryAdminSchema,
+  createQuerySchema,
   reopenQuerySchema,
   replyToQuerySchema,
 } from "./types";
@@ -48,4 +49,12 @@ export const reopenQueryAction = defineAction({
   input: reopenQuerySchema,
   permission: "queries.close",
   handler: (input, ctx) => queriesService.reopenQuery(ctx, input),
+});
+
+/** API-CHAT-01 `createQuery` — customer (`support.self`), `source` dashboard/order (this app's "New query" sheet only ever sends `dashboard`; `form`/guest submission is a public, unauthenticated path handled elsewhere). */
+export const createQueryAction = defineAction({
+  name: "API-CHAT-01 query.create",
+  input: createQuerySchema,
+  permission: "support.self",
+  handler: (input, ctx) => queriesService.createQuery(ctx, input),
 });

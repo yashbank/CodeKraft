@@ -1,7 +1,12 @@
 "use server";
 
 import { defineAction } from "@/lib/actions/envelope";
-import { confirmPaymentInput, failPaymentInput, proposeRefundInput } from "./types";
+import {
+  confirmPaymentInput,
+  failPaymentInput,
+  proposeRefundInput,
+  submitPaymentReferenceInput,
+} from "./types";
 import { paymentsService } from "./service";
 
 export const proposeRefundAction = defineAction({
@@ -28,5 +33,20 @@ export const failPaymentAction = defineAction({
   input: failPaymentInput,
   handler: async (input, ctx) => {
     return await paymentsService.failPayment(ctx, input);
+  },
+});
+
+/**
+ * API-PAY-02 `submitPaymentReference` — customer submits their UPI/bank transfer reference
+ * (UTR) after paying the manual instructions from `createOrder`. This does NOT confirm the
+ * payment — it only moves `initiated|submitted -> submitted` and notifies admins; an admin still
+ * has to `confirmPayment` (`payments.confirm`) before the order is `paid` and access unlocks.
+ */
+export const submitPaymentReferenceAction = defineAction({
+  name: "API-PAY-02 payment.submit_reference",
+  permission: "commerce.self",
+  input: submitPaymentReferenceInput,
+  handler: async (input, ctx) => {
+    return await paymentsService.submitPaymentReference(ctx, input);
   },
 });

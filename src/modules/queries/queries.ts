@@ -7,7 +7,7 @@
  */
 import { z } from "zod";
 import { defineAction } from "@/lib/actions/envelope";
-import { getQueryAdminSchema, listQueriesAdminSchema } from "./types";
+import { getQueryAdminSchema, listMyQueriesSchema, listQueriesAdminSchema } from "./types";
 import { queriesService } from "./service";
 import { getDb } from "@/lib/db";
 import { listActiveAdminUsers, type AdminDirectoryEntry } from "@/modules/approvals/approver-set";
@@ -38,4 +38,12 @@ export const listAssignableAdminsQuery = defineAction({
     void ctx;
     return { items: await listActiveAdminUsers(getDb()) };
   },
+});
+
+/** API-CHAT-02 `listMyQueries` — `support.self`, own rows only (service filters by `ctx.userId`). */
+export const listMyQueriesQuery = defineAction({
+  name: "API-CHAT-02 query.list_mine",
+  input: listMyQueriesSchema,
+  permission: "support.self",
+  handler: (input, ctx) => queriesService.listMyQueries(ctx, input),
 });

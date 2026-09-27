@@ -244,6 +244,7 @@ describe("Phase 7: Public Site & Customer UI", () => {
   it("renders CheckoutScreen with billing fields and payment methods", () => {
     render(
       <CheckoutScreen
+        offeringId="off_preview"
         offering={checkoutOffering}
         customerEmail="pravin@iauro.com"
         billing={customer.billing}
