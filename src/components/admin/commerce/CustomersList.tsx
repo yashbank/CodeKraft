@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import {
   BadgeCheckIcon,
@@ -45,6 +46,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  reinstateCustomer,
+  sendResetLink,
+  suspendCustomer,
+} from "@/modules/users/admin-mutations";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
 import { formatDate, initials, inr, timeAgo } from "../format";
@@ -61,6 +67,11 @@ export interface CustomersListProps {
   newOrderHref: string;
 }
 
+interface StatusDialogState {
+  customer: CustomerRow;
+  mode: "suspend" | "reinstate";
+}
+
 /** SCR-ADM-10 — customers list with status/tag/country filters and gated row actions. */
 export function CustomersList({
   customers,
@@ -69,7 +80,44 @@ export function CustomersList({
   quotesHref,
   newOrderHref,
 }: CustomersListProps) {
-  const [suspend, setSuspend] = React.useState<CustomerRow | null>(null);
+  const router = useRouter();
+  const [statusDialog, setStatusDialog] = React.useState<StatusDialogState | null>(null);
+  const [reason, setReason] = React.useState("");
+  const [submitting, setSubmitting] = React.useState(false);
+
+  async function handleSendResetLink(c: CustomerRow) {
+    const result = await sendResetLink({ userId: c.id, kind: "reset" });
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(`Reset link sent to ${result.data.sentTo}`);
+  }
+
+  async function confirmStatusChange() {
+    if (!statusDialog) return;
+    if (reason.trim().length === 0) {
+      toast.error("A reason is required.");
+      return;
+    }
+    setSubmitting(true);
+    const input = { userId: statusDialog.customer.id, reason: reason.trim() };
+    const result =
+      statusDialog.mode === "suspend" ? await suspendCustomer(input) : await reinstateCustomer(input);
+    setSubmitting(false);
+
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(
+      `${statusDialog.customer.name} ${statusDialog.mode === "suspend" ? "suspended" : "reinstated"}`,
+    );
+    setStatusDialog(null);
+    setReason("");
+    router.refresh();
+  }
+
   return (
     <>
       <PageHeader
@@ -174,7 +222,7 @@ export function CustomersList({
                 <TableRow key={c.id}>
                   <TableCell>
                     <Link
-                      href={detailHref}
+                      href={`${detailHref}/${c.id}`}
                       className="flex items-center gap-3 hover:text-accent-text"
                     >
                       <Avatar>
@@ -240,18 +288,21 @@ export function CustomersList({
                     <RowActions
                       label={`Actions for ${c.name}`}
                       actions={[
-                        { label: "Open", href: detailHref },
+                        { label: "Open", href: `${detailHref}/${c.id}` },
                         {
                           label: "Send reset link",
-                          onSelect: () => toast.success(`Reset link sent to ${c.email}`),
+                          onSelect: () => void handleSendResetLink(c),
                           disabled: c.status === "deleted",
                         },
                         {
                           label: c.status === "suspended" ? "Reinstate" : "Suspend",
-                          onSelect: () =>
-                            c.status === "suspended"
-                              ? toast.success(`${c.name} reinstated`)
-                              : setSuspend(c),
+                          onSelect: () => {
+                            setReason("");
+                            setStatusDialog({
+                              customer: c,
+                              mode: c.status === "suspended" ? "reinstate" : "suspend",
+                            });
+                          },
                           disabled: c.status === "deleted",
                           destructive: c.status !== "suspended",
                         },
@@ -275,30 +326,41 @@ export function CustomersList({
           </Table>
         </div>
       )}
-      <Dialog open={suspend !== null} onOpenChange={(o) => !o && setSuspend(null)}>
+      <Dialog open={statusDialog !== null} onOpenChange={(o) => !o && setStatusDialog(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Suspend {suspend?.name}?</DialogTitle>
+            <DialogTitle>
+              {statusDialog?.mode === "suspend" ? "Suspend" : "Reinstate"} {statusDialog?.customer.name}?
+            </DialogTitle>
             <DialogDescription>
-              Suspending signs the customer out and blocks purchases, downloads and chat. Existing
-              invoices remain. Add a reason (logged).
+              {statusDialog?.mode === "suspend"
+                ? "Suspending signs the customer out and blocks purchases, downloads and chat. Existing invoices remain."
+                : "Reinstating restores purchases, downloads and chat access."}{" "}
+              Add a reason (logged).
             </DialogDescription>
           </DialogHeader>
-          <Field id="suspend-reason" label="Reason" required>
-            <Textarea id="suspend-reason" rows={2} required aria-required />
+          <Field id="status-reason" label="Reason" required>
+            <Textarea
+              id="status-reason"
+              rows={2}
+              required
+              aria-required
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
           </Field>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="ghost">Cancel</Button>
+              <Button variant="ghost" disabled={submitting}>
+                Cancel
+              </Button>
             </DialogClose>
             <Button
-              variant="destructive"
-              onClick={() => {
-                toast.success(`${suspend?.name} suspended`);
-                setSuspend(null);
-              }}
+              variant={statusDialog?.mode === "suspend" ? "destructive" : "secondary"}
+              onClick={() => void confirmStatusChange()}
+              disabled={submitting}
             >
-              Suspend
+              {statusDialog?.mode === "suspend" ? "Suspend" : "Reinstate"}
             </Button>
           </DialogFooter>
         </DialogContent>

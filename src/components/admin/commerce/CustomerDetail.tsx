@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { BadgeCheckIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -46,6 +47,13 @@ import { Field } from "../RichTextField";
 import { RowActions } from "../RowActions";
 import { StatTile } from "../StatTile";
 import type { CustomerDetailData } from "../types";
+import {
+  reinstateCustomer,
+  sendMagicLink,
+  sendResetLink,
+  suspendCustomer,
+  updateCustomerNotes,
+} from "@/modules/users/admin-mutations";
 
 export interface CustomerDetailProps {
   data: CustomerDetailData;
@@ -71,13 +79,76 @@ export function CustomerDetail({
   newOrderHref,
   auditHref,
 }: CustomerDetailProps) {
+  const router = useRouter();
   const c = data.customer;
   const [tags, setTags] = React.useState(c.tags);
   const [newTag, setNewTag] = React.useState("");
   const [grantOpen, setGrantOpen] = React.useState(false);
   const [reason, setReason] = React.useState("");
   const [notesSaved, setNotesSaved] = React.useState("Saved");
+  const [statusDialogOpen, setStatusDialogOpen] = React.useState(false);
+  const [statusReason, setStatusReason] = React.useState("");
+  const [statusSubmitting, setStatusSubmitting] = React.useState(false);
   const deleted = c.status === "deleted";
+  const suspending = c.status !== "suspended";
+
+  async function persistTags(next: string[]) {
+    const result = await updateCustomerNotes({ userId: c.id, tags: next });
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    router.refresh();
+  }
+
+  async function saveNotes(value: string) {
+    setNotesSaved("Saving…");
+    const result = await updateCustomerNotes({ userId: c.id, internalNotes: value });
+    if (!result.ok) {
+      toast.error(result.error.message);
+      setNotesSaved("Not saved");
+      return;
+    }
+    setNotesSaved("Saved");
+  }
+
+  async function handleSendResetLink() {
+    const result = await sendResetLink({ userId: c.id, kind: "reset" });
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(`Reset link sent to ${result.data.sentTo}`);
+  }
+
+  async function handleSendMagicLink() {
+    const result = await sendMagicLink({ userId: c.id, kind: "magic" });
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(`One-time login link sent to ${result.data.sentTo} · expires in 15 min`);
+  }
+
+  async function confirmStatusChange() {
+    if (statusReason.trim().length === 0) {
+      toast.error("A reason is required.");
+      return;
+    }
+    setStatusSubmitting(true);
+    const input = { userId: c.id, reason: statusReason.trim() };
+    const result = suspending ? await suspendCustomer(input) : await reinstateCustomer(input);
+    setStatusSubmitting(false);
+
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(`${c.name} ${suspending ? "suspended" : "reinstated"}`);
+    setStatusDialogOpen(false);
+    setStatusReason("");
+    router.refresh();
+  }
 
   return (
     <>
@@ -118,7 +189,11 @@ export function CustomerDetail({
                     <button
                       type="button"
                       aria-label={`Remove tag ${t}`}
-                      onClick={() => setTags((l) => l.filter((x) => x !== t))}
+                      onClick={() => {
+                        const next = tags.filter((x) => x !== t);
+                        setTags(next);
+                        void persistTags(next);
+                      }}
                       className="grid size-4 place-items-center rounded-full hover:bg-danger-soft hover:text-danger"
                     >
                       ×
@@ -136,11 +211,16 @@ export function CustomerDetail({
                   onChange={(e) => setNewTag(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && newTag.trim()) {
-                      setTags((l) => [...l, newTag.trim()]);
+                      const next = [...tags, newTag.trim()];
+                      setTags(next);
                       setNewTag("");
+                      void persistTags(next);
                     }
-                    if (e.key === "Backspace" && newTag === "" && tags.length > 0)
-                      setTags((l) => l.slice(0, -1));
+                    if (e.key === "Backspace" && newTag === "" && tags.length > 0) {
+                      const next = tags.slice(0, -1);
+                      setTags(next);
+                      void persistTags(next);
+                    }
                   }}
                   placeholder="Add tag"
                   className="h-6 w-24 px-2 text-caption"
@@ -154,7 +234,7 @@ export function CustomerDetail({
               variant="outline"
               size="sm"
               disabled={deleted}
-              onClick={() => toast.success("Reset link sent")}
+              onClick={() => void handleSendResetLink()}
             >
               Send reset link
             </Button>
@@ -162,7 +242,7 @@ export function CustomerDetail({
               variant="outline"
               size="sm"
               disabled={deleted}
-              onClick={() => toast.success("One-time login link sent · expires in 15 min")}
+              onClick={() => void handleSendMagicLink()}
             >
               Send one-time login link
             </Button>
@@ -170,6 +250,10 @@ export function CustomerDetail({
               variant={c.status === "suspended" ? "secondary" : "destructive"}
               size="sm"
               disabled={deleted}
+              onClick={() => {
+                setStatusReason("");
+                setStatusDialogOpen(true);
+              }}
             >
               {c.status === "suspended" ? "Reinstate" : "Suspend"}
             </Button>
@@ -178,7 +262,13 @@ export function CustomerDetail({
               actions={[
                 { label: "New quote", href: quotesHref, disabled: deleted },
                 { label: "New manual order", href: newOrderHref, disabled: deleted },
-                { label: "Grant access", onSelect: () => setGrantOpen(true), disabled: deleted },
+                {
+                  label: "Grant access",
+                  onSelect: () => setGrantOpen(true),
+                  // Manual entitlement grants need `modules/entitlements` wired (out of this
+                  // phase's scope, see the phase report) -- the dialog opens read-only below.
+                  disabled: true,
+                },
                 { label: "Export data", separatorBefore: true },
               ]}
             />
@@ -406,7 +496,7 @@ export function CustomerDetail({
               defaultValue={data.notes}
               rows={5}
               onChange={() => setNotesSaved("Saving…")}
-              onBlur={() => setNotesSaved("Saved")}
+              onBlur={(e) => void saveNotes(e.target.value)}
               disabled={deleted}
             />
             <ul className="mt-2 text-caption text-fg-muted">
@@ -449,14 +539,53 @@ export function CustomerDetail({
         </aside>
       </div>
 
+      <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {suspending ? "Suspend" : "Reinstate"} {c.name}?
+            </DialogTitle>
+            <DialogDescription>
+              {suspending
+                ? "Suspending signs the customer out and blocks purchases, downloads and chat. Existing invoices remain."
+                : "Reinstating restores purchases, downloads and chat access."}{" "}
+              Add a reason (logged).
+            </DialogDescription>
+          </DialogHeader>
+          <Field id="status-change-reason" label="Reason" required>
+            <Textarea
+              id="status-change-reason"
+              rows={2}
+              required
+              aria-required
+              value={statusReason}
+              onChange={(e) => setStatusReason(e.target.value)}
+            />
+          </Field>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="ghost" disabled={statusSubmitting}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              variant={suspending ? "destructive" : "secondary"}
+              onClick={() => void confirmStatusChange()}
+              disabled={statusSubmitting}
+            >
+              {suspending ? "Suspend" : "Reinstate"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={grantOpen} onOpenChange={setGrantOpen}>
         <DialogContent size="md">
           <DialogHeader>
             <DialogTitle>Grant access to {c.name}</DialogTitle>
             <DialogDescription>
-              Manual grants create an entitlement without an order or invoice; use a manual order if
-              money changed hands. No ledger entries or allocations; audited; the other admins are
-              notified.
+              Not available yet: manual entitlement grants need the entitlements admin module,
+              which is out of this phase's scope. This form is shown read-only for reference.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -515,13 +644,7 @@ export function CustomerDetail({
             <DialogClose asChild>
               <Button variant="ghost">Cancel</Button>
             </DialogClose>
-            <Button
-              disabled={reason.trim() === ""}
-              onClick={() => {
-                toast.success("Access granted — customer emailed");
-                setGrantOpen(false);
-              }}
-            >
+            <Button disabled title="Not wired yet -- see the phase report">
               Grant access
             </Button>
           </DialogFooter>
