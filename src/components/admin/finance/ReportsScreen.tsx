@@ -28,6 +28,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/components/ui/_utils";
+import { exportStatement } from "@/modules/finance/admin-mutations";
 import { BarChart } from "../charts/BarChart";
 import { formatDateTime, inr } from "../format";
 import { PageHeader } from "../PageHeader";
@@ -43,15 +44,39 @@ import type {
 
 const PRESETS = ["This month", "Last month", "This FY", "Last FY", "Custom"];
 
+export interface ReportsScreenPartner {
+  id: string;
+  name: string;
+}
+
 export interface ReportsScreenProps {
   reports: ReportDefinition[];
   customerCredits: CustomerCreditRow[];
-  partners: string[];
+  partners: ReportsScreenPartner[];
   statement: StatementPreview;
   statementHistory: StatementHistoryRow[];
   isSuperAdmin: boolean;
   initialTab?: "reports" | "statements";
   initialReport?: ReportKey;
+}
+
+/** UTC calendar-period bounds for the statement generator's period preset (`custom` has no date
+ * inputs wired in this screen, so it falls back to the current month -- see report). */
+function periodRange(preset: string): { dateFrom: string; dateTo: string } {
+  const now = new Date();
+  const y = now.getUTCFullYear();
+  const m = now.getUTCMonth();
+  if (preset === "last") {
+    const from = new Date(Date.UTC(y, m - 1, 1));
+    const to = new Date(Date.UTC(y, m, 0));
+    return { dateFrom: from.toISOString().slice(0, 10), dateTo: to.toISOString().slice(0, 10) };
+  }
+  if (preset === "fy") {
+    const fyStartYear = m >= 3 ? y : y - 1;
+    return { dateFrom: `${fyStartYear}-04-01`, dateTo: now.toISOString().slice(0, 10) };
+  }
+  const from = new Date(Date.UTC(y, m, 1));
+  return { dateFrom: from.toISOString().slice(0, 10), dateTo: now.toISOString().slice(0, 10) };
 }
 
 /** SCR-ADM-22 — reports (left rail, controls, tiles, chart, table with totals row, export) and partner statements (form, preview, history). */
@@ -67,8 +92,29 @@ export function ReportsScreen({
 }: ReportsScreenProps) {
   const [key, setKey] = React.useState<ReportKey>(initialReport);
   const [preset, setPreset] = React.useState("This FY");
+  const [stPartnerId, setStPartnerId] = React.useState(partners[0]?.id ?? "");
+  const [stPeriod, setStPeriod] = React.useState("last");
+  const [stFormat, setStFormat] = React.useState<"pdf" | "csv">("pdf");
+  const [generating, setGenerating] = React.useState(false);
   const report = reports.find((r) => r.key === key) ?? reports[0];
   if (!report) return null;
+
+  async function handleGenerateStatement() {
+    if (!stPartnerId) {
+      toast.error("Pick a partner.");
+      return;
+    }
+    setGenerating(true);
+    const { dateFrom, dateTo } = periodRange(stPeriod);
+    const result = await exportStatement({ partnerId: stPartnerId, dateFrom, dateTo, format: stFormat });
+    setGenerating(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    window.open(result.data.url, "_blank", "noopener,noreferrer");
+    toast.success(`${result.data.filename} ready — link valid 5 min`);
+  }
 
   return (
     <TooltipProvider>
@@ -192,7 +238,7 @@ export function ReportsScreen({
                 {key === "revenue_by_partner" || key === "outstanding_payouts" ? (
                   <Field id="rp-partner" label="Partner">
                     <Select
-                      defaultValue={isSuperAdmin ? "all" : partners[0]}
+                      defaultValue={isSuperAdmin ? "all" : partners[0]?.id}
                       disabled={!isSuperAdmin}
                     >
                       <SelectTrigger id="rp-partner" size="sm" className="w-40">
@@ -201,8 +247,8 @@ export function ReportsScreen({
                       <SelectContent>
                         <SelectItem value="all">All partners</SelectItem>
                         {partners.map((p) => (
-                          <SelectItem key={p} value={p}>
-                            {p}
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -334,21 +380,21 @@ export function ReportsScreen({
             >
               <h2 className="text-h4">Generate statement</h2>
               <Field id="st-partner" label="Partner" required>
-                <Select defaultValue={partners[0]} disabled={!isSuperAdmin}>
+                <Select value={stPartnerId} onValueChange={setStPartnerId} disabled={!isSuperAdmin}>
                   <SelectTrigger id="st-partner">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {partners.map((p) => (
-                      <SelectItem key={p} value={p}>
-                        {p}
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </Field>
               <Field id="st-period" label="Period" required>
-                <Select defaultValue="last">
+                <Select value={stPeriod} onValueChange={setStPeriod}>
                   <SelectTrigger id="st-period">
                     <SelectValue />
                   </SelectTrigger>
@@ -356,12 +402,12 @@ export function ReportsScreen({
                     <SelectItem value="this">This month</SelectItem>
                     <SelectItem value="last">Last month</SelectItem>
                     <SelectItem value="fy">This FY</SelectItem>
-                    <SelectItem value="custom">Custom</SelectItem>
+                    <SelectItem value="custom">Custom (falls back to this month)</SelectItem>
                   </SelectContent>
                 </Select>
               </Field>
               <Field id="st-format" label="Format">
-                <Select defaultValue="pdf">
+                <Select value={stFormat} onValueChange={(v) => setStFormat(v as "pdf" | "csv")}>
                   <SelectTrigger id="st-format">
                     <SelectValue />
                   </SelectTrigger>
@@ -372,16 +418,17 @@ export function ReportsScreen({
                 </Select>
               </Field>
               <div className="flex items-center gap-2">
-                <Switch id="st-payouts" defaultChecked />
-                <Label htmlFor="st-payouts">Include payouts</Label>
+                <Switch id="st-payouts" defaultChecked disabled />
+                <Label htmlFor="st-payouts">Include payouts (always included)</Label>
               </div>
               <div className="flex items-center gap-2">
-                <Switch id="st-expenses" defaultChecked />
-                <Label htmlFor="st-expenses">Include expense shares</Label>
+                <Switch id="st-expenses" defaultChecked disabled />
+                <Label htmlFor="st-expenses">Include expense shares (always included)</Label>
               </div>
               <Button
                 type="submit"
-                onClick={() => toast.success("Statement ready — link valid 5 min")}
+                disabled={generating}
+                onClick={() => void handleGenerateStatement()}
               >
                 Generate
               </Button>

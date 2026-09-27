@@ -19,7 +19,10 @@ export default function Page() {
       <ReportsScreen
         reports={REPORTS}
         customerCredits={CUSTOMER_CREDITS}
-        partners={["Priya Nair", "Arjun Mehta"]}
+        partners={[
+          { id: "p-priya", name: "Priya Nair" },
+          { id: "p-arjun", name: "Arjun Mehta" },
+        ]}
         statement={STATEMENT_PREVIEW}
         statementHistory={STATEMENT_HISTORY}
         isSuperAdmin

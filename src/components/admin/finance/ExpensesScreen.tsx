@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { DownloadIcon, PaperclipIcon, PlusIcon, ReceiptIcon, UploadIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -34,7 +35,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { allocateLargestRemainder, parseMinor } from "@/lib/money";
+import { allocateLargestRemainder, parseMinor, type Currency } from "@/lib/money";
+import { recordExpense } from "@/modules/finance/admin-mutations";
 import { Banner } from "../Banner";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
@@ -56,9 +58,14 @@ const CATEGORIES = [
   "Other",
 ];
 
+export interface ExpenseProductOption {
+  id: string;
+  name: string;
+}
+
 export interface ExpensesScreenProps {
   expenses: ExpenseRow[];
-  products: string[];
+  products: ExpenseProductOption[];
   ledgerHref: string;
   adjustmentsHref: string;
   productHref: string;
@@ -72,13 +79,18 @@ export function ExpensesScreen({
   adjustmentsHref,
   productHref,
 }: ExpensesScreenProps) {
+  const router = useRouter();
+  const formRef = React.useRef<HTMLFormElement>(null);
   const [open, setOpen] = React.useState(false);
   const [product, setProduct] = React.useState<string>("company");
+  const [category, setCategory] = React.useState("Hosting");
+  const [currency, setCurrency] = React.useState<Currency>("INR");
   const [shared, setShared] = React.useState(true);
   const [amount, setAmount] = React.useState("5,000.00");
+  const [submitting, setSubmitting] = React.useState(false);
   const amountMinor = (() => {
     try {
-      return parseMinor(amount || "0", "INR");
+      return parseMinor(amount || "0", currency);
     } catch {
       return 0;
     }
@@ -87,6 +99,42 @@ export function ExpensesScreen({
     product !== "company" && shared && amountMinor > 0
       ? allocateLargestRemainder(amountMinor, [5000, 3000])
       : null;
+
+  async function handleRecord() {
+    if (!formRef.current) return;
+    const fd = new FormData(formRef.current);
+    const description = String(fd.get("description") ?? "").trim();
+    const incurredOn = String(fd.get("incurredOn") ?? "");
+    const note = String(fd.get("note") ?? "").trim();
+    if (amountMinor <= 0) {
+      toast.error("Enter an amount greater than 0.");
+      return;
+    }
+    if (!incurredOn) {
+      toast.error("Pick the date the expense was incurred.");
+      return;
+    }
+    const payload: Record<string, unknown> = {
+      category,
+      description: description || note || undefined,
+      amountMinor,
+      currency,
+      incurredOn,
+      sharedBySplit: product !== "company" && shared,
+    };
+    if (product !== "company") payload.productId = product;
+
+    setSubmitting(true);
+    const result = await recordExpense(payload);
+    setSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Expense recorded");
+    setOpen(false);
+    router.refresh();
+  }
   const total = expenses.reduce((s, e) => s + e.amountInr, 0);
   const byProduct = [
     ...expenses
@@ -136,8 +184,8 @@ export function ExpensesScreen({
                 <SelectContent>
                   <SelectItem value="company">Company (no product)</SelectItem>
                   {products.map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {p}
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -281,13 +329,20 @@ export function ExpensesScreen({
               active ownership unless company-only.
             </SheetDescription>
           </SheetHeader>
-          <form className="space-y-4 px-4" onSubmit={(e) => e.preventDefault()}>
+          <form
+            ref={formRef}
+            className="space-y-4 px-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void handleRecord();
+            }}
+          >
             <Field id="ex-desc" label="Description" required>
-              <Input id="ex-desc" required aria-required />
+              <Input id="ex-desc" name="description" required aria-required />
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field id="ex-cat" label="Category" required>
-                <Select defaultValue="Hosting">
+                <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger id="ex-cat">
                     <SelectValue />
                   </SelectTrigger>
@@ -301,7 +356,7 @@ export function ExpensesScreen({
                 </Select>
               </Field>
               <Field id="ex-date" label="Incurred on" required>
-                <Input id="ex-date" type="date" defaultValue="2026-09-25" />
+                <Input id="ex-date" name="incurredOn" type="date" defaultValue="2026-09-25" />
               </Field>
               <Field id="ex-amount" label="Amount" required>
                 <Input
@@ -312,15 +367,15 @@ export function ExpensesScreen({
                   className="text-right font-mono tnum"
                 />
               </Field>
-              <Field id="ex-currency" label="Currency" hint="FX rate shown for non-INR.">
-                <Select defaultValue="INR">
+              <Field id="ex-currency" label="Currency" hint="Converted to INR on the ledger at posting.">
+                <Select value={currency} onValueChange={(v) => setCurrency(v as Currency)}>
                   <SelectTrigger id="ex-currency">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="INR">INR (base)</SelectItem>
-                    <SelectItem value="USD">USD · 83.51</SelectItem>
-                    <SelectItem value="EUR">EUR · 90.00</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
                   </SelectContent>
                 </Select>
               </Field>
@@ -333,8 +388,8 @@ export function ExpensesScreen({
                 <SelectContent>
                   <SelectItem value="company">Company (no product)</SelectItem>
                   {products.map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {p}
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -361,25 +416,29 @@ export function ExpensesScreen({
                 aria-live="polite"
                 className="rounded-md bg-elevated px-3 py-2 text-body-sm"
               >
-                Preview: Priya −{inr(preview[0] ?? 0)} · Arjun −{inr(preview[1] ?? 0)}
+                Estimated split (illustrative 50/30 example) − partner A {inr(preview[0] ?? 0)} · partner B{" "}
+                {inr(preview[1] ?? 0)}
               </p>
             ) : null}
             <div className="rounded-lg border-2 border-dashed border-border-strong p-4 text-center text-body-sm text-fg-muted">
               <UploadIcon aria-hidden className="mx-auto mb-1 size-6" />
               Receipt · PDF or image ≤ 10 MB
+              <p className="mt-1 text-caption text-fg-subtle">
+                Upload isn&rsquo;t wired yet — the expense saves without a receipt attached.
+              </p>
             </div>
             <Field id="ex-note" label="Note" optional>
-              <Textarea id="ex-note" rows={2} />
+              <Textarea id="ex-note" name="note" rows={2} />
             </Field>
           </form>
           <SheetFooter className="flex-row justify-end gap-2">
-            <Button variant="ghost" onClick={() => setOpen(false)}>
+            <Button variant="ghost" onClick={() => setOpen(false)} disabled={submitting}>
               Cancel
             </Button>
             <Button
+              disabled={submitting}
               onClick={() => {
-                toast.success("Expense recorded (seq 1090)");
-                setOpen(false);
+                void handleRecord();
               }}
             >
               Record

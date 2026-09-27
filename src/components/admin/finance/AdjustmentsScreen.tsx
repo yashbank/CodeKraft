@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { parseMinor } from "@/lib/money";
+import { proposeAdjustment } from "@/modules/finance/admin-mutations";
 import { ApprovalGateNotice, Banner } from "../Banner";
 import { FilterChips } from "../FilterChips";
 import { formatDateTime, inr } from "../format";
@@ -75,7 +77,9 @@ export function AdjustmentsScreen({
   initialView = "list",
   prefillRef,
 }: AdjustmentsScreenProps) {
+  const router = useRouter();
   const [view, setView] = React.useState(initialView);
+  const [submitting, setSubmitting] = React.useState(false);
   const [status, setStatus] = React.useState<AdjustmentRow["status"] | null>(null);
   const [lines, setLines] = React.useState<DraftLine[]>([
     {
@@ -108,6 +112,32 @@ export function AdjustmentsScreen({
   const setLine = (id: number, patch: Partial<DraftLine>) =>
     setLines((ls) => ls.map((l) => (l.id === id ? { ...l, ...patch } : l)));
   const canSubmit = reason.trim().length >= 20 && !allZero && (net === 0 || justify);
+
+  async function handleSubmit() {
+    setSubmitting(true);
+    const payload = {
+      reason,
+      lines: lines.map((l) => {
+        const partner = l.partyType === "partner" ? partners.find((p) => p.name === l.partner) : undefined;
+        return {
+          partyType: l.partyType,
+          ...(partner ? { partnerId: partner.id } : {}),
+          amountMinor: minor(l.amount),
+          currency: "INR",
+          memo: l.order ? `${l.memo} (${l.order})` : l.memo,
+        };
+      }),
+    };
+    const result = await proposeAdjustment(payload);
+    setSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Adjustment sent for approval");
+    setView("list");
+    router.refresh();
+  }
 
   return (
     <>
@@ -502,10 +532,9 @@ export function AdjustmentsScreen({
             <ApprovalGateNotice approvers={approvers} what="Proposing an adjustment" />
             <Button
               className="w-full"
-              disabled={!canSubmit}
+              disabled={!canSubmit || submitting}
               onClick={() => {
-                toast.success("Adjustment sent for approval");
-                setView("list");
+                void handleSubmit();
               }}
             >
               Request approval

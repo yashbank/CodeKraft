@@ -13,7 +13,11 @@ export default function Page() {
     >
       <ExpensesScreen
         expenses={EXPENSES}
-        products={["FitDesk Pro", "TradeFlow", "ShopSync"]}
+        products={[
+          { id: "fitdesk", name: "FitDesk Pro" },
+          { id: "tradeflow", name: "TradeFlow" },
+          { id: "shopsync", name: "ShopSync" },
+        ]}
         ledgerHref={href("/finance/ledger")}
         adjustmentsHref={href("/finance/adjustments")}
         productHref={href("/products/new")}

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { InfoIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,7 +39,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { parseMinor } from "@/lib/money";
+import { parseMinor, type Currency } from "@/lib/money";
+import { recordPayout } from "@/modules/finance/admin-mutations";
 import { ApprovalGateNotice } from "../Banner";
 import { Sparkline } from "../charts/Sparkline";
 import { FilterChips } from "../FilterChips";
@@ -76,15 +78,19 @@ export function PartnersPayouts({
   approvalsHref,
   initialTab = "partners",
 }: PartnersPayoutsProps) {
+  const router = useRouter();
+  const formRef = React.useRef<HTMLFormElement>(null);
   const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [submitting, setSubmitting] = React.useState(false);
   const [partnerId, setPartnerId] = React.useState(partners[0]?.id ?? "");
+  const [currency, setCurrency] = React.useState<Currency>("INR");
   const [amount, setAmount] = React.useState("");
   const [status, setStatus] = React.useState<PayoutRow["status"] | null>(null);
   const [selectedHistory, setSelectedHistory] = React.useState(partners[0]?.id ?? "");
   const partner = partners.find((p) => p.id === partnerId);
   const amountMinor = (() => {
     try {
-      return parseMinor(amount || "0", "INR");
+      return parseMinor(amount || "0", currency);
     } catch {
       return Number.NaN;
     }
@@ -97,10 +103,44 @@ export function PartnersPayouts({
     const p = partners.find((x) => x.id === (id ?? partnerId)) ?? partners[0];
     if (p) {
       setPartnerId(p.id);
+      setCurrency(p.perCurrency[0]?.currency ?? "INR");
       setAmount((p.balanceInr / 100).toFixed(2));
     }
     setDialogOpen(true);
   };
+
+  async function handleSubmit() {
+    if (!formRef.current) return;
+    const fd = new FormData(formRef.current);
+    const paidOn = String(fd.get("paidOn") ?? "");
+    const reference = String(fd.get("reference") ?? "").trim();
+    const note = String(fd.get("note") ?? "").trim();
+    if (!paidOn) {
+      toast.error("Pick the date the payout was paid on.");
+      return;
+    }
+    if (reference.length < 1) {
+      toast.error("Enter a bank / UPI reference.");
+      return;
+    }
+    setSubmitting(true);
+    const result = await recordPayout({
+      partnerId,
+      amountMinor,
+      currency,
+      paidOn,
+      reference,
+      note: note || undefined,
+    });
+    setSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Payout sent for approval");
+    setDialogOpen(false);
+    router.refresh();
+  }
 
   return (
     <TooltipProvider>
@@ -399,14 +439,17 @@ export function PartnersPayouts({
               exceed the partner&rsquo;s current balance.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <form ref={formRef} className="grid gap-4 sm:grid-cols-2" onSubmit={(e) => e.preventDefault()}>
             <Field id="po-partner" label="Partner" required>
               <Select
                 value={partnerId}
                 onValueChange={(v) => {
                   setPartnerId(v);
                   const p = partners.find((x) => x.id === v);
-                  if (p) setAmount((p.balanceInr / 100).toFixed(2));
+                  if (p) {
+                    setAmount((p.balanceInr / 100).toFixed(2));
+                    setCurrency(p.perCurrency[0]?.currency ?? "INR");
+                  }
                 }}
               >
                 <SelectTrigger id="po-partner">
@@ -422,7 +465,7 @@ export function PartnersPayouts({
               </Select>
             </Field>
             <Field id="po-currency" label="Currency">
-              <Select defaultValue="INR">
+              <Select value={currency} onValueChange={(v) => setCurrency(v as Currency)}>
                 <SelectTrigger id="po-currency">
                   <SelectValue />
                 </SelectTrigger>
@@ -437,7 +480,7 @@ export function PartnersPayouts({
             </Field>
             <Field
               id="po-amount"
-              label="Amount (INR)"
+              label={`Amount (${currency})`}
               required
               error={
                 over > 0
@@ -459,11 +502,12 @@ export function PartnersPayouts({
               />
             </Field>
             <Field id="po-date" label="Paid on" required>
-              <Input id="po-date" type="date" defaultValue="2026-09-25" />
+              <Input id="po-date" name="paidOn" type="date" defaultValue="2026-09-25" />
             </Field>
             <Field id="po-ref" label="Bank reference" required>
               <Input
                 id="po-ref"
+                name="reference"
                 className="font-mono"
                 placeholder="NEFT N…"
                 required
@@ -471,9 +515,9 @@ export function PartnersPayouts({
               />
             </Field>
             <Field id="po-note" label="Note" optional>
-              <Textarea id="po-note" rows={2} />
+              <Textarea id="po-note" name="note" rows={2} />
             </Field>
-          </div>
+          </form>
           <p
             role="status"
             aria-live="polite"
@@ -489,13 +533,14 @@ export function PartnersPayouts({
           <ApprovalGateNotice approvers={approvers} what="Recording a payout" />
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="ghost">Cancel</Button>
+              <Button variant="ghost" disabled={submitting}>
+                Cancel
+              </Button>
             </DialogClose>
             <Button
-              disabled={over > 0 || !Number.isFinite(amountMinor) || amountMinor <= 0}
+              disabled={over > 0 || !Number.isFinite(amountMinor) || amountMinor <= 0 || submitting}
               onClick={() => {
-                toast.success(`Payout approval requested from ${approvers[0]}`);
-                setDialogOpen(false);
+                void handleSubmit();
               }}
             >
               Request approval

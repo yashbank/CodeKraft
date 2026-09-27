@@ -372,7 +372,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
     render(
       <ExpensesScreen
         expenses={EXPENSES}
-        products={PRODUCTS.map((p) => p.name)}
+        products={PRODUCTS.map((p) => ({ id: p.id, name: p.name }))}
         ledgerHref="/admin/finance/ledger"
         adjustmentsHref="/admin/finance/adjustments"
         productHref="/admin/products"
@@ -397,7 +397,10 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
       <ReportsScreen
         reports={REPORTS}
         customerCredits={CUSTOMER_CREDITS}
-        partners={["Priya Nair", "Arjun Patel"]}
+        partners={[
+          { id: "p-priya", name: "Priya Nair" },
+          { id: "p-arjun", name: "Arjun Patel" },
+        ]}
         statement={STATEMENT_PREVIEW}
         statementHistory={STATEMENT_HISTORY}
         isSuperAdmin={true}
