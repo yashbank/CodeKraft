@@ -1,9 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { BotIcon, ChevronDownIcon, PaperclipIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
+
+import { fromPlainText } from "@/modules/content/render";
+import {
+  assignQuery,
+  closeQuery,
+  createQueryAdmin,
+  fetchQueryThread,
+  reopenQuery,
+  replyToQuery,
+} from "@/modules/queries/admin-mutations";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -65,38 +76,119 @@ export function QueriesInbox({
   customerHref,
   chatbotHref,
 }: QueriesInboxProps) {
+  const router = useRouter();
   const [status, setStatus] = React.useState<QueryRow["status"]>("open");
   const [selectedId, setSelectedId] = React.useState(thread.query.id);
-  const [messages, setMessages] = React.useState<QueryMessage[]>(thread.messages);
+  const [activeThread, setActiveThread] = React.useState(thread);
+  const [loadingThread, setLoadingThread] = React.useState(false);
   const [draft, setDraft] = React.useState("");
-  const [internal, setInternal] = React.useState(false);
   const [logOpen, setLogOpen] = React.useState(false);
   const [contextOpen, setContextOpen] = React.useState(false);
+  const [submitting, setSubmitting] = React.useState(false);
+  const logFormRef = React.useRef<HTMLFormElement>(null);
+  const [logCustomer, setLogCustomer] = React.useState('none');
+  const [logSource, setLogSource] = React.useState<'email' | 'manual'>('email');
+  const [logRefund, setLogRefund] = React.useState(false);
   const list = queries.filter((q) => q.status === status);
-  const selected = queries.find((q) => q.id === selectedId) ?? thread.query;
-  const isThread = selected.id === thread.query.id;
+  const selected = queries.find((q) => q.id === selectedId) ?? activeThread.query;
+  const messages = activeThread.messages;
 
-  const send = (resolve: boolean) => {
+  React.useEffect(() => {
+    if (selectedId === activeThread.query.id) return;
+    let cancelled = false;
+    setLoadingThread(true);
+    void fetchQueryThread(selectedId).then((result) => {
+      if (cancelled) return;
+      setLoadingThread(false);
+      if (!result.ok) {
+        toast.error(result.error.message);
+        return;
+      }
+      setActiveThread(result.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
+
+  const send = async (resolve: boolean) => {
     if (!draft.trim()) return;
-    setMessages((m) => [
-      ...m,
-      {
-        id: `m-${Date.now()}`,
-        authorKind: "admin",
-        author: "You",
-        at: now,
-        text: draft.trim(),
-        internal,
-      },
-    ]);
+    setSubmitting(true);
+    const result = await replyToQuery({
+      queryId: selected.id,
+      bodyJson: fromPlainText(draft.trim()),
+      setStatus: resolve ? "resolved" : undefined,
+    });
+    setSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
     setDraft("");
-    toast.success(
-      internal
-        ? "Internal note saved"
-        : resolve
-          ? "Reply sent and resolved — customer emailed"
-          : "Reply sent — customer emailed",
-    );
+    toast.success(resolve ? "Reply sent and resolved — customer emailed" : "Reply sent — customer emailed");
+    router.refresh();
+    const refreshed = await fetchQueryThread(selected.id);
+    if (refreshed.ok) setActiveThread(refreshed.data);
+  };
+
+  const resolveThread = async () => {
+    setSubmitting(true);
+    const result = await replyToQuery({
+      queryId: selected.id,
+      bodyJson: fromPlainText(draft.trim() || "Marked resolved."),
+      setStatus: "resolved",
+    });
+    setSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    setDraft("");
+    toast.success("Resolved");
+    router.refresh();
+    const refreshed = await fetchQueryThread(selected.id);
+    if (refreshed.ok) setActiveThread(refreshed.data);
+  };
+
+  const closeThread = async () => {
+    setSubmitting(true);
+    const result = await closeQuery({ queryId: selected.id, resolutionNote: draft.trim() || undefined });
+    setSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    setDraft("");
+    toast.success("Closed");
+    router.refresh();
+  };
+
+  const reopenThread = async () => {
+    setSubmitting(true);
+    const result = await reopenQuery({ queryId: selected.id });
+    setSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Reopened");
+    router.refresh();
+  };
+
+  const changeAssignee = async (value: string) => {
+    setSubmitting(true);
+    const result = await assignQuery({
+      queryId: selected.id,
+      assignedTo: value === "pool" ? null : value,
+    });
+    setSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(value === "pool" ? "Returned to pool" : "Assigned");
+    router.refresh();
   };
 
   return (
@@ -257,7 +349,12 @@ export function QueriesInbox({
             <Label htmlFor="thread-assignee" className="sr-only">
               Assignee
             </Label>
-            <Select defaultValue={selected.assignee?.id ?? "pool"} key={selected.id}>
+            <Select
+              defaultValue={selected.assignee?.id ?? "pool"}
+              key={selected.id}
+              onValueChange={(v) => void changeAssignee(v)}
+              disabled={submitting}
+            >
               <SelectTrigger id="thread-assignee" size="sm" className="w-40">
                 <SelectValue />
               </SelectTrigger>
@@ -270,13 +367,28 @@ export function QueriesInbox({
                 ))}
               </SelectContent>
             </Select>
-            <Button size="sm" variant="secondary" onClick={() => toast.success("Resolved")}>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={submitting || selected.status === "resolved" || selected.status === "closed"}
+              onClick={() => void resolveThread()}
+            >
               Resolve
             </Button>
-            <Button size="sm" variant="outline" onClick={() => toast.success("Closed")}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={submitting || selected.status === "closed"}
+              onClick={() => void closeThread()}
+            >
               Close
             </Button>
-            <Button size="sm" variant="ghost" disabled={selected.status === "open"}>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={submitting || selected.status === "open"}
+              onClick={() => void reopenThread()}
+            >
               Reopen
             </Button>
             <RowActions
@@ -327,7 +439,7 @@ export function QueriesInbox({
               {contextOpen ? (
                 <ul className="space-y-1 border-t border-border px-3 py-2 text-body-sm text-fg-muted">
                   {(
-                    thread.chatbotContext ?? [
+                    activeThread.chatbotContext ?? [
                       "User: Can I pay from a company account?",
                       "Assistant: Yes — add your GSTIN at checkout…",
                       "User: Talk to a human",
@@ -339,18 +451,12 @@ export function QueriesInbox({
               ) : null}
             </div>
           ) : null}
-          {(isThread
-            ? messages
-            : [
-                {
-                  id: "x",
-                  authorKind: "customer" as const,
-                  author: selected.customer?.name ?? "Visitor",
-                  at: selected.updatedAt,
-                  text: selected.snippet,
-                },
-              ]
-          ).map((m) => (
+          {loadingThread ? (
+            <p className="py-6 text-center text-body-sm text-fg-muted">Loading messages…</p>
+          ) : messages.length === 0 ? (
+            <p className="py-6 text-center text-body-sm text-fg-muted">No messages yet.</p>
+          ) : (
+            messages.map((m) => (
             <div
               key={m.id}
               className={cn(
@@ -393,7 +499,8 @@ export function QueriesInbox({
                 </p>
               </div>
             </div>
-          ))}
+            ))
+          )}
         </div>
         <footer className="space-y-2 border-t border-border p-4">
           <div className="flex items-center justify-between gap-2">
@@ -404,7 +511,7 @@ export function QueriesInbox({
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="start" className="w-80 space-y-1">
-                {thread.snippets.map((s) => (
+                {activeThread.snippets.map((s) => (
                   <button
                     key={s}
                     type="button"
@@ -416,9 +523,11 @@ export function QueriesInbox({
                 ))}
               </PopoverContent>
             </Popover>
-            <div className="flex items-center gap-2">
-              <Switch id="q-internal" size="sm" checked={internal} onCheckedChange={setInternal} />
-              <Label htmlFor="q-internal">Internal note</Label>
+            <div className="flex items-center gap-2" title="Internal notes are not supported by the backend yet">
+              <Switch id="q-internal" size="sm" checked={false} disabled />
+              <Label htmlFor="q-internal" className="text-fg-subtle">
+                Internal note (not available yet)
+              </Label>
             </div>
           </div>
           <Label htmlFor="q-composer" className="sr-only">
@@ -429,26 +538,23 @@ export function QueriesInbox({
             rows={3}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder={
-              internal ? "Visible to admins only" : "Reply to the customer (bold, lists, links)…"
-            }
-            className={cn(internal && "border-warning")}
+            placeholder="Reply to the customer…"
           />
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" disabled title="Attachments are not wired yet">
               <PaperclipIcon aria-hidden /> Attach (3 × 10 MB)
             </Button>
             <span className="ml-auto flex gap-2">
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={() => send(true)}
-                disabled={!draft.trim() || internal}
+                onClick={() => void send(true)}
+                disabled={!draft.trim() || submitting}
               >
                 Reply & resolve
               </Button>
-              <Button size="sm" onClick={() => send(false)} disabled={!draft.trim()}>
-                {internal ? "Save note" : "Reply"}
+              <Button size="sm" onClick={() => void send(false)} disabled={!draft.trim() || submitting}>
+                Reply
               </Button>
             </span>
           </div>
@@ -463,13 +569,14 @@ export function QueriesInbox({
               For requests that arrived by email (invoice contact) or were taken manually.
             </SheetDescription>
           </SheetHeader>
-          <form className="space-y-4 px-4" onSubmit={(e) => e.preventDefault()}>
+          <form ref={logFormRef} className="space-y-4 px-4" onSubmit={(e) => e.preventDefault()}>
             <Field id="lq-customer" label="Customer" hint="Or a guest email below.">
-              <Select>
+              <Select value={logCustomer} onValueChange={setLogCustomer}>
                 <SelectTrigger id="lq-customer">
                   <SelectValue placeholder="Search customers" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">None — use guest email</SelectItem>
                   {customers.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.name} · {c.email}
@@ -478,17 +585,17 @@ export function QueriesInbox({
                 </SelectContent>
               </Select>
             </Field>
-            <Field id="lq-email" label="Guest email" optional>
-              <Input id="lq-email" type="email" />
+            <Field id="lq-email" label="Guest email" optional={logCustomer !== "none"} required={logCustomer === "none"}>
+              <Input id="lq-email" name="guestEmail" type="email" disabled={logCustomer !== "none"} />
             </Field>
             <Field id="lq-subject" label="Subject" required>
-              <Input id="lq-subject" required aria-required />
+              <Input id="lq-subject" name="subject" required aria-required />
             </Field>
             <Field id="lq-message" label="Message" required>
-              <Textarea id="lq-message" rows={4} />
+              <Textarea id="lq-message" name="message" rows={4} required aria-required />
             </Field>
             <Field id="lq-source" label="Source" required>
-              <Select defaultValue="email">
+              <Select value={logSource} onValueChange={(v) => setLogSource(v as typeof logSource)}>
                 <SelectTrigger id="lq-source">
                   <SelectValue />
                 </SelectTrigger>
@@ -498,22 +605,58 @@ export function QueriesInbox({
                 </SelectContent>
               </Select>
             </Field>
-            <Field id="lq-order" label="Related order" optional>
-              <Input id="lq-order" placeholder="CK-ORD-…" className="font-mono" />
+            <Field id="lq-order" label="Related order" optional hint="Order ID (UUID), not the order number.">
+              <Input id="lq-order" name="orderId" className="font-mono" />
             </Field>
             <div className="flex items-center gap-2">
-              <Switch id="lq-refund" />
+              <Switch id="lq-refund" checked={logRefund} onCheckedChange={setLogRefund} />
               <Label htmlFor="lq-refund">This is a refund request</Label>
             </div>
           </form>
           <SheetFooter className="flex-row justify-end gap-2">
-            <Button variant="ghost" onClick={() => setLogOpen(false)}>
+            <Button variant="ghost" onClick={() => setLogOpen(false)} disabled={submitting}>
               Cancel
             </Button>
             <Button
-              onClick={() => {
+              disabled={submitting}
+              onClick={async () => {
+                const formEl = logFormRef.current;
+                if (!formEl) return;
+                const fd = new FormData(formEl);
+                const subject = String(fd.get("subject") ?? "").trim();
+                const message = String(fd.get("message") ?? "").trim();
+                const guestEmail = String(fd.get("guestEmail") ?? "").trim();
+                const orderId = String(fd.get("orderId") ?? "").trim();
+                if (!subject || !message) {
+                  toast.error("Subject and message are required.");
+                  return;
+                }
+                if (logCustomer === "none" && !guestEmail) {
+                  toast.error("Provide a customer or a guest email.");
+                  return;
+                }
+                setSubmitting(true);
+                const result = await createQueryAdmin({
+                  userId: logCustomer !== "none" ? logCustomer : undefined,
+                  guestEmail: logCustomer === "none" ? guestEmail : undefined,
+                  subject,
+                  bodyJson: fromPlainText(message),
+                  source: logSource,
+                  orderId: orderId || undefined,
+                  refundRequest: logRefund || undefined,
+                });
+                setSubmitting(false);
+                if (!result.ok) {
+                  toast.error(result.error.message);
+                  return;
+                }
                 toast.success("Query logged");
                 setLogOpen(false);
+                formEl.reset();
+                setLogCustomer("none");
+                setLogSource("email");
+                setLogRefund(false);
+                router.refresh();
               }}
             >
               Log query
