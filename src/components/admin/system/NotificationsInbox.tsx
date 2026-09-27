@@ -19,6 +19,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/components/ui/_utils";
+import {
+  markAllNotificationsRead,
+  markNotificationsRead,
+} from "@/modules/notifications/admin-mutations";
 import { EmptyState } from "../EmptyState";
 import { FilterChips } from "../FilterChips";
 import { formatDate, hoursSince, timeAgo } from "../format";
@@ -60,7 +64,20 @@ export function NotificationsInbox({
     m.set(d, [...(m.get(d) ?? []), n]);
     return m;
   }, new Map<string, AdminNotification[]>());
-  const markRead = (ids: Iterable<string>) => setReadIds((s) => new Set([...s, ...ids]));
+  const markRead = (ids: Iterable<string>) => {
+    const idList = [...ids];
+    if (idList.length === 0) return;
+    setReadIds((s) => new Set([...s, ...idList]));
+    void markNotificationsRead({ notificationIds: idList }).then((result) => {
+      if (!result.ok) toast.error(result.error.message);
+    });
+  };
+  const markAllRead = () => {
+    setReadIds((s) => new Set([...s, ...notifications.map((n) => n.id)]));
+    void markAllNotificationsRead().then((result) => {
+      if (!result.ok) toast.error(result.error.message);
+    });
+  };
 
   return (
     <>
@@ -75,7 +92,7 @@ export function NotificationsInbox({
           className="ml-auto"
           disabled={unread === 0}
           onClick={() => {
-            markRead(notifications.map((n) => n.id));
+            markAllRead();
             toast.success("All notifications marked read");
           }}
         >

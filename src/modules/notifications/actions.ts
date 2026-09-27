@@ -1,6 +1,32 @@
+"use server";
+
 /**
- * `notifications` Server Actions — owned by P6 (master plan §3 ownership map). Intentionally empty in P2.8:
- * Every export must be created with `defineAction` / `definePublicAction`
- * (`tests/static/actions-use-define-action.test.ts`, SA-07).
+ * `notifications` Server Actions (API-NOTIF-03 `markRead` / `markAllRead`, PHASE-05).
+ * All actions are wrapped in defineAction (SA-07).
+ *
+ * `notificationsService` is imported lazily inside each handler (never a static top-level
+ * import) -- see the comment in `./queries.ts` for why.
  */
-export {};
+import { z } from "zod";
+import { defineAction } from "@/lib/actions/envelope";
+import { markReadSchema } from "./types";
+
+export const markReadAction = defineAction({
+  name: "API-NOTIF-03 markRead",
+  input: markReadSchema,
+  permission: "account.self",
+  handler: async (input, ctx) => {
+    const { notificationsService } = await import("./service");
+    return notificationsService.markRead(ctx, input);
+  },
+});
+
+export const markAllReadAction = defineAction({
+  name: "API-NOTIF-03 markAllRead",
+  input: z.strictObject({}),
+  permission: "account.self",
+  handler: async (_input, ctx) => {
+    const { notificationsService } = await import("./service");
+    return notificationsService.markAllRead(ctx);
+  },
+});
