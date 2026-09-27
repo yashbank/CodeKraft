@@ -1,9 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { ChevronDownIcon, KeyRoundIcon, TruckIcon } from "lucide-react";
 import { toast } from "sonner";
+
+import {
+  extendAccess,
+  resetDownloadCount,
+  revokeEntitlement,
+} from "@/modules/entitlements/admin-mutations";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -78,6 +85,57 @@ export function EntitlementsScreen({
   const [kind, setKind] = React.useState<DeliveryTaskRow["kind"] | null>(null);
   const [expanded, setExpanded] = React.useState<string | null>(null);
   const [doneTask, setDoneTask] = React.useState<DeliveryTaskRow | null>(null);
+  const router = useRouter();
+  const [submitting, setSubmitting] = React.useState(false);
+
+  const doResetDownloads = async (e: EntitlementRow) => {
+    setSubmitting(true);
+    const result = await resetDownloadCount({ entitlementId: e.id });
+    setSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Download count reset");
+    router.refresh();
+  };
+
+  const doExtend = async (e: EntitlementRow) => {
+    const dateStr = window.prompt(
+      "New access-end date (YYYY-MM-DD), or leave blank for lifetime access:",
+      e.accessEnds?.slice(0, 10) ?? "",
+    );
+    if (dateStr === null) return;
+    const reason = window.prompt("Reason for extending access?");
+    if (!reason || !reason.trim()) return;
+    setSubmitting(true);
+    const result = await extendAccess({
+      entitlementId: e.id,
+      accessEndsAt: dateStr.trim() ? new Date(dateStr.trim()).toISOString() : null,
+      reason: reason.trim(),
+    });
+    setSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Access extended");
+    router.refresh();
+  };
+
+  const doRevoke = async (e: EntitlementRow) => {
+    const reason = window.prompt(`Reason for revoking access for ${e.customer.name}?`);
+    if (!reason || !reason.trim()) return;
+    setSubmitting(true);
+    const result = await revokeEntitlement({ entitlementId: e.id, reason: reason.trim() });
+    setSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Access revoked");
+    router.refresh();
+  };
 
   const rows = entitlements
     .filter((e) => (status ? e.status === status : true))
@@ -305,14 +363,19 @@ export function EntitlementsScreen({
                               { label: "Open order", href: orderHref },
                               { label: "Enter key", disabled: e.keyIssued !== false },
                               { label: "Mark provisioned", disabled: e.provisioning !== "pending" },
-                              { label: "Reset downloads", disabled: !e.downloadCap },
-                              { label: "Extend" },
+                              {
+                                label: "Reset downloads",
+                                disabled: !e.downloadCap || submitting,
+                                onSelect: () => void doResetDownloads(e),
+                              },
+                              { label: "Extend", disabled: submitting, onSelect: () => void doExtend(e) },
                               { label: "Cancel subscription", disabled: !e.subscription },
                               {
                                 label: "Revoke",
                                 destructive: true,
                                 separatorBefore: true,
-                                disabled: e.status === "revoked",
+                                disabled: e.status === "revoked" || submitting,
+                                onSelect: () => void doRevoke(e),
                               },
                             ]}
                           />
