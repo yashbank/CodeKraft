@@ -37,7 +37,7 @@ export function ConfirmDialog({
   confirmLabel: string;
   typeToConfirm?: string;
   destructive?: boolean;
-  onConfirm?: () => void;
+  onConfirm?: (typed: string) => void;
   children?: React.ReactNode;
 }) {
   const [typed, setTyped] = React.useState("");
@@ -72,7 +72,7 @@ export function ConfirmDialog({
             <Button
               variant={destructive ? "destructive" : "primary"}
               disabled={!ready}
-              onClick={onConfirm}
+              onClick={() => onConfirm?.(typed)}
             >
               {confirmLabel}
             </Button>

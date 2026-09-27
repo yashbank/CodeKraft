@@ -3,6 +3,7 @@
 import { FileTextIcon, ReceiptIcon } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "@/lib/money";
+import { getMyInvoicePdfUrl } from "@/modules/invoices/site-mutations";
 import { Banner } from "./Banner";
 import { EmptyState } from "./EmptyState";
 import { formatDate } from "./format";
@@ -80,6 +82,25 @@ export function InvoicesScreen({
   const [reference, setReference] = React.useState("");
   const pending = payments.find((p) => p.status === "initiated");
   const anySubmitted = payments.some((p) => p.status === "submitted");
+
+  const [pdfLoadingId, setPdfLoadingId] = React.useState<string | null>(null);
+
+  async function downloadPdf(inv: InvoiceSummary) {
+    setPdfLoadingId(inv.id);
+    try {
+      const raw = inv.kind === "credit_note" ? { creditNoteId: inv.id } : { invoiceId: inv.id };
+      const result = await getMyInvoicePdfUrl(raw);
+      if (!result.ok) {
+        toast.error(result.error.message);
+        return;
+      }
+      window.open(result.data.url, "_blank", "noopener,noreferrer");
+    } catch {
+      toast.error("Couldn't open the PDF. Please try again.");
+    } finally {
+      setPdfLoadingId(null);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -198,8 +219,14 @@ export function InvoicesScreen({
                           <StatusBadge kind="orders.status" value={inv.status} size="sm" />
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" variant="secondary">
-                            <FileTextIcon aria-hidden /> PDF
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={pdfLoadingId === inv.id}
+                            onClick={() => downloadPdf(inv)}
+                          >
+                            <FileTextIcon aria-hidden />{" "}
+                            {pdfLoadingId === inv.id ? "Opening…" : "PDF"}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -234,8 +261,14 @@ export function InvoicesScreen({
                       ) : null}
                     </div>
                     <div className="mt-3 flex gap-2">
-                      <Button size="sm" variant="secondary" className="flex-1">
-                        <FileTextIcon aria-hidden /> PDF
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="flex-1"
+                        disabled={pdfLoadingId === inv.id}
+                        onClick={() => downloadPdf(inv)}
+                      >
+                        <FileTextIcon aria-hidden /> {pdfLoadingId === inv.id ? "Opening…" : "PDF"}
                       </Button>
                       <Button size="sm" variant="ghost" className="flex-1" asChild>
                         <Link href={links.order(inv.orderNumber)}>View order</Link>

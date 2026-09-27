@@ -6,7 +6,7 @@
  * assert `orders.read`.
  */
 import { defineAction } from "@/lib/actions/envelope";
-import { getOrderAdminInput, listOrdersAdminInput } from "./types";
+import { getOrderAdminInput, listMyOrdersInput, listOrdersAdminInput } from "./types";
 import { ordersService } from "./service";
 
 export const listOrdersAdminQuery = defineAction({
@@ -21,4 +21,11 @@ export const getOrderAdminQuery = defineAction({
   permission: "orders.read",
   input: getOrderAdminInput,
   handler: (input, ctx) => ordersService.getOrderAdmin(ctx, input),
+});
+
+export const listMyOrdersQuery = defineAction({
+  name: "API-COM-05 listMyOrders",
+  permission: "commerce.self",
+  input: listMyOrdersInput,
+  handler: (input, ctx) => ordersService.listMyOrders(ctx, input),
 });

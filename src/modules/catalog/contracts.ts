@@ -39,6 +39,7 @@ import {
   type ProductVersionView,
   type PublishPayload,
   type Tag,
+  type WishlistProductCard,
 } from "./types";
 
 /* ========================================================================================== */
@@ -463,7 +464,7 @@ export interface CatalogService {
     ctx: RequestContext,
     input: z.infer<typeof listMyWishlistSchema>,
     tx?: DbOrTx,
-  ): Promise<ListResult<ProductCard>>;
+  ): Promise<ListResult<WishlistProductCard>>;
   /** Internal: refresh `products.tag_names` after `product_tags` changes (FR-CAT-07 search bridge). */
   refreshTagNames(productId: string, tx: TxCtx): Promise<void>;
 }

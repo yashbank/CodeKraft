@@ -9,7 +9,7 @@
  */
 import { z } from "zod";
 import { defineAction } from "@/lib/actions/envelope";
-import { markReadSchema } from "./types";
+import { markReadSchema, updateNotificationPreferencesSchema } from "./types";
 
 export const markReadAction = defineAction({
   name: "API-NOTIF-03 markRead",
@@ -28,5 +28,15 @@ export const markAllReadAction = defineAction({
   handler: async (_input, ctx) => {
     const { notificationsService } = await import("./service");
     return notificationsService.markAllRead(ctx);
+  },
+});
+
+export const updateNotificationPreferencesAction = defineAction({
+  name: "API-NOTIF-04 notificationPreferences.update",
+  input: updateNotificationPreferencesSchema,
+  permission: "account.self",
+  handler: async (input, ctx) => {
+    const { notificationsService } = await import("./service");
+    return notificationsService.updateNotificationPreferences(ctx, input);
   },
 });

@@ -126,6 +126,16 @@ export interface ProductCard {
   currentVersion: string | null;
 }
 
+/**
+ * API-CAT-36 \`listMyWishlist\` row -- a \`ProductCard\` plus the fields the customer wishlist
+ * screen needs that a public product card doesn't (the product id, to toggle it off; when it
+ * was saved).
+ */
+export interface WishlistProductCard extends ProductCard {
+  productId: string;
+  addedAt: string;
+}
+
 export interface Breadcrumb {
   label: string;
   href: string;

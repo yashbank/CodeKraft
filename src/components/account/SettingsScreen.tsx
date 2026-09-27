@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -24,6 +25,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Currency } from "@/lib/money";
+import { updateMyNotificationPreferences } from "@/modules/notifications/site-mutations";
+import {
+  changeMyPassword,
+  deleteMyAccount,
+  requestMyEmailChange,
+  signOutMyOtherSessions,
+  updateMyAccountSettings,
+  updateMyProfile,
+} from "@/modules/users/site-mutations";
 import { Banner } from "./Banner";
 import { BillingFields } from "./CheckoutScreen";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -64,12 +74,42 @@ export function SettingsScreen({
   deleteBlocked?: boolean;
   loading?: boolean;
 }) {
+  const router = useRouter();
   const [billing, setBilling] = React.useState<BillingDetails>(profile.billing);
   const [currency, setCurrency] = React.useState<Currency>(profile.displayCurrency);
   const [theme, setTheme] = React.useState(profile.themePref ?? "dark-cinematic");
   const [reduce, setReduce] = React.useState(profile.reduceMotion);
   const [newPw, setNewPw] = React.useState("");
-  const [updates, setUpdates] = React.useState(true);
+  const [updates, setUpdates] = React.useState(profile.emailProductUpdates);
+  const [savingProfile, setSavingProfile] = React.useState(false);
+  const [signingOutEverywhere, setSigningOutEverywhere] = React.useState(false);
+  const [newEmail, setNewEmail] = React.useState("");
+  const [emailChangePw, setEmailChangePw] = React.useState("");
+  const [sendingVerification, setSendingVerification] = React.useState(false);
+  const [changingPassword, setChangingPassword] = React.useState(false);
+  const [savingNotificationPref, setSavingNotificationPref] = React.useState(false);
+  const [deletingAccount, setDeletingAccount] = React.useState(false);
+  const [deleteAccountPw, setDeleteAccountPw] = React.useState("");
+
+  function billingInput(b: BillingDetails) {
+    const hasAddress = Boolean(b.line1 && b.city && b.postalCode);
+    return {
+      billingName: b.name,
+      company: b.company || undefined,
+      address: hasAddress
+        ? {
+            line1: b.line1!,
+            line2: b.line2 || undefined,
+            city: b.city!,
+            state: b.state || undefined,
+            postalCode: b.postalCode!,
+            country: b.country,
+          }
+        : undefined,
+      country: b.country,
+      gstNumber: b.gstNumber || undefined,
+    };
+  }
 
   if (loading) {
     return (
@@ -127,9 +167,20 @@ export function SettingsScreen({
           <TabsContent value="profile">
             <form
               className="space-y-6"
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
+                const form = new FormData(e.currentTarget);
+                const name = String(form.get("name") ?? "").trim();
+                if (!name) return;
+                setSavingProfile(true);
+                const result = await updateMyProfile({ name, billing: billingInput(billing) });
+                setSavingProfile(false);
+                if (!result.ok) {
+                  toast.error(result.error.message);
+                  return;
+                }
                 toast.success("Profile saved");
+                router.refresh();
               }}
             >
               <section className="space-y-4">
@@ -139,7 +190,13 @@ export function SettingsScreen({
                     <Label htmlFor="pf-name" required>
                       Full name
                     </Label>
-                    <Input id="pf-name" defaultValue={profile.name} autoComplete="name" required />
+                    <Input
+                      id="pf-name"
+                      name="name"
+                      defaultValue={profile.name}
+                      autoComplete="name"
+                      required
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="pf-email">Email</Label>
@@ -164,28 +221,54 @@ export function SettingsScreen({
                               <Label htmlFor="ce-new" required>
                                 New email
                               </Label>
-                              <Input id="ce-new" type="email" autoComplete="email" required />
+                              <Input
+                                id="ce-new"
+                                type="email"
+                                autoComplete="email"
+                                required
+                                value={newEmail}
+                                onChange={(e) => setNewEmail(e.target.value)}
+                              />
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="ce-pw" required>
                                 Current password
                               </Label>
-                              <PasswordInput id="ce-pw" autoComplete="current-password" required />
+                              <PasswordInput
+                                id="ce-pw"
+                                autoComplete="current-password"
+                                required
+                                value={emailChangePw}
+                                onChange={(e) => setEmailChangePw(e.target.value)}
+                              />
                             </div>
                           </div>
                           <DialogFooter>
                             <DialogClose asChild>
                               <Button variant="ghost">Cancel</Button>
                             </DialogClose>
-                            <DialogClose asChild>
-                              <Button
-                                onClick={() =>
-                                  toast.success("Verification sent to the new address")
+                            <Button
+                              disabled={sendingVerification}
+                              onClick={async () => {
+                                const trimmed = newEmail.trim();
+                                if (!trimmed || !emailChangePw) return;
+                                setSendingVerification(true);
+                                const result = await requestMyEmailChange({
+                                  newEmail: trimmed,
+                                  currentPassword: emailChangePw,
+                                });
+                                setSendingVerification(false);
+                                if (!result.ok) {
+                                  toast.error(result.error.message);
+                                  return;
                                 }
-                              >
-                                Send verification
-                              </Button>
-                            </DialogClose>
+                                setNewEmail("");
+                                setEmailChangePw("");
+                                toast.success("Verification sent to the new address");
+                              }}
+                            >
+                              {sendingVerification ? "Sending…" : "Send verification"}
+                            </Button>
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
@@ -208,7 +291,9 @@ export function SettingsScreen({
                 <h2 className="text-h4 text-fg">Billing details</h2>
                 <BillingFields value={billing} onChange={setBilling} idPrefix="pf" />
               </section>
-              <Button type="submit">Save</Button>
+              <Button type="submit" disabled={savingProfile}>
+                {savingProfile ? "Saving…" : "Save"}
+              </Button>
             </form>
           </TabsContent>
 
@@ -221,8 +306,13 @@ export function SettingsScreen({
                   id="pref-currency"
                   size="default"
                   value={currency}
-                  onChange={(c) => {
+                  onChange={async (c) => {
                     setCurrency(c);
+                    const result = await updateMyAccountSettings({ displayCurrency: c });
+                    if (!result.ok) {
+                      toast.error(result.error.message);
+                      return;
+                    }
                     toast.success(`Prices now shown in ${c}`);
                   }}
                   className="w-40"
@@ -236,8 +326,14 @@ export function SettingsScreen({
                 {themeFlagOn ? (
                   <RadioGroup
                     value={theme}
-                    onValueChange={(v) => {
-                      setTheme(v as typeof theme);
+                    onValueChange={async (v) => {
+                      const next = v as typeof theme;
+                      setTheme(next);
+                      const result = await updateMyAccountSettings({ themePref: next });
+                      if (!result.ok) {
+                        toast.error(result.error.message);
+                        return;
+                      }
                       toast.success("Theme saved");
                     }}
                     aria-label="Theme"
@@ -283,7 +379,10 @@ export function SettingsScreen({
                   }}
                 />
               </div>
-              <p className="text-caption text-fg-subtle">Preferences save automatically.</p>
+              <p className="text-caption text-fg-subtle">
+                Currency and theme save automatically. Reduce motion is remembered on this device
+                only.
+              </p>
             </div>
           </TabsContent>
 
@@ -291,8 +390,28 @@ export function SettingsScreen({
             <div className="space-y-8">
               <form
                 className="space-y-4"
-                onSubmit={(e) => {
+                onSubmit={async (e) => {
                   e.preventDefault();
+                  const form = new FormData(e.currentTarget);
+                  const currentPassword = String(form.get("currentPassword") ?? "");
+                  const confirmPassword = String(form.get("confirmPassword") ?? "");
+                  if (newPw !== confirmPassword) {
+                    toast.error("New password and confirmation don't match");
+                    return;
+                  }
+                  setChangingPassword(true);
+                  const result = await changeMyPassword({
+                    currentPassword,
+                    newPassword: newPw,
+                    revokeOtherSessions: true,
+                  });
+                  setChangingPassword(false);
+                  if (!result.ok) {
+                    toast.error(result.error.message);
+                    return;
+                  }
+                  setNewPw("");
+                  e.currentTarget.reset();
                   toast.success("Password changed");
                 }}
               >
@@ -301,7 +420,12 @@ export function SettingsScreen({
                   <Label htmlFor="sec-current" required>
                     Current password
                   </Label>
-                  <PasswordInput id="sec-current" autoComplete="current-password" required />
+                  <PasswordInput
+                    id="sec-current"
+                    name="currentPassword"
+                    autoComplete="current-password"
+                    required
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="sec-new" required>
@@ -322,9 +446,16 @@ export function SettingsScreen({
                   <Label htmlFor="sec-confirm" required>
                     Confirm new password
                   </Label>
-                  <PasswordInput id="sec-confirm" autoComplete="new-password" required />
+                  <PasswordInput
+                    id="sec-confirm"
+                    name="confirmPassword"
+                    autoComplete="new-password"
+                    required
+                  />
                 </div>
-                <Button type="submit">Update password</Button>
+                <Button type="submit" disabled={changingPassword}>
+                  {changingPassword ? "Updating…" : "Update password"}
+                </Button>
               </form>
 
               <Card className="gap-4 py-5">
@@ -341,15 +472,28 @@ export function SettingsScreen({
                   </p>
                   <ConfirmDialog
                     trigger={
-                      <Button variant="secondary" size="sm">
-                        Sign out everywhere
+                      <Button variant="secondary" size="sm" disabled={signingOutEverywhere}>
+                        Sign out other sessions
                       </Button>
                     }
-                    title="Sign out everywhere?"
-                    description="This ends your current session too — you'll sign in again on this device."
-                    confirmLabel="Sign out everywhere"
+                    title="Sign out other sessions?"
+                    description="This device's session stays signed in; any other active session is ended."
+                    confirmLabel="Sign out other sessions"
                     destructive={false}
-                    onConfirm={() => toast.success("Signed out of all devices")}
+                    onConfirm={async () => {
+                      setSigningOutEverywhere(true);
+                      const result = await signOutMyOtherSessions();
+                      setSigningOutEverywhere(false);
+                      if (!result.ok) {
+                        toast.error(result.error.message);
+                        return;
+                      }
+                      toast.success(
+                        result.data.revoked > 0
+                          ? `Signed out of ${result.data.revoked} other session${result.data.revoked === 1 ? "" : "s"}`
+                          : "No other sessions were active",
+                      );
+                    }}
                   />
                 </CardContent>
               </Card>
@@ -401,8 +545,19 @@ export function SettingsScreen({
                 <Switch
                   id="nt-updates"
                   checked={updates}
-                  onCheckedChange={(v) => {
+                  disabled={savingNotificationPref}
+                  onCheckedChange={async (v) => {
                     setUpdates(v);
+                    setSavingNotificationPref(true);
+                    const result = await updateMyNotificationPreferences({
+                      email: { orderUpdates: true, productUpdates: v },
+                    });
+                    setSavingNotificationPref(false);
+                    if (!result.ok) {
+                      setUpdates(!v);
+                      toast.error(result.error.message);
+                      return;
+                    }
                     toast.success("Preference saved");
                   }}
                 />
@@ -443,7 +598,7 @@ export function SettingsScreen({
               </div>
               <ConfirmDialog
                 trigger={
-                  <Button variant="destructive" disabled={deleteBlocked}>
+                  <Button variant="destructive" disabled={deleteBlocked || deletingAccount}>
                     Delete my account
                   </Button>
                 }
@@ -451,13 +606,33 @@ export function SettingsScreen({
                 description="This anonymises your profile right away and signs you out. Purchases can't be recovered afterwards."
                 confirmLabel="Delete my account"
                 typeToConfirm="DELETE"
-                onConfirm={() => toast("Account deletion requested")}
+                onConfirm={async (typed) => {
+                  if (typed !== "DELETE") return;
+                  setDeletingAccount(true);
+                  const result = await deleteMyAccount({
+                    password: deleteAccountPw || undefined,
+                    confirmPhrase: "DELETE",
+                  });
+                  setDeletingAccount(false);
+                  if (!result.ok) {
+                    toast.error(result.error.message);
+                    return;
+                  }
+                  toast.success("Your account has been deleted");
+                  window.location.href = "/";
+                }}
               >
                 <div className="space-y-2">
                   <Label htmlFor="del-pw" required>
                     Password
                   </Label>
-                  <PasswordInput id="del-pw" autoComplete="current-password" required />
+                  <PasswordInput
+                    id="del-pw"
+                    autoComplete="current-password"
+                    required
+                    value={deleteAccountPw}
+                    onChange={(e) => setDeleteAccountPw(e.target.value)}
+                  />
                 </div>
               </ConfirmDialog>
               <p className="text-caption text-fg-subtle">

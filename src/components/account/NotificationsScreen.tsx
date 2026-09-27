@@ -17,6 +17,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/components/ui/_utils";
+import {
+  markAllMyNotificationsRead,
+  markMyNotificationRead,
+} from "@/modules/notifications/site-mutations";
 import { EmptyState } from "./EmptyState";
 import { dayLabel, formatDateTime, relativeTime } from "./format";
 import type { NotificationItem, NotificationType } from "./types";
@@ -56,6 +60,9 @@ export function NotificationsScreen({
 
   function markRead(id: string) {
     setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    void markMyNotificationRead({ notificationIds: [id] }).then((result) => {
+      if (!result.ok) toast.error(result.error.message);
+    });
   }
 
   return (
@@ -69,9 +76,11 @@ export function NotificationsScreen({
           variant="secondary"
           size="sm"
           disabled={unread === 0}
-          onClick={() => {
+          onClick={async () => {
             setItems((prev) => prev.map((n) => ({ ...n, read: true })));
-            toast.success("All notifications marked as read");
+            const result = await markAllMyNotificationsRead();
+            if (result.ok) toast.success("All notifications marked as read");
+            else toast.error(result.error.message);
           }}
         >
           Mark all as read

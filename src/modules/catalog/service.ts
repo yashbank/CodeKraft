@@ -68,6 +68,7 @@ import type {
   ProductTestimonialView,
   ProductVersionView,
   PublishPayload,
+  WishlistProductCard,
 } from "./types";
 import { resolveRedirect } from "./redirects";
 
@@ -1812,7 +1813,7 @@ export class DefaultCatalogService implements CatalogService {
     ctx: RequestContext,
     input: { cursor?: string; limit?: number; displayCurrency: Currency },
     tx?: DbOrTx,
-  ): Promise<ListResult<ProductCard>> {
+  ): Promise<ListResult<WishlistProductCard>> {
     assertPermission(ctx, "account.self");
     const dbClient = await this.getDatabase(tx);
 
@@ -1822,17 +1823,21 @@ export class DefaultCatalogService implements CatalogService {
       .select({
         product: products,
         category: categories,
+        wishlistedAt: wishlists.createdAt,
       })
       .from(wishlists)
       .innerJoin(products, eq(wishlists.productId, products.id))
       .leftJoin(categories, eq(products.categoryId, categories.id))
       .where(eq(wishlists.userId, ctx.userId))
+      .orderBy(desc(wishlists.createdAt))
       .limit(limit + 1);
 
     const hasMore = rows.length > limit;
     const items = hasMore ? rows.slice(0, limit) : rows;
 
-    const cards: ProductCard[] = items.map((r) => ({
+    const cards: WishlistProductCard[] = items.map((r) => ({
+      productId: r.product.id,
+      addedAt: r.wishlistedAt.toISOString(),
       slug: r.product.slug,
       name: r.product.name,
       shortDescription: r.product.shortDescription,

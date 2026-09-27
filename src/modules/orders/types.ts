@@ -285,6 +285,8 @@ export interface OrderSummary {
   status: OrderStatus;
   total: Money;
   itemCount: number;
+  /** First line item's description (offering title snapshot / free-form project line). */
+  itemsSummary: string;
   createdAt: string;
   paidAt: string | null;
   expiresAt: string | null;

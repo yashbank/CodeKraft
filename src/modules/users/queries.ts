@@ -23,6 +23,13 @@ export const getMeQuery = defineAction({
   handler: (_input, ctx) => usersService.getMe(ctx),
 });
 
+export const getMyProfileQuery = defineAction({
+  name: "API-AUTH-02 profile.get",
+  input: emptyQueryInput,
+  permission: "account.self",
+  handler: (_input, ctx) => usersService.getMyProfile(ctx),
+});
+
 export const listSessionsQuery = defineAction({
   name: "API-AUTH-06 session.list",
   input: emptyQueryInput,

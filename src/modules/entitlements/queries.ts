@@ -6,7 +6,11 @@
  * wrappers P2.8 left empty, following `finance/queries.ts` / `approvals/queries.ts`.
  */
 import { defineAction } from "@/lib/actions/envelope";
-import { getEntitlementAdminSchema, listEntitlementsAdminSchema } from "./types";
+import {
+  getEntitlementAdminSchema,
+  listEntitlementsAdminSchema,
+  listMyEntitlementsSchema,
+} from "./types";
 import { entitlementsService } from "./service";
 
 export const listEntitlementsAdminQuery = defineAction({
@@ -21,4 +25,11 @@ export const getEntitlementAdminQuery = defineAction({
   input: getEntitlementAdminSchema,
   permission: "delivery.tasks.write",
   handler: (input, ctx) => entitlementsService.getEntitlementAdmin(ctx, input),
+});
+
+export const listMyEntitlementsQuery = defineAction({
+  name: "API-DEL-01 listMyEntitlements",
+  input: listMyEntitlementsSchema,
+  permission: "delivery.self",
+  handler: (input, ctx) => entitlementsService.listMyEntitlements(ctx, input),
 });

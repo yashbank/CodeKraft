@@ -87,6 +87,7 @@ import type { ThemeName } from "@/lib/theme";
 export function createNotImplementedUsersService(): UsersService {
   return createNotImplemented<UsersService>("users", "P3", {
     getMe: "async",
+    getMyProfile: "async",
     updateProfile: "async",
     updateSettings: "async",
     changeEmailRequest: "async",
@@ -163,6 +164,41 @@ export class DefaultUsersService implements UsersService {
       twoFactorEnabled: userView.twoFactorEnabled,
       ...(partnerRow ? { partner: partnerRow } : {}),
     };
+  }
+
+  /* --- API-AUTH-02 (own profile: billing + notification prefs) --------------------------- */
+  async getMyProfile(
+    ctx: RequestContext,
+    tx?: DbOrTx,
+  ): Promise<{ user: UserView; profile: CustomerProfileView }> {
+    assertPermission(ctx, "account.self");
+    const database = await this.getDatabase(tx);
+
+    const [u] = await database.select().from(users).where(eq(users.id, ctx.userId)).limit(1);
+    if (!u) {
+      throw new AppError(ErrorCode.UNAUTHENTICATED, "User not found");
+    }
+
+    const [existingProfile] = await database
+      .select()
+      .from(customerProfiles)
+      .where(eq(customerProfiles.userId, ctx.userId))
+      .limit(1);
+
+    const profileView =
+      toProfileView(existingProfile) ??
+      ({
+        userId: ctx.userId,
+        company: null,
+        billingName: null,
+        billingAddress: null,
+        country: null,
+        gstNumber: null,
+        tags: [],
+        notificationPrefs: { email: true, inapp: true },
+      } satisfies CustomerProfileView);
+
+    return { user: toUserView(u), profile: profileView };
   }
 
   /* --- API-AUTH-03 ------------------------------------------------------------------------ */

@@ -15,7 +15,7 @@ import { DELIVERY_LABELS } from "./DeliveryTypeIcon";
 import { EmptyState } from "./EmptyState";
 import { EntitlementCard } from "./EntitlementCard";
 import { formatDate } from "./format";
-import type { DeliveryType, EntitlementSummary, OrderView } from "./types";
+import type { DeliveryType, EntitlementSummary, OrderSummaryView } from "./types";
 
 const FILTERS: { key: DeliveryType | "subscription"; label: string }[] = [
   { key: "download", label: "Download" },
@@ -27,7 +27,7 @@ const FILTERS: { key: DeliveryType | "subscription"; label: string }[] = [
   { key: "subscription", label: "Subscription" },
 ];
 
-function orderAction(o: OrderView): string {
+function orderAction(o: OrderSummaryView): string {
   if (o.status === "pending_payment") {
     if (o.payment?.status === "initiated") return "Submit reference";
     if (o.payment?.status === "failed") return "Retry payment";
@@ -37,7 +37,7 @@ function orderAction(o: OrderView): string {
 }
 
 /** SCR-ACC-02 `OrderRow`: order no, date, product/offering, total, status, action. */
-export function OrderRow({ order: o, href }: { order: OrderView; href: string }) {
+export function OrderRow({ order: o, href }: { order: OrderSummaryView; href: string }) {
   return (
     <article className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 shadow-1 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
@@ -73,7 +73,7 @@ export function PurchasesScreen({
   error,
 }: {
   entitlements: EntitlementSummary[];
-  orders: OrderView[];
+  orders: OrderSummaryView[];
   now: string;
   links: { entitlement: (id: string) => string; order: (id: string) => string };
   loading?: boolean;

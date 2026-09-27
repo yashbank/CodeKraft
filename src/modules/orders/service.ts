@@ -658,17 +658,43 @@ export class DefaultOrdersService implements OrdersService {
       .orderBy(desc(orders.createdAt))
       .limit(pageSize);
 
-    const items: OrderSummary[] = rows.map((r) => ({
-      orderId: r.orderId,
-      orderNo: r.orderNo,
-      type: r.type,
-      status: r.status,
-      total: money(r.totalMinor, r.currency as Currency),
-      itemCount: 1,
-      createdAt: r.createdAt.toISOString(),
-      paidAt: r.paidAt ? r.paidAt.toISOString() : null,
-      expiresAt: r.expiresAt ? r.expiresAt.toISOString() : null,
-    }));
+    const orderIds = rows.map((r) => r.orderId);
+    const itemRows =
+      orderIds.length > 0
+        ? await db
+            .select({
+              orderId: orderItems.orderId,
+              description: orderItems.description,
+              createdAt: orderItems.createdAt,
+            })
+            .from(orderItems)
+            .where(inArray(orderItems.orderId, orderIds))
+            .orderBy(orderItems.createdAt)
+        : [];
+    const itemsByOrder = new Map<string, { description: string }[]>();
+    for (const it of itemRows) {
+      const list = itemsByOrder.get(it.orderId) ?? [];
+      list.push({ description: it.description });
+      itemsByOrder.set(it.orderId, list);
+    }
+
+    const items: OrderSummary[] = rows.map((r) => {
+      const lineItems = itemsByOrder.get(r.orderId) ?? [];
+      const first = lineItems[0]?.description ?? "Order";
+      return {
+        orderId: r.orderId,
+        orderNo: r.orderNo,
+        type: r.type,
+        status: r.status,
+        total: money(r.totalMinor, r.currency as Currency),
+        itemCount: lineItems.length,
+        itemsSummary:
+          lineItems.length > 1 ? `${first} +${lineItems.length - 1} more` : first,
+        createdAt: r.createdAt.toISOString(),
+        paidAt: r.paidAt ? r.paidAt.toISOString() : null,
+        expiresAt: r.expiresAt ? r.expiresAt.toISOString() : null,
+      };
+    });
 
     return {
       items,

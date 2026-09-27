@@ -35,6 +35,7 @@ export const customer: CustomerProfile = {
   displayCurrency: "INR",
   themePref: null,
   reduceMotion: false,
+  emailProductUpdates: true,
   billing: {
     name: "Pravin Deshmukh",
     company: "iauro Systems Pvt Ltd",

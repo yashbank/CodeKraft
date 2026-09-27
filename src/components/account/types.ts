@@ -44,6 +44,7 @@ export interface CustomerProfile {
   reduceMotion: boolean;
   billing: BillingDetails;
   phone?: string;
+  emailProductUpdates: boolean;
 }
 
 export interface ReleaseFile {
@@ -164,6 +165,22 @@ export interface PaymentInstructions {
     bankName: string;
     swift?: string;
   };
+}
+
+/**
+ * A lightweight order row for list screens (the Purchases "Pending & past orders" tab) that only
+ * need what `OrderRow` renders -- as opposed to `OrderView`, the full order-detail shape (lines,
+ * billing, payment instructions, refund) that only an order-detail screen needs.
+ */
+export interface OrderSummaryView {
+  id: string;
+  number: string;
+  placedAt: string;
+  status: OrderStatus;
+  productName: string;
+  offeringName: string;
+  total: Money;
+  payment?: { status: PaymentStatus };
 }
 
 export interface OrderView {

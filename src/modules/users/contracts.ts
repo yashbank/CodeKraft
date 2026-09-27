@@ -204,6 +204,11 @@ export type UpdatePartnerInput = z.infer<typeof updatePartnerSchema>;
 export interface UsersService {
   /** API-AUTH-02 */
   getMe(ctx: RequestContext, tx?: DbOrTx): Promise<Me>;
+  /** API-AUTH-02 — the caller's own `CustomerProfileView` (billing, GST, notification prefs) alongside `UserView`. */
+  getMyProfile(
+    ctx: RequestContext,
+    tx?: DbOrTx,
+  ): Promise<{ user: UserView; profile: CustomerProfileView }>;
   /** API-AUTH-03 */
   updateProfile(
     ctx: RequestContext,

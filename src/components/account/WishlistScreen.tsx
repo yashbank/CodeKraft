@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "@/lib/money";
+import { toggleWishlist } from "@/modules/catalog/site-mutations";
 import { EmptyState } from "./EmptyState";
 import { ProductCover } from "./ProductCover";
 import type { WishlistItem } from "./types";
@@ -42,10 +43,26 @@ export function WishlistScreen({
     return b.addedAt.localeCompare(a.addedAt);
   });
 
-  function remove(item: WishlistItem) {
+  async function remove(item: WishlistItem) {
     setItems((prev) => prev.filter((i) => i.id !== item.id));
+    const result = await toggleWishlist({ productId: item.id, on: false });
+    if (!result.ok) {
+      setItems((prev) => [item, ...prev]);
+      toast.error(result.error.message);
+      return;
+    }
     toast(`${item.productName} removed`, {
-      action: { label: "Undo", onClick: () => setItems((prev) => [item, ...prev]) },
+      action: {
+        label: "Undo",
+        onClick: async () => {
+          setItems((prev) => [item, ...prev]);
+          const undoResult = await toggleWishlist({ productId: item.id, on: true });
+          if (!undoResult.ok) {
+            setItems((prev) => prev.filter((i) => i.id !== item.id));
+            toast.error(undoResult.error.message);
+          }
+        },
+      },
     });
   }
 
