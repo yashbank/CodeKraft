@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { ClipboardCheckIcon, ArrowLeftIcon } from "lucide-react";
 import { toast } from "sonner";
+
+import { approveRequest, cancelRequest, rejectRequest } from "@/modules/approvals/admin-mutations";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -50,12 +53,14 @@ export interface ApprovalsInboxProps {
  * sees an Approve button on their own request (D-1102). Read-mostly single-pane layout below `lg`.
  */
 export function ApprovalsInbox({ approvals, currentUser, now }: ApprovalsInboxProps) {
+  const router = useRouter();
   const [tab, setTab] = React.useState<"mine" | "requested" | "history">("mine");
   const [type, setType] = React.useState<ApprovalType | null>(null);
   const [decided, setDecided] = React.useState<Record<string, "approve" | "reject">>({});
   const [comment, setComment] = React.useState("");
   const [commentError, setCommentError] = React.useState<string | null>(null);
   const [mobileDetail, setMobileDetail] = React.useState(false);
+  const [submitting, setSubmitting] = React.useState(false);
 
   const isMine = (a: ApprovalItem) => a.requestedBy.id === currentUser.id;
   const byTab = approvals.filter((a) =>
@@ -75,12 +80,22 @@ export function ApprovalsInbox({ approvals, currentUser, now }: ApprovalsInboxPr
     history: approvals.filter((a) => a.status !== "pending" || decided[a.id]).length,
   };
 
-  const decide = (a: ApprovalItem, decision: "approve" | "reject") => {
+  const decide = async (a: ApprovalItem, decision: "approve" | "reject") => {
     if (decision === "reject" && comment.trim() === "") {
       setCommentError("A comment is required to reject.");
       return;
     }
     setCommentError(null);
+    setSubmitting(true);
+    const result =
+      decision === "approve"
+        ? await approveRequest({ approvalRequestId: a.id, comment: comment.trim() || undefined })
+        : await rejectRequest({ approvalRequestId: a.id, comment: comment.trim() });
+    setSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
     setDecided((d) => ({ ...d, [a.id]: decision }));
     setComment("");
     toast.success(
@@ -88,6 +103,19 @@ export function ApprovalsInbox({ approvals, currentUser, now }: ApprovalsInboxPr
         ? `Approved — ${TYPE_LABEL[a.type].toLowerCase()} of ${a.subject}`
         : `Rejected — ${a.subject}`,
     );
+    router.refresh();
+  };
+
+  const cancel = async (a: ApprovalItem) => {
+    setSubmitting(true);
+    const result = await cancelRequest({ approvalRequestId: a.id });
+    setSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Request cancelled");
+    router.refresh();
   };
 
   const detail = selected ? (
@@ -99,7 +127,9 @@ export function ApprovalsInbox({ approvals, currentUser, now }: ApprovalsInboxPr
       comment={comment}
       onComment={setComment}
       commentError={commentError}
-      onDecide={(d) => decide(selected, d)}
+      onDecide={(d) => void decide(selected, d)}
+      onCancel={() => void cancel(selected)}
+      submitting={submitting}
       currentUser={currentUser}
     />
   ) : (
@@ -250,6 +280,8 @@ function ApprovalDetail({
   onComment,
   commentError,
   onDecide,
+  onCancel,
+  submitting,
   currentUser,
 }: {
   approval: ApprovalItem;
@@ -260,6 +292,8 @@ function ApprovalDetail({
   onComment: (v: string) => void;
   commentError: string | null;
   onDecide: (d: "approve" | "reject") => void;
+  onCancel: () => void;
+  submitting: boolean;
   currentUser: AdminUserRef;
 }) {
   const status = localDecision ? (localDecision === "approve" ? "applied" : "rejected") : a.status;
@@ -389,6 +423,7 @@ function ApprovalDetail({
           <div className="flex flex-wrap gap-2">
             <Button
               onClick={() => onDecide("approve")}
+              disabled={submitting}
               aria-label={`Approve ${TYPE_LABEL[a.type].toLowerCase()} of ${a.subject}`}
             >
               Approve
@@ -396,6 +431,7 @@ function ApprovalDetail({
             <Button
               variant="destructive"
               onClick={() => onDecide("reject")}
+              disabled={submitting}
               aria-label={`Reject ${TYPE_LABEL[a.type].toLowerCase()} of ${a.subject}`}
             >
               Reject
@@ -404,7 +440,7 @@ function ApprovalDetail({
         </div>
       ) : null}
       {pending && isRequester ? (
-        <Button variant="outline" size="sm" onClick={() => toast("Request cancelled")}>
+        <Button variant="outline" size="sm" onClick={onCancel} disabled={submitting}>
           Cancel request
         </Button>
       ) : null}
