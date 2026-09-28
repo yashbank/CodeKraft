@@ -2,7 +2,7 @@
 
 import { QueriesScreen } from "@/components/account/QueriesScreen";
 import { chatTranscripts, NOW, queries } from "../../_fixtures/account";
-import { DEV_LINKS, queryHref, transcriptHref } from "../_links";
+import { DEV_LINKS } from "../_links";
 
 export function Preview({ state }: { state: string }) {
   const empty = state === "empty";
@@ -11,7 +11,7 @@ export function Preview({ state }: { state: string }) {
       queries={empty ? [] : queries}
       transcripts={empty ? [] : chatTranscripts}
       now={NOW}
-      links={{ query: queryHref, chat: DEV_LINKS.chat, transcript: transcriptHref }}
+      links={{ query: DEV_LINKS.queryThread, chat: DEV_LINKS.chat, transcript: DEV_LINKS.chat }}
       loading={state === "loading"}
     />
   );

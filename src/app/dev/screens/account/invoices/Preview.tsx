@@ -2,7 +2,7 @@
 
 import { InvoicesScreen } from "@/components/account/InvoicesScreen";
 import { invoices, payments } from "../../_fixtures/account";
-import { orderHref } from "../_links";
+import { DEV_LINKS } from "../_links";
 
 export function Preview({ state }: { state: string }) {
   const empty = state === "empty";
@@ -11,7 +11,7 @@ export function Preview({ state }: { state: string }) {
       invoices={empty ? [] : invoices}
       payments={empty ? [] : payments}
       financialYears={["2026-27", "2025-26"]}
-      links={{ order: orderHref }}
+      links={{ order: DEV_LINKS.orderStatus }}
       loading={state === "loading"}
       error={state === "error" ? "Couldn't load invoices." : null}
       pdfError={state === "pdf-error"}

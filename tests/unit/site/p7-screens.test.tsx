@@ -152,10 +152,10 @@ describe("Phase 7: Public Site & Customer UI", () => {
         now={new Date().toISOString()}
         links={{
           purchases: "/account/purchases",
-          entitlement: (id: string) => `/account/purchases/${id}`,
+          entitlement: "/account/purchases",
           invoices: "/account/invoices",
           queries: "/account/queries",
-          query: (id: string) => `/account/queries/${id}`,
+          query: "/account/queries",
           wishlist: "/account/wishlist",
           chat: "/account/chat",
         }}
@@ -172,8 +172,8 @@ describe("Phase 7: Public Site & Customer UI", () => {
         orders={[orders.awaitingReference, orders.submitted, orders.confirmed]}
         now={new Date().toISOString()}
         links={{
-          entitlement: (id: string) => `/account/purchases/${id}`,
-          order: (id: string) => `/account/orders/${id}`,
+          entitlement: "/account/purchases",
+          order: "/account/orders",
         }}
       />
     );
@@ -188,7 +188,7 @@ describe("Phase 7: Public Site & Customer UI", () => {
         payments={payments}
         financialYears={["FY 2026–27", "FY 2025–26", "all"]}
         links={{
-          order: (orderNumber: string) => `/account/orders/${orderNumber}`,
+          order: "/account/orders",
         }}
       />
     );
@@ -203,9 +203,9 @@ describe("Phase 7: Public Site & Customer UI", () => {
         transcripts={chatTranscripts}
         now={new Date().toISOString()}
         links={{
-          query: (id: string) => `/account/queries/${id}`,
+          query: "/account/queries",
           chat: "/account/chat",
-          transcript: (id: string) => `/account/chat/${id}`,
+          transcript: "/account/chat",
         }}
       />
     );

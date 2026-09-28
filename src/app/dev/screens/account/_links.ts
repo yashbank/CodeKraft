@@ -14,6 +14,9 @@ export const DEV_LINKS = {
   quote: `${BASE}/quote`,
   verify: `${BASE}/verify-email`,
   login: `${BASE}/login`,
+  entitlement: `${BASE}/entitlement`,
+  orderStatus: `${BASE}/order-status`,
+  queryThread: `${BASE}/query-thread`,
 } as const;
 
 export const entitlementHref = (id: string) => `${BASE}/entitlement?state=${entitlementState(id)}`;

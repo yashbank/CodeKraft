@@ -38,7 +38,7 @@ export default async function InvoicesPage() {
       financialYears={financialYears(invoiceRows)}
       error={error}
       links={{
-        order: (orderNumber: string) => `/account/orders/${orderNumber}`,
+        order: "/account/orders",
       }}
     />
   );

@@ -30,8 +30,8 @@ export default async function PurchasesPage() {
       now={new Date().toISOString()}
       error={error}
       links={{
-        entitlement: (id: string) => `/account/purchases/${id}`,
-        order: (id: string) => `/account/orders/${id}`,
+        entitlement: "/account/purchases",
+        order: "/account/orders",
       }}
     />
   );

@@ -26,9 +26,9 @@ export default async function QueriesPage() {
       transcripts={transcripts}
       now={new Date().toISOString()}
       links={{
-        query: (id: string) => `/account/queries/${id}`,
+        query: "/account/queries",
         chat: "/account/chat",
-        transcript: (id: string) => `/account/chat/${id}`,
+        transcript: "/account/chat",
       }}
     />
   );

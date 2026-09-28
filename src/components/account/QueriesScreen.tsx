@@ -132,7 +132,7 @@ export function QueriesScreen({
   queries: QuerySummary[];
   transcripts: ChatTranscript[];
   now: string;
-  links: { query: (id: string) => string; chat: string; transcript: (id: string) => string };
+  links: { query: string; chat: string; transcript: string };
   loading?: boolean;
 }) {
   const [filter, setFilter] = React.useState<"all" | "open" | "waiting_customer" | "resolved">(
@@ -200,7 +200,7 @@ export function QueriesScreen({
               {rows.map((q) => (
                 <li key={q.id}>
                   <Link
-                    href={links.query(q.id)}
+                    href={`${links.query}/${q.id}`}
                     className="flex items-start gap-3 p-4 hover:bg-accent-soft/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
                   >
                     <span
@@ -265,7 +265,7 @@ export function QueriesScreen({
                     </Badge>
                   ) : null}
                   <Button variant="link" size="sm" asChild>
-                    <Link href={links.transcript(t.id)}>View transcript</Link>
+                    <Link href={`${links.transcript}/${t.id}`}>View transcript</Link>
                   </Button>
                 </li>
               ))}

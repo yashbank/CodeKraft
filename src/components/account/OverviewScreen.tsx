@@ -32,10 +32,10 @@ export interface OverviewScreenProps {
   now: string;
   links: {
     purchases: string;
-    entitlement: (id: string) => string;
+    entitlement: string;
     invoices: string;
     queries: string;
-    query: (id: string) => string;
+    query: string;
     wishlist: string;
     chat: string;
   };
@@ -176,7 +176,7 @@ export function OverviewScreen(props: OverviewScreenProps) {
               <ul className="space-y-3">
                 {entitlements.slice(0, 5).map((e) => (
                   <li key={e.id}>
-                    <EntitlementCard entitlement={e} detailHref={links.entitlement(e.id)} />
+                    <EntitlementCard entitlement={e} detailHref={`${links.entitlement}#${e.id}`} />
                   </li>
                 ))}
               </ul>
@@ -244,7 +244,7 @@ export function OverviewScreen(props: OverviewScreenProps) {
                     {queries.slice(0, 3).map((q) => (
                       <li key={q.id}>
                         <Link
-                          href={links.query(q.id)}
+                          href={`${links.query}#${q.id}`}
                           className="flex items-center gap-3 py-2.5 hover:text-accent-text"
                         >
                           <span

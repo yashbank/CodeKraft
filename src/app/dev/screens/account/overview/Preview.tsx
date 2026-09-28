@@ -47,10 +47,10 @@ export function Preview({ state }: { state: string }) {
       now={NOW}
       links={{
         purchases: DEV_LINKS.purchases,
-        entitlement: entitlementHref,
+        entitlement: DEV_LINKS.entitlement,
         invoices: DEV_LINKS.invoices,
         queries: DEV_LINKS.queries,
-        query: queryHref,
+        query: DEV_LINKS.queryThread,
         wishlist: DEV_LINKS.wishlist,
         chat: DEV_LINKS.chat,
       }}

@@ -75,7 +75,7 @@ export function PurchasesScreen({
   entitlements: EntitlementSummary[];
   orders: OrderSummaryView[];
   now: string;
-  links: { entitlement: (id: string) => string; order: (id: string) => string };
+  links: { entitlement: string; order: string };
   loading?: boolean;
   error?: string | null;
 }) {
@@ -186,7 +186,7 @@ export function PurchasesScreen({
             <ul className="space-y-3">
               {active.map((e) => (
                 <li key={e.id}>
-                  <EntitlementCard entitlement={e} detailHref={links.entitlement(e.id)} />
+                  <EntitlementCard entitlement={e} detailHref={`${links.entitlement}/${e.id}`} />
                 </li>
               ))}
             </ul>
@@ -202,7 +202,7 @@ export function PurchasesScreen({
             <ul className="space-y-3">
               {orders.map((o) => (
                 <li key={o.id}>
-                  <OrderRow order={o} href={links.order(o.id)} />
+                  <OrderRow order={o} href={`${links.order}/${o.id}`} />
                 </li>
               ))}
             </ul>
@@ -231,7 +231,7 @@ export function PurchasesScreen({
                     </p>
                   </div>
                   <Button size="sm" variant="secondary" className="w-full sm:w-auto" asChild>
-                    <Link href={links.entitlement(e.id)}>
+                    <Link href={`${links.entitlement}/${e.id}`}>
                       {e.status === "revoked"
                         ? "Contact support"
                         : e.subscription

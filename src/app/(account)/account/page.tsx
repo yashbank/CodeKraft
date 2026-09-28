@@ -45,10 +45,10 @@ export default async function AccountOverviewPage() {
       error={anyFailed ? "Couldn't load some of your account data. Please try again." : undefined}
       links={{
         purchases: "/account/purchases",
-        entitlement: (id: string) => `/account/purchases#${id}`,
+        entitlement: "/account/purchases",
         invoices: "/account/invoices",
         queries: "/account/queries",
-        query: (id: string) => `/account/queries#${id}`,
+        query: "/account/queries",
         wishlist: "/account/wishlist",
         chat: "/account/chat",
       }}

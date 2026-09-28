@@ -2,7 +2,7 @@
 
 import { PurchasesScreen } from "@/components/account/PurchasesScreen";
 import { entitlements, expiredEntitlement, NOW, orders } from "../../_fixtures/account";
-import { entitlementHref, orderHref } from "../_links";
+import { DEV_LINKS } from "../_links";
 
 export function Preview({ state }: { state: string }) {
   const empty = state === "empty";
@@ -21,7 +21,7 @@ export function Preview({ state }: { state: string }) {
             ]
       }
       now={NOW}
-      links={{ entitlement: entitlementHref, order: orderHref }}
+      links={{ entitlement: DEV_LINKS.entitlement, order: DEV_LINKS.orderStatus }}
       loading={state === "loading"}
       error={state === "error" ? "Couldn't load your purchases." : null}
     />

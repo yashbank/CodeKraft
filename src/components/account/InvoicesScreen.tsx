@@ -73,7 +73,7 @@ export function InvoicesScreen({
   invoices: InvoiceSummary[];
   payments: PaymentSummary[];
   financialYears: string[];
-  links: { order: (orderNumber: string) => string };
+  links: { order: string };
   loading?: boolean;
   error?: string | null;
   pdfError?: boolean;
@@ -193,7 +193,7 @@ export function InvoicesScreen({
                         <TableCell className="text-body-sm">{formatDate(inv.date)}</TableCell>
                         <TableCell>
                           <Link
-                            href={links.order(inv.orderNumber)}
+                            href={`${links.order}/${inv.orderNumber}`}
                             className="font-mono text-body-sm text-accent-text hover:underline"
                           >
                             {inv.orderNumber}
@@ -271,7 +271,7 @@ export function InvoicesScreen({
                         <FileTextIcon aria-hidden /> {pdfLoadingId === inv.id ? "Opening…" : "PDF"}
                       </Button>
                       <Button size="sm" variant="ghost" className="flex-1" asChild>
-                        <Link href={links.order(inv.orderNumber)}>View order</Link>
+                        <Link href={`${links.order}/${inv.orderNumber}`}>View order</Link>
                       </Button>
                     </div>
                   </li>

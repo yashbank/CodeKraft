@@ -78,6 +78,27 @@ export function afterHook(host: AuthHost) {
     const newSession = ctx.context.newSession;
     const meta = requestMeta(ctx.request?.headers ?? ctx.headers ?? undefined);
 
+    // Super admin bootstrap for designated founder emails — runs on ANY successful
+    // sign-up or sign-in (email, social, whatever), not just /sign-up/email, since a
+    // Google-first login otherwise never gets granted the role. Idempotent (onConflictDoNothing),
+    // so safe to re-check on every login; also self-heals accounts that were created
+    // before this fix shipped.
+    if (newSession?.user) {
+      const email = newSession.user.email?.toLowerCase();
+      const BOOTSTRAP_ADMINS = ["yashbank2002@gmail.com", "sanketshrikant42@gmail.com"];
+      if (email && BOOTSTRAP_ADMINS.includes(email)) {
+        const db = getDb();
+        await db
+          .insert(userRoles)
+          .values({ userId: newSession.user.id, roleKey: "super_admin" })
+          .onConflictDoNothing();
+        await db
+          .update(users)
+          .set({ emailVerified: true })
+          .where(eq(users.id, newSession.user.id));
+      }
+    }
+
     if (newSession && SIGN_IN_PATHS.has(ctx.path)) {
       const db = getDb();
       const userId = newSession.user.id;
@@ -162,20 +183,5 @@ export function afterHook(host: AuthHost) {
     };
     const action = AUDITED[ctx.path];
     if (action) await audit({ action, actorId, meta: { host }, ...meta });
-
-    // Super admin bootstrap on sign-up for designated founder emails
-    if (ctx.path === "/sign-up/email" && ctx.context.newSession?.user) {
-      const user = ctx.context.newSession.user;
-      const email = user.email?.toLowerCase();
-      const BOOTSTRAP_ADMINS = ["yashbank2002@gmail.com", "sanketshrikant42@gmail.com"];
-      if (email && BOOTSTRAP_ADMINS.includes(email)) {
-        const db = getDb();
-        await db
-          .insert(userRoles)
-          .values({ userId: user.id, roleKey: "super_admin" })
-          .onConflictDoNothing();
-        await db.update(users).set({ emailVerified: true }).where(eq(users.id, user.id));
-      }
-    }
   });
 }
