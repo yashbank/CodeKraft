@@ -26,11 +26,13 @@ export function RegisterScreen({
   sentTo = "you@example.com",
   phoneOtpEnabled = false,
   onSubmit,
+  onGoogleClick,
 }: {
   state?: RegisterState;
   sentTo?: string;
   phoneOtpEnabled?: boolean;
   onSubmit?: (values: { name: string; email: string; password: string }) => void;
+  onGoogleClick?: () => void;
 }) {
   const [password, setPassword] = React.useState("");
   const loading = state === "loading";
@@ -74,7 +76,7 @@ export function RegisterScreen({
             });
           }}
         >
-          <GoogleButton disabled={loading} />
+          <GoogleButton disabled={loading} onClick={onGoogleClick} />
           <div className="flex items-center gap-3 text-caption text-fg-subtle">
             <Separator className="flex-1" />
             or

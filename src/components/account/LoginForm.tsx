@@ -94,7 +94,12 @@ export function LoginForm({
     >
       {designed ? (
         <>
-          <GoogleButton disabled={busy} />
+          <GoogleButton
+            disabled={busy}
+            onClick={() => {
+              void authClient.signIn.social({ provider: "google", callbackURL: next });
+            }}
+          />
           <div className="flex items-center gap-3 text-caption text-fg-subtle">
             <Separator className="flex-1" />
             or

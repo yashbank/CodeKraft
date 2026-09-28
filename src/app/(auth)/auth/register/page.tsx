@@ -29,11 +29,16 @@ export default function RegisterPage() {
     }
   };
 
+  const handleGoogleClick = () => {
+    void authClient.signIn.social({ provider: "google", callbackURL: "/account" });
+  };
+
   return (
     <RegisterScreen
       state={state}
       sentTo={sentTo}
       onSubmit={handleSubmit}
+      onGoogleClick={handleGoogleClick}
     />
   );
 }
