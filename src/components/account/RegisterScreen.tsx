@@ -24,12 +24,14 @@ export type RegisterState = "default" | "loading" | "error" | "turnstile" | "sen
 export function RegisterScreen({
   state = "default",
   sentTo = "you@example.com",
+  errorMessage,
   phoneOtpEnabled = false,
   onSubmit,
   onGoogleClick,
 }: {
   state?: RegisterState;
   sentTo?: string;
+  errorMessage?: React.ReactNode;
   phoneOtpEnabled?: boolean;
   onSubmit?: (values: { name: string; email: string; password: string }) => void;
   onGoogleClick?: () => void;
@@ -84,15 +86,7 @@ export function RegisterScreen({
           </div>
           {state === "error" ? (
             <Banner tone="danger">
-              An account with this email already exists —{" "}
-              <Link href="/auth/login" className="font-medium underline">
-                sign in
-              </Link>{" "}
-              or{" "}
-              <Link href="/auth/reset" className="font-medium underline">
-                reset your password
-              </Link>
-              .
+              {errorMessage ?? "Something went wrong. Please try again."}
             </Banner>
           ) : null}
           <div className="space-y-2">
@@ -132,7 +126,7 @@ export function RegisterScreen({
               name="password"
               autoComplete="new-password"
               required
-              minLength={10}
+              minLength={12}
               disabled={loading}
               aria-describedby="reg-password-rules"
               value={password}

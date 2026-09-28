@@ -103,7 +103,7 @@ export function ResetPasswordScreen({
                 name="password"
                 autoComplete="new-password"
                 required
-                minLength={10}
+                minLength={12}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 aria-describedby="new-password-rules"

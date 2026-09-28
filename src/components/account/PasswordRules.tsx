@@ -11,10 +11,10 @@ export interface PasswordCheck {
   ok: boolean;
 }
 
-/** Register/reset policy (SCR-AUTH-02): min 10 chars plus a mix of character classes. */
+/** Register/reset policy (SCR-AUTH-02): min 12 chars plus a mix of character classes — must match `minPasswordLength` in auth/config.ts. */
 export function passwordChecks(value: string): PasswordCheck[] {
   return [
-    { id: "length", label: "At least 10 characters", ok: value.length >= 10 },
+    { id: "length", label: "At least 12 characters", ok: value.length >= 12 },
     {
       id: "case",
       label: "Upper and lower case letters",

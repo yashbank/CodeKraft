@@ -435,7 +435,7 @@ export function SettingsScreen({
                     id="sec-new"
                     autoComplete="new-password"
                     required
-                    minLength={10}
+                    minLength={12}
                     value={newPw}
                     onChange={(e) => setNewPw(e.target.value)}
                     aria-describedby="sec-rules"

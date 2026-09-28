@@ -1,12 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import { RegisterScreen, type RegisterState } from "@/components/account/RegisterScreen";
 import { authClient } from "@/modules/auth/client";
+
+const ALREADY_EXISTS_MESSAGE: ReactNode = (
+  <>
+    An account with this email already exists —{" "}
+    <Link href="/auth/login" className="font-medium underline">
+      sign in
+    </Link>{" "}
+    or{" "}
+    <Link href="/auth/reset" className="font-medium underline">
+      reset your password
+    </Link>
+    .
+  </>
+);
 
 export default function RegisterPage() {
   const [state, setState] = useState<RegisterState>("default");
   const [sentTo, setSentTo] = useState("");
+  const [errorMessage, setErrorMessage] = useState<ReactNode>(null);
 
   const handleSubmit = async (values: { name: string; email: string; password: string }) => {
     setState("loading");
@@ -18,6 +34,11 @@ export default function RegisterPage() {
       });
 
       if (error) {
+        setErrorMessage(
+          error.code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL"
+            ? ALREADY_EXISTS_MESSAGE
+            : (error.message ?? "Something went wrong. Please try again."),
+        );
         setState("error");
         return;
       }
@@ -25,6 +46,7 @@ export default function RegisterPage() {
       setSentTo(values.email);
       setState("sent");
     } catch (err) {
+      setErrorMessage("Something went wrong. Please try again.");
       setState("error");
     }
   };
@@ -37,6 +59,7 @@ export default function RegisterPage() {
     <RegisterScreen
       state={state}
       sentTo={sentTo}
+      errorMessage={errorMessage}
       onSubmit={handleSubmit}
       onGoogleClick={handleGoogleClick}
     />
