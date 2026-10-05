@@ -5,10 +5,14 @@
  *
  * Unlike `tests/unit/admin/p8-screens.test.tsx` (pure render smoke tests), these click through
  * real interactions, so the catalog/media "use server" mutation wrappers are mocked — calling
- * the real ones would reach for a live DB/auth context that doesn't exist in jsdom.
+ * the real ones would reach for a live DB/auth context that doesn't exist in jsdom. Tab/trigger
+ * clicks go through `@testing-library/user-event` rather than `fireEvent.click`: Radix's
+ * `Tabs.Trigger` needs the fuller pointerdown/mousedown/focus/click sequence userEvent produces
+ * — a bare synthetic `click` event doesn't switch the active tab.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 const push = vi.fn();
 const refresh = vi.fn();
@@ -107,6 +111,15 @@ function renderEditor() {
   );
 }
 
+/** The tab trigger's accessible name includes a completeness suffix (`, complete` /
+ * `, incomplete`) via `aria-label`, so match on the visible label text instead of the exact
+ * accessible name. A real pointer sequence (not a bare `fireEvent.click`) is required for
+ * Radix's `Tabs.Trigger` to switch the active tab. */
+async function clickTab(name: RegExp) {
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("tab", { name }));
+}
+
 describe("ProductEditor — new-product slug auto-fill (overnight item 1, bug #2)", () => {
   afterEach(() => cleanup());
 
@@ -157,13 +170,9 @@ describe("ProductEditor — Offerings tab edit/delete (overnight item 2)", () =>
   });
   afterEach(() => cleanup());
 
-  function openOfferingsTab() {
-    fireEvent.click(screen.getByRole("tab", { name: "Offerings & prices" }));
-  }
-
-  it("Edit opens the dialog prefilled with the offering's current values", () => {
+  it("Edit opens the dialog prefilled with the offering's current values", async () => {
     renderEditor();
-    openOfferingsTab();
+    await clickTab(/Offerings & prices/);
 
     const row = screen.getByText("Starter").closest("tr") as HTMLElement;
     fireEvent.click(within(row).getByRole("button", { name: "Edit" }));
@@ -179,7 +188,7 @@ describe("ProductEditor — Offerings tab edit/delete (overnight item 2)", () =>
 
   it("saving an edit upserts with every full-replace field preserved, not just name/price", async () => {
     renderEditor();
-    openOfferingsTab();
+    await clickTab(/Offerings & prices/);
 
     const row = screen.getByText("Starter").closest("tr") as HTMLElement;
     fireEvent.click(within(row).getByRole("button", { name: "Edit" }));
@@ -218,9 +227,9 @@ describe("ProductEditor — Offerings tab edit/delete (overnight item 2)", () =>
     });
   });
 
-  it("Delete calls removeOffering with the offering's id", () => {
+  it("Delete calls removeOffering with the offering's id", async () => {
     renderEditor();
-    openOfferingsTab();
+    await clickTab(/Offerings & prices/);
 
     const row = screen.getByText("Team").closest("tr") as HTMLElement;
     fireEvent.click(within(row).getByRole("button", { name: "Delete" }));
@@ -235,9 +244,9 @@ describe("ProductEditor — Delivery config tab (overnight item 2)", () => {
   });
   afterEach(() => cleanup());
 
-  it("shows saas-relevant fields (App/Repo URL) and hides download-only fields", () => {
+  it("shows saas-relevant fields (App/Repo URL) and hides download-only fields", async () => {
     renderEditor();
-    fireEvent.click(screen.getByRole("tab", { name: "Delivery config" }));
+    await clickTab(/Delivery config/);
 
     // off-1 "Starter" is deliveryType "saas" and is open by default (first offering).
     expect(document.getElementById("dl-app-off-1")).toBeInTheDocument();
@@ -250,7 +259,7 @@ describe("ProductEditor — Delivery config tab (overnight item 2)", () => {
 
   it("saving delivery config round-trips the unrelated offering fields unchanged", async () => {
     renderEditor();
-    fireEvent.click(screen.getByRole("tab", { name: "Delivery config" }));
+    await clickTab(/Delivery config/);
 
     const appUrlInput = document.getElementById("dl-app-off-1") as HTMLInputElement;
     const form = appUrlInput.closest("form") as HTMLFormElement;
@@ -280,9 +289,9 @@ describe("ProductEditor — Delivery config tab (overnight item 2)", () => {
 describe("ProductEditor — media reorder (overnight item 3)", () => {
   afterEach(() => cleanup());
 
-  it("disables the edge buttons and swaps order via reorderProductMedia", () => {
+  it("disables the edge buttons and swaps order via reorderProductMedia", async () => {
     renderEditor();
-    fireEvent.click(screen.getByRole("tab", { name: "Media" }));
+    await clickTab(/^Media,/);
 
     expect(screen.getByRole("button", { name: "Move hero-cover.webp up" })).toBeDisabled();
     expect(
