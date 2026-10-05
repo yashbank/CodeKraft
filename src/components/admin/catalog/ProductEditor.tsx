@@ -63,6 +63,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
+import { slugify } from "@/modules/catalog/slugs";
 import { fromPlainText, toPlainText } from "@/modules/content/render";
 import {
   createProduct,
@@ -184,14 +185,6 @@ function flattenCategoryOptions(nodes: CategoryNode[]): Array<{ id: string; labe
     for (const ch of c.children ?? []) out.push({ id: ch.id, label: `${c.name} › ${ch.name}` });
   }
   return out;
-}
-
-function slugify(input: string): string {
-  return input
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 }
 
 /**
