@@ -23,7 +23,7 @@ import type { CustomerProfileView, UserView } from "@/modules/users/types";
  * values are ever actually in it (release 1, D-501). Filter again here so the narrower
  * `PaymentProvider` the checkout UI understands is a real invariant, not just a cast.
  */
-function toManualPaymentProviders(methods: readonly string[]): PaymentProvider[] {
+export function toManualPaymentProviders(methods: readonly string[]): PaymentProvider[] {
   return methods.filter((m): m is PaymentProvider => m === "manual_upi" || m === "manual_bank");
 }
 

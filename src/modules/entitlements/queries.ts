@@ -8,6 +8,7 @@
 import { defineAction } from "@/lib/actions/envelope";
 import {
   getEntitlementAdminSchema,
+  getMyEntitlementSchema,
   listEntitlementsAdminSchema,
   listMyEntitlementsSchema,
 } from "./types";
@@ -32,4 +33,17 @@ export const listMyEntitlementsQuery = defineAction({
   input: listMyEntitlementsSchema,
   permission: "delivery.self",
   handler: (input, ctx) => entitlementsService.listMyEntitlements(ctx, input),
+});
+
+/**
+ * API-DEL-01 `getMyEntitlement` — the single-entitlement counterpart of `listMyEntitlements`, for
+ * the entitlement detail screen (SCR-ACC-03). `entitlementsService.getMyEntitlement` was already
+ * fully implemented (scoped to `ctx.userId`, `NOT_FOUND` when not owned by the caller) but never
+ * had a `defineAction` wrapper.
+ */
+export const getMyEntitlementQuery = defineAction({
+  name: "API-DEL-01 getMyEntitlement",
+  input: getMyEntitlementSchema,
+  permission: "delivery.self",
+  handler: (input, ctx) => entitlementsService.getMyEntitlement(ctx, input),
 });
