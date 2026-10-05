@@ -72,12 +72,16 @@ import {
   reorderProductFaqsList,
   requestProductArchive,
   requestProductDelete,
+  saveOffering,
   saveProductFaq,
   saveProductTestimonial,
+  setOfferingPaymentMethods,
+  setOfferingPrices,
   submitProductForApproval,
   unpublishProduct,
   updateProduct,
 } from "@/modules/catalog/admin-mutations";
+import { attachProductMedia, detachProductMedia } from "@/modules/media/admin-mutations";
 import { ApprovalGateNotice, Banner } from "../Banner";
 import { formatDate, formatDateTime, money, percentFromBps } from "../format";
 import { RowActions } from "../RowActions";
@@ -118,6 +122,25 @@ const FLAGS: Array<{ key: ProductFlag; label: string; hint: string }> = [
 ];
 
 type LifecycleDialogKind = "unpublish" | "archive" | "delete";
+
+/** Mirrors `src/modules/offerings/types.ts` enums — kept as plain literals here (not imported)
+ * so this client component doesn't pull in that module's server-only dependency graph. */
+const PURCHASE_MODELS = ["one_time", "subscription", "custom_quote"] as const;
+const BILLING_INTERVALS = ["monthly", "quarterly", "annual"] as const;
+const DELIVERY_TYPES = ["saas", "hosted", "download", "license", "service", "custom"] as const;
+const PURCHASE_MODEL_LABEL: Record<(typeof PURCHASE_MODELS)[number], string> = {
+  one_time: "One-time",
+  subscription: "Subscription",
+  custom_quote: "Custom quote",
+};
+const DELIVERY_TYPE_LABEL: Record<(typeof DELIVERY_TYPES)[number], string> = {
+  saas: "SaaS",
+  hosted: "Hosted",
+  download: "Download",
+  license: "License",
+  service: "Service",
+  custom: "Custom",
+};
 
 export interface ProductEditorProps {
   product: ProductEditorData;
@@ -185,6 +208,19 @@ export function ProductEditor({
   const [lifecycleReason, setLifecycleReason] = React.useState("");
   const [lifecycleBusy, setLifecycleBusy] = React.useState(false);
   const [proposing, setProposing] = React.useState(false);
+  const [addOfferingOpen, setAddOfferingOpen] = React.useState(false);
+  const [savingOffering, setSavingOffering] = React.useState(false);
+  const [offeringPurchaseModel, setOfferingPurchaseModel] =
+    React.useState<(typeof PURCHASE_MODELS)[number]>("one_time");
+  const [offeringBillingInterval, setOfferingBillingInterval] =
+    React.useState<(typeof BILLING_INTERVALS)[number]>("monthly");
+  const [offeringDeliveryType, setOfferingDeliveryType] =
+    React.useState<(typeof DELIVERY_TYPES)[number]>("download");
+  const mediaFileInputRef = React.useRef<HTMLInputElement>(null);
+  const [pendingMediaFile, setPendingMediaFile] = React.useState<File | null>(null);
+  const [pendingMediaAlt, setPendingMediaAlt] = React.useState("");
+  const [uploadingMedia, setUploadingMedia] = React.useState(false);
+  const [removingMediaId, setRemovingMediaId] = React.useState<string | null>(null);
   const active = product.ownership.find((o) => o.status === "active");
   const pendingOwnership = product.ownership.find((o) => o.status === "pending");
   const [split, setSplit] = React.useState<SplitValue>({
@@ -390,6 +426,134 @@ export function ProductEditor({
     router.refresh();
   }
 
+  async function handleAddOffering(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    const name = String(data.get("offeringName") ?? "").trim();
+    const priceInput = String(data.get("offeringPrice") ?? "").trim();
+    const priceInr = Number(priceInput);
+    if (!name || !priceInput || !Number.isFinite(priceInr) || priceInr <= 0) {
+      toast.error("Name and a price above 0 are required.");
+      return;
+    }
+    const slugified = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    setSavingOffering(true);
+    const isDefault = product.offerings.length === 0;
+
+    const upsertResult = await saveOffering({
+      productId,
+      name,
+      slug: slugified || `offering-${Date.now()}`,
+      position: product.offerings.length,
+      isDefault,
+      purchaseModel: offeringPurchaseModel,
+      ...(offeringPurchaseModel === "subscription" ? { billingInterval: offeringBillingInterval } : {}),
+      deliveryType: offeringDeliveryType,
+      deliveryConfig: { provisioning: "manual", updatePolicy: "all_free" },
+      ...(offeringDeliveryType === "service"
+        ? { serviceSteps: [{ key: "delivery", title: "Delivery" }] }
+        : {}),
+      status: "active",
+    });
+    if (!upsertResult.ok) {
+      toast.error(upsertResult.error.message);
+      setSavingOffering(false);
+      return;
+    }
+    const offeringId = upsertResult.data.offering.id;
+
+    const priceResult = await setOfferingPrices({
+      offeringId,
+      prices: [{ currency: "INR", amountMinor: Math.round(priceInr * 100) }],
+    });
+    if (!priceResult.ok) {
+      toast.error(priceResult.error.message);
+      setSavingOffering(false);
+      return;
+    }
+
+    const methodsResult = await setOfferingPaymentMethods({
+      offeringId,
+      methods: ["manual_upi", "manual_bank"],
+    });
+    if (!methodsResult.ok) {
+      toast.error(methodsResult.error.message);
+      setSavingOffering(false);
+      return;
+    }
+
+    setSavingOffering(false);
+    setAddOfferingOpen(false);
+    toast.success("Offering created");
+    router.refresh();
+  }
+
+  function mediaKindFor(mime: string): "image" | "video_file" | "presentation" | "attachment" {
+    if (mime.startsWith("image/")) return "image";
+    if (mime.startsWith("video/")) return "video_file";
+    if (mime === "application/pdf") return "presentation";
+    return "attachment";
+  }
+  function uploadPurposeFor(mime: string): string {
+    if (mime.startsWith("image/")) return "product_image";
+    if (mime.startsWith("video/")) return "product_video";
+    if (mime === "application/pdf") return "product_presentation";
+    return "product_attachment";
+  }
+
+  function onMediaFileChosen(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setPendingMediaFile(file);
+    setPendingMediaAlt("");
+  }
+
+  async function confirmMediaUpload() {
+    const file = pendingMediaFile;
+    if (!file) return;
+    const kind = mediaKindFor(file.type);
+    if (kind === "image" && pendingMediaAlt.trim().length === 0) {
+      toast.error("Alt text is required for images.");
+      return;
+    }
+    setUploadingMedia(true);
+    try {
+      const { uploadMediaFile } = await import("@/lib/admin/media-upload");
+      const uploaded = await uploadMediaFile(file, uploadPurposeFor(file.type));
+      const result = await attachProductMedia({
+        productId,
+        kind,
+        mediaId: uploaded.mediaId,
+        alt: pendingMediaAlt.trim(),
+        position: product.media.length,
+      });
+      if (!result.ok) {
+        toast.error(result.error.message);
+        return;
+      }
+      toast.success("Media attached");
+      setPendingMediaFile(null);
+      setPendingMediaAlt("");
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploadingMedia(false);
+    }
+  }
+
+  async function removeMedia(productMediaId: string) {
+    setRemovingMediaId(productMediaId);
+    const result = await detachProductMedia({ productId, productMediaId });
+    setRemovingMediaId(null);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Media removed");
+    router.refresh();
+  }
 
   function addFaq() {
     setFaqs((l) => [
@@ -862,32 +1026,53 @@ export function ProductEditor({
           </TabsContent>
 
           <TabsContent value="media" className="space-y-5">
-            <Banner tone="neutral">
-              Media upload and attach/detach aren't wired in this pass — there's no "browse
-              existing media" picker in this editor yet, so new uploads would have nowhere to
-              land. This tab shows the product's current media read-only.
-            </Banner>
-            <div
-              className="rounded-lg border-2 border-dashed border-border-strong p-8 text-center opacity-60"
-              aria-disabled
-            >
+            <input
+              ref={mediaFileInputRef}
+              type="file"
+              className="sr-only"
+              accept="image/*,video/mp4,video/webm,application/pdf"
+              onChange={onMediaFileChosen}
+            />
+            <div className="rounded-lg border-2 border-dashed border-border-strong p-8 text-center">
               <UploadIcon aria-hidden className="mx-auto size-8 text-fg-subtle" />
               <p className="mt-2 text-body">
-                Drop images, screenshots, video (≤ 200 MB), presentation PDF or attachments
-              </p>
-              <p className="text-caption text-fg-muted">
-                Alt text is required for every image. Uploads use presigned PUT with progress.
+                Images, video (≤ 200 MB) or a presentation PDF. Alt text is required for images.
               </p>
               <Button
                 variant="secondary"
                 size="sm"
                 className="mt-3"
-                disabled
-                title="Media upload isn't wired in this pass"
+                onClick={() => mediaFileInputRef.current?.click()}
               >
-                Choose files
+                Choose file
               </Button>
             </div>
+            {pendingMediaFile ? (
+              <div className="flex flex-wrap items-end gap-3 rounded-md border border-border bg-surface p-3">
+                <span className="font-mono text-body-sm">{pendingMediaFile.name}</span>
+                {mediaKindFor(pendingMediaFile.type) === "image" ? (
+                  <Field id="pending-alt" label="Alt text" className="min-w-48 flex-1">
+                    <Input
+                      id="pending-alt"
+                      value={pendingMediaAlt}
+                      onChange={(e) => setPendingMediaAlt(e.target.value)}
+                      required
+                    />
+                  </Field>
+                ) : null}
+                <Button size="sm" onClick={confirmMediaUpload} loading={uploadingMedia}>
+                  Upload &amp; attach
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setPendingMediaFile(null)}
+                  disabled={uploadingMedia}
+                >
+                  Cancel
+                </Button>
+              </div>
+            ) : null}
             <div className="space-y-1">
               <div className="flex justify-between text-caption text-fg-muted">
                 <span>Storage</span>
@@ -919,6 +1104,14 @@ export function ProductEditor({
                   {m.alt ? (
                     <span className="w-64 truncate text-caption text-fg-muted">Alt: {m.alt}</span>
                   ) : null}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => removeMedia(m.id)}
+                    loading={removingMediaId === m.id}
+                  >
+                    Remove
+                  </Button>
                 </li>
               ))}
               {product.media.length === 0 ? (
@@ -928,20 +1121,115 @@ export function ProductEditor({
           </TabsContent>
 
           <TabsContent value="offerings" className="space-y-4">
-            <Banner tone="neutral">
-              Offering create/edit isn't wired in this pass (prices per currency, payment
-              methods and delivery config are a distinct sub-feature — the backend actions
-              exist in <code>modules/offerings</code> but this tab is read-only here).
-            </Banner>
             <div className="flex items-center justify-between">
               <p className="text-body-sm text-fg-muted">
                 “Offering”, never “plan” or “tier”. Prices are stored in minor units per enabled
-                currency.
+                currency. New offerings default to manual UPI/bank payment and manual
+                provisioning — edit delivery config and extra currencies later.
               </p>
-              <Button size="sm" disabled title="Not wired in this pass">
+              <Button size="sm" onClick={() => setAddOfferingOpen(true)}>
                 <PlusIcon aria-hidden /> Add offering
               </Button>
             </div>
+            <Dialog open={addOfferingOpen} onOpenChange={setAddOfferingOpen}>
+              <DialogContent>
+                <form onSubmit={handleAddOffering}>
+                  <DialogHeader>
+                    <DialogTitle>Add offering</DialogTitle>
+                    <DialogDescription>
+                      Base price is in INR. You can add more currencies and refine delivery
+                      config after creating it.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <Field id="off-name" label="Name">
+                      <Input id="off-name" name="offeringName" required maxLength={120} />
+                    </Field>
+                    <Field id="off-price" label="Price (INR)">
+                      <Input
+                        id="off-price"
+                        name="offeringPrice"
+                        type="number"
+                        min="1"
+                        step="0.01"
+                        required
+                      />
+                    </Field>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field id="off-model" label="Purchase model">
+                        <Select
+                          value={offeringPurchaseModel}
+                          onValueChange={(v) =>
+                            setOfferingPurchaseModel(v as (typeof PURCHASE_MODELS)[number])
+                          }
+                        >
+                          <SelectTrigger id="off-model">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PURCHASE_MODELS.map((m) => (
+                              <SelectItem key={m} value={m}>
+                                {PURCHASE_MODEL_LABEL[m]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                      <Field id="off-delivery" label="Delivery type">
+                        <Select
+                          value={offeringDeliveryType}
+                          onValueChange={(v) =>
+                            setOfferingDeliveryType(v as (typeof DELIVERY_TYPES)[number])
+                          }
+                        >
+                          <SelectTrigger id="off-delivery">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {DELIVERY_TYPES.map((d) => (
+                              <SelectItem key={d} value={d}>
+                                {DELIVERY_TYPE_LABEL[d]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                    </div>
+                    {offeringPurchaseModel === "subscription" ? (
+                      <Field id="off-interval" label="Billing interval">
+                        <Select
+                          value={offeringBillingInterval}
+                          onValueChange={(v) =>
+                            setOfferingBillingInterval(v as (typeof BILLING_INTERVALS)[number])
+                          }
+                        >
+                          <SelectTrigger id="off-interval">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {BILLING_INTERVALS.map((b) => (
+                              <SelectItem key={b} value={b}>
+                                {b}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                    ) : null}
+                  </div>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button type="button" variant="ghost">
+                        Cancel
+                      </Button>
+                    </DialogClose>
+                    <Button type="submit" loading={savingOffering}>
+                      Create offering
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
             <div className="rounded-lg border border-border bg-surface">
               <Table>
                 <TableHeader>

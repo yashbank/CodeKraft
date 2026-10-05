@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -53,11 +54,35 @@ export function LandingEditor({
   const [published, setPublished] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const formRef = React.useRef<HTMLFormElement>(null);
+  const posterFileInputRef = React.useRef<HTMLInputElement>(null);
   const chapter = chapters.find((c) => c.key === active) ?? chapters[0];
+  const [pendingPosterMediaId, setPendingPosterMediaId] = React.useState<string | undefined>();
+  const [pendingPosterPreview, setPendingPosterPreview] = React.useState<string | undefined>();
+  const [uploadingPoster, setUploadingPoster] = React.useState(false);
 
   React.useEffect(() => {
     setPublished(chapter?.published ?? false);
+    setPendingPosterMediaId(undefined);
+    setPendingPosterPreview(undefined);
   }, [chapter?.key, chapter?.published]);
+
+  async function handlePosterChosen(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploadingPoster(true);
+    try {
+      const { uploadMediaFile } = await import("@/lib/admin/media-upload");
+      const uploaded = await uploadMediaFile(file, "content_media");
+      setPendingPosterMediaId(uploaded.mediaId);
+      setPendingPosterPreview(uploaded.url ?? URL.createObjectURL(file));
+      toast.success("Image uploaded — save the chapter to apply it");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploadingPoster(false);
+    }
+  }
 
   if (!chapter) return null;
   const rail = chapters.map((c) => ({
@@ -83,7 +108,7 @@ export function LandingEditor({
       title: String(data.get("title") ?? "").trim(),
       subtitle: String(data.get("subtitle") ?? "").trim() || undefined,
       bodyJson: fromPlainText(String(data.get("body") ?? "")),
-      media: {},
+      media: { posterMediaId: pendingPosterMediaId ?? chapter.posterMediaId },
       cta: {
         primary: {
           label: String(data.get("cta1") ?? "").trim() || "Start a project",
@@ -139,6 +164,38 @@ export function LandingEditor({
             position {chapters.indexOf(chapter) + 1}
           </span>
         </h2>
+        <Field id="ch-poster" label="Hero image" optional hint="Image shown for this chapter.">
+          <input
+            ref={posterFileInputRef}
+            type="file"
+            className="sr-only"
+            accept="image/*"
+            onChange={handlePosterChosen}
+          />
+          <div className="flex items-center gap-3">
+            {pendingPosterPreview ?? chapter.poster ? (
+              // eslint-disable-next-line @next/next/no-img-element -- admin preview of a user-uploaded R2 URL, not a next/image-optimizable static asset
+              <img
+                src={pendingPosterPreview ?? chapter.poster}
+                alt=""
+                className="h-16 w-28 rounded-md border border-border object-cover"
+              />
+            ) : (
+              <div className="grid h-16 w-28 place-items-center rounded-md border border-dashed border-border-strong text-caption text-fg-subtle">
+                No image
+              </div>
+            )}
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              loading={uploadingPoster}
+              onClick={() => posterFileInputRef.current?.click()}
+            >
+              {chapter.poster || pendingPosterPreview ? "Replace image" : "Upload image"}
+            </Button>
+          </div>
+        </Field>
         <Field id="ch-eyebrow" label="Eyebrow" optional hint="Small label above the title. 60 chars.">
           <Input id="ch-eyebrow" name="eyebrow" maxLength={60} defaultValue={chapter.eyebrow} />
         </Field>

@@ -5,7 +5,7 @@ import * as React from "react";
 
 import { AdminShell, type AdminRoute } from "./AdminShell";
 import type { AdminNotification, AdminUserRef } from "./types";
-import { NOTIFICATIONS as initialNotifications, PRIYA } from "@/app/dev/screens/_fixtures/admin";
+import { PRIYA } from "@/app/dev/screens/_fixtures/admin";
 
 const ADMIN_ROUTE_MAP: Record<string, string> = {
   "/dashboard": "/admin/dashboard",
@@ -75,11 +75,17 @@ const ROUTE_TITLES: Record<string, string> = {
 
 interface AdminShellWrapperProps {
   user?: AdminUserRef;
+  pendingApprovals?: number;
+  notifications?: AdminNotification[];
+  environment?: "development" | "staging" | "production";
   children: React.ReactNode;
 }
 
 export function AdminShellWrapper({
   user = PRIYA,
+  pendingApprovals = 0,
+  notifications = [],
+  environment = "development",
   children,
 }: AdminShellWrapperProps) {
   const pathname = usePathname();
@@ -100,9 +106,9 @@ export function AdminShellWrapper({
     <AdminShell
       active={active}
       user={user}
-      environment="development"
-      pendingApprovals={3}
-      notifications={initialNotifications}
+      environment={environment}
+      pendingApprovals={pendingApprovals}
+      notifications={notifications}
       now={new Date().toISOString()}
       title={title}
       routes={ADMIN_ROUTE_MAP}

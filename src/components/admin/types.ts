@@ -745,6 +745,7 @@ export interface LandingChapter {
   body: string;
   published: boolean;
   poster?: string;
+  posterMediaId?: string;
   ctaPrimary?: { label: string; target: string };
   ctaSecondary?: { label: string; target: string };
 }

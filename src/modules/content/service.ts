@@ -1447,6 +1447,7 @@ export class DefaultContentService implements ContentService {
       body: string;
       published: boolean;
       poster?: string;
+      posterMediaId?: string;
       ctaPrimary?: { label: string; target: string };
       ctaSecondary?: { label: string; target: string };
     }> = [];
@@ -1468,6 +1469,7 @@ export class DefaultContentService implements ContentService {
         body: toPlainText(c.bodyJson as unknown as RichTextDoc),
         published: c.published,
         poster,
+        posterMediaId: c.media?.posterMediaId ?? undefined,
         ctaPrimary: c.cta?.primary ? { label: c.cta.primary.label, target: c.cta.primary.href } : undefined,
         ctaSecondary: c.cta?.secondary ? { label: c.cta.secondary.label, target: c.cta.secondary.href } : undefined,
       });

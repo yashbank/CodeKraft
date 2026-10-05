@@ -112,3 +112,42 @@ export async function proposeOwnershipSplit(raw: unknown) {
     return fail(err);
   }
 }
+
+/**
+ * Offerings live in `src/modules/offerings` (a sibling module, not `catalog`), same reason
+ * and pattern as `proposeOwnershipSplit` above — the product editor's Offerings tab calls it
+ * through this file so the client component only imports from one place.
+ */
+async function withOfferingsCtx<T>(
+  pick: (actions: typeof import("@/modules/offerings/actions")) => (
+    raw: unknown,
+    ctx: Context,
+  ) => Promise<ActionResult<T>>,
+  raw: unknown,
+): Promise<ActionResult<T>> {
+  try {
+    const [{ getAdminRequestContext }, actions] = await Promise.all([
+      import("@/lib/authz/admin-request-context"),
+      import("@/modules/offerings/actions"),
+    ]);
+    const ctx = await getAdminRequestContext();
+    const result = await pick(actions)(raw, ctx);
+    if (result.ok) revalidatePath("/", "layout");
+    return result;
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+export async function saveOffering(raw: unknown) {
+  return withOfferingsCtx((a) => a.upsertOfferingAction, raw);
+}
+export async function removeOffering(raw: unknown) {
+  return withOfferingsCtx((a) => a.deleteOfferingAction, raw);
+}
+export async function setOfferingPrices(raw: unknown) {
+  return withOfferingsCtx((a) => a.setOfferingPricesAction, raw);
+}
+export async function setOfferingPaymentMethods(raw: unknown) {
+  return withOfferingsCtx((a) => a.setOfferingPaymentMethodsAction, raw);
+}
