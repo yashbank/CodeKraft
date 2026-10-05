@@ -67,6 +67,7 @@ import { fromPlainText, toPlainText } from "@/modules/content/render";
 import {
   createProduct,
   proposeOwnershipSplit,
+  removeOffering,
   removeProductFaq,
   removeProductTestimonial,
   reorderProductFaqsList,
@@ -81,12 +82,23 @@ import {
   unpublishProduct,
   updateProduct,
 } from "@/modules/catalog/admin-mutations";
-import { attachProductMedia, detachProductMedia } from "@/modules/media/admin-mutations";
+import {
+  attachProductMedia,
+  detachProductMedia,
+  reorderProductMedia,
+} from "@/modules/media/admin-mutations";
 import { ApprovalGateNotice, Banner } from "../Banner";
 import { formatDate, formatDateTime, money, percentFromBps } from "../format";
 import { RowActions } from "../RowActions";
 import { Field, RichTextField } from "../RichTextField";
-import type { CategoryNode, FaqItem, ProductEditorData, ProductFlag, TestimonialItem } from "../types";
+import type {
+  CategoryNode,
+  FaqItem,
+  OfferingRow,
+  ProductEditorData,
+  ProductFlag,
+  TestimonialItem,
+} from "../types";
 import { SplitEditor, splitSummary, type SplitValue } from "./SplitEditor";
 
 const TABS = [
@@ -141,6 +153,15 @@ const DELIVERY_TYPE_LABEL: Record<(typeof DELIVERY_TYPES)[number], string> = {
   service: "Service",
   custom: "Custom",
 };
+const PROVISIONING_MODES = ["manual", "automated"] as const;
+const UPDATE_POLICIES = ["all_free", "during_access", "major_paid"] as const;
+const UPDATE_POLICY_LABEL: Record<(typeof UPDATE_POLICIES)[number], string> = {
+  all_free: "All updates free",
+  during_access: "Updates during access window",
+  major_paid: "Major versions paid",
+};
+/** Delivery types whose config commonly uses a repo/app URL + "customer hosted" toggle. */
+const HOSTED_DELIVERY_TYPES = new Set<(typeof DELIVERY_TYPES)[number]>(["saas", "hosted"]);
 
 export interface ProductEditorProps {
   product: ProductEditorData;
@@ -165,14 +186,22 @@ function flattenCategoryOptions(nodes: CategoryNode[]): Array<{ id: string; labe
   return out;
 }
 
+function slugify(input: string): string {
+  return input
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 /**
  * SCR-ADM-04 — the product editor: sticky header with autosave status and approval chip, 220 px
  * vertical tab rail with completeness ticks, and the twelve tab panels.
  *
  * Basics / Content / SEO each save independently (their own form + `updateProduct` patch);
- * FAQs, testimonials and the ownership split each have their own real mutation. Offerings,
- * delivery config, media upload and the blog body/SEO fields are display-only in this pass —
- * see the phase report for exactly what's missing and why.
+ * FAQs, testimonials, the ownership split, offerings (create/edit/delete), per-offering
+ * delivery config and media upload/reorder each have their own real mutation. The blog body and
+ * its own SEO fields are still display-only — see the phase report for why.
  */
 export function ProductEditor({
   product,
@@ -191,6 +220,12 @@ export function ProductEditor({
   const [expectedUpdatedAt, setExpectedUpdatedAt] = React.useState(product.updatedAt);
   const [flags, setFlags] = React.useState<ReadonlySet<ProductFlag>>(new Set(product.flags));
   const [slug, setSlug] = React.useState(product.slug);
+  // Only matters for `isNew`: the Slug field's hint promises auto-generation from the Name
+  // field, but nothing wired that up — for a new product `slug` starts empty and stays empty
+  // unless the admin notices and types one manually, which silently fails `saveBasics`'s
+  // required-fields guard. Tracks whether the admin has typed into the Slug field directly, so
+  // once they have, further Name edits stop overwriting their choice.
+  const [slugEdited, setSlugEdited] = React.useState(false);
   const [tags, setTags] = React.useState<string[]>(product.tags);
   const [newTag, setNewTag] = React.useState("");
   const [techStack, setTechStack] = React.useState<string[]>(product.techStack);
@@ -210,6 +245,10 @@ export function ProductEditor({
   const [proposing, setProposing] = React.useState(false);
   const [addOfferingOpen, setAddOfferingOpen] = React.useState(false);
   const [savingOffering, setSavingOffering] = React.useState(false);
+  // `null` = the dialog is creating a new offering; otherwise it's editing this one (prefilled).
+  const [editingOffering, setEditingOffering] = React.useState<OfferingRow | null>(null);
+  const [removingOfferingId, setRemovingOfferingId] = React.useState<string | null>(null);
+  const [savingDeliveryFor, setSavingDeliveryFor] = React.useState<string | null>(null);
   const [offeringPurchaseModel, setOfferingPurchaseModel] =
     React.useState<(typeof PURCHASE_MODELS)[number]>("one_time");
   const [offeringBillingInterval, setOfferingBillingInterval] =
@@ -221,6 +260,7 @@ export function ProductEditor({
   const [pendingMediaAlt, setPendingMediaAlt] = React.useState("");
   const [uploadingMedia, setUploadingMedia] = React.useState(false);
   const [removingMediaId, setRemovingMediaId] = React.useState<string | null>(null);
+  const [reorderingMedia, setReorderingMedia] = React.useState(false);
   const active = product.ownership.find((o) => o.status === "active");
   const pendingOwnership = product.ownership.find((o) => o.status === "pending");
   const [split, setSplit] = React.useState<SplitValue>({
@@ -426,7 +466,22 @@ export function ProductEditor({
     router.refresh();
   }
 
-  async function handleAddOffering(e: React.FormEvent<HTMLFormElement>) {
+  /** Opens the offering dialog — `null` for "Add offering", an existing row to edit it prefilled. */
+  function openOfferingDialog(offering: OfferingRow | null) {
+    setEditingOffering(offering);
+    setOfferingPurchaseModel(offering?.purchaseModel ?? "one_time");
+    setOfferingBillingInterval(offering?.billingInterval ?? "monthly");
+    setOfferingDeliveryType(offering?.deliveryType ?? "download");
+    setAddOfferingOpen(true);
+  }
+
+  /**
+   * Creates a new offering, or saves an edit to `editingOffering`. `upsertOffering` is a full
+   * replace (see `offeringsService.upsertOffering`), so every field the dialog doesn't expose
+   * (slug, position, isDefault, trialDays, licenseType, deliveryConfig, serviceSteps, status)
+   * has to be carried over from the existing row on an edit, or it gets silently cleared.
+   */
+  async function handleSaveOffering(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     const name = String(data.get("offeringName") ?? "").trim();
@@ -436,24 +491,51 @@ export function ProductEditor({
       toast.error("Name and a price above 0 are required.");
       return;
     }
-    const slugified = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    const existing = editingOffering;
     setSavingOffering(true);
-    const isDefault = product.offerings.length === 0;
+    const isDefault = existing ? existing.isDefault : product.offerings.length === 0;
+    const slugValue = existing ? existing.slug : slugify(name) || `offering-${Date.now()}`;
+    const deliveryConfigPayload: Record<string, unknown> = existing
+      ? {
+          provisioning: existing.deliveryConfig.provisioning,
+          updatePolicy: existing.deliveryConfig.updatePolicy,
+          ...(existing.deliveryConfig.downloadCap !== undefined
+            ? { downloadCap: existing.deliveryConfig.downloadCap }
+            : {}),
+          ...(existing.deliveryConfig.accessMonths !== undefined &&
+          existing.deliveryConfig.accessMonths !== null
+            ? { accessMonths: existing.deliveryConfig.accessMonths }
+            : {}),
+          ...(existing.deliveryConfig.instructionsText
+            ? { instructionsJson: fromPlainText(existing.deliveryConfig.instructionsText) }
+            : {}),
+          ...(existing.deliveryConfig.repoUrl ? { repoUrl: existing.deliveryConfig.repoUrl } : {}),
+          ...(existing.deliveryConfig.appUrl ? { appUrl: existing.deliveryConfig.appUrl } : {}),
+          ...(existing.deliveryConfig.customerHosted ? { customerHosted: true } : {}),
+        }
+      : { provisioning: "manual", updatePolicy: "all_free" };
+    const serviceSteps =
+      offeringDeliveryType === "service"
+        ? existing?.serviceSteps && existing.serviceSteps.length > 0
+          ? existing.serviceSteps
+          : [{ key: "delivery", title: "Delivery" }]
+        : existing?.serviceSteps;
 
     const upsertResult = await saveOffering({
       productId,
+      ...(existing ? { offeringId: existing.id } : {}),
       name,
-      slug: slugified || `offering-${Date.now()}`,
-      position: product.offerings.length,
+      slug: slugValue,
+      position: existing?.position ?? product.offerings.length,
       isDefault,
       purchaseModel: offeringPurchaseModel,
       ...(offeringPurchaseModel === "subscription" ? { billingInterval: offeringBillingInterval } : {}),
+      ...(existing?.trialDays !== undefined ? { trialDays: existing.trialDays } : {}),
+      ...(existing?.licenseType ? { licenseType: existing.licenseType } : {}),
       deliveryType: offeringDeliveryType,
-      deliveryConfig: { provisioning: "manual", updatePolicy: "all_free" },
-      ...(offeringDeliveryType === "service"
-        ? { serviceSteps: [{ key: "delivery", title: "Delivery" }] }
-        : {}),
-      status: "active",
+      deliveryConfig: deliveryConfigPayload,
+      ...(serviceSteps && serviceSteps.length > 0 ? { serviceSteps } : {}),
+      status: existing?.status ?? "active",
     });
     if (!upsertResult.ok) {
       toast.error(upsertResult.error.message);
@@ -462,9 +544,12 @@ export function ProductEditor({
     }
     const offeringId = upsertResult.data.offering.id;
 
+    // `setOfferingPrices` replaces the whole price set — keep any other currency rows so editing
+    // the INR base price doesn't silently delete them.
+    const otherPrices = (existing?.prices ?? []).filter((p) => p.currency !== "INR");
     const priceResult = await setOfferingPrices({
       offeringId,
-      prices: [{ currency: "INR", amountMinor: Math.round(priceInr * 100) }],
+      prices: [{ currency: "INR", amountMinor: Math.round(priceInr * 100) }, ...otherPrices],
     });
     if (!priceResult.ok) {
       toast.error(priceResult.error.message);
@@ -474,7 +559,10 @@ export function ProductEditor({
 
     const methodsResult = await setOfferingPaymentMethods({
       offeringId,
-      methods: ["manual_upi", "manual_bank"],
+      methods:
+        existing?.paymentMethodValues && existing.paymentMethodValues.length > 0
+          ? existing.paymentMethodValues
+          : ["manual_upi", "manual_bank"],
     });
     if (!methodsResult.ok) {
       toast.error(methodsResult.error.message);
@@ -484,7 +572,75 @@ export function ProductEditor({
 
     setSavingOffering(false);
     setAddOfferingOpen(false);
-    toast.success("Offering created");
+    setEditingOffering(null);
+    toast.success(existing ? "Offering saved" : "Offering created");
+    router.refresh();
+  }
+
+  async function deleteOfferingRow(offering: OfferingRow) {
+    setRemovingOfferingId(offering.id);
+    const result = await removeOffering({ offeringId: offering.id });
+    setRemovingOfferingId(null);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(result.data.result === "deleted" ? "Offering deleted" : "Offering deactivated (has orders)");
+    router.refresh();
+  }
+
+  /**
+   * Saves just the delivery-config fields for one offering, carrying every other field on the
+   * row through unchanged (same full-replace caveat as `handleSaveOffering`).
+   */
+  async function saveDeliveryConfig(offering: OfferingRow, e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    const provisioning = String(data.get("provisioning") ?? "manual") as "manual" | "automated";
+    const updatePolicy = String(data.get("updatePolicy") ?? "all_free") as
+      | "all_free"
+      | "during_access"
+      | "major_paid";
+    const downloadCapRaw = String(data.get("downloadCap") ?? "").trim();
+    const accessMonthsRaw = String(data.get("accessMonths") ?? "").trim();
+    const instructionsRaw = String(data.get("instructions") ?? "").trim();
+    const repoUrl = String(data.get("repoUrl") ?? "").trim();
+    const appUrl = String(data.get("appUrl") ?? "").trim();
+    const customerHosted = data.get("customerHosted") === "on";
+
+    const deliveryConfig: Record<string, unknown> = { provisioning, updatePolicy };
+    if (downloadCapRaw) deliveryConfig.downloadCap = Number(downloadCapRaw);
+    if (accessMonthsRaw) deliveryConfig.accessMonths = Number(accessMonthsRaw);
+    if (instructionsRaw) deliveryConfig.instructionsJson = fromPlainText(instructionsRaw);
+    if (repoUrl) deliveryConfig.repoUrl = repoUrl;
+    if (appUrl) deliveryConfig.appUrl = appUrl;
+    if (customerHosted) deliveryConfig.customerHosted = true;
+
+    setSavingDeliveryFor(offering.id);
+    const result = await saveOffering({
+      productId,
+      offeringId: offering.id,
+      name: offering.name,
+      slug: offering.slug,
+      position: offering.position,
+      isDefault: offering.isDefault,
+      purchaseModel: offering.purchaseModel,
+      ...(offering.billingInterval ? { billingInterval: offering.billingInterval } : {}),
+      ...(offering.trialDays !== undefined ? { trialDays: offering.trialDays } : {}),
+      ...(offering.licenseType ? { licenseType: offering.licenseType } : {}),
+      deliveryType: offering.deliveryType,
+      deliveryConfig,
+      ...(offering.serviceSteps && offering.serviceSteps.length > 0
+        ? { serviceSteps: offering.serviceSteps }
+        : {}),
+      status: offering.status,
+    });
+    setSavingDeliveryFor(null);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Delivery config saved");
     router.refresh();
   }
 
@@ -552,6 +708,30 @@ export function ProductEditor({
       return;
     }
     toast.success("Media removed");
+    router.refresh();
+  }
+
+  /** Swaps `index` with `index + dir` and persists the full new order (`reorderProductMedia`
+   *  takes the complete ordered id list, not a single move). */
+  async function moveMedia(index: number, dir: -1 | 1) {
+    const target = index + dir;
+    if (target < 0 || target >= product.media.length) return;
+    const next = [...product.media];
+    const tmp = next[index];
+    const swap = next[target];
+    if (!tmp || !swap) return;
+    next[index] = swap;
+    next[target] = tmp;
+    setReorderingMedia(true);
+    const result = await reorderProductMedia({
+      productId,
+      productMediaIds: next.map((m) => m.id),
+    });
+    setReorderingMedia(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
     router.refresh();
   }
 
@@ -812,7 +992,20 @@ export function ProductEditor({
             <form onSubmit={saveBasics} className="space-y-5">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field id="p-name" label="Name" required>
-                  <Input id="p-name" name="name" defaultValue={product.name} required aria-required />
+                  <Input
+                    id="p-name"
+                    name="name"
+                    defaultValue={product.name}
+                    required
+                    aria-required
+                    onChange={
+                      isNew
+                        ? (e) => {
+                            if (!slugEdited) setSlug(slugify(e.target.value));
+                          }
+                        : undefined
+                    }
+                  />
                 </Field>
                 <Field
                   id="p-slug"
@@ -828,7 +1021,10 @@ export function ProductEditor({
                     id="p-slug"
                     name="slug"
                     value={slug}
-                    onChange={(e) => setSlug(e.target.value)}
+                    onChange={(e) => {
+                      setSlug(e.target.value);
+                      setSlugEdited(true);
+                    }}
                     className="font-mono"
                   />
                 </Field>
@@ -1086,11 +1282,15 @@ export function ProductEditor({
               />
             </div>
             <ul className="space-y-2">
-              {product.media.map((m) => (
+              {product.media.map((m, i) => (
                 <li
                   key={m.id}
                   className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-surface p-3"
                 >
+                  <GripVerticalIcon
+                    aria-hidden
+                    className="size-4 shrink-0 text-fg-subtle"
+                  />
                   <span
                     aria-hidden
                     className="grid size-12 place-items-center rounded-sm bg-elevated text-caption text-fg-subtle"
@@ -1104,6 +1304,26 @@ export function ProductEditor({
                   {m.alt ? (
                     <span className="w-64 truncate text-caption text-fg-muted">Alt: {m.alt}</span>
                   ) : null}
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="icon-sm"
+                      variant="ghost"
+                      aria-label={`Move ${m.fileName} up`}
+                      disabled={i === 0 || reorderingMedia}
+                      onClick={() => moveMedia(i, -1)}
+                    >
+                      ▲
+                    </Button>
+                    <Button
+                      size="icon-sm"
+                      variant="ghost"
+                      aria-label={`Move ${m.fileName} down`}
+                      disabled={i === product.media.length - 1 || reorderingMedia}
+                      onClick={() => moveMedia(i, 1)}
+                    >
+                      ▼
+                    </Button>
+                  </div>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -1127,23 +1347,35 @@ export function ProductEditor({
                 currency. New offerings default to manual UPI/bank payment and manual
                 provisioning — edit delivery config and extra currencies later.
               </p>
-              <Button size="sm" onClick={() => setAddOfferingOpen(true)}>
+              <Button size="sm" onClick={() => openOfferingDialog(null)}>
                 <PlusIcon aria-hidden /> Add offering
               </Button>
             </div>
-            <Dialog open={addOfferingOpen} onOpenChange={setAddOfferingOpen}>
+            <Dialog
+              open={addOfferingOpen}
+              onOpenChange={(o) => {
+                setAddOfferingOpen(o);
+                if (!o) setEditingOffering(null);
+              }}
+            >
               <DialogContent>
-                <form onSubmit={handleAddOffering}>
+                <form onSubmit={handleSaveOffering}>
                   <DialogHeader>
-                    <DialogTitle>Add offering</DialogTitle>
+                    <DialogTitle>{editingOffering ? `Edit ${editingOffering.name}` : "Add offering"}</DialogTitle>
                     <DialogDescription>
-                      Base price is in INR. You can add more currencies and refine delivery
-                      config after creating it.
+                      Base price is in INR — saving replaces only the INR row (other currencies,
+                      if any, are kept). Refine delivery config from the Delivery config tab.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <Field id="off-name" label="Name">
-                      <Input id="off-name" name="offeringName" required maxLength={120} />
+                      <Input
+                        id="off-name"
+                        name="offeringName"
+                        defaultValue={editingOffering?.name ?? ""}
+                        required
+                        maxLength={120}
+                      />
                     </Field>
                     <Field id="off-price" label="Price (INR)">
                       <Input
@@ -1152,6 +1384,9 @@ export function ProductEditor({
                         type="number"
                         min="1"
                         step="0.01"
+                        defaultValue={
+                          editingOffering ? editingOffering.basePrice.amountMinor / 100 : undefined
+                        }
                         required
                       />
                     </Field>
@@ -1224,7 +1459,7 @@ export function ProductEditor({
                       </Button>
                     </DialogClose>
                     <Button type="submit" loading={savingOffering}>
-                      Create offering
+                      {editingOffering ? "Save offering" : "Create offering"}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -1241,6 +1476,7 @@ export function ProductEditor({
                     <TableHead>Methods</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Default</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1280,6 +1516,22 @@ export function ProductEditor({
                         <StatusBadge kind="offerings.status" value={o.status} size="sm" />
                       </TableCell>
                       <TableCell>{o.isDefault ? "★ Default" : ""}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button size="sm" variant="ghost" onClick={() => openOfferingDialog(o)}>
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-danger"
+                            onClick={() => deleteOfferingRow(o)}
+                            loading={removingOfferingId === o.id}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -1292,7 +1544,8 @@ export function ProductEditor({
 
           <TabsContent value="delivery" className="space-y-4">
             <Banner tone="neutral">
-              Delivery config isn't wired in this pass — shown read-only per offering.
+              Delivery type and purchase model are set from the Offerings tab — this tab only
+              covers how access, updates and instructions work after purchase.
             </Banner>
             <Accordion type="multiple" defaultValue={[product.offerings[0]?.id ?? ""]}>
               {product.offerings.map((o) => (
@@ -1307,13 +1560,118 @@ export function ProductEditor({
                       />
                     </span>
                   </AccordionTrigger>
-                  <AccordionContent className="grid gap-4 sm:grid-cols-2">
-                    <Field id={`dl-type-${o.id}`} label="Delivery type">
-                      <Input id={`dl-type-${o.id}`} readOnly value={o.deliveryType} />
-                    </Field>
-                    <Field id={`dl-model-${o.id}`} label="Purchase model">
-                      <Input id={`dl-model-${o.id}`} readOnly value={o.purchaseModel} />
-                    </Field>
+                  <AccordionContent>
+                    <form
+                      className="space-y-4"
+                      onSubmit={(e) => void saveDeliveryConfig(o, e)}
+                    >
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <Field id={`dl-type-${o.id}`} label="Delivery type">
+                          <Input id={`dl-type-${o.id}`} readOnly value={DELIVERY_TYPE_LABEL[o.deliveryType]} />
+                        </Field>
+                        <Field id={`dl-model-${o.id}`} label="Purchase model">
+                          <Input id={`dl-model-${o.id}`} readOnly value={PURCHASE_MODEL_LABEL[o.purchaseModel]} />
+                        </Field>
+                        <Field id={`dl-prov-${o.id}`} label="Provisioning">
+                          <Select name="provisioning" defaultValue={o.deliveryConfig.provisioning}>
+                            <SelectTrigger id={`dl-prov-${o.id}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {PROVISIONING_MODES.map((p) => (
+                                <SelectItem key={p} value={p}>
+                                  {p === "manual" ? "Manual" : "Automated"}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </Field>
+                        <Field id={`dl-policy-${o.id}`} label="Update policy">
+                          <Select name="updatePolicy" defaultValue={o.deliveryConfig.updatePolicy}>
+                            <SelectTrigger id={`dl-policy-${o.id}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {UPDATE_POLICIES.map((p) => (
+                                <SelectItem key={p} value={p}>
+                                  {UPDATE_POLICY_LABEL[p]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </Field>
+                        <Field
+                          id={`dl-access-${o.id}`}
+                          label="Access months"
+                          optional
+                          hint="Leave blank for lifetime access."
+                        >
+                          <Input
+                            id={`dl-access-${o.id}`}
+                            name="accessMonths"
+                            type="number"
+                            min="1"
+                            max="600"
+                            defaultValue={o.deliveryConfig.accessMonths ?? ""}
+                          />
+                        </Field>
+                        {o.deliveryType === "download" ? (
+                          <Field id={`dl-cap-${o.id}`} label="Download cap" optional hint="Max downloads per entitlement.">
+                            <Input
+                              id={`dl-cap-${o.id}`}
+                              name="downloadCap"
+                              type="number"
+                              min="1"
+                              max="1000"
+                              defaultValue={o.deliveryConfig.downloadCap ?? ""}
+                            />
+                          </Field>
+                        ) : null}
+                        {HOSTED_DELIVERY_TYPES.has(o.deliveryType) ? (
+                          <>
+                            <Field id={`dl-repo-${o.id}`} label="Repo URL" optional>
+                              <Input
+                                id={`dl-repo-${o.id}`}
+                                name="repoUrl"
+                                type="url"
+                                defaultValue={o.deliveryConfig.repoUrl ?? ""}
+                              />
+                            </Field>
+                            <Field id={`dl-app-${o.id}`} label="App URL" optional>
+                              <Input
+                                id={`dl-app-${o.id}`}
+                                name="appUrl"
+                                type="url"
+                                defaultValue={o.deliveryConfig.appUrl ?? ""}
+                              />
+                            </Field>
+                          </>
+                        ) : null}
+                      </div>
+                      {o.deliveryType === "hosted" ? (
+                        <div className="flex items-center gap-3">
+                          <Switch
+                            id={`dl-customer-hosted-${o.id}`}
+                            name="customerHosted"
+                            defaultChecked={o.deliveryConfig.customerHosted ?? false}
+                          />
+                          <Label htmlFor={`dl-customer-hosted-${o.id}`}>
+                            Customer supplies the hosting target
+                          </Label>
+                        </div>
+                      ) : null}
+                      <Field id={`dl-instructions-${o.id}`} label="Instructions" optional hint="Shown to the customer after purchase.">
+                        <Textarea
+                          id={`dl-instructions-${o.id}`}
+                          name="instructions"
+                          rows={3}
+                          defaultValue={o.deliveryConfig.instructionsText ?? ""}
+                        />
+                      </Field>
+                      <Button type="submit" size="sm" loading={savingDeliveryFor === o.id}>
+                        Save delivery config
+                      </Button>
+                    </form>
                   </AccordionContent>
                 </AccordionItem>
               ))}

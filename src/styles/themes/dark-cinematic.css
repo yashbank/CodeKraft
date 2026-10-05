@@ -186,10 +186,13 @@
   --ck-z-raised: 10;
   --ck-z-sticky: 100;
   --ck-z-header: 200;
-  --ck-z-dropdown: 300;
   --ck-z-drawer: 400;
   --ck-z-overlay: 500;
   --ck-z-modal: 600;
+  /* Above --ck-z-modal: Select/DropdownMenu/Popover content portals to <body> as a sibling of
+     Dialog/Sheet, so a lower z-index here renders it behind the modal's overlay — clicks land
+     on the overlay instead of the dropdown item. Needs to beat 600, stay under toast/tooltip. */
+  --ck-z-dropdown: 650;
   --ck-z-toast: 700;
   --ck-z-tooltip: 800;
   --ck-z-skip: 900;

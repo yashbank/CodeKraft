@@ -130,15 +130,36 @@ export function mapProductGraphToEditorData(
 
   const offerings: OfferingRow[] = graph.offerings.map((o) => ({
     id: o.id,
+    slug: o.slug,
+    position: o.position,
     name: o.name,
     purchaseModel: o.purchaseModel,
     billingInterval: o.billingInterval ?? undefined,
+    trialDays: o.trialDays ?? undefined,
+    licenseType: o.licenseType ?? undefined,
     deliveryType: o.deliveryType,
+    deliveryConfig: {
+      provisioning: o.deliveryConfig.provisioning ?? "manual",
+      downloadCap: o.deliveryConfig.downloadCap,
+      accessMonths: o.deliveryConfig.accessMonths,
+      updatePolicy: o.deliveryConfig.updatePolicy ?? "all_free",
+      instructionsText: toPlainText(asRichText(o.deliveryConfig.instructionsJson ?? null)),
+      repoUrl: o.deliveryConfig.repoUrl,
+      appUrl: o.deliveryConfig.appUrl,
+      customerHosted: o.deliveryConfig.customerHosted,
+    },
+    serviceSteps: o.serviceSteps ?? undefined,
     basePrice: o.price?.base ?? { amountMinor: 0, currency: "INR" },
     compareAt: o.price?.compareAt ?? undefined,
+    prices: o.prices.map((p) => ({
+      currency: p.currency,
+      amountMinor: p.amountMinor,
+      compareAtMinor: p.compareAtMinor ?? undefined,
+    })),
     methods: o.paymentMethods
       .map((m) => (m === "manual_upi" ? "upi" : m === "manual_bank" ? "bank" : null))
       .filter((m): m is "upi" | "bank" => m !== null),
+    paymentMethodValues: o.paymentMethods,
     status: o.status,
     isDefault: o.isDefault,
   }));

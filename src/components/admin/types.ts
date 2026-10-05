@@ -71,15 +71,58 @@ export interface CategoryNode {
   children?: CategoryNode[];
 }
 
+/** `offerings.delivery_config` (docs/05 §3) — keys used depend on `deliveryType`. Mirrors
+ * `DeliveryConfig` in `drizzle/schema/offerings.ts` / `deliveryConfigSchema` in
+ * `modules/offerings/contracts.ts`, kept as a local plain shape (not imported) for the same
+ * reason the purchase-model/delivery-type literals above are: this client component shouldn't
+ * pull in that module's server-only dependency graph. `instructionsText` is already converted
+ * to plain text server-side (see `mapProductGraphToEditorData`), same pattern as FAQ answers. */
+export interface OfferingDeliveryConfig {
+  provisioning: "manual" | "automated";
+  downloadCap?: number;
+  accessMonths?: number | null;
+  updatePolicy: "all_free" | "during_access" | "major_paid";
+  instructionsText?: string;
+  repoUrl?: string;
+  appUrl?: string;
+  customerHosted?: boolean;
+}
+
+export interface OfferingServiceStep {
+  key: string;
+  title: string;
+  description?: string;
+}
+
+export interface OfferingPriceRow {
+  currency: string;
+  amountMinor: number;
+  compareAtMinor?: number;
+}
+
 export interface OfferingRow {
   id: string;
+  /** Needed for an edit/delivery-config save — `upsertOffering` is a full replace, not a patch,
+   * so every field below has to round-trip through the editor even when only one changes. */
+  slug: string;
+  position: number;
   name: string;
   purchaseModel: StatusValue<"offerings.purchase_model">;
   billingInterval?: StatusValue<"offerings.billing_interval">;
+  trialDays?: number;
+  licenseType?: string;
   deliveryType: StatusValue<"offerings.delivery_type">;
+  deliveryConfig: OfferingDeliveryConfig;
+  serviceSteps?: OfferingServiceStep[];
   basePrice: MoneyLike;
   compareAt?: MoneyLike;
+  /** All stored currency rows (base + any extra) — needed so editing the base price doesn't
+   * silently drop other currencies (`setOfferingPrices` replaces the whole set). */
+  prices: OfferingPriceRow[];
   methods: Array<"upi" | "bank">;
+  /** Raw payment-method values for `setOfferingPaymentMethods` — `methods` above is a
+   * display-only subset (manual methods only). */
+  paymentMethodValues: Array<"manual_upi" | "manual_bank" | "razorpay" | "stripe" | "paypal">;
   status: StatusValue<"offerings.status">;
   isDefault: boolean;
 }
