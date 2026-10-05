@@ -23,7 +23,12 @@ function toCategoryTree(nodes: CatalogCategoryNode[]): CategoryNode[] {
   }));
 }
 
-export default async function ProductsPage() {
+interface PageProps {
+  searchParams: Promise<{ q?: string }>;
+}
+
+export default async function ProductsPage({ searchParams }: PageProps) {
+  const { q } = await searchParams;
   const ctx = anonymousContext();
   const [productsResult, categoriesResult] = await Promise.all([
     listProductsQuery({ limit: 100, displayCurrency: "INR" }, ctx),
@@ -33,5 +38,12 @@ export default async function ProductsPage() {
   const products = productsResult.ok ? productsResult.data.map(toProductSummary) : [];
   const categories = categoriesResult.ok ? toCategoryTree(categoriesResult.data) : [];
 
-  return <ProductsListPage products={products} categories={categories} pageSize={12} />;
+  return (
+    <ProductsListPage
+      products={products}
+      categories={categories}
+      pageSize={12}
+      initialQuery={q}
+    />
+  );
 }
