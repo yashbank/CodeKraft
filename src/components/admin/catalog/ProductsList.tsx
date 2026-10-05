@@ -130,6 +130,12 @@ export function ProductsList({
   const [submitting, setSubmitting] = React.useState(false);
   const [bulkBusy, setBulkBusy] = React.useState(false);
   const [panelOpen, setPanelOpen] = React.useState(showCategories);
+  // Keep in sync with the route-driven prop: /products and /categories render this same
+  // component, and Next.js can reuse the instance across that client-side navigation, so a
+  // useState initial value alone would stick to whichever page mounted it first.
+  React.useEffect(() => {
+    setPanelOpen(showCategories);
+  }, [showCategories]);
 
   const categoryNameById = React.useMemo(() => flattenCategoryNames(categories), [categories]);
   const productHref = (id: string) => `${editorHref}/${id}`;
