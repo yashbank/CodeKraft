@@ -773,3 +773,232 @@ up.
    pressure-tested with a raw concurrent bypass in this pass (see above) — they read correctly in
    the code, and that check's logic isn't timing-dependent in the way `decide()`'s status handling
    is, but that's a code-reading conclusion, not a live-fire one.
+
+## Performance audit (2026-10-06, separate session)
+
+**Goal:** a measurement-first baseline before the founder evaluates moving off Vercel — not a
+redesign. Method: a throwaway Playwright script (`tests/e2e/_perf-audit-throwaway/*.ts`, chromium
+via `@playwright/test`'s bundled `playwright-core`, deleted after use, never committed) driving
+real headless Chrome against **live production** (`codekraft-admin.vercel.app`,
+`codekraft-dusky.vercel.app`), signing in through the real `/auth/login` form with
+`yashbank2002@gmail.com`. For each nav target: `page.goto(url, { waitUntil: "load" })` (full window
+`load` event — all sync sub-resources fetched) then `page.locator("h1:visible").first()` becoming
+visible, timed wall-clock from `goto()` call; cross-checked against the real Navigation Timing API
+(`responseStart`, `domContentLoadedEventEnd`, `loadEventEnd`) read via `page.evaluate`. Two full
+3-attempt passes were run ~12 minutes apart (same-session repeats = "warm", attempt 1 = "cold"),
+plus five independent login timings and a resource-timing capture on the homepage.
+
+**Caveat on what "contentVisible"/"windowLoad" actually measure here:** because `goto()` waits for
+the full `load` event before the h1 check even starts, these two numbers end up almost identical
+everywhere below — this is really "time to all sub-resources fetched," not first-paint/FCP. TTFB
+(time to the *first* response byte) was captured separately and stayed under 25ms on every single
+request across both runs and every page, admin and public alike — confirmed with a direct
+resource-timing capture on the homepage too (see below). That one fact matters a lot for where the
+time actually goes: **the backend starts responding near-instantly every time; all the latency
+reported below is in how long the document body + hydration take to finish, not in reaching the
+server.**
+
+### Headline finding: sign-in itself, not any one page, is the single slowest and most consistent
+step
+
+Five independent real sign-ins through `/auth/login`, each a fresh browser context, spread across
+roughly 20 minutes of wall-clock time: **17151ms, 17779ms, 18821ms, 19548ms, 38957ms.** Every
+single one was above 17 seconds — this never happened "once, cold, then fine." this is the admin's
+literal first interaction with the product on any given day, and it is consistently a 17-39 second
+wait. Not investigated further this pass (out of scope — this is a measurement audit, not a fix
+pass — but it is the single highest-leverage thing to profile next: `better-auth`'s
+`argon2`-based password verify, cold Lambda init, and the DB round trip for session creation are
+the three candidate causes, in roughly that priority order given argon2 is deliberately
+CPU-expensive and Vercel's default Node runtime gives a fresh Lambda no CPU-cache warmth).
+
+### Run 1 — lower-contention baseline (started ~16:00 IST)
+
+Cold = attempt 1, Warm = attempts 2 / 3. All times ms, via the method above.
+
+| Page / action | Cold | Warm | Verdict |
+|---|---|---|---|
+| site `/` | 5832 | 3206 / 5473 | **slow** — doesn't improve with repetition (see public-site section) |
+| site `/products` | 3255 | 3073 / 1131 | fine (settles fast) |
+| site `/products/custom-web-apps` | 1501 | 1369 / 2971 | fine-ish, some variance |
+| site `/products/mobile-apps` | 1329 | 1328 / 1233 | fine |
+| admin sign-in | — | — | **slow, see headline finding above** (38957ms this run) |
+| admin `/admin/dashboard` | n/m¹ | n/m¹ / 752 | fine (752ms clean sample) |
+| admin `/admin/products` | 2507 | 2773 / 728 | fine once warm |
+| admin `/admin/products/new` | 2928 | 717 / 732 | fine once warm |
+| admin `/admin/orders` | 1164 | 832 / 777 | fine |
+| admin `/admin/leads` | 744 | 715 / 740 | fine |
+| admin `/admin/queries` | 764 | 873 / 755 | fine **in this run** — see ambiguous finding below |
+| admin `/admin/customers` | 733 | 729 / 780 | fine |
+| admin `/admin/quotes` | 728 | 777 / 745 | fine |
+| admin `/admin/finance/ledger` | 768 | 2496 / 743 | fine (one 2.5s blip, not reproduced) |
+| admin `/admin/approvals` | 768 | 817 / 733 | fine |
+
+¹ Attempts 1–2 hit a script bug (selector matched a permanently-hidden duplicate `<h1>` from
+`LaptopNotice.tsx`, which `AdminDashboard` renders before its real title — not a real app issue;
+confirmed by attempt 3's clean 752ms and by `LaptopNotice` being `aria-hidden`/display-none at
+desktop viewport width). Fixed in the v2 script (`h1:visible` selector) before Run 2.
+
+**Takeaway from Run 1 alone:** once past sign-in, every admin page in this repo is fast when the
+backend isn't under load — sub-second warm, which directly rules out "the app's React/data-fetch
+code is slow" as the generic explanation for "admin feels slow." The dashboard, leads, queries,
+customers, quotes, ledger, approvals, orders and products-list server pages all already fetch their
+data with a single parallel `Promise.all` (confirmed by reading every one of
+`src/app/(admin)/admin/{dashboard,products,orders,leads,queries,customers,quotes,finance/ledger,approvals}/page.tsx`)
+— there is no "missing `Promise.all`" or N+1 bug sitting in any of these hot paths waiting to be
+fixed.
+
+### Run 2 — same 10 admin pages + 4 site pages, ~12 minutes later, fresh login per stage
+
+Everything got dramatically worse, uniformly, across every single page — including ones that were
+sub-second in Run 1 — and did **not** recover across the 3 attempts (i.e. this was not "cold then
+fine," it stayed bad):
+
+| Page / action | Attempt 1 | Attempt 2 | Attempt 3 |
+|---|---|---|---|
+| site `/` | 5436 | 5269 | 5147 |
+| admin sign-in | 18821 | — | — |
+| admin `/admin/dashboard` | 10090 | 8291 | 8452 |
+| admin `/admin/products` | 6302 | 2755 | 2694 |
+| admin `/admin/products/new` | 6239 | 6847 | 4527 |
+| admin `/admin/orders` | 3186 | 2753 | 4903 |
+| admin `/admin/leads` | 4510 | 4476 | 6347 |
+| admin `/admin/queries` | 2642² | 4583² | 7898² |
+| admin `/admin/customers` | 10933 | 11424 | 10961 |
+| admin `/admin/quotes` | 13699 | 10931 | 12698 |
+| admin `/admin/finance/ledger` | 4598 | 4427 | 2729 |
+| admin `/admin/approvals` | **23051** | **25564** | **22198** |
+
+² `windowLoad` value shown (the `h1:visible` wait itself timed out all 3 times on this page — see
+"ambiguous finding" below; not the same script bug as Run 1's dashboard case).
+
+**This is not attributed to any code change** — nothing was deployed between the two runs (checked:
+`vercel ls codekraft --prod` / `vercel inspect codekraft-admin.vercel.app` showed the live
+deployment (`dpl_4iQeN77Qc6mkM5RCqMZVvoFV39tq`, created 14:51 IST) had already been live and serving
+both runs — same build, same Lambdas, both times). TTFB stayed under 25ms throughout Run 2 as well,
+on every page, including `/admin/approvals` at 23–25 *seconds* total. The honest, best-supported
+explanation I have, not independently proven: **this project's production environment is getting
+hit by a lot of concurrent automated traffic today** — this very handoff file's own "Concurrency
+stress test" section above documents another session running real-browser Playwright suites
+(multiple simultaneous logins, concurrent approval decisions, concurrent dashboard/product/order
+reads) against this exact same production deployment today, and `vercel ls codekraft --prod` shows
+8+ fresh production deployments in the trailing 12 hours from other concurrent agents. Shared
+Vercel function concurrency limits and/or Postgres connection contention under that combined load
+is a plausible, cheap-to-believe explanation for "TTFB stays tiny but everything downstream balloons
+to 10–25 seconds, uniformly, without improving on repetition" — but I did not instrument the
+database or Vercel's function-concurrency metrics directly to confirm it, so treat this as a
+well-supported theory, not a proven root cause. **Practically, for the founder's Vercel-migration
+question: this is itself a relevant data point** — the "very slow" feeling may be as much about
+shared multi-tenant infra contention under concurrent load as about this app's own code, and that
+dynamic doesn't automatically go away on a different host unless capacity/isolation changes too.
+
+### Write actions (measured end-to-end, click → visible result, 3x each, Run 2 conditions)
+
+| Action | Attempt 1 | Attempt 2 | Attempt 3 | Verdict |
+|---|---|---|---|---|
+| Create lead (`/admin/leads` → "New lead" → "Create lead" → toast) | 6879ms | 3846ms | 6376ms | slow, consistently (3.8–6.9s every time, not just first) |
+| Create product, Basics tab (`/admin/products/new` → "Create product" → lands on new product editor) | 13746ms | 14320ms | 15097ms | **confirmed still slow, consistently** — not a one-time cold start |
+
+**This directly answers the task's specific ask about the previously-reported ~15s product-creation
+latency: it is not "slow once, cold-start, then fine."** All 3 back-to-back attempts in an
+already-signed-in, already-warmed session landed at 13.7s / 14.3s / 15.1s — flat, no improvement.
+Root cause theory (not newly fixed, already partially diagnosed in the "Real browser verification"
+section above as "~15s cold-start round trip, Vercel/Next cold-start + client RSC navigation"): one
+additional concrete contributor found by reading `src/modules/catalog/service.ts`'s
+`createProduct` (lines 88–227) — inside one DB transaction it does, **sequentially**, a slug-
+uniqueness `SELECT`, a redirect-slug lookup, an optional category `SELECT`, the product `INSERT`,
+a partner-ownership `SELECT`, and an audit-log `INSERT` — 5–6 round trips in series where at least
+the slug-uniqueness check and the partner lookup don't depend on each other's results and could in
+principle run concurrently. Flagging precisely rather than fixing: this is Yash's own "known
+cold-start" latency, the per-query overhead here is plausibly a minor fraction of 14+ seconds next
+to a cold Lambda/connection-pool init, and I have no way to isolate how much either contributes
+without server-side timing instrumentation — exactly the kind of thing this task said needs "a
+dedicated follow-up pass," not a guess I can't verify.
+
+### Public homepage (`/`) — consistently slow, not cold-start-shaped, likely fixable but **not
+touched this pass**
+
+`/` measured 5832/3206/5473ms (Run 1) and 5436/5269/5147ms (Run 2) — six attempts, two sessions 12
+minutes apart, every single one in the 3.2–5.8 second band, TTFB under 60ms every time. This is the
+opposite shape from a cold start (which would show attempt 1 high, attempts 2–3 low): it is flat.
+A direct resource-timing capture (`performance.getEntriesByType("resource")`) on a *second*,
+fully browser-cache-warm visit showed every static asset (JS chunks, fonts, CSS, the hero image) at
+**0ms** duration — fully served from the HTTP cache. That isolates the remaining 3–5 seconds to the
+page's own server-side render: `src/app/(site)/page.tsx` has `export const dynamic =
+"force-dynamic"`, so every single request — including repeat ones — re-runs 6 parallel DB queries
+and a full SSR render from scratch; there is no caching layer at all for this public, non-
+personalized marketing/catalog page. It's a plausible, cheap-sounding fix (drop `force-dynamic` in
+favor of time-based ISR, e.g. `export const revalidate = 60`): content edits already call
+`revalidatePath("/", "layout")` from `src/modules/content/admin-mutations.ts:47`, so on-demand
+invalidation after a real content save would keep working alongside time-based caching, and the
+route reads no cookies/headers/searchParams that would make it genuinely request-specific. **I did
+not make this change.** Two reasons: (1) `git status` shows `src/app/(site)/page.tsx` as currently
+**uncommitted-modified in this working tree** — another concurrent agent is actively editing this
+exact file right now, and the task's own instructions say not to touch files other agents are
+likely mid-edit on; and (2) Run 1 vs Run 2 above shows this production environment is currently too
+noisy (10–25x swings on unrelated pages, no code change involved) to reliably attribute any "it got
+faster" result to this specific change rather than to normal load variance. Flagging precisely for
+a dedicated follow-up once the concurrent edit lands and the environment is quieter.
+
+### Ambiguous finding: `/admin/queries` — "No queries yet" every time, cause not fully isolated
+
+Reproduced 3/3 times in a clean, isolated, low-contention follow-up check (fresh login, no other
+concurrent script activity from this session): `/admin/queries` renders the `EmptyState` "No queries
+yet" fallback every single time in production right now. `src/app/(admin)/admin/queries/page.tsx`
+(lines 11–38) fetches `queriesResult`/`adminsResult`/`customersResult` in one `Promise.all`, then —
+only after all three resolve — does a **separate, sequential** `getQueryAdminQuery` call for just
+the first query's id; if that call's result is not `.ok` for *any* reason (including a transient
+failure under load, not just "there are genuinely zero queries"), the page returns the `EmptyState`
+fallback instead of rendering `QueriesInbox` with the real `queries` list it already has from
+`queriesResult` — i.e. a single failed/slow lookup for one query's thread can hide the entire
+list from the admin. **I was not able to confirm whether this is actually happening** (a real bug
+masking existing queries) **or whether "No queries yet" is simply correct** (zero queries of any
+status exist in this environment at all — plausible, since this looks like a low-traffic/demo
+system: the dashboard's "Open queries" widget independently showed "Inbox zero — no open queries,"
+which only rules out *open*-status queries, not other statuses). I don't have direct database
+access in this sandbox to settle it either way, and didn't want to guess. Also noted but not
+measurably slow in either run (~750–870ms both times it rendered successfully): the sequential
+`getQueryAdminQuery` call happens *after* awaiting `adminsResult`/`customersResult` too, even though
+it only depends on `queriesResult` — reordering so it starts as soon as `queriesResult` resolves
+(running alongside the other two awaits) would shave a small, currently-unmeasurable amount off the
+critical path. Flagging both precisely for a follow-up pass rather than fixing: the correctness
+question needs DB access or a real-browser repro that creates a query of a non-open status to
+settle definitively, and the component the real fix would touch (`QueriesInbox`'s `thread` prop is
+currently non-optional) is more than a one-line change.
+
+### Public product pages — fine
+
+`/products`, `/products/custom-web-apps`, `/products/mobile-apps` (real slugs confirmed from
+production's own RSC payload) stayed in the 0.95–3.0 second band across both runs with no
+approvals-style blowup — the one page that seemed immune to whatever degraded the rest of the site
+in Run 2.
+
+### No code changes made this pass
+
+Every admin list/detail page's data-fetching was read and confirmed already-parallelized
+(`Promise.all`); the one genuinely "obviously cheap and safe" candidate found (`/` losing
+`force-dynamic`) sits in a file another agent is actively editing right now, and the measurement
+environment was independently confirmed too noisy during this session to verify any before/after
+improvement reliably. Per the task's own framing, logging precise findings for a dedicated
+follow-up pass was the right call here over shipping an unverifiable change.
+
+### Compact summary table
+
+| Page / action | Cold | Warm | Verdict |
+|---|---|---|---|
+| Admin sign-in | 17.2–39.0s (5 runs, never fast) | — | **slow, every time** |
+| `/admin/dashboard` | 752ms–10.1s (run-dependent) | 752ms–8.5s | fine when uncontended; slow under load |
+| `/admin/products` | 2.5–6.3s | 0.7–2.8s | fine warm |
+| `/admin/products/new` (nav only) | 2.9–6.2s | 0.7–6.8s | fine-to-slow, load-dependent |
+| `/admin/orders` | 1.2–3.2s | 0.8–4.9s | fine |
+| `/admin/leads` | 0.7–4.5s | 0.7–6.3s | fine when uncontended |
+| `/admin/queries` | 0.8–2.6s | 0.8–7.9s, h1 never visible under load | **ambiguous — see above** |
+| `/admin/customers` | 0.7–10.9s | 0.7–11.4s | fine-to-slow, load-dependent |
+| `/admin/quotes` | 0.7–13.7s | 0.7–12.7s | fine-to-slow, load-dependent |
+| `/admin/finance/ledger` | 0.8–4.6s | 0.7–4.4s | fine |
+| `/admin/approvals` | 0.8–23.1s | 0.7–25.6s | fine uncontended; **severe under load** |
+| Create lead (end-to-end) | 6.9s | 3.8s / 6.4s | **slow, consistently** |
+| Create product, Basics (end-to-end) | 13.7s | 14.3s / 15.1s | **slow, consistently — confirmed not one-time cold start** |
+| Site `/` | 5.8s | 3.2s / 5.5s | **slow, consistently, every run** |
+| Site `/products` | 1.3–3.3s | 1.0–3.1s | fine |
+| Site `/products/custom-web-apps` | 1.2–1.5s | 1.2–3.0s | fine |
+| Site `/products/mobile-apps` | 1.2–1.3s | 1.2–1.3s | fine |
