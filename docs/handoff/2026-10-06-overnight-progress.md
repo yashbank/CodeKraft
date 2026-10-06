@@ -1183,3 +1183,63 @@ finance/chat/delivery/entitlements modules other agents are actively working in 
 this session touched). `pnpm build` clean. Full unit suite: 745/745 passing. Pushed to `main`,
 deployed as `dpl_3nZXJMSG1MtoXvwaCXpn4SdXagt4`, confirmed `READY` + aliased to both production
 domains via `vercel inspect` and `mcp__claude_ai_Vercel__get_deployment`.
+
+## Finance ledger, audit CSV, chatbot prompt editor, rich-text toolbar (2026-10-06, fix agent)
+
+Status: all four fixes are committed and pushed to `main` and built locally. Each one was checked
+with tsc, eslint and `pnpm build`. The post-deploy browser check against production is NOT done:
+the saved login state (`SCR/admin-yash.json`) never appeared, and this agent does not sign in. Do
+not mark these fixed until the browser script below passes.
+
+### Fix 1: finance ledger "No entries" / ₹0 (commit cb1a42b)
+- Root cause: the finance pages sent `limit: 200` to `listLedgerEntries` and `listPartners`. The
+  list cap is 100 (`LIST_LIMIT_MAX`, pinned by `tests/unit/modules/contracts-b.test.ts`), so
+  `defineAction` returned `VALIDATION` ("Too big: expected number to be <=100"). The ledger page
+  treated `!ok` as an empty list, so it rendered "No entries" with a zero total.
+- Fix: limit 100 on the finance pages (ledger, expenses, partners, reports, allocations,
+  adjustments) and the order-detail ledger lookup. The ledger page now shows a danger banner with
+  the error message when the query fails, and logs the error code on the server.
+- Verified locally (read-only, `tsx` against the DB, super_admin context): the service returns 6
+  entries; the envelope with limit 200 returns VALIDATION; with limit 100 it returns `ok:true` with
+  the 6 entries.
+- Not fixed (same limit-200 bug, outside finance, owned by other areas): `account/page.tsx`
+  (wishlist), `admin/leads/page.tsx`, `admin/leads/[id]/page.tsx`, `admin/coupons/page.tsx`,
+  `admin/queries/page.tsx`.
+
+### Fix 2: audit CSV export linked to a stub URL (commit a87636e)
+- Root cause: `exportAuditLogs` returned `https://storage.codekraft.local/...`, a URL that does not
+  exist.
+- Fix: the action returns `{ filename: "audit-log.csv", csv, rowCount }`. `AuditLog.tsx` saves the
+  CSV with a Blob download. No external storage. The export is still audited. The integration test
+  checks the header row and one line per row.
+- Limitation: the whole CSV travels in the action response, with no row cap. Large audit tables
+  will be heavy. A streamed or capped export is the follow-up.
+
+### Fix 3: chatbot prompt editor disabled with no explanation (commit 14035e0)
+- Root cause: the prompt table is empty until the first chat, so "Save as new version" is disabled
+  with no reason given.
+- Fix: the admin chatbot page seeds the built-in default as v1 (active) when the prompt list is
+  empty. Seeding goes through `seedDefaultPromptVersion`, which is a no-op once any version exists
+  and uses `onConflictDoNothing` (the partial unique index on `is_active` covers races). The editor
+  shows an info banner explaining the state, and the disabled button has a title with the same
+  reason. Permission: `chat.prompts.write`.
+- Not checked on prod: whether production already has a v1. The empty-index path is covered by
+  the code only.
+
+### Fix 4: rich-text toolbar buttons did nothing (commit 45466cc)
+- Fix: `RichTextField` renders a plain textarea with the note "Plain text. Formatting controls
+  arrive with the rich editor (P3)". The inert toolbar is removed. The `full` prop is still accepted
+  for existing callers and has no effect.
+
+### Verification
+- tsc: 208 errors before and after each fix (baseline). `src/modules/chat/service.ts` has 16
+  eslint errors at HEAD, unchanged by these commits; no new eslint errors in touched files.
+- `pnpm build` passed for each fix.
+- Vercel production: the fix 1 build (`dpl_EkohtAbCHdTxCgLFPm3w6HjJQ8jH`) is Ready. Later
+  production builds (`codekraft-1e8lifuhs`, `codekraft-fedmhguaf`) are Ready. MCP deployment reads
+  return 403/404 for this scope, so the CLI (`vercel ls`, `vercel inspect`) was used. Commit SHA per
+  deployment was not confirmed.
+- Browser check (pending): `SCR/fix/verify-fixes.mjs` covers all four fixes. It loads
+  `SCR/admin-yash.json` and checks the ledger rows, the audit CSV download (`audit-log.csv`, header
+  plus rows), the chatbot Prompts editor, and the case-study toolbar. Run it with
+  `node --input-type=module < SCR/fix/verify-fixes.mjs` from the repo root once the file exists.
