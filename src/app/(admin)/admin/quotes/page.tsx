@@ -13,7 +13,14 @@ export default async function AdminQuotesPage() {
 
   const [quotesRes, customersRes] = await Promise.all([
     listQuotesQuery({ limit: 100 }, ctx),
-    listCustomersQuery({ limit: 200 }, ctx),
+    // `limit` is capped at `LIST_LIMIT_MAX` (100, src/modules/_shared/zod.ts) by the shared
+    // `listParams` schema every list query uses — 200 here failed Zod validation on every
+    // request, so `customersRes.ok` was always `false` and the "New quote" customer dropdown
+    // silently rendered with zero options in production (confirmed via a real-browser repro:
+    // the Select opened, `role=combobox`, but had no `option` children at all). Found by
+    // real-browser testing, not previously caught by tsc/eslint/build since this is a runtime
+    // validation failure the page swallows into an empty array rather than an error.
+    listCustomersQuery({ limit: 100 }, ctx),
   ]);
 
   const customerOptions: CustomerOption[] = customersRes.ok

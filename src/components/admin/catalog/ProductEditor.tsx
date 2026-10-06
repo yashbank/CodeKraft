@@ -307,12 +307,24 @@ export function ProductEditor({
         categoryId: categoryId === "none" ? undefined : categoryId,
         tags,
       });
-      setSavingTab(null);
       if (!result.ok) {
+        setSavingTab(null);
         toast.error(result.error.message);
         return;
       }
       toast.success("Product created as a draft — continue editing below.");
+      // Deliberately NOT clearing `savingTab` here: on a cold Vercel/Next.js instance the
+      // client-side RSC navigation below can take several more seconds after this point (real-
+      // browser measurement: ~7s for the mutation to resolve, another ~8s for the route to
+      // actually land — see docs/handoff/2026-10-06-overnight-progress.md "Real browser
+      // verification"). This component stays mounted on `/admin/products/new` for that whole
+      // window. Leaving the button in its `loading`/disabled state for that window is the only
+      // signal the admin has that something is still happening — without it, the button
+      // re-enables immediately after the toast while the page still looks exactly like the
+      // empty "New product" form, which both reads as "frozen" and (if clicked a second time)
+      // re-submits the same name/slug into a now-real CONFLICT error, since the first submit
+      // already succeeded server-side. `savingTab` is irrelevant once the route actually changes
+      // (this component unmounts), so there's nothing to reset on the success path.
       router.push(`/admin/products/${result.data.productId}`);
       return;
     }
@@ -1123,9 +1135,19 @@ export function ProductEditor({
                   </div>
                 ))}
               </fieldset>
-              <Button type="submit" disabled={savingTab === "basics"}>
+              <Button
+                type="submit"
+                disabled={savingTab === "basics"}
+                loading={savingTab === "basics"}
+              >
                 {isNew ? "Create product" : "Save changes"}
               </Button>
+              {isNew && savingTab === "basics" ? (
+                <p className="text-caption text-fg-muted" aria-live="polite">
+                  Creating your product — this can take several seconds on a cold start, please
+                  don&apos;t click again.
+                </p>
+              ) : null}
             </form>
           </TabsContent>
 
