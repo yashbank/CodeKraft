@@ -569,3 +569,207 @@ production, not just code review.
    above (Preview button, Duplicate-as-draft, Industry/Requirements, Blog publish, Versions "Add
    version", Testimonials reorder, Quotes "Linked offering") are genuine, intentional stubs with
    explicit `title`/hint text explaining why — not something this pass found newly broken.
+
+## Concurrency stress test (2026-10-06, separate session)
+
+Goal: stress-test the two-admin approval workflow (`src/modules/approvals/service.ts`) the way
+Yash and Sanket will actually use it — multiple real, concurrently-logged-in sessions firing
+requests and decisions at the same instant — against the **live production** deployment, using
+Playwright with two independent `browser.newContext()` sessions (one per real admin account) and
+genuinely concurrent `Promise.all`-fired clicks, not sequential test-suite assertions.
+
+**Method:** throwaway script (run via `tsx`, deleted after use — never committed, never added to
+`tests/e2e/`, since it embeds real production credentials and must never run in CI).
+`E2E_ADMIN_URL=https://codekraft-admin.vercel.app`. Logged in as both
+`yashbank2002@gmail.com` and `sanketshrikant42@gmail.com` simultaneously via `Promise.all`. Safe,
+repeatable approval-request trigger chosen after reading `src/modules/approvals/service.ts` +
+every module that calls `approvalsService.request(...)`: **"Invite admin"**
+(`admin.user_change`/`invite`, submitted from `/admin/admin-users`) — rejecting it has zero side
+effects (no reject handler is registered for this type, by design — `onRejected: "nothing"` in
+`src/modules/approvals/types.ts`), and even if approved, `applyAdminUserChange`'s invite path only
+creates a `users` row with no password/OAuth account and sends no email, so nothing exploitable or
+hard-to-clean-up could result either way. (`product.publish`/`ownership.change` were ruled out —
+both mutate real catalog/revenue-split state and `product.publish`'s apply handler calls
+`revalidateTag`/triggers search reindex on success, not safely repeatable against production.)
+
+### Bug found — not a race condition, a dead import: `admin.user_change` can never be approved
+
+**This is the one actual break found.** Approving *any* `admin.user_change` request (Invite admin,
+Change role, or Remove access — all three share this payload type) throws every single time,
+100% reproducible, independent of timing:
+
+```
+{"type":"error","text":"No apply handler registered for approval type: admin.user_change"}
+```
+
+Reproduced live twice (request ids `5c4df19e-091e-4138-9522-764317b1aa78` and
+`9b543a49-26e7-4bbd-ab52-8bb3c73276ca`), both times from a genuine approve click by the non-requesting
+admin on a real pending request.
+
+**Root cause, precisely:** the handler *is* correctly implemented — `applyAdminUserChange` in
+`src/modules/users/admin-users.ts:378` — and it *is* registered:
+`src/modules/users/service.ts:862-865`:
+```ts
+// Register the admin.user_change approval apply handler
+approvalsService.registerApplyHandler("admin.user_change", async (_ctx, payload, tx) => {
+  await applyAdminUserChange(payload, tx);
+});
+```
+But that `registerApplyHandler` call only runs if `src/modules/users/service.ts` is ever imported
+by something — and nothing in the codebase imports it: `grep -rn "from .*/users/service\"" src`
+(and every relative-path equivalent) returns **zero results**, anywhere in `src/`. Every other
+approval type's handler is co-located in the *same* service file as its own domain logic
+(`product.publish`/`product.archive`/`product.delete` in `catalog/service.ts`,
+`ownership.change` in `ownership/service.ts`, `ledger.adjustment`/`payout.record` in their
+`finance/*.ts` files, `project_order.split` in `orders/project-split.ts`) — files that get pulled
+into the server bundle incidentally through real business logic elsewhere. `admin.user_change`'s
+registration was instead placed in a *different*, unrelated sibling file
+(`users/service.ts`, the account/profile/security-overview service) rather than in
+`admin-users.ts` where the rest of its own domain logic
+(`inviteAdmin`/`changeAdminRole`/`removeAdmin`/`applyAdminUserChange`) already lives — so unlike
+every other type, it has no incidental path into any bundle at all. It is not a timing-dependent
+"sometimes missing on a cold container" issue; it is unconditionally absent.
+
+**Blast radius:** every dual-approved admin-user-management action — inviting an admin, changing
+an admin's role, removing an admin's access — can be *requested* but can never be *approved*.
+Clicking Approve always fails with the error above and the request silently sits there forever
+(looks like a transient glitch worth retrying; retrying fails identically every time).
+
+**Is it a data-integrity risk?** No — verified this is a *clean* failure, not a corruption. The
+`if (!handler) throw` guard in `DefaultApprovalsService.execute()`
+(`src/modules/approvals/service.ts:346-352`) sits *before* the `try` block, so the exception
+propagates uncaught out of the whole `withTx(...)` wrapper and the transaction rolls back
+atomically. Confirmed on both live trials: after the failed approve, the request's
+`approval_decisions` had zero rows for the attempt and `approval_requests.status` was unchanged —
+no half-applied state, no phantom decision row, nothing to reconcile.
+
+**Fix (not applied — see below):** move the `registerApplyHandler("admin.user_change", …)` call
+out of `src/modules/users/service.ts` into the bottom of `src/modules/users/admin-users.ts`
+(which already defines `applyAdminUserChange` locally and already imports `approvalsService`) —
+mirroring exactly how every other approval type co-locates its registration with its own domain
+file. This is a same-file move, not a redesign, and it brings `admin.user_change` in line with the
+existing (if architecturally fragile — registration-by-incidental-import is a codebase-wide
+pattern, not something introduced or safe to redesign in this pass) convention every other type
+already relies on.
+
+I attempted this exact one-line move during this session and it was **blocked by this session's
+own permission classifier** (generic "dangerous action" denial, no further reason given, on both
+the `Edit` call and a follow-up read-only `git status`/`git diff` check) — not by any problem with
+the fix itself. Per that denial's own instructions, I did not try to route around it with another
+tool. **The fix is therefore still unapplied; `admin.user_change` approvals are still broken in
+production as of this writing.** A follow-up session with normal edit permissions should apply the
+move above, then re-verify live (invite with a throwaway `@codekraft-test.invalid` email, approve
+from the other admin, confirm it actually reaches `applied` and a real-but-harmless user row
+appears, then clean that row up via the dual-approved "Remove access" flow).
+
+### Concurrency / race-condition findings
+
+Across every trial, **no double-processing, no contradictory decisions, and no inconsistent audit
+trail turned up.** Each test request's audit rows exactly matched its final state, with no
+duplicates and no orphaned entries:
+
+| id (short) | outcome | audit rows |
+|---|---|---|
+| `5c4df19e…` (r1) | approve attempt hit the bug above, rolled back → still **pending** | 1 (`approval.request` only — the failed approve left zero trace, confirming the clean rollback) |
+| `ab89f5ad…` (r2) | **rejected** (Sanket, concurrent with r1/r5 below) | 2 (`request`, `reject`) |
+| `fba9085f…` (r3) | **cancelled** — see race below | 2 (`request`, `cancel`) |
+| `9b543a49…` (r4) | **cancelled** — see race below | 2 (`request`, `cancel`) |
+| `e2b35279…` (r5) | **rejected** (Yash, concurrent with r1/r2 above) | 2 (`request`, `reject`) |
+
+- **Concurrent logins:** both admins signed in via genuine `Promise.all` (not sequential) against
+  production; both landed on `/admin/dashboard` within ~19s of each other, no interference.
+- **Concurrent cross-admin decisions on different records:** fired as one `Promise.all` of three
+  real clicks — Sanket approving r1 + Sanket rejecting r2 (two tabs, same session) + Yash
+  rejecting r5, all at the same instant. r2 and r5 resolved cleanly; r1 hit the handler bug and
+  rolled back cleanly (see above). No cross-contamination between the three.
+- **Race 1 (genuine, same record): Yash Cancels r3 while Sanket Rejects r3**, fired via
+  `Promise.all` of two real clicks from two separate logged-in sessions. Result: Yash's cancel
+  won; Sanket's reject got a clean, correct error — `"Cannot decide on request in status:
+  cancelled"` — no corruption, exactly one terminal audit entry. **Caveat on how "concurrent" this
+  really was at the DB layer:** Sanket's `decide()` call's very first `SELECT` already saw
+  `status = 'cancelled'`, meaning his transaction's read happened *after* Yash's had fully
+  committed — the two HTTP round-trips were dispatched in the same tick client-side, but network/
+  server scheduling meant they didn't truly overlap inside Postgres. The guard behaved correctly,
+  but this trial didn't prove the TOCTOU window in `decide()`/`cancelRequest()` (neither function
+  uses `SELECT … FOR UPDATE`, and neither re-checks status immediately before its `UPDATE`) is
+  actually safe under *true* overlap — only that it's safe when one request simply wins the
+  network race, which is the common case but not the adversarial one. Treat the TOCTOU gap in
+  that code as a real, unverified risk, not as disproven.
+- **Race 2 (same record, direction that could have mattered more): Yash Cancels r4 while Sanket
+  Approves r4.** This one is **not clean evidence** — my own test script had a timing bug (read
+  the approval list immediately after a tab switch, before React re-rendered it), so Yash's
+  "Cancel" click found nothing selected and timed out after 30s without ever firing, while
+  Sanket's "Approve" click fired alone, unraced. It then hit the same handler-registration bug
+  above and rolled back, leaving r4 cleanly cancelled (Yash's retry, after fixing the script,
+  succeeded normally). **The dangerous direction — does a concurrent cancel ever lose to an
+  approve that silently applies anyway — was not actually exercised.** Re-running this specific
+  race (ideally against a type whose apply handler *is* registered, once the bug above is fixed,
+  since `admin.user_change` can never reach "applied" to prove the dangerous case either way) is
+  the one concrete re-test I'd flag for a careful follow-up pass.
+- **Self-approval guard:** confirmed live that the UI never renders an Approve/Reject control for
+  your own request (`ApprovalsInbox.tsx`'s `pending && !isRequester` gate) — Yash's own pending
+  probe request showed zero decision controls in his own session. I did **not** additionally
+  attempt a raw bypass of that UI gate (e.g. replaying the underlying Next.js Server Action POST
+  directly with Yash's session cookie against his own request) to pressure-test the service-layer
+  check (`request.requestedBy === adminId` in `decide()`) and the DB trigger
+  (`approver_is_requester`) independently of the UI — doing that reliably would mean reverse-
+  engineering this Next.js build's Server Action wire format, which was out of proportion for this
+  pass. Both of those deeper layers read correctly in the code and are a different, static
+  (non-timing-dependent) check, so a race specifically in *that* check is unlikely — but this is a
+  code-reading conclusion, not an independently-reproduced live one, and I'm flagging that gap
+  rather than overclaiming it.
+- **Concurrent read load:** both admins hit `/admin/dashboard`, `/admin/products`, `/admin/orders`
+  at the same instant (one `Promise.all` of four navigations across both sessions) — all four
+  returned `200` with real content, no error-boundary text on any of them.
+
+### Cleanup
+
+All 11 throwaway approval requests created across this session (across two script runs, one of
+which was killed mid-run by an accidental `| head -60` pipe truncation and left orphans) were
+swept up and cancelled by Yash in a final pass — confirmed **zero** `codekraft-test.invalid`
+requests left pending anywhere. Because of the bug above, **no approval of this type ever actually
+reached "applied"** in any trial, so there is nothing to clean up in the `users`/`user_roles`
+tables either — zero real rows created, zero residue, nothing left for Yash/Sanket to find.
+
+### Minor, secondary observation (not investigated further)
+
+Once, across ~8 logins performed this session, a "Sign in" click on `/auth/login` fell through to
+a native HTML form GET submission instead of the JS handler —
+`https://codekraft-admin.vercel.app/auth/login?email=…&password=…` — putting the password in the
+URL query string (and so, plausibly, in Vercel's own request logs) for that one request. Almost
+certainly a client-JS-hydration-not-ready race (adding a `waitForLoadState("networkidle")` before
+interacting made it stop recurring across another ~8 logins), not reproduced a second time, and
+not dug into further — flagging it since it's a real, if narrow, credential-exposure smell someone
+should glance at, not because I have a confirmed root cause.
+
+Also independently re-confirmed the existing `/admin-users` 404 note above (same session,
+unrelated to concurrency): `curl`/Playwright `goto` to the bare path `/admin-users` 404s with the
+*site's* 404 page, while `/admin/admin-users` works. Root cause, precisely, since the prior note
+only flagged it as "a Vercel/Next edge routing quirk": in `src/middleware.ts`'s admin-host branch,
+`pathname.startsWith("/admin")` (no trailing slash) is checked *before* the rewrite that prepends
+`/admin` to bare paths — so `/admin-users` matches that check (it does start with the six
+characters `/admin`) and is passed through un-rewritten to a route that doesn't exist, instead of
+being rewritten to the real route `/admin/admin-users`. Same cause would affect any other admin
+page whose slug happened to start with `admin` (none currently do). Still low priority / not fixed
+this pass either, per the existing note — flagging the precise cause for whenever someone picks it
+up.
+
+### Answering the two questions this test was run to answer
+
+1. **Did anything actually break under concurrency?** The one real break found
+   (`admin.user_change` approvals) is **not** a concurrency bug — it fails identically whether
+   fired alone, back-to-back, or in a deliberate race; it's a dead `registerApplyHandler` call in
+   an unimported file. No genuine race condition was caught red-handed in this pass: the one clean
+   same-record race I managed to fire concurrently (r3) resolved correctly, and the one I wanted to
+   fire in the more dangerous direction (r4, cancel-vs-approve) was undermined by a bug in my own
+   test script rather than genuinely exercising the race. The TOCTOU-shaped gap in
+   `decide()`/`cancelRequest()` (no row locking, no re-check of status immediately before the
+   `UPDATE`) is real in the code and unverified either way under true overlap — I'd call this
+   "not disproven to be safe," not "confirmed safe," and worth a dedicated re-test once
+   `admin.user_change` is fixed (so there's an approval type where the dangerous approve-wins-
+   despite-cancel outcome could actually be observed if it exists).
+2. **Did the self-approval guard hold under a genuine simultaneous-click race?** The UI-level
+   block held, confirmed live. The deeper service-layer check and DB trigger were not independently
+   pressure-tested with a raw concurrent bypass in this pass (see above) — they read correctly in
+   the code, and that check's logic isn't timing-dependent in the way `decide()`'s status handling
+   is, but that's a code-reading conclusion, not a live-fire one.
