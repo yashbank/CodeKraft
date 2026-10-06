@@ -81,6 +81,8 @@ export function mapApprovalToItem(
     requestedAt: createdAt,
     comment: a.payloadSummary,
     status: a.status,
+    approvedByIds: a.decisions.filter((d) => d.decision === "approve").map((d) => d.decidedBy),
+    pendingApprovers: a.pendingApprovers.length,
     diff: buildDiff(a),
     note: a.error ?? undefined,
     decision: latestDecision

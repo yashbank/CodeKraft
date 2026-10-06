@@ -256,6 +256,10 @@ export interface ApprovalItem {
   requestedAt: string;
   comment: string;
   status: ApprovalStatus;
+  /** Approver ids who have already recorded an approve decision (server truth). */
+  approvedByIds?: string[];
+  /** Approvers still owed a decision while the request is pending. */
+  pendingApprovers?: number;
   diff: DiffRow[];
   note?: string;
   decision?: {

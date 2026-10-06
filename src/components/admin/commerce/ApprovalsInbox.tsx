@@ -56,28 +56,28 @@ export function ApprovalsInbox({ approvals, currentUser, now }: ApprovalsInboxPr
   const router = useRouter();
   const [tab, setTab] = React.useState<"mine" | "requested" | "history">("mine");
   const [type, setType] = React.useState<ApprovalType | null>(null);
-  const [decided, setDecided] = React.useState<Record<string, "approve" | "reject">>({});
   const [comment, setComment] = React.useState("");
   const [commentError, setCommentError] = React.useState<string | null>(null);
   const [mobileDetail, setMobileDetail] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
 
   const isMine = (a: ApprovalItem) => a.requestedBy.id === currentUser.id;
+  // Everything here is server state: the list only changes when the server data changes.
   const byTab = approvals.filter((a) =>
     tab === "mine"
-      ? a.status === "pending" && !isMine(a) && !decided[a.id]
+      ? a.status === "pending" && !isMine(a)
       : tab === "requested"
         ? isMine(a)
-        : a.status !== "pending" || decided[a.id],
+        : a.status !== "pending",
   );
   const list = byTab.filter((a) => (type ? a.type === type : true));
   const [selectedId, setSelectedId] = React.useState<string | null>(list[0]?.id ?? null);
   const selected = approvals.find((a) => a.id === selectedId) ?? list[0] ?? null;
 
   const counts = {
-    mine: approvals.filter((a) => a.status === "pending" && !isMine(a) && !decided[a.id]).length,
+    mine: approvals.filter((a) => a.status === "pending" && !isMine(a)).length,
     requested: approvals.filter(isMine).length,
-    history: approvals.filter((a) => a.status !== "pending" || decided[a.id]).length,
+    history: approvals.filter((a) => a.status !== "pending").length,
   };
 
   const decide = async (a: ApprovalItem, decision: "approve" | "reject") => {
@@ -92,18 +92,28 @@ export function ApprovalsInbox({ approvals, currentUser, now }: ApprovalsInboxPr
         ? await approveRequest({ approvalRequestId: a.id, comment: comment.trim() || undefined })
         : await rejectRequest({ approvalRequestId: a.id, comment: comment.trim() });
     setSubmitting(false);
+    // Re-read the server state either way so the screen matches what was actually recorded.
+    router.refresh();
     if (!result.ok) {
       toast.error(result.error.message);
       return;
     }
-    setDecided((d) => ({ ...d, [a.id]: decision }));
     setComment("");
-    toast.success(
-      decision === "approve"
-        ? `Approved — ${TYPE_LABEL[a.type].toLowerCase()} of ${a.subject}`
-        : `Rejected — ${a.subject}`,
-    );
-    router.refresh();
+    const r = result.data;
+    if (decision === "reject") {
+      toast.success(`Rejected — ${a.subject}`);
+    } else if (r.status === "applied") {
+      toast.success(`Approved and applied — ${TYPE_LABEL[a.type].toLowerCase()} of ${a.subject}`);
+    } else if (r.status === "pending") {
+      const n = r.waitingFor ?? 0;
+      toast.success(
+        `Approval recorded — waiting for ${n} more approver${n === 1 ? "" : "s"} before it applies`,
+      );
+    } else if (r.status === "approved") {
+      toast.error(`Approved, but applying failed: ${r.error ?? "unknown error"}`);
+    } else {
+      toast.success(`Request is now ${r.status}`);
+    }
   };
 
   const cancel = async (a: ApprovalItem) => {
@@ -123,7 +133,6 @@ export function ApprovalsInbox({ approvals, currentUser, now }: ApprovalsInboxPr
       approval={selected}
       now={now}
       isRequester={isMine(selected)}
-      localDecision={decided[selected.id]}
       comment={comment}
       onComment={setComment}
       commentError={commentError}
@@ -231,13 +240,7 @@ export function ApprovalsInbox({ approvals, currentUser, now }: ApprovalsInboxPr
                       </span>
                       <StatusBadge
                         kind="approval_requests.status"
-                        value={
-                          decided[a.id]
-                            ? decided[a.id] === "approve"
-                              ? "approved"
-                              : "rejected"
-                            : a.status
-                        }
+                        value={a.status}
                         size="sm"
                         hideIcon
                       />
@@ -275,7 +278,6 @@ function ApprovalDetail({
   approval: a,
   now,
   isRequester,
-  localDecision,
   comment,
   onComment,
   commentError,
@@ -287,7 +289,6 @@ function ApprovalDetail({
   approval: ApprovalItem;
   now: string;
   isRequester: boolean;
-  localDecision?: "approve" | "reject";
   comment: string;
   onComment: (v: string) => void;
   commentError: string | null;
@@ -296,7 +297,8 @@ function ApprovalDetail({
   submitting: boolean;
   currentUser: AdminUserRef;
 }) {
-  const status = localDecision ? (localDecision === "approve" ? "applied" : "rejected") : a.status;
+  const status = a.status;
+  const decidedByMe = (a.approvedByIds ?? []).includes(currentUser.id);
   const pending = status === "pending";
   const money = MONEY_TYPES.includes(a.type);
   return (
@@ -366,13 +368,13 @@ function ApprovalDetail({
         </tbody>
       </table>
 
-      {a.decision || localDecision ? (
+      {a.decision ? (
         <Banner
           tone={status === "rejected" ? "danger" : "success"}
           title={
             status === "rejected"
               ? "Rejected"
-              : a.appliedAt || localDecision
+              : a.appliedAt
                 ? "Approved and applied"
                 : "Approved"
           }
@@ -395,7 +397,13 @@ function ApprovalDetail({
         </Banner>
       ) : null}
 
-      {pending && !isRequester ? (
+      {pending && decidedByMe ? (
+        <p className="text-body-sm text-fg-muted">
+          You approved this. Waiting for {a.pendingApprovers ?? 0} more approver
+          {(a.pendingApprovers ?? 0) === 1 ? "" : "s"} before it applies.
+        </p>
+      ) : null}
+      {pending && !isRequester && !decidedByMe ? (
         <div className="space-y-3 rounded-md border border-border bg-canvas p-4">
           {money ? (
             <p className="text-body-sm text-warning">

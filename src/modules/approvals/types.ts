@@ -243,6 +243,10 @@ export interface DecideResult {
   status: ApprovalStatus;
   /** True when this decision completed the approver set and `execute()` succeeded. */
   applied: boolean;
+  /** While pending: how many approvers still have to decide before the request can apply. */
+  waitingFor?: number;
+  /** Set when the approver set completed but the apply handler failed (status stays approved). */
+  error?: string;
 }
 
 export type {

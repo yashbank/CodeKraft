@@ -214,6 +214,10 @@ export class DefaultApprovalsService implements ApprovalsService {
         return {
           status: request.status,
           applied: request.status === "applied",
+          waitingFor:
+            request.status === "pending"
+              ? await this.outstandingApprovers(request.requestedBy, existingDecisions, tx)
+              : 0,
         };
       }
       throw new AppError(
@@ -323,7 +327,22 @@ export class DefaultApprovalsService implements ApprovalsService {
       return await this.execute(requestId, tx);
     }
 
-    return { status: "pending", applied: false };
+    return {
+      status: "pending",
+      applied: false,
+      waitingFor: neededApprovers.filter((id) => !approvedDecisions.includes(id)).length,
+    };
+  }
+
+  /** Approvers still owed a decision on this request (approver set minus approve decisions). */
+  private async outstandingApprovers(
+    requestedBy: string,
+    decisions: { decidedBy: string; decision: string }[],
+    tx: TxCtx,
+  ): Promise<number> {
+    const needed = await this.approverSet(requestedBy, tx);
+    const approved = decisions.filter((d) => d.decision === "approve").map((d) => d.decidedBy);
+    return needed.filter((id) => !approved.includes(id)).length;
   }
 
   async execute(requestId: string, tx: TxCtx): Promise<DecideResult> {
@@ -392,7 +411,7 @@ export class DefaultApprovalsService implements ApprovalsService {
         })
         .where(eq(approvalRequests.id, requestId));
 
-      return { status: "approved", applied: false };
+      return { status: "approved", applied: false, error: errorMessage };
     }
   }
 
