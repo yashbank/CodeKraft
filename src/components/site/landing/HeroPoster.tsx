@@ -3,8 +3,20 @@ import { cn } from "@/components/ui/_utils";
 
 /**
  * 3D Isometric architectural render hero showcase with ambient glow & glass borders.
+ *
+ * `src`/`alt` come from the admin-uploaded "who" chapter poster (Landing editor →
+ * `/admin/content/landing`, see `LandingEditor.tsx`'s "Hero image" field). When no poster has
+ * been uploaded yet, falls back to the built-in static render so the hero never looks empty.
  */
-export function HeroPoster({ className }: { className?: string }) {
+export function HeroPoster({
+  className,
+  src,
+  alt,
+}: {
+  className?: string;
+  src?: string;
+  alt?: string;
+}) {
   return (
     <div
       className={cn(
@@ -14,8 +26,9 @@ export function HeroPoster({ className }: { className?: string }) {
     >
       <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/10 via-transparent to-violet-500/10 opacity-70 transition-opacity group-hover:opacity-100" />
       <Image
-        src="/images/hero-3d.jpg"
-        alt="CodeKraft 3D System Architecture Render"
+        key={src ?? "default"}
+        src={src || "/images/hero-3d.jpg"}
+        alt={alt || "CodeKraft 3D System Architecture Render"}
         fill
         priority
         sizes="(min-width: 1024px) 50vw, 100vw"

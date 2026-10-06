@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { PlusIcon, Trash2Icon } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -18,12 +19,17 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { allocateLargestRemainder, parseMinor } from "@/lib/money";
+import { createManualOrder } from "@/modules/orders/admin-mutations";
 import { ApprovalGateNotice, Banner } from "../Banner";
 import { SplitEditor, splitSummary, type SplitValue } from "../catalog/SplitEditor";
 import { inr } from "../format";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
 import type { CustomerOption, OfferingOption } from "../types";
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
 interface ProjectLine {
   id: number;
@@ -59,39 +65,38 @@ export function ManualOrderForm({
   isSuperAdmin,
   initialType = "project",
 }: ManualOrderFormProps) {
+  const router = useRouter();
   const [type, setType] = React.useState<"product" | "project">(initialType);
+  const [customerId, setCustomerId] = React.useState(customers[0]?.id ?? "");
   const [productLines, setProductLines] = React.useState<Array<{ id: number; offeringId: string }>>(
     [{ id: 1, offeringId: offerings[0]?.id ?? "" }],
   );
   const [lines, setLines] = React.useState<ProjectLine[]>([
     {
       id: 1,
-      description: "Discovery workshop",
+      description: "",
       qty: 1,
-      unit: "80,000.00",
-      split: {
-        companyCutBps: 2000,
-        lines: partners.map((p) => ({ partnerId: p.id, partnerName: p.name, bps: 4000 })),
-      },
-    },
-    {
-      id: 2,
-      description: "Portal build phase 1",
-      qty: 1,
-      unit: "3,20,000.00",
-      split: {
-        companyCutBps: 2000,
-        lines: [
-          { partnerId: partners[0]?.id ?? "", partnerName: partners[0]?.name ?? "", bps: 3000 },
-          { partnerId: partners[1]?.id ?? "", partnerName: partners[1]?.name ?? "", bps: 5000 },
-        ],
-      },
+      unit: "0.00",
+      split: { companyCutBps: 10000, lines: [] },
     },
   ]);
+  const [clientName, setClientName] = React.useState("");
+  const [clientEmail, setClientEmail] = React.useState("");
+  const [clientCompany, setClientCompany] = React.useState("");
+  const [clientCountry, setClientCountry] = React.useState("IN");
+  const [clientAddress, setClientAddress] = React.useState("");
+  const [clientGst, setClientGst] = React.useState("");
   const [applyTax, setApplyTax] = React.useState(true);
   const [discount, setDiscount] = React.useState("0");
+  const [notes, setNotes] = React.useState("");
   const [recordPayment, setRecordPayment] = React.useState(false);
   const [received, setReceived] = React.useState("");
+  const [paymentMethod, setPaymentMethod] = React.useState<"manual_bank" | "manual_upi">(
+    "manual_bank",
+  );
+  const [paymentReference, setPaymentReference] = React.useState("");
+  const [paidOn, setPaidOn] = React.useState(todayIso());
+  const [submitting, setSubmitting] = React.useState(false);
 
   const safeMinor = (s: string) => {
     try {
@@ -147,6 +152,74 @@ export function ManualOrderForm({
   const setLine = (id: number, patch: Partial<ProjectLine>) =>
     setLines((ls) => ls.map((l) => (l.id === id ? { ...l, ...patch } : l)));
 
+  const selectedCustomer = customers.find((c) => c.id === customerId);
+  const validProductLines = productLines.filter((l) => l.offeringId);
+
+  /**
+   * Only "product" orders submit for real right now. "Project" orders need a partner revenue
+   * split that's independently approval-gated (`zSplitSnapshot` in `modules/orders/types.ts`
+   * requires `lines` — the partner shares — to sum to 10 000 bps on their own; this form's
+   * `splitsValid` check above folds `companyCutBps` into that sum, which is a different
+   * invariant than the one the backend actually enforces). Wiring that correctly needs the
+   * finance split logic double-checked against real ledger behavior, not guessed here — so
+   * rather than submit a split that silently gets rejected (or worse, accepted with the wrong
+   * numbers), "project" stays an honest "not available from this screen yet" instead of lying
+   * with a fake success toast the way this form used to for every order type.
+   */
+  async function handleCreate() {
+    if (type === "project") {
+      toast.error(
+        "Project orders need a finance-approved revenue split and can't be created from this screen yet — ask a super admin to create it directly.",
+      );
+      return;
+    }
+    if (!customerId) {
+      toast.error("Choose a registered customer first.");
+      return;
+    }
+    if (validProductLines.length === 0) {
+      toast.error("Add at least one offering.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const result = await createManualOrder({
+        type: "product",
+        customer: { userId: customerId },
+        currency: "INR",
+        items: validProductLines.map((l) => ({ offeringId: l.offeringId })),
+        discountMinor: safeMinor(discount),
+        taxEnabled: applyTax,
+        billing: {
+          name: selectedCustomer?.name ?? "",
+          email: selectedCustomer?.email ?? "",
+          country: "IN",
+        },
+        notes: notes.trim() || undefined,
+        payment: recordPayment
+          ? {
+              method: paymentMethod,
+              amountReceivedMinor: safeMinor(received),
+              reference: paymentReference,
+              paidOn,
+            }
+          : undefined,
+      });
+      if (!result.ok) {
+        toast.error(result.error.message);
+        return;
+      }
+      toast.success(
+        `Order ${result.data.orderNo} created${recordPayment ? " and confirmed" : " · instructions emailed"}`,
+      );
+      router.push(`/admin/orders/${result.data.orderId}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create order");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <>
       <PageHeader
@@ -189,7 +262,7 @@ export function ManualOrderForm({
                   : "Or enter client details below."
               }
             >
-              <Select defaultValue={customers[0]?.id}>
+              <Select value={customerId} onValueChange={setCustomerId}>
                 <SelectTrigger id="mo-customer">
                   <SelectValue placeholder="Search by email" />
                 </SelectTrigger>
@@ -201,30 +274,58 @@ export function ManualOrderForm({
                   ))}
                 </SelectContent>
               </Select>
+              {customers.length === 0 ? (
+                <p className="mt-1 text-caption text-danger">
+                  No registered customers yet — invite one from Customers first.
+                </p>
+              ) : null}
             </Field>
             {type === "project" ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field id="mo-client" label="Client name" required>
-                  <Input id="mo-client" defaultValue="Global Textiles Pvt Ltd" />
+                  <Input
+                    id="mo-client"
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                  />
                 </Field>
                 <Field id="mo-client-email" label="Client email" required>
                   <Input
                     id="mo-client-email"
                     type="email"
-                    defaultValue="accounts@globaltextiles.in"
+                    value={clientEmail}
+                    onChange={(e) => setClientEmail(e.target.value)}
                   />
                 </Field>
                 <Field id="mo-company" label="Company" optional>
-                  <Input id="mo-company" />
+                  <Input
+                    id="mo-company"
+                    value={clientCompany}
+                    onChange={(e) => setClientCompany(e.target.value)}
+                  />
                 </Field>
                 <Field id="mo-country" label="Country" required>
-                  <Input id="mo-country" defaultValue="IN" />
+                  <Input
+                    id="mo-country"
+                    value={clientCountry}
+                    onChange={(e) => setClientCountry(e.target.value)}
+                  />
                 </Field>
                 <Field id="mo-address" label="Billing address" className="sm:col-span-2">
-                  <Textarea id="mo-address" rows={2} defaultValue="Plot 9, GIDC, Surat 395010" />
+                  <Textarea
+                    id="mo-address"
+                    rows={2}
+                    value={clientAddress}
+                    onChange={(e) => setClientAddress(e.target.value)}
+                  />
                 </Field>
                 <Field id="mo-gst" label="GST number" optional>
-                  <Input id="mo-gst" className="font-mono" defaultValue="24AABCG1234H1Z5" />
+                  <Input
+                    id="mo-gst"
+                    className="font-mono"
+                    value={clientGst}
+                    onChange={(e) => setClientGst(e.target.value.toUpperCase())}
+                  />
                 </Field>
               </div>
             ) : null}
@@ -455,7 +556,7 @@ export function ManualOrderForm({
               </div>
             </div>
             <Field id="mo-notes" label="Notes on invoice" optional>
-              <Textarea id="mo-notes" rows={2} />
+              <Textarea id="mo-notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
             </Field>
           </fieldset>
 
@@ -478,7 +579,10 @@ export function ManualOrderForm({
                 {recordPayment ? (
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field id="mo-method" label="Method" required>
-                      <Select defaultValue="manual_bank">
+                      <Select
+                        value={paymentMethod}
+                        onValueChange={(v) => setPaymentMethod(v as "manual_bank" | "manual_upi")}
+                      >
                         <SelectTrigger id="mo-method">
                           <SelectValue />
                         </SelectTrigger>
@@ -498,10 +602,20 @@ export function ManualOrderForm({
                       />
                     </Field>
                     <Field id="mo-ref" label="Reference" required>
-                      <Input id="mo-ref" className="font-mono" />
+                      <Input
+                        id="mo-ref"
+                        className="font-mono"
+                        value={paymentReference}
+                        onChange={(e) => setPaymentReference(e.target.value)}
+                      />
                     </Field>
                     <Field id="mo-paid-on" label="Paid on" required>
-                      <Input id="mo-paid-on" type="date" defaultValue="2026-09-25" />
+                      <Input
+                        id="mo-paid-on"
+                        type="date"
+                        value={paidOn}
+                        onChange={(e) => setPaidOn(e.target.value)}
+                      />
                     </Field>
                     {received ? (
                       <p role="status" aria-live="polite" className="text-body-sm sm:col-span-2">
@@ -581,23 +695,28 @@ export function ManualOrderForm({
               </section>
             ) : null}
             {type === "project" ? (
-              <ApprovalGateNotice approvers={approvers} what="Creating a project order" />
+              <>
+                <ApprovalGateNotice approvers={approvers} what="Creating a project order" />
+                <Banner tone="warning">
+                  Not available from this screen yet — project orders need a finance-approved
+                  partner split. Ask a super admin to create it directly, or switch to "Product
+                  order" above.
+                </Banner>
+              </>
             ) : null}
-            {!splitsValid ? (
+            {type === "project" && !splitsValid ? (
               <Banner tone="danger">Every project line needs a split that sums to 100 %.</Banner>
             ) : null}
             <div className="flex flex-col gap-2">
               <Button
-                disabled={!splitsValid || total <= 0}
-                onClick={() =>
-                  toast.success(
-                    type === "project"
-                      ? `Order created · split approval requested from ${approvers[0]}`
-                      : recordPayment
-                        ? "Order created and confirmed · invoice CK/2026-27/0007"
-                        : "Order created · instructions emailed",
-                  )
+                disabled={
+                  submitting ||
+                  type === "project" ||
+                  total <= 0 ||
+                  (type === "product" && (!customerId || validProductLines.length === 0))
                 }
+                loading={submitting}
+                onClick={handleCreate}
               >
                 {type === "project"
                   ? "Create & request split approval"

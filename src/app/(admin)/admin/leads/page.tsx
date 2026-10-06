@@ -7,8 +7,18 @@ import { listProductsAdminQuery } from "@/modules/catalog/queries";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminLeadsPage() {
+interface PageProps {
+  searchParams: Promise<{
+    prefillName?: string;
+    prefillEmail?: string;
+    prefillPhone?: string;
+    prefillCompany?: string;
+  }>;
+}
+
+export default async function AdminLeadsPage({ searchParams }: PageProps) {
   const ctx = await getAdminRequestContext();
+  const sp = await searchParams;
 
   const [leadsResult, adminsResult, productsResult, currentUser] = await Promise.all([
     listLeadsQuery({ limit: 100 }, ctx),
@@ -44,6 +54,16 @@ export default async function AdminLeadsPage() {
       detailHref="/admin/leads"
       newOrderHref="/admin/orders/new"
       products={products}
+      initialNewLead={
+        sp.prefillName
+          ? {
+              name: sp.prefillName,
+              email: sp.prefillEmail,
+              phone: sp.prefillPhone,
+              company: sp.prefillCompany,
+            }
+          : undefined
+      }
     />
   );
 }

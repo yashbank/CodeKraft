@@ -263,6 +263,15 @@ export function CustomerDetail({
                 { label: "New quote", href: quotesHref, disabled: deleted },
                 { label: "New manual order", href: newOrderHref, disabled: deleted },
                 {
+                  label: "New lead",
+                  href: `/admin/leads?${new URLSearchParams({
+                    prefillName: c.name,
+                    prefillEmail: c.email,
+                    ...(c.company ? { prefillCompany: c.company } : {}),
+                  }).toString()}`,
+                  disabled: deleted,
+                },
+                {
                   label: "Grant access",
                   onSelect: () => setGrantOpen(true),
                   // Manual entitlement grants need `modules/entitlements` wired (out of this

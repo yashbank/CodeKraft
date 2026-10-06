@@ -59,11 +59,18 @@ export default async function LandingRoute() {
     landingResult.ok ? landingResult.data.chapters.map((c) => [c.key, c]) : [],
   );
 
-  const who = chapterCopy(chaptersByKey.get("who"));
+  const whoChapter = chaptersByKey.get("who");
+  const who = chapterCopy(whoChapter);
   const proof = chapterCopy(chaptersByKey.get("proof"));
 
   const content: LandingContent = {
-    who: { ...who, subtitle: chaptersByKey.get("who")?.subtitle ?? "" },
+    who: {
+      ...who,
+      subtitle: whoChapter?.subtitle ?? "",
+      poster: whoChapter?.media.poster
+        ? { url: whoChapter.media.poster.url, alt: whoChapter.media.poster.alt || whoChapter.title }
+        : null,
+    },
     build: chapterCopy(chaptersByKey.get("build")),
     sell: chapterCopy(chaptersByKey.get("sell")),
     proof: { ...proof, stats: [] },

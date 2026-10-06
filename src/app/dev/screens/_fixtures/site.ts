@@ -628,6 +628,7 @@ export const LANDING: LandingContent = {
     subtitle:
       "We design and build web, mobile and SaaS products for clients — and sell the ones we've perfected, ready to run.",
     body: "",
+    poster: null,
   },
   build: {
     eyebrow: "02 / What we build",

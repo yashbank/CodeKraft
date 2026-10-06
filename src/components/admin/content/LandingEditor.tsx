@@ -16,7 +16,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Banner } from "../Banner";
 import { Field, RichTextField } from "../RichTextField";
 import type { LandingChapter, ServiceRow } from "../types";
 import { ContentEditorFrame, moveItem, SortableRow } from "./ContentEditorFrame";
@@ -164,7 +163,16 @@ export function LandingEditor({
             position {chapters.indexOf(chapter) + 1}
           </span>
         </h2>
-        <Field id="ch-poster" label="Hero image" optional hint="Image shown for this chapter.">
+        <Field
+          id="ch-poster"
+          label="Hero image"
+          optional
+          hint={
+            chapter.key === "who"
+              ? "Shown behind the opening hero text on the public site."
+              : "Saved with this chapter, but not shown on the public page yet — only the \"Who we are\" hero image renders today."
+          }
+        >
           <input
             ref={posterFileInputRef}
             type="file"
@@ -217,15 +225,6 @@ export function LandingEditor({
           <Input id="ch-subtitle" name="subtitle" defaultValue={chapter.subtitle} />
         </Field>
         <RichTextField id="ch-body" name="body" label="Body" defaultValue={chapter.body} rows={4} />
-        {chapter.key === "who" ? (
-          <div className="space-y-3 rounded-lg border border-border bg-surface p-4">
-            <h3 className="text-h4">Hero media</h3>
-            <Banner tone="neutral">
-              Poster image upload is coming in a follow-up update. The 3D scene is code-driven and
-              works without a poster for now.
-            </Banner>
-          </div>
-        ) : null}
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="ch-cta1" label="Primary CTA label">
             <Input id="ch-cta1" name="cta1" defaultValue={chapter.ctaPrimary?.label ?? "Start a project"} />

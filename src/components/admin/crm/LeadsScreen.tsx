@@ -98,6 +98,13 @@ export interface LeadsScreenProps {
   initialView?: "table" | "board";
   /** Products offered for the "Product" field on the New lead sheet (product_cta-style leads). */
   products?: Array<{ id: string; name: string }>;
+  /**
+   * Opens the "New lead" sheet pre-filled on mount — used by the "New lead" deep link from
+   * `CustomerDetail` (`/admin/leads?prefillName=…`), so a founder looking at a customer with no
+   * leads yet has an actual path to create one instead of re-typing the name/email by hand on
+   * this page.
+   */
+  initialNewLead?: { name?: string; email?: string; phone?: string; company?: string };
 }
 
 /** Follow-up chip: red with the number of days when overdue (D-706). */
@@ -131,6 +138,7 @@ export function LeadsScreen({
   newOrderHref,
   initialView = "table",
   products = [],
+  initialNewLead,
 }: LeadsScreenProps) {
   const [leads, setLeads] = React.useState(initial);
   const router = useRouter();
@@ -146,6 +154,27 @@ export function LeadsScreen({
   const [newProduct, setNewProduct] = React.useState<string>("none");
   const [newPriority, setNewPriority] = React.useState<"low" | "normal" | "high">("normal");
   const [assignToMe, setAssignToMe] = React.useState(true);
+
+  // Deep link from CustomerDetail's "New lead" action (?prefillName=&prefillEmail=&…): open the
+  // sheet and fill in what we already know about the customer, same imperative
+  // `document.getElementById(...).value =` pattern this file already uses for the Lost/Won
+  // dialogs' uncontrolled fields, so the admin isn't re-typing a name/email we already have.
+  React.useEffect(() => {
+    if (!initialNewLead?.name) return;
+    setNewOpen(true);
+    const id = requestAnimationFrame(() => {
+      const setVal = (elId: string, v: string | undefined) => {
+        const el = document.getElementById(elId) as HTMLInputElement | null;
+        if (el && v) el.value = v;
+      };
+      setVal("nl-name", initialNewLead.name);
+      setVal("nl-email", initialNewLead.email);
+      setVal("nl-phone", initialNewLead.phone);
+      setVal("nl-company", initialNewLead.company);
+    });
+    return () => cancelAnimationFrame(id);
+    // Deliberately only on mount — this is a one-time deep-link prefill, not a sync with props.
+  }, []);
 
   const isOverdue = (l: LeadRow) =>
     Boolean(l.nextFollowUpAt && daysUntil(l.nextFollowUpAt, now) < 0);
@@ -639,6 +668,7 @@ export function LeadsScreen({
             <Button
               variant="destructive"
               disabled={submitting}
+              loading={submitting}
               onClick={async () => {
                 if (!lostOpen) return;
                 const reasonEl = document.getElementById("lost-reason") as HTMLButtonElement | null;
@@ -686,6 +716,7 @@ export function LeadsScreen({
             </Button>
             <Button
               disabled={submitting}
+              loading={submitting}
               onClick={async () => {
                 if (!wonOpen) return;
                 const orderEl = document.getElementById("won-order") as HTMLInputElement | null;
@@ -778,6 +809,7 @@ export function LeadsScreen({
             </Button>
             <Button
               disabled={submitting}
+              loading={submitting}
               onClick={async () => {
                 const formEl = newLeadFormRef.current;
                 if (!formEl) return;

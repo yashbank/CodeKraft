@@ -198,7 +198,12 @@ export interface LandingChapterCopy {
 }
 
 export interface LandingContent {
-  who: LandingChapterCopy & { subtitle: string };
+  who: LandingChapterCopy & {
+    subtitle: string;
+    /** Admin-uploaded hero poster (Landing editor, "Who we are" chapter). Falls back to the
+     * built-in architecture render when none is set. */
+    poster: { url: string; alt: string } | null;
+  };
   build: LandingChapterCopy;
   sell: LandingChapterCopy;
   proof: LandingChapterCopy & { stats: { label: string; value: string }[] };
