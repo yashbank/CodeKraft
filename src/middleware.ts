@@ -43,7 +43,8 @@ export function middleware(req: NextRequest): NextResponse {
     // Auth screens and APIs are shared by both hosts; everything else lives under /admin
     if (
       pathname.startsWith("/api/") ||
-      pathname.startsWith("/admin") ||
+      pathname === "/admin" ||
+      pathname.startsWith("/admin/") ||
       pathname === "/auth" ||
       pathname.startsWith("/auth/")
     ) {

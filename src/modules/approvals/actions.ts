@@ -13,6 +13,20 @@ import {
 } from "./types";
 import { approvalsService } from "./service";
 
+// Side-effect-only: each domain module below calls `approvalsService.registerApplyHandler`
+// at its own top level. That registration only runs once the module is actually evaluated —
+// in this serverless app, module graphs are bundled/loaded per route, so a handler registered
+// by a module nothing on the approve/reject path happens to import is silently missing from
+// this process's in-memory registry (confirmed live: approving an admin.user_change request
+// threw "No apply handler registered for approval type: admin.user_change" because nothing in
+// the approvals flow's own import graph touched src/modules/users/service.ts). Importing every
+// handler-registering module here, directly alongside the action handlers that call
+// `approvalsService.decide()`, guarantees the registry is fully populated before any of them
+// can run, regardless of what else has or hasn't loaded in this instance.
+import "@/modules/catalog/service";
+import "@/modules/ownership/service";
+import "@/modules/users/service";
+
 export const approveRequestAction = defineAction({
   name: "API-ADM-02 approval.approve",
   input: approveRequestInput,

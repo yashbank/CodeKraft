@@ -57,6 +57,7 @@ export function LoginForm({
   return (
     <form
       className="space-y-4"
+      method="post"
       aria-busy={busy || undefined}
       onSubmit={(e) => {
         e.preventDefault();

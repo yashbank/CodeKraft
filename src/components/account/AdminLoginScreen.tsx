@@ -45,6 +45,7 @@ export function AdminLoginScreen({
         <AuthCard title="Sign in to CodeKraft admin">
           <form
             className="space-y-4"
+            method="post"
             aria-busy={loading || undefined}
             onSubmit={(e) => {
               e.preventDefault();
