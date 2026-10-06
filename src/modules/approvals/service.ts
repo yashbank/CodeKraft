@@ -485,12 +485,19 @@ export class DefaultApprovalsService implements ApprovalsService {
     for (const req of items) {
       // A pending request can become fully approved when the approver set shrinks
       // (e.g. an admin is deactivated) without any new decision. Re-check it here.
-      if (req.status === "pending" && (await this.reconcilePending(req.id, req.requestedBy))) {
-        const [fresh] = await database
-          .select()
-          .from(approvalRequests)
-          .where(eq(approvalRequests.id, req.id));
-        if (fresh) Object.assign(req, fresh);
+      if (req.status === "pending") {
+        try {
+          if (await this.reconcilePending(req.id, req.requestedBy)) {
+            const [fresh] = await database
+              .select()
+              .from(approvalRequests)
+              .where(eq(approvalRequests.id, req.id));
+            if (fresh) Object.assign(req, fresh);
+          }
+        } catch (err: unknown) {
+          // Never let a reconcile failure hide the whole inbox.
+          console.error("approval reconcile failed", req.id, err);
+        }
       }
 
       const decisions = await database
