@@ -1184,6 +1184,238 @@ this session touched). `pnpm build` clean. Full unit suite: 745/745 passing. Pus
 deployed as `dpl_3nZXJMSG1MtoXvwaCXpn4SdXagt4`, confirmed `READY` + aliased to both production
 domains via `vercel inspect` and `mcp__claude_ai_Vercel__get_deployment`.
 
+## Multi-role data population + concurrency pass (2026-10-06, late session) — PARTIAL, blocked
+
+Scope asked: publish 2-3 real products through the two-admin approval flow, run customers
+through browse → checkout, create categories/coupons/leads, verify every write by reload.
+**Outcome: nothing is published, and no customer can buy anything yet.** Stopped at the first
+real blocker, plus a new production breakage (below). All scripts were throwaway, in the session
+scratchpad, not committed.
+
+### 1. Done and verified
+
+- **Commit `a59f37e`** `feat(leads): add public createLead defineAction wrapper` (pushed; deployed as
+  the current production build). Adds `createLeadAction` in `src/modules/leads/actions.ts`, which
+  is unused: no UI calls it yet. `tsc` reports no errors in that file, eslint clean. Also
+  corrected a misleading comment in that file before committing.
+- **Three categories**, created via the real `/admin/categories` panel (toast "Category created"
+  each): `DevOps & Cloud Infrastructure` (`devops-cloud-infrastructure`), `Data & Analytics
+  Engineering` (`data-analytics-engineering`), `QA & Test Automation` (`qa-test-automation`).
+  **Not reload-verified** (admin pages were already signed out by the time I could re-check).
+- **Three draft products**, all created via `/admin/products/new`:
+  | Product | id | Category | Offering | Status |
+  |---|---|---|---|---|
+  | CloudPilot Managed Platform | `03ab87c0-7923-4c8f-b1f0-a33d5392fcff` | DevOps & Cloud Infrastructure | Managed Ops — Monthly (subscription, monthly, SaaS, INR 24,999) | draft |
+  | InsightForge Analytics Starter Kit | `521a45f8-47ce-4557-b4d9-b013942439c2` | Data & Analytics Engineering | Starter Kit License (one-time, download, INR 14,999) | draft |
+  | QA Sentinel Test Automation Service | `376f1b35-20be-4073-9df8-9b711e174390` | QA & Test Automation | QA Sentinel — Engagement (one-time, service, INR 89,999) | draft |
+  - Long description saved ("Content saved" toast) on all three.
+  - **Media upload works on brand-new products.** `Upload & attach` showed "Media attached" for
+    all three (cover image is a 2×2 PNG, so placeholder quality). The readiness check's image
+    requirement passes on the server. This means the R2 CORS failure documented earlier in this
+    file no longer reproduces from a browser. Confirmed for these uploads only.
+
+### 2. Blocked: publish (readiness check 3, ownership)
+
+Clicking "Submit for approval" on each product returns this toast from the real server action:
+`Product readiness checks failed: Product must have an active or pending ownership version summing to 10,000 bps`
+(`src/modules/catalog/service.ts` ~L713-760). It is the only failing check. The offering and image
+checks pass.
+
+Root cause: a new product gets an ownership version only when the creating admin has a
+**partner** profile (`ownership/service.ts`, the creator-partner branch around L250-290). Neither
+admin has one. The "Propose new split" button on the Ownership tab is disabled
+(`ProductEditor.tsx` ~L1786, `product.partners.length === 0`), and the tab says "No partners to
+propose a split with". Confirmed on the live page (button `disabled=true`, note present). There is
+no partner record in the system to propose against.
+
+I did **not** create a partner or a split. A partner is a revenue-share party, and the partner form
+has hard-coded bank details, so this is a business decision for the founder. The same outcome
+would also need a dual-approved `ownership.change` before `product.publish`. Options for the
+founder: (a) create real partner records and propose a split, which is the intended path; or (b)
+allow a company-owned 100% version (`companyCutBps = 10000`, no partner lines) when there are no
+partners. Option (b) is a small UI and service change, but it touches revenue allocation, so it
+needs a human decision first.
+
+Because nothing was ever submitted, no product approval request exists. The two-admin **publish**
+race could not be run.
+
+### 3. Customer side: what was verified and what is blocked
+
+- **Customer accounts** were self-registered through the real `/auth/register` form and are
+  signed in: `ck-demo-customer-1..5@example.com` (Asha Rao, Vikram Mehta, Priya Nair, Rohan Shah,
+  Neha Kapoor), plus `yashbank2002+ckdemo@gmail.com` ("CK Demo Purchaser"). Each session was checked
+  by loading `/account` with no sign-in gate. Note: the register form stays on `/auth/register`
+  and shows "Check your inbox". It doesn't redirect, so a success check based on URL change gives
+  a false negative.
+- **Concurrent browsing during content creation** (2 customer contexts, polling `/products` every
+  ~4s for the whole admin run): 43 polls, every one returned 0 product links. Correct, because
+  nothing was published. This is not stale-data evidence. The real stale-data test (catalog
+  before/after a publish) can't run until a product is published.
+- **Checkout is blocked, and the cause is email verification, not payments.** `createOrder`
+  throws `EMAIL_UNVERIFIED` unless `users.emailVerified` is true (`orders/service.ts` ~L249). Only
+  the two bootstrap admin emails are force-verified (`auth/hooks.ts` ~L97). Every other customer
+  needs the emailed link.
+  - The verification email never showed up. A Gmail search for the exact subject from
+    `bootstrap.ts` ("Verify your CodeKraft email") over the last day returned nothing.
+  - Production env (`vercel env list`, names only, no values read): `RESEND_API_KEY` is set, but
+    `ALLOW_LOG_EMAIL` is also set to a secret in production. `src/lib/env.ts` ~L181 only
+    skips the "must be `resend`" check when `ALLOW_LOG_EMAIL=true`, so `EMAIL_TRANSPORT` is most
+    likely `log` and no mail is sent. This is circumstantial, not confirmed. The exact
+    `EMAIL_TRANSPORT` value was not read, since reading it would mean decrypting it.
+  - **Why this matters beyond this test:** every real customer who signs up today can't verify
+    email, so can't place an order. Please check Vercel's `EMAIL_TRANSPORT` value directly.
+    Changing it sends real mail to real people, so I did not change it.
+- **Login flakiness:** the sign-in POST returns 200 with a valid `Set-Cookie`, but the browser
+  cookie jar was sometimes empty right after (`diag-login-cookie`). `login()` in my script now
+  checks for the session cookie and retries. Real browsers may not hit this. Not confirmed as a
+  product bug.
+
+### 4. NEW production breakage, unresolved — admin pages show "sign in" for fresh sessions
+
+Since about **16:07 UTC**, a freshly signed-in admin (both accounts) can load `/dashboard`, but
+every other admin route renders the `AdminLoginPrompt` ("Sign in with an admin account to
+continue", `src/app/(admin)/layout.tsx` L20). Reproduced at least 4 times:
+`/admin/admin-users`, `/admin/approvals`, `/admin/categories`, and `/dashboard` for an older
+session. At 16:04 UTC the admin product page still worked.
+
+- The newest production deployment (created 16:03:44 UTC, Ready) is commit **`a59f37e` — my
+  commit above**. Nothing else has been pushed since, so production = `a59f37e`. The
+  correlation is strong, but the mechanism is not clear: that commit adds one unused server-action
+  export.
+- I tried to revert `a59f37e` to test this. The production-deploy action was denied by the
+  permission classifier, and the classifier then denied further git commands too. **I did not
+  push a revert.** Local state may have been left unchanged. I could not confirm this because git
+  reads were also denied.
+- **Next step for whoever picks this up:** either revert `a59f37e` and confirm
+  `/admin/admin-users` loads for a fresh sign-in, or check the admin-layout session path in the
+  Vercel runtime logs for the 16:03-16:10 window.
+
+### 5. Not done (blocked by section 4)
+
+- **Two-admin approval race** (planned: admin1 submits invite-admin R4 while admin1 rejects admin2's
+  R2; cancel-vs-approve on invite R1, same record). Not run. The earlier admin.user_change fix
+  (`dc4bcf3`) is still the most recent change to this path.
+- **Coupons** (planned, not created): `CKLAUNCH2026` (20%, max 100 redemptions),
+  `CKWELCOME500` (fixed INR 500, max 50 redemptions). Both use the real `/admin/coupons` form.
+- **Leads** (planned, not created): two demo leads via `/admin/leads` → "New lead"
+  (`ck-demo-lead-1@example.com`, Rahul Deshmukh / Lumen Retail; `ck-demo-lead-2@example.com`,
+  Ananya Iyer / Brightpath Health).
+- **Landing content**: nothing changed. Featured products would have nothing to show until
+  products are published.
+- **Customer purchase path**: nothing completed. Blocked first by unpublished products, then by
+  email verification. The payment gateway is not reached.
+
+### 6. What the founder needs to decide or do
+
+1. Decide the ownership model for new products (section 2): real partners with a split, or a
+   company-owned 100% option.
+2. Check `EMAIL_TRANSPORT` in Vercel production (section 3). This is probably the biggest blocker
+   for real customers.
+3. Look into the admin session breakage (section 4) before anyone relies on the admin site.
+
+---
+
+## Admin functional sweep: click-tested write paths (2026-10-06, Playwright against production)
+
+Scope: finance (ledger, allocations, reports, adjustments, expenses, partners), CRM (leads detail, queries, chatbot, delivery tasks, entitlements, customers), content (testimonials, FAQs, legal, services, case studies), settings (read side), quotes, audit log, admin-users (request creation only). Products, categories, the landing editor and lead/order creation were not touched.
+
+Method: each write was verified by reloading the page, not by the toast. Test rows were created unpublished where possible and deleted again in the same run. Sessions: admin login is single-session per user, so scripts reused one saved storage state after the founder's concurrent sessions kept replacing each other.
+
+### Fixed and deployed
+
+| Commit | Bug | Proof |
+|---|---|---|
+| `a790277` | `/admin/chatbot` returned 500 for every admin. `AdminChatbotPage` read `promptsResult.data.versions`, but the service returns `{ items }`, so `prompts.map` threw. | Vercel log `TypeError: Cannot read properties of undefined (reading 'map')`, digest 3558723863. Page renders after deploy. |
+| `f399e1b` | (a) Chatbot still 500'd on a fresh install: `lastIndexRun = ""` made `Intl.DateTimeFormat.format(new Date(""))` throw `RangeError`. Shared formatters now render "—". (b) `/admin/content/legal` was a blank screen when `legal_pages` has zero rows (`LegalEditor` returned `null`). It now shows an empty state that points to `pnpm db:seed`. | Vercel log `RangeError: Invalid time value`. Both pages render in production. |
+| `9513036` | Case study Industry is required by `upsertCaseStudySchema` (`text(80)`, min 1) but not marked required in the UI. Save then fails with a generic "Some fields are invalid." | Create with Industry filled persists after reload; the draft was deleted again. |
+
+Checks: `pnpm build` passes; eslint is clean on the touched lines; tsc error count went 209 → 208 (no new errors). Note that `next.config.ts` has `typescript.ignoreBuildErrors: true` and tsc has 208 pre-existing errors elsewhere, so `tsc` is not a gate. That is also why the chatbot field mismatch shipped.
+
+### Section verdicts
+
+- **Finance / Expenses: fully works.** Recorded ₹123.45 expenses persist after reload (audit log shows six `API-FIN-06 expense.recorded`). These are immutable ledger rows from my testing. Reverse them with an adjustment if you don't want them. Confirm the total is `₹740.70` (6 × 123.45).
+- **Finance / Adjustments: fully works.** A proposal persists in "Awaiting approval" (audit `API-FIN-07 adjustment.proposed`). Not approved.
+- **Finance / Partners & payouts: not testable.** The dialog renders and validates. Production has zero partners, so there is nothing to pay. The Company card does not render (see Ledger bug).
+- **Finance / Ledger: found, NOT fixed (real bug).** See the repro below.
+- **Finance / Allocations, Reports: read-only, render with zero data.** No order-based ledger data exists yet, so no values could be checked.
+- **CRM / Leads detail: fully works** for notes, pipeline stage, and assignee (claim and reassign, both persisted). **Caveat:** I moved `demolead` (`/admin/leads/6a3ef8a8-311c-4bc1-8ae1-807e00f51108`) to *Won*. The state machine (`src/modules/leads/state.ts`: `won: []`) has no UI path back, so **it stays Won unless someone edits the row directly.** It is a test lead.
+- **CRM / Queries: fully works.** Claim, reply (persists, thread updates), close, and reopen all persist. The test query is left Closed.
+- **CRM / Chatbot: fixed and renders (see table). Prompt create/activate not testable.** The prompts editor is disabled until the first chat conversation seeds v1 (`src/modules/chat/service.ts:86-100`). Customer chat is gated behind email verification. Minor copy issue: unverified users see "Daily limit reached" when the real reason is that their email is unverified (`src/app/(account)/account/chat/page.tsx`, `capReached` flag).
+- **CRM / Delivery tasks, Entitlements: not testable.** Both are empty, and tasks only come from orders, which were out of scope.
+- **CRM / Customers: fully works.** Internal note saves on blur and persists. Suspend and Reinstate persist, but both require a reason. Reset-link was not sent because it emails the customer.
+- **Content / Testimonials: fully works for create and delete.** Publish toggle not exercised, because publishing a test quote would show it on the public site.
+- **Content / FAQs: fully works for create and delete** (unpublished, then deleted).
+- **Content / Services: fully works for create and delete** (unpublished, then deleted). Summary is required; the form marks it but does not enforce it natively, so the server rejects a blank summary.
+- **Content / Case studies: fixed (`9513036`), create and delete verified.** The rich-text toolbar buttons are inert (`src/components/admin/RichTextField.tsx`); the fields are plain textareas with a "Tiptap arrives in P3" caption. Not fixed.
+- **Content / Legal: fixed (`f399e1b`).** Creating the four legal page rows is a seed step (`pnpm db:seed`, `scripts/seed/content.ts`), which is a founder decision.
+- **Settings (read side): fully works.** Sections render. AI caps read 2000 platform and 30 per user. Save was not touched.
+- **Quotes: fully works.** Create with the customer dropdown (16 real customers) persists. Cancel persists (row status "Cancelled"). Send was not exercised, because it emails the customer.
+- **Audit log: entries real, export broken.** Rows render. "Export CSV" shows "Export ready", then opens a dead link (see Found, not fixed).
+- **Admin users: request creation works, nothing approved.** "Invite admin" posts and shows "Invite approval requested". "Requested by me" went 16 → 20. Those rows are for `e2e-*@codekraft-test.invalid` and are still **pending**. Cancel them from Approvals → Requested by me. Nothing was approved or rejected. A slow server action caused a false negative in my first attempt; the second attempt succeeded.
+
+### Found, NOT fixed
+
+1. **Ledger entries invisible (`/admin/finance/ledger`, `/admin/finance/expenses` ledger column, `/admin/finance/partners` Company card).**
+   - Repro: as the super admin, record an expense at `/admin/finance/expenses`. The expense row persists. `/admin/finance/ledger` still shows "No entries" with every total at ₹0.00. The Expenses "Ledger" column shows 0, and the Partners "Company" card is absent.
+   - The write side is fine: the audit log shows the expense transactions completing, and `postExpense` is called in the same transaction (`src/modules/finance/expenses.ts:74`).
+   - Ruled out: role (this account is "Super Admin" and passes `users.admin.manage`), the scoping branch (`src/modules/finance/entries.ts:216-294` returns everything for `finance.ledger.read_all`), stale deploy (live SHA matches HEAD at the time), and the date inputs (they are uncontrolled and do no filtering).
+   - Likely cause: `listLedgerEntries` returns `ok:false` from an unexpected exception. `defineAction` converts that to a silent `ok:false`, and `AdminLedgerPage` renders it as an empty list (`src/app/(admin)/admin/finance/ledger/page.tsx:20`). Only the Sentry reporter sees it (`src/lib/bootstrap.ts:50`), and I have no Sentry access.
+   - Next step: check Sentry for `API-FIN-01 listLedgerEntries` around 16:03-16:06 IST, or add a visible error state when `!ledgerResult.ok`.
+
+2. **Audit CSV export link is a fake (`src/modules/audit/service.ts:298`).** The URL is `https://storage.codekraft.local/...`, which does not resolve (`ERR_NAME_NOT_RESOLVED`). The code comment says the real R2 client is pending (P3.5). The CSV is never uploaded. The fix needs a real storage upload (`src/lib/storage.ts`) or an inline download route.
+
+3. **Chatbot prompts editor is disabled until a chat conversation exists** (`src/components/admin/crm/ChatbotMonitor.tsx:520-524`). Nothing tells the admin why. Decide whether to seed v1 at deploy time.
+
+4. **Case study rich-text toolbar is inert** (`src/components/admin/RichTextField.tsx`). The buttons have no handlers.
+
+5. **Lint and tsc debt, pre-existing:** `LegalEditor.tsx` has three unused-variable errors (`Checkbox`, `Label`, `saving`). I did not change those lines.
+
+### Test data left in production
+
+- Six ₹123.45 expenses (immutable ledger rows; see Expenses above).
+- One adjustment proposal (pending).
+- Four or so pending invite requests for `e2e-*@codekraft-test.invalid` (cancel them).
+- Lead `demolead` in status Won (terminal; see Leads above).
+- Throwaway customer `e2e-query-…@codekraft-test.invalid` (unverified, Active) and a closed query on it.
+- Quote `E2E-TEST-QUOTE-…` (cancelled).
+
+Nothing else from the test runs remains: testimonial, FAQ, service, and case-study drafts were all deleted, and each deletion was checked after reload.
+
+## 2026-10-06 — Performance round 2 (performance lane, measured in production)
+
+Method: throwaway Playwright script in the agent scratchpad (`perf-round2/measure.mjs`). Page-ready = first `<h1>` visible AND `networkidle`, measured from navigation start. Three runs per page in one context: run 1 is cold, runs 2 and 3 are warm. Public pages only this round. The admin state file (`scratchpad/admin-yash.json`) never appeared, so no admin, write or sign-in numbers were taken this round. No sign-in was performed by the agent.
+
+### Before / after (production, Chromium, page-ready ms)
+
+| Page | Before (cold / warm / warm) | After (cold / warm / warm) |
+|---|---|---|
+| site:/ homepage | 6622 / 6066 / 5818 | 5316 / 1833 / 1998, then 3370 / 990 / 1016 (2nd run) |
+| site:/products | 2261 / 3931 / 2029 | 4639 / 5476 / 4624, then 4817 / 4574 / 4567 (2nd run; no commit touched this path, so treat as load noise) |
+| site:/services | 1797 / 1772 / 1779 | 3136 / 1999 / 1722, then 1872 / 1851 / 1729 (unchanged, still force-dynamic) |
+| site:/about | not a page: returns 404 | the previous audit's "about" baseline was measuring a 404 |
+
+Homepage after the change: `x-vercel-cache: HIT`, TTFB about 0.06 to 0.07s on warm requests (was an uncached 3.0 to 5.4s TTFB, MISS every time).
+
+### Commits this round
+- `0e3deef` perf(site): ISR the homepage (`revalidate = 300`, was `force-dynamic`). Build passes; `/` now builds as static with 5m revalidate. Relies on the existing `revalidatePath("/", "layout")` in the content, catalog and settings admin wrappers for immediate edits. NOT YET VERIFIED in production: an admin content save followed by a homepage reload. This needs the admin state file.
+- `31a6fb6` perf(auth): memoize `getSession` per request with React `cache()`. Local commit, NOT pushed. Tsc 208 (baseline), eslint clean, `pnpm build` passes, unit suite 745/745. Not measured in production, so it is held back until admin timing exists.
+
+### Root cause found, NOT applied
+- Every serverless function runs in `iad1` (the `x-vercel-id` header shows `bom1::iad1`). The Neon database is `ap-southeast-1` (Singapore). Each sequential query therefore costs about 250ms round trip.
+- Evidence: `/api/health` (one `select 1`) warm TTFB median about 0.52s over 10 samples. `/products` warm TTFB about 0.95s.
+- Fix: pin functions to `sin1` (`"regions": ["sin1"]` in `vercel.json`). Expected to remove most of the per-query RTT across admin, writes and sign-in. The agent's attempt to write `vercel.json` was denied by the auto-mode classifier (shared-resource modification). This is a decision for Yash, not the agent.
+
+### Admin, writes, sign-in: not measured this round
+Reference only, from the earlier audit (`perf-audit/run2.log`, same app, pre-round, h1-visible method, not networkidle):
+- admin dashboard 8.3 to 10.1s; products 2.7 to 6.3s; products/new 4.5 to 6.8s; orders 2.8 to 4.9s; leads 4.5 to 6.3s; queries over 20s (timeouts); customers 10.9 to 11.4s; quotes 10.9 to 13.7s; finance ledger 2.7 to 4.6s; approvals 22 to 25s.
+- writes: create lead 3.8 to 6.9s; create product basics 13.7 to 15.1s; sign-in 18.8s in that run (the 17 to 39s range is from the original audit).
+
+### Open
+1. Verify in production that an admin content save shows on `/` immediately (ISR + revalidatePath). Needs the admin state file.
+2. Push `31a6fb6` only after an admin before/after run.
+3. Decide on the `sin1` region pin (biggest remaining lever).
+4. `/products` and `/services` remain `force-dynamic` with the same DB RTT cost. Candidates for the same ISR treatment if content edits are wired to them.
+
 ## Finance ledger, audit CSV, chatbot prompt editor, rich-text toolbar (2026-10-06, fix agent)
 
 Status: all four fixes are committed and pushed to `main` and built locally. Each one was checked
@@ -1243,3 +1475,57 @@ not mark these fixed until the browser script below passes.
   `SCR/admin-yash.json` and checks the ledger rows, the audit CSV download (`audit-log.csv`, header
   plus rows), the chatbot Prompts editor, and the case-study toolbar. Run it with
   `node --input-type=module < SCR/fix/verify-fixes.mjs` from the repo root once the file exists.
+
+## Test customer verification + email delivery root cause (2026-10-06) — BLOCKED, stopped
+
+Goal: mark `yashbank2002+ckcust1..5@gmail.com` email-verified so checkout can be tested, and find the
+permanent email-delivery fix. **Result: none of the five accounts is verified. No code or data changed.**
+
+### Why verification was not done
+
+- There is no supported path to set `emailVerified` on an existing customer. The only app writes that
+  set it are the founder bootstrap hook (`src/modules/auth/hooks.ts`, for the two admin emails) and
+  admin invite for brand-new users (`src/modules/users/admin-users.ts`). Customer status and
+  "send auth link" actions do not verify anyone (`src/modules/users/customers.ts` `sendAuthLink`
+  only audits).
+- The Better Auth verify link is only delivered by email, and the token lives in the DB.
+- Any other route needs a raw production DB connection, which needs `DATABASE_URL` (a secret). Reading
+  it is blocked, so this was not attempted. `vercel env pull` would materialize secrets to disk, so it
+  was not used either.
+- Sign-in verification was therefore not run. Checkout still fails with `EMAIL_UNVERIFIED`
+  (`src/modules/orders/service.ts` ~L244-250).
+
+### Root cause (code-confirmed; runtime value not confirmed)
+
+- Verification mail path: Better Auth `emailVerification.sendVerificationEmail` →
+  `sendAuthMail` (`src/modules/auth/mailer.ts`) → `bootstrapPorts()` (`src/lib/bootstrap.ts`, wired from
+  `instrumentation.ts` and the auth route) → `sendEmail` (`src/lib/email/transport.ts`) → Resend.
+- Resend rejects sends from an unverified sending domain, and in sandbox mode it rejects any recipient
+  except the account owner. `sendEmail` throws `Resend: <msg>`, Better Auth does not await or surface
+  that error, and nothing reaches the customer or the UI. This matches the symptom exactly.
+- Docs confirm the domain is an unfinished launch prerequisite: `docs/12-DEVOPS-DEPLOYMENT.md` §7
+  (~L167-168) and `docs/13-ROADMAP.md` E-06.
+- Production env var names present (values not readable here): `EMAIL_TRANSPORT`, `RESEND_API_KEY`,
+  `EMAIL_FROM`, and `ALLOW_LOG_EMAIL`. The last one is set in Production 10 days ago. If it is `true`
+  together with `EMAIL_TRANSPORT=log`, mail is only logged and never sent. This must be checked by
+  the founder in the Vercel dashboard.
+- Vercel runtime logs could not show the send failures (query returned 403 via MCP and no matching
+  entries via CLI). Confirm from the Resend dashboard, Logs tab.
+
+### Manual founder steps still needed
+
+1. Resend: add and verify the sending domain (`<domain>` or a subdomain such as `send.<domain>`), then
+   add the DNS records Resend shows (DKIM TXT `resend._domainkey.<domain>`, SPF TXT, return-path MX, and
+   DMARC) in Cloudflare. Until this is done, customer mail goes nowhere.
+2. Vercel production env: set `EMAIL_FROM=CodeKraft <hello@<domain>>` (the value must be on the verified
+   domain), confirm `EMAIL_TRANSPORT=resend`, and confirm `ALLOW_LOG_EMAIL` is not `true`. Redeploy.
+3. Test-account workaround until step 1 is done: a founder-run one-off to set `emailVerified=true` on
+   the five test customers, done in the DB console with audit, or a new admin "mark verified" action
+   (needs code and approval, not done here).
+
+### Follow-ups (not done)
+
+- Surface verification-mail send failures instead of swallowing them. A visible "could not send, retry"
+  state would have shown this on day one.
+- `DAILY_SOFT_CAP` in `transport.ts` is a per-process counter (90/day), so serverless instances each keep
+  their own count. It is not a real global limit. Low priority.
