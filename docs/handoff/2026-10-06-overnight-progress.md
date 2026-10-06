@@ -1529,3 +1529,18 @@ permanent email-delivery fix. **Result: none of the five accounts is verified. N
   state would have shown this on day one.
 - `DAILY_SOFT_CAP` in `transport.ts` is a per-process counter (90/day), so serverless instances each keep
   their own count. It is not a real global limit. Low priority.
+
+## Admin sign-in from the landing page asked for credentials twice (2026-10-07)
+
+- Root cause: `src/components/account/LoginForm.tsx` (site host, admin-class branch) did a plain
+  `window.location.href` to the admin host's `/auth/login`, so the admin had to type the password again.
+- Fix (commit `fc10478`): the site mints a 2-minute single-use token via Better Auth's `oneTimeToken`
+  plugin (`src/modules/auth/config.ts`), and the new `/auth/handoff` page on the admin host exchanges it
+  for the `ckadm` cookie, then continues to `/dashboard`. Admin-class access is still enforced by the
+  `(admin)` layout.
+- Verified on production with one real landing sign-in per account (Playwright): yash and sanket each
+  reached `/dashboard` on the first attempt, `/admin/products` loaded with no sign-in prompt, no console
+  errors. Saved states `admin-yash.json` and `admin-sanket.json` were refreshed from those runs.
+- Known gap, not fixed: the admin login form is server-rendered with `method="post"` and no `action`, so
+  clicking Sign in before hydration posts natively and drops the typed credentials. Only affects a direct
+  visit to `/auth/login` on a slow connection.
