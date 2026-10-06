@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { CopyIcon, FileTextIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -28,6 +29,8 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { STATUS_ENUMS } from "@/lib/status-tone";
+import { cancelQuote, createQuote, sendQuote } from "@/modules/quotes/admin-mutations";
+import { Banner } from "../Banner";
 import { DataToolbar } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
 import { FilterChips } from "../FilterChips";
@@ -45,13 +48,105 @@ export interface QuotesScreenProps {
   customerHref: string;
 }
 
+/** "Default +14 days" per the Expires-on field hint, as a `yyyy-MM-dd` string for the date input. */
+function defaultExpiresOn(): string {
+  const d = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+  return d.toISOString().slice(0, 10);
+}
+
 /** SCR-ADM-09 — custom quotes list with status chips, and the two-column detail/editor. */
 export function QuotesScreen({ quotes, customers, orderHref, customerHref }: QuotesScreenProps) {
+  const router = useRouter();
   const [status, setStatus] = React.useState<QuoteRow["status"] | null>(null);
   const [selected, setSelected] = React.useState<QuoteRow | null>(quotes[0] ?? null);
+  const [pending, setPending] = React.useState(false);
+  const formRef = React.useRef<HTMLFormElement>(null);
   const rows = quotes
     .filter((q) => (status ? q.status === status : true))
     .sort((a, b) => (a.status === "sent" ? -1 : b.status === "sent" ? 1 : 0));
+
+  /** Creates a new quote from the form below — there is no "update an existing quote" action in
+   * `modules/quotes` (only create/send/cancel), so Save only ever creates; see `handleSaveClick`. */
+  async function handleCreate() {
+    const form = formRef.current;
+    if (!form) return;
+    const data = new FormData(form);
+    const customerId = String(data.get("customerId") ?? "");
+    const title = String(data.get("title") ?? "").trim();
+    const amountStr = String(data.get("amount") ?? "").trim();
+    const expiresAtStr = String(data.get("expiresAt") ?? "").trim();
+    const description = String(data.get("description") ?? "").trim();
+
+    if (!customerId || !title || !amountStr) {
+      toast.error("Customer, title and amount are required");
+      return;
+    }
+    const amountMinor = Math.round(parseFloat(amountStr) * 100);
+    if (!Number.isFinite(amountMinor) || amountMinor <= 0) {
+      toast.error("Enter a valid amount");
+      return;
+    }
+
+    setPending(true);
+    const result = await createQuote({
+      customerId,
+      title,
+      description: description || undefined,
+      // Base currency only in release 1 (D-502) — matches `createCustomQuoteInput`.
+      currency: "INR",
+      amountMinor,
+      expiresAt: expiresAtStr ? new Date(`${expiresAtStr}T00:00:00.000Z`).toISOString() : undefined,
+    });
+    setPending(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Quote created");
+    setSelected(null);
+    router.refresh();
+  }
+
+  function handleSaveClick() {
+    if (selected) {
+      toast.error(
+        "Editing an existing quote isn't supported — quotes are immutable after creation. Cancel it and create a new one instead.",
+      );
+      return;
+    }
+    void handleCreate();
+  }
+
+  async function handleSend(id: string, email: string) {
+    setPending(true);
+    const result = await sendQuote({ quoteId: id });
+    setPending(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(`Quote sent to ${email}`);
+    router.refresh();
+  }
+
+  async function handleCancel(id: string) {
+    setPending(true);
+    const result = await cancelQuote({ quoteId: id });
+    setPending(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast("Cancelled — the pay link stops working");
+    router.refresh();
+  }
+
+  function handleCopyPayLink(payLink: string) {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      void navigator.clipboard.writeText(payLink);
+    }
+    toast.success("Pay link copied");
+  }
 
   return (
     <>
@@ -119,7 +214,7 @@ export function QuotesScreen({ quotes, customers, orderHref, customerHref }: Quo
                     <TableCell>
                       <MoneyCell value={q.amount} />
                     </TableCell>
-                    <TableCell>{formatDate(q.expiresAt)}</TableCell>
+                    <TableCell>{q.expiresAt ? formatDate(q.expiresAt) : "—"}</TableCell>
                     <TableCell>
                       <StatusBadge kind="custom_quotes.status" value={q.status} />
                     </TableCell>
@@ -145,20 +240,21 @@ export function QuotesScreen({ quotes, customers, orderHref, customerHref }: Quo
                           { label: "Open", onSelect: () => setSelected(q) },
                           {
                             label: "Send",
-                            disabled: q.status !== "draft",
-                            onSelect: () => toast.success(`Quote sent to ${q.customer.email}`),
+                            disabled: q.status !== "draft" || pending,
+                            onSelect: () => handleSend(q.id, q.customer.email),
                           },
                           {
                             label: "Copy pay link",
                             disabled: q.status === "draft",
-                            onSelect: () => toast.success("Pay link copied"),
+                            onSelect: () => handleCopyPayLink(q.payLink),
                           },
-                          { label: "Duplicate" },
+                          { label: "Duplicate", disabled: true },
                           {
                             label: "Cancel",
                             destructive: true,
                             separatorBefore: true,
-                            disabled: q.status === "paid" || q.status === "cancelled",
+                            disabled: q.status === "paid" || q.status === "cancelled" || pending,
+                            onSelect: () => handleCancel(q.id),
                           },
                         ]}
                       />
@@ -176,15 +272,27 @@ export function QuotesScreen({ quotes, customers, orderHref, customerHref }: Quo
         className="mt-8 grid gap-6 lg:grid-cols-12"
       >
         <form
+          ref={formRef}
           className="space-y-4 rounded-lg border border-border bg-surface p-5 lg:col-span-8"
-          onSubmit={(e) => e.preventDefault()}
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSaveClick();
+          }}
         >
           <h2 className="text-h4">{selected ? selected.title : "New quote"}</h2>
+          {selected ? (
+            <Banner tone="neutral">
+              Quotes can&apos;t be edited after creation — cancel this one and create a new quote
+              instead.
+            </Banner>
+          ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="q-customer" label="Customer" required>
               <Select
+                name="customerId"
                 defaultValue={selected?.customer.id ?? customers[0]?.id}
                 key={selected?.id ?? "new"}
+                disabled={selected !== null}
               >
                 <SelectTrigger id="q-customer">
                   <SelectValue />
@@ -202,38 +310,36 @@ export function QuotesScreen({ quotes, customers, orderHref, customerHref }: Quo
               id="q-offering"
               label="Linked offering"
               optional
-              hint="Determines the delivery type."
+              hint="Offering linking isn't available in this build yet."
             >
               <Select
                 defaultValue={selected?.offering ?? "none"}
                 key={`o-${selected?.id ?? "new"}`}
+                disabled
               >
                 <SelectTrigger id="q-offering">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
-                  <SelectItem value="FitDesk Pro · Enterprise rollout">
-                    FitDesk Pro · Enterprise rollout
-                  </SelectItem>
-                  <SelectItem value="MIS Portal · Implementation">
-                    MIS Portal · Implementation
-                  </SelectItem>
                 </SelectContent>
               </Select>
             </Field>
             <Field id="q-title" label="Title" required className="sm:col-span-2">
               <Input
                 id="q-title"
+                name="title"
                 defaultValue={selected?.title}
                 key={`t-${selected?.id ?? "new"}`}
                 required
                 aria-required
+                disabled={selected !== null}
               />
             </Field>
           </div>
           <RichTextField
             id="q-desc"
+            name="description"
             label="Description (what's included)"
             defaultValue={selected?.description}
             rows={4}
@@ -242,10 +348,12 @@ export function QuotesScreen({ quotes, customers, orderHref, customerHref }: Quo
             <Field id="q-amount" label="Amount (INR, tax-exclusive)" required>
               <Input
                 id="q-amount"
+                name="amount"
                 inputMode="decimal"
                 defaultValue={selected ? (selected.amount.amountMinor / 100).toFixed(2) : ""}
                 key={`a-${selected?.id ?? "new"}`}
                 className="text-right font-mono tnum"
+                disabled={selected !== null}
               />
             </Field>
             <div className="space-y-1.5">
@@ -253,32 +361,38 @@ export function QuotesScreen({ quotes, customers, orderHref, customerHref }: Quo
               <div className="flex h-10 items-center gap-2">
                 <Switch
                   id="q-tax"
-                  defaultChecked={selected?.taxApplies ?? true}
+                  defaultChecked={selected?.taxApplies ?? false}
                   key={`x-${selected?.id ?? "new"}`}
+                  disabled
                 />
-                <span className="text-caption text-fg-muted">GSTIN rule (BR-08)</span>
+                <span className="text-caption text-fg-muted">
+                  Always tax-exclusive today (GSTIN rule BR-08 isn&apos;t wired for quotes yet)
+                </span>
               </div>
             </div>
             <Field id="q-expires" label="Expires on" required hint="Default +14 days.">
               <Input
                 id="q-expires"
+                name="expiresAt"
                 type="date"
-                defaultValue={selected?.expiresAt ?? "2026-10-09"}
+                defaultValue={selected?.expiresAt?.slice(0, 10) || defaultExpiresOn()}
                 key={`e-${selected?.id ?? "new"}`}
+                disabled={selected !== null}
               />
             </Field>
           </div>
-          <Field id="q-note" label="Internal note" optional>
+          <Field id="q-note" label="Internal note" optional hint="Display-only — not saved yet.">
             <Textarea
               id="q-note"
               rows={2}
               defaultValue={selected?.internalNote}
               key={`n-${selected?.id ?? "new"}`}
+              disabled={selected !== null}
             />
           </Field>
           <div className="flex gap-2">
-            <Button type="submit" onClick={() => toast.success("Quote saved as draft")}>
-              Save
+            <Button type="submit" disabled={pending || selected !== null}>
+              {pending ? "Saving…" : "Save"}
             </Button>
           </div>
         </form>
@@ -320,7 +434,7 @@ export function QuotesScreen({ quotes, customers, orderHref, customerHref }: Quo
                   size="icon-md"
                   aria-label="Copy pay link"
                   disabled={!selected || selected.status === "draft"}
-                  onClick={() => toast.success("Pay link copied")}
+                  onClick={() => selected && handleCopyPayLink(selected.payLink)}
                 >
                   <CopyIcon aria-hidden className="size-4" />
                 </Button>
@@ -333,18 +447,15 @@ export function QuotesScreen({ quotes, customers, orderHref, customerHref }: Quo
               {selected?.status === "sent" ? (
                 <Button
                   variant="secondary"
-                  onClick={() => toast.success(`Quote re-sent to ${selected.customer.email}`)}
+                  disabled
+                  title="Resending isn't supported yet — the quotes API only sends once."
                 >
                   Resend
                 </Button>
               ) : (
                 <Button
-                  onClick={() =>
-                    toast.success(
-                      `Email the quote to ${selected?.customer.email ?? "the customer"}? Sent.`,
-                    )
-                  }
-                  disabled={selected !== null && selected.status !== "draft"}
+                  onClick={() => selected && handleSend(selected.id, selected.customer.email)}
+                  disabled={!selected || selected.status !== "draft" || pending}
                 >
                   Send to customer
                 </Button>
@@ -352,9 +463,12 @@ export function QuotesScreen({ quotes, customers, orderHref, customerHref }: Quo
               <Button
                 variant="destructive"
                 disabled={
-                  !selected || selected.status === "paid" || selected.status === "cancelled"
+                  !selected ||
+                  selected.status === "paid" ||
+                  selected.status === "cancelled" ||
+                  pending
                 }
-                onClick={() => toast("Cancelled — the pay link stops working")}
+                onClick={() => selected && handleCancel(selected.id)}
               >
                 Cancel quote
               </Button>
@@ -367,7 +481,7 @@ export function QuotesScreen({ quotes, customers, orderHref, customerHref }: Quo
               <p className="mt-1 text-fg-muted">
                 {selected?.title ?? "Title"} · {selected ? money(selected.amount) : "₹0.00"}
                 {selected?.taxApplies ? " + tax" : ""} · valid until{" "}
-                {selected ? formatDate(selected.expiresAt) : "—"}
+                {selected?.expiresAt ? formatDate(selected.expiresAt) : "—"}
               </p>
               <p className="mt-2 text-accent-text">Review and pay →</p>
             </div>

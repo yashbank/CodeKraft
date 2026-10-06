@@ -730,8 +730,8 @@ export function SettingsScreen({
                 — there is no delay setting.
               </Banner>
               <p className="text-body-sm text-fg-muted">
-                Last run {formatDateTime(s.retention.lastRunAt)} · next purge{" "}
-                {formatDateTime(s.retention.nextPurgeAt)}
+                Last run {s.retention.lastRunAt ? formatDateTime(s.retention.lastRunAt) : "—"} ·
+                next purge {s.retention.nextPurgeAt ? formatDateTime(s.retention.nextPurgeAt) : "—"}
               </p>
               <Button
                 variant="secondary"

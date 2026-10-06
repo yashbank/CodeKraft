@@ -248,3 +248,132 @@ Code-reading audit (no dev server, no browser) of the ~17 admin sections that pr
 **Two-admin approval workflow (the thing asked about repeatedly):** the code path looks complete, not a stub. `src/modules/approvals/service.ts` has an explicit self-approval guard (`if (request.requestedBy === adminId)`) plus a documented DB-trigger-level defense, and `ApprovalsInbox.tsx` calls the real `approveRequest`/`rejectRequest`/`cancelRequest` actions. It has **not** been live-tested with two actual browser logins (no browser tool available), but it has real integration-test coverage that exercises two distinct admin identities end-to-end through the service + DB layer: `tests/integration/approvals/lifecycle.test.ts` (full request→approve→applied cycle with separate `requester`/`approver` users), plus explicit self-approval-rejection tests (`tests/integration/refunds/requester-cannot-approve.test.ts`, `tests/integration/finance/adjustment-requester-blocked.test.ts`, `tests/integration/approvals/requester-rejected.test.ts`). This is the strongest evidence available short of an actual two-browser-session test.
 
 **Overall for the 22 sections audited here (excluding admin-users):** 20/22 are "fully wired & plausible" for both data and core write actions (allocations/ledger counted as fully wired since display-only is the correct design, not a gap); entitlements has one stubbed sub-tab (tasks); settings and quotes are entirely fixture-backed despite real backing modules already existing and unused. That's roughly **91% fully wired** on this slice — but this was always going to be the better-covered half of the app (these routes all return 200 and were deliberately chosen from working production logs); it says nothing about routes not in this list, and the dashboard-root finding above is a reminder that even previously-"confirmed" sections are worth re-checking at the page level, not just the widget level.
+
+## Settings + Quotes wired to real data (2026-10-06, follow-up)
+
+Closed both `**entirely fixture**` rows from the audit table above. Both pages now call the real
+query/action modules that already existed; neither imports `_fixtures/admin.ts` any more.
+
+### Settings (`/admin/settings`)
+
+- `src/app/(admin)/admin/settings/page.tsx`: now an `async` server component — calls
+  `getSettingsQuery({}, ctx)` (falls back to `SITE_SETTINGS_DEFAULTS` if the query fails, never
+  crashes), derives `isSuperAdmin` from `ctx.roles.includes("super_admin")` (same as the dashboard
+  page) and `environment` from `getEnv().APP_ENV` (same two-line ternary as `admin/layout.tsx`,
+  for consistency with the real env badge elsewhere).
+- New `src/lib/admin/settings-view.ts` (`mapSiteSettingsToSettingsData`): maps the real
+  `SiteSettings` shape onto the UI's `SettingsData` shape. **Real shape mismatch, as flagged** —
+  roughly half the UI fields have no backing column in `modules/settings` at all (the whole
+  `general` tab's `siteName`/`domain`/`legalName`/`address`/`phones`/`email`/`replyTime`/
+  `snippets`, the whole `notifications` section, `currencies.fx`/`locked`/`pendingOrders`,
+  several `payments` fields, `ai.maxTokens`/`usedToday`, `retention.nextPurgeAt`/`lastRunAt`).
+  Every one of those is mapped to an honest empty/default value with the reason documented inline
+  in that file's header comment — nothing is fabricated to look fixture-like. Where a real source
+  exists it's used: `theme.lightEnabled` ← `flags.theme_light_editorial`, `notifications.whatsapp`
+  ← `flags.whatsapp_channel`, `notifications.sender` ← `EMAIL_FROM` env var, `general.domain` ←
+  `NEXT_PUBLIC_SITE_URL`, `tax.sellerState` ← `sellerDetails.address.state`, all of `currencies`/
+  `tax.rateBps`/`gstin`/`ai.*caps/model/timeout`/`retention.chatMonths`/`recordYears`/the full
+  `flags` table (with real `envOverride` per key via `getFlagFromEnv`).
+- **Crash fix, found while wiring, not fixture-dependent:** `SettingsScreen.tsx` called
+  `formatDateTime(s.retention.lastRunAt)`/`nextPurgeAt` unconditionally — `formatDateTime("")`
+  throws (`new Date("")` is Invalid Date, and `Intl.DateTimeFormat.format` on it throws
+  `RangeError`). The fixture always had real-looking date strings there so this never fired
+  before; real settings data has no retention-job-run log so these are genuinely `""`. Fixed with
+  a guard (`"—"` fallback) — this was a latent bug, not something introduced by this pass.
+- **Write side — explicitly NOT wired this pass, flagged for a human decision.** Added
+  `src/modules/settings/admin-mutations.ts` (the `withCtx`-wrapped `updateSettings`, same pattern
+  as `catalog`/`media`) so the capability exists, but did **not** wire `SettingsScreen`'s "Save
+  changes" button to it. Reason: `SettingsScreenProps` has no `onSave` callback and every field is
+  an uncontrolled `defaultValue` input with no `name` attributes — the button's `onClick` is
+  currently just a local `toast.success(...)`. Doing this properly for even the sections that
+  *do* have real backing (tax, AI caps, retention months, the flags table) means converting those
+  fields to controlled/FormData-capturable inputs and building section-scoped patches that respect
+  the server's own compound validation (e.g. `enabledCurrencies` must include `baseCurrency`,
+  `upiVpa` required before enabling `manual_upi`, gateway methods need their feature flag) — real
+  engineering, not a guess, and three of the nine sections (`general`, `notifications`,
+  `currencies.fx`/`retention` dates) have **no backing field to save at all**, so "wire every
+  section's Save" isn't achievable honestly without first deciding what those sections should
+  persist to. Recommend: either add the missing settings columns/queries, or scope the Settings
+  screen down to the sections that have real data. Left as read-only-but-real rather than guessing
+  at a write path with no browser available to verify it.
+
+### Quotes (`/admin/quotes`)
+
+- `src/app/(admin)/admin/quotes/page.tsx`: calls `listQuotesQuery({ limit: 100 }, ctx)` and
+  `listCustomersQuery({ limit: 200 }, ctx)` in parallel (`Promise.all`, same pattern as the
+  dashboard page), maps customers via the existing `mapCustomerOptions` helper
+  (`src/lib/admin/queries-view.ts`) — `listCustomersQuery`'s items are nested (`item.user.id`, not
+  `item.id`), unwrapped via `.map((c) => c.user)` first.
+- New `src/lib/admin/quotes-view.ts` (`mapQuoteRow`): maps the real `CustomQuote` row onto
+  `QuoteRow`. Documented gaps (all honest fallbacks, not fabricated): `offering` is always
+  `undefined` — there is no admin-wide "list every offering with a product·offering label" query
+  anywhere in `catalog`/`offerings` (checked explicitly; only single-product-scoped listings
+  exist), and `custom_quotes` only stores `offering_id`, not a name. `taxApplies` is always
+  `false` — there's no such column, and `quotesService.acceptCustomQuote` always posts the
+  resulting order with `taxRateBps: 0`, so `false` matches real behavior. `sentAt`/`orderNumber`/
+  `internalNote` are always `undefined` — no `sent_at`/no lightweight order-number-by-id lookup/no
+  matching column exists, respectively. `payLink` is real (`quotePayUrl(q.token)`) for every
+  quote, including drafts — the token exists from creation, the screen's own UI already gates
+  *copying* it before `sent`.
+- New `src/modules/quotes/admin-mutations.ts`: `createQuote`/`sendQuote`/`cancelQuote`, wrapping
+  the already-existing `createCustomQuoteAction`/`sendCustomQuoteAction`/`cancelCustomQuoteAction`
+  (`src/modules/quotes/actions.ts` — these existed and were already fully implemented, just never
+  called from anywhere) with `getAdminRequestContext`, same `withCtx` pattern as
+  `catalog`/`media`'s admin-mutations files.
+- `QuotesScreen.tsx` **write side — wired for real**, unlike Settings, because this module's
+  mutations map cleanly onto the UI with no shape reconciliation needed:
+  - "New quote" form now actually creates a quote (`createQuote`) — customer `<Select>` uses
+    Radix's native `name="customerId"` form-association (so it round-trips through `FormData`
+    without extra controlled state), title/amount/expires/description read via `FormData` on
+    submit (same technique as `FaqsEditor`). Validates customer/title/amount client-side before
+    calling the action; server-side `zod` validation errors still surface via `result.error`.
+  - Editing an *existing* quote's fields is disabled with an explanatory `Banner` — there is no
+    "update a quote" action in `modules/quotes` (only create/send/cancel), so Save only ever
+    creates. This is a real API gap, not a UI oversight.
+  - "Send to customer" calls `sendQuote`; row-action "Send" and "Cancel" call the same action per
+    row. "Resend" is disabled with a `title` explaining why — `sendCustomQuoteAction` only accepts
+    a `draft` quote, there's no real resend. "Duplicate" was already a no-op with no backing
+    action; now explicitly `disabled: true` (consistent with how other audited sections mark an
+    unwired stub, e.g. `ProductEditor`'s "Duplicate as draft").
+  - "Copy pay link" now copies the real token-based pay URL via `navigator.clipboard`.
+  - Removed the two literal fixture-product `<SelectItem>`s from "Linked offering" (they named
+    specific fixture products — would have been actively misleading with real data); the dropdown
+    is now disabled with a hint that offering-linking isn't available yet (no backing query, see
+    above), rather than silently doing nothing on selection.
+  - **Crash fix, same class as Settings':** `formatDate(q.expiresAt)` was called unconditionally
+    in the table and the email preview; `expiresAt` is optional on `createCustomQuoteInput`, so a
+    real quote can have no expiry. Fixed with `"—"` fallbacks — fixture data always had a date so
+    this was latent, not something this pass introduced.
+  - `router.refresh()` after every successful mutation (same pattern as `FaqsEditor`) so the
+    server-rendered list reflects the change without a full reload.
+
+### Verification
+
+- `npx tsc --noEmit -p .`: 209 errors — unchanged from the stated baseline, confirmed zero of them
+  are in any file touched this pass (grepped the output for every touched path).
+- Targeted `eslint` on all 8 touched/new files: clean, zero warnings or errors.
+- `pnpm build`: succeeds, ~150 routes generated (both `/admin/quotes` and `/admin/settings` show
+  as `ƒ` dynamic routes), no new warnings.
+- `npx vitest run --project unit`: 99 files / 745 tests, all pass — including
+  `tests/unit/admin/p8-screens.test.tsx` (renders both `QuotesScreen` and `SettingsScreen` against
+  the old fixtures directly as a smoke test; still passes unchanged since neither component's
+  prop *interface* changed, only their internal behavior/imports).
+- No browser available this pass either — curl/deploy verification against the live admin host
+  pending (see below); this section itself was written immediately after the build+test pass, as
+  instructed, so the deploy step could still be in flight when a reader first sees this.
+
+### What still needs a human decision
+
+1. **Settings write-wiring** (above) — needs either new backing columns for `general`/
+   `notifications`/retention-job-log data, or a product decision to trim the Settings screen down
+   to what's actually persistable, before a real "Save" can be wired honestly.
+2. **Quotes "linked offering"** — wiring this for real needs a new batched admin query
+   (`offeringId → "<product> · <offering>"` label, likely a join against `offerings`+`products`
+   keyed by the distinct `offeringId`s in the current quote list) that doesn't exist anywhere in
+   `catalog`/`offerings` today.
+3. **Quotes "order number"** — same shape of gap: resolving `custom_quotes.order_id` to a display
+   order number needs a lightweight lookup; today only the full admin order-detail query exists,
+   and calling that per-quote for a list screen was judged not worth the N+1 cost this pass.
+4. **Quotes "resend"** — `sendCustomQuoteAction` only transitions `draft → sent`; if a product
+   decision wants real resending of an already-sent quote, that's a new service capability, not a
+   wiring gap.
