@@ -25,7 +25,11 @@ import type {
 } from "@/components/site/types";
 import type { LandingChapterView } from "@/modules/content/types";
 
-export const dynamic = "force-dynamic";
+// ISR (docs/08 §10). Anonymous data only. Every admin save that changes homepage content
+// calls revalidatePath("/", "layout") (content, catalog, settings admin wrappers), so edits show
+// on the next request. The window is a fallback for writes that run outside a request
+// (scheduled publish job) and for anything that is not wired to a path revalidation.
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "CodeKraft — Architected for scale. Crafted for production.",
