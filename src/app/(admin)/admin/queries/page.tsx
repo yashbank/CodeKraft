@@ -16,7 +16,7 @@ export default async function AdminQueriesPage() {
     listAssignableAdminsQuery({}, ctx),
     // `listCustomers` needs `customers.read`; an admin with only `queries.read`/`queries.reply`
     // still gets the page, just with an empty customer picker on "Log a query" (see below).
-    listCustomersQuery({ limit: 200 }, ctx).catch(() => ({ ok: false as const })),
+    listCustomersQuery({ limit: 100 }, ctx).catch(() => ({ ok: false as const })),
   ]);
 
   const admins = adminsResult.ok ? adminsResult.data.items : [];

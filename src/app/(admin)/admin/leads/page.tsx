@@ -25,7 +25,7 @@ export default async function AdminLeadsPage({ searchParams }: PageProps) {
     listAssignableAdminsQuery({}, ctx),
     // `listProductsAdmin` needs `catalog.read`; an admin with only `leads.read`/`leads.assign`
     // still gets the page, just with short product ids instead of names (see leads-view.ts).
-    listProductsAdminQuery({ limit: 200 }, ctx).catch(() => ({ ok: false as const })),
+    listProductsAdminQuery({ limit: 100 }, ctx).catch(() => ({ ok: false as const })),
     getCurrentAdminUser(ctx),
   ]);
 

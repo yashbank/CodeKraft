@@ -11,7 +11,8 @@ import { getReportQuery, listLedgerEntriesQuery } from "@/modules/finance/querie
 import { listAuditLogsAction } from "@/modules/audit/queries";
 import { listPartnersQuery } from "@/modules/users/queries";
 import type { ReportDefinition, ReportKey, StatementPreview } from "@/components/admin/types";
-import type { ReportKey as FinanceReportKey } from "@/modules/finance/types";
+import type { ReportKey as FinanceReportKey, LedgerEntryView } from "@/modules/finance/types";
+import type { RequestContext } from "@/lib/authz/context";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,33 @@ const REPORT_META: Record<ReportKey, { title: string; description: string; formu
 const REPORT_ORDER = Object.keys(REPORT_META) as (keyof typeof REPORT_META)[];
 
 /** Current Indian financial year (1 Apr – today). */
+/** Upper bound on pages walked (100 rows each) so a bad cursor can never loop forever. */
+const LEDGER_MAX_PAGES = 50;
+
+/**
+ * Every ledger line matching `filters`, fetched 100 at a time along the cursor. Returns `null` when
+ * any page fails, so callers can tell a failed read from a genuinely empty one.
+ */
+async function listAllLedgerEntries(
+  ctx: RequestContext,
+  filters: { partnerId: string; dateFrom?: string; dateTo?: string },
+  sort?: "seq:desc",
+): Promise<LedgerEntryView[] | null> {
+  const items: LedgerEntryView[] = [];
+  let cursor: string | undefined;
+  for (let page = 0; page < LEDGER_MAX_PAGES; page++) {
+    const result = await listLedgerEntriesQuery({ filters, limit: 100, sort, cursor }, ctx).catch(
+      () => ({ ok: false as const }),
+    );
+    if (!("data" in result) || !result.ok) return null;
+    items.push(...result.data.items);
+    if (!result.data.nextCursor) return items;
+    cursor = result.data.nextCursor;
+  }
+  console.error("[finance/reports] ledger paging stopped at the page guard", { filters });
+  return items;
+}
+
 function currentFyRange(): { dateFrom: string; dateTo: string } {
   const now = new Date();
   const fyStartYear = now.getUTCMonth() >= 3 ? now.getUTCFullYear() : now.getUTCFullYear() - 1;
@@ -123,27 +151,24 @@ export default async function AdminReportsPage() {
   };
 
   if (firstPartner) {
-    const [beforeResult, inRangeResult] = await Promise.all([
-      listLedgerEntriesQuery(
-        { filters: { partnerId: firstPartner.id, dateTo: periodFromIso }, limit: 500, sort: "seq:desc" },
-        ctx,
-      ),
-      listLedgerEntriesQuery(
-        {
-          filters: { partnerId: firstPartner.id, dateFrom: periodFromIso, dateTo: queryDateToIso },
-          limit: 500,
-        },
-        ctx,
-      ),
+    // The list cap is 100 rows per request (`LIST_LIMIT_MAX`); a 500-row ask failed validation and
+    // the statement silently summed zero lines. Walk the cursor so the totals cover every line.
+    const [beforeEntries, inRangeEntries] = await Promise.all([
+      listAllLedgerEntries(ctx, { partnerId: firstPartner.id, dateTo: periodFromIso }, "seq:desc"),
+      listAllLedgerEntries(ctx, {
+        partnerId: firstPartner.id,
+        dateFrom: periodFromIso,
+        dateTo: queryDateToIso,
+      }),
     ]);
-    const openingBalanceInrMinor = beforeResult.ok
-      ? beforeResult.data.items.reduce((s, e) => s + e.amountInrMinor, 0)
+    const openingBalanceInrMinor = beforeEntries
+      ? beforeEntries.reduce((s, e) => s + e.amountInrMinor, 0)
       : 0;
     statement = computeStatementPreview({
       partnerName: firstPartner.displayName,
       period: `${periodFromIso} – ${periodToIso}`,
       openingBalanceInrMinor,
-      entries: inRangeResult.ok ? inRangeResult.data.items : [],
+      entries: inRangeEntries ?? [],
     });
   }
 

@@ -19,7 +19,7 @@ export default async function AccountOverviewPage() {
     listMyEntitlementsQuery({ limit: 5 }, ctx),
     listMyInvoicesQuery({ limit: 5 }, ctx),
     listMyQueriesQuery({ limit: 5 }, ctx),
-    listMyWishlistQuery({ limit: 200 }, ctx),
+    listMyWishlistQuery({ limit: 100 }, ctx),
   ]);
 
   const entitlements = entitlementsResult.ok

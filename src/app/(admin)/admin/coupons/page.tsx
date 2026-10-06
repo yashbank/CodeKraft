@@ -12,7 +12,7 @@ export default async function AdminCouponsPage() {
 
   const [couponsResult, productsResult] = await Promise.all([
     listCouponsQuery({ limit: 100 }, ctx),
-    listProductsAdminQuery({ limit: 200 }, ctx),
+    listProductsAdminQuery({ limit: 100 }, ctx),
   ]);
 
   const products = productsResult.ok

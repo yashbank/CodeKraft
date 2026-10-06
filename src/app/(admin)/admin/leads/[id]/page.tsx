@@ -19,7 +19,7 @@ export default async function AdminLeadDetailPage({ params }: PageProps) {
   const [leadResult, adminsResult, productsResult] = await Promise.all([
     getLeadQuery({ leadId: id }, ctx),
     listAssignableAdminsQuery({}, ctx),
-    listProductsAdminQuery({ limit: 200 }, ctx).catch(() => ({ ok: false as const })),
+    listProductsAdminQuery({ limit: 100 }, ctx).catch(() => ({ ok: false as const })),
   ]);
 
   if (!leadResult.ok) {
