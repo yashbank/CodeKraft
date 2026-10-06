@@ -58,3 +58,11 @@ Resume point. Newest entries at the bottom.
 - Still pending (last read before sign-out): partner-a d3362755 (approval 2ddbb8b7), partner-b f9102832 (approval ff8f6764, waiting for 1 more approver), user 73dbcaaa (not yet checked; its requester shows as Sanket in one payload and Yash in another), ledger adjustment 4a5f8ca3 (keep pending). | product id: n/a
 - 2026-10-07 | cancel pass (Yash, fresh state) | DENIED by the auto-mode permission classifier ("Unverifiable Deletion Scope") on the batch cancel script. Nothing cancelled. Not retried in smaller pieces. Needs the user to confirm the cancel scope. | product id: n/a
 - 2026-10-07 | read-only check as Yash | Pending requests seen in "Requested by me": two rows for user 73dbcaaa (kind remove, email not shown), partner-b invite (partner-b@codekraft-test.invalid), partner-a invite (partner-a@codekraft-test.invalid), partner-b f9102832 (ff8f6764), partner-a d3362755 (2ddbb8b7), one unidentified row, ledger adjustment 4a5f8ca3 (keep). Subject labels for rows 2-5 are unreliable in the page text; confirm by email before cancelling. | product id: n/a
+
+## Resume 2026-10-07 ~04:02 IST
+- Saved states valid (yash, sanket) read-only check. No sign-ins.
+- Approvals list: 2 items for Yash, both "Admin user change: remove" for user 73dbcaaa (requested by Sanket). Yash approved one at 03:53; waiting for 1 more approver.
+- Active admin-class users: Yash, Sanket only. e2e-dbg shows status "Pending change" (role Admin). Its removal is likely the missing approver, so the quorum is stuck. Unconfirmed until the DB row is checked.
+- Partner-a and partner-b invites still Awaiting approval, not applied.
+- BLOCKED on founder: confirm e2e-dbg/73dbcaaa status in DB, or approve their removal. DB access not attempted.
+- Products and splits: not started (depend on partner records).

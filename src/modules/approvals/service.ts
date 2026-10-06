@@ -345,6 +345,34 @@ export class DefaultApprovalsService implements ApprovalsService {
     return needed.filter((id) => !approved.includes(id)).length;
   }
 
+  /**
+   * Applies a pending request when every current approver has already approved it.
+   * Returns true when the request was executed (applied or marked approved with an error).
+   */
+  private async reconcilePending(requestId: string, requestedBy: string): Promise<boolean> {
+    const { withTx } = await import("@/lib/db");
+    return await withTx(async (tx) => {
+      const [req] = await tx
+        .select({ status: approvalRequests.status })
+        .from(approvalRequests)
+        .where(eq(approvalRequests.id, requestId));
+      if (!req || req.status !== "pending") return false;
+
+      const needed = await this.approverSet(requestedBy, tx);
+      if (needed.length === 0) return false;
+
+      const decisions = await tx
+        .select({ decidedBy: approvalDecisions.decidedBy, decision: approvalDecisions.decision })
+        .from(approvalDecisions)
+        .where(eq(approvalDecisions.requestId, requestId));
+      const approved = decisions.filter((d) => d.decision === "approve").map((d) => d.decidedBy);
+      if (!needed.every((id) => approved.includes(id))) return false;
+
+      await this.execute(requestId, tx);
+      return true;
+    });
+  }
+
   async execute(requestId: string, tx: TxCtx): Promise<DecideResult> {
     const [request] = await tx
       .select()
@@ -455,6 +483,16 @@ export class DefaultApprovalsService implements ApprovalsService {
     const views: ApprovalView[] = [];
 
     for (const req of items) {
+      // A pending request can become fully approved when the approver set shrinks
+      // (e.g. an admin is deactivated) without any new decision. Re-check it here.
+      if (req.status === "pending" && (await this.reconcilePending(req.id, req.requestedBy))) {
+        const [fresh] = await database
+          .select()
+          .from(approvalRequests)
+          .where(eq(approvalRequests.id, req.id));
+        if (fresh) Object.assign(req, fresh);
+      }
+
       const decisions = await database
         .select()
         .from(approvalDecisions)
