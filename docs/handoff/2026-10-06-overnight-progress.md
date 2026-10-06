@@ -377,3 +377,195 @@ query/action modules that already existed; neither imports `_fixtures/admin.ts` 
 4. **Quotes "resend"** — `sendCustomQuoteAction` only transitions `draft → sent`; if a product
    decision wants real resending of an already-sent quote, that's a new service capability, not a
    wiring gap.
+
+## Real browser verification (Playwright) — 2026-10-06
+
+First real-browser verification this whole multi-session effort. Every prior "fixed and
+verified" claim in this file (including the two bugs fixed in item 1 of the overnight round
+above) was code-only — `tsc`/`eslint`/`pnpm build`/curl/`vercel logs`, never an actual browser.
+This repo already had `@playwright/test` 1.63.0 installed, browsers downloaded, and
+`playwright.config.ts` wired for exactly this (`E2E_ADMIN_URL`/`E2E_SITE_URL` env overrides) —
+it had just never been run against anything. Used it against **live production**
+(`https://codekraft-admin.vercel.app`, `https://codekraft-dusky.vercel.app`), signed in through
+the real `/auth/login` form with the `yashbank2002@gmail.com` super_admin account, driving a real
+headless Chromium with `page.on('console'|'pageerror'|'requestfailed'|'response')` wired up.
+Throwaway spec files (`tests/e2e/_repro-*.spec.ts`) were used for the repro runs and deleted
+afterward — not part of the committed suite. Screenshots referenced below are in this session's
+scratchpad (`screenshots/`), not committed (ephemeral, local to the session that ran them).
+
+### 1. Create a product (`/admin/products/new` → Basics → Save)
+
+**Not actually broken — real root cause was a missing loading indicator during a slow (~15s)
+cold-start round trip, which looked exactly like "frozen"/"locked" fields.** Verbatim real-browser
+timeline (deep-diagnostic spec, all network requests logged):
+- Filled Name/Slug(auto-filled correctly via the existing fix)/Short description, clicked
+  "Create product".
+- **t+0 to t+6s:** button correctly `disabled=true`, no toast, no visible feedback at all (no
+  spinner — `Button`'s `loading` prop was never passed on this button).
+- **t+7s:** the real `createProduct` server action resolved; toast
+  `"Product created as a draft — continue editing below."` appeared; **the button simultaneously
+  re-enabled** (`btnDisabled=false`) because `setSavingTab(null)` ran unconditionally right after
+  the mutation resolved, before `router.push` had actually navigated anywhere.
+- **t+7s to t+14s:** URL still `/admin/products/new`, toast gone, button sitting idle/clickable,
+  page visually identical to the untouched empty form — a real admin would reasonably conclude
+  nothing happened and either give up or click Create again (which, since the name/slug fields
+  still hold the same values and the product now already exists server-side, would hit the
+  `createProduct` slug-`CONFLICT` path the previous session's handoff note only hypothesized).
+- **t+15s:** URL finally changed to `/admin/products/a3122cb1-5f7c-432b-8f46-b454f1802139` — the
+  real new product's editor, fully populated, tabs unlocked. Creation **did** succeed; it just
+  took 15 real seconds end-to-end with zero UI feedback for roughly half of that window.
+
+**Fix (`src/components/admin/catalog/ProductEditor.tsx`):** the Basics submit button now passes
+`loading={savingTab === "basics"}` (spinner), and on the `isNew` success path `setSavingTab(null)`
+is no longer called before `router.push` — the button stays disabled/spinning for the whole
+window until the component actually unmounts on navigation, plus an inline
+`"Creating your product — this can take several seconds on a cold start, please don't click
+again."` note while it's in flight. This doesn't eliminate the ~15s latency (that's Vercel/Next
+cold-start + client RSC navigation, not an app bug) but it does eliminate the multi-second window
+where the UI looked idle/frozen and a duplicate click could create a confusing duplicate-slug
+error.
+
+**Re-verified live after deploy:** see "Post-deploy re-verification" below.
+
+### 2. Offerings tab — "Add offering" dialog, both dropdowns
+
+**Confirmed genuinely working in production already — the earlier z-index fix (`--ck-z-dropdown`)
+holds up in a real browser. No code change needed.** Real-browser evidence (same deep-diagnostic
+run, product `a3122cb1-5f7c-432b-8f46-b454f1802139`):
+- Offerings tab enabled (`disabled=false`), clicked, "Add offering" opened the dialog.
+- Purchase-model dropdown (`#off-model`): clicked, opened, **3 real options** rendered
+  (`role=option`), selected "Subscription", trigger text updated to `"Subscription"` immediately.
+- Delivery-type dropdown (`#off-delivery`): clicked, opened, **6 real options**, selected
+  "Service", trigger text updated to `"Service"` immediately.
+- Filled name/price, clicked "Create offering" — dialog stayed open through the same cold-start
+  latency pattern as item 1 (still `visible=true` at t+15s) and **closed at t+16s**, confirming
+  the save round-trip completed.
+
+No bug here. If the user still perceives this as broken in their own click-through, the most
+likely explanation given the pattern above is the same cold-start latency as item 1 — the dialog
+staying open for 10+ seconds with no spinner on "Create offering"/"Save offering" either (that
+button already has `loading={savingOffering}` wired, so it does show *a* spinner — unlike the
+Basics button before this pass's fix — but it's worth knowing this flow can also take ~15s).
+
+### 3. Media tab — upload a real image
+
+**Confirmed broken, and now directly proven to be the R2 bucket CORS gap the previous session
+only inferred from absence of evidence — this is infra, not app code, and needs Yash's own
+Cloudflare dashboard action.** Exact real-browser evidence, uploading a real 1×1 PNG via the
+actual "Choose file" → "Upload & attach" flow on product
+`a3122cb1-5f7c-432b-8f46-b454f1802139`:
+
+```
+[console.error] Access to fetch at 'https://codekraft-public.49e4d7c7a96b5956fb8fdcead7bd1d5e.r2.cloudflarestorage.com/media/2026/10/1e2894ae-3d28-4f7a-b325-1e13b8780424.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&...&x-id=PutObject'
+from origin 'https://codekraft-admin.vercel.app' has been blocked by CORS policy: Response to
+preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is
+present on the requested resource.
+
+[requestfailed] PUT https://codekraft-public.49e4d7c7a96b5956fb8fdcead7bd1d5e.r2.cloudflarestorage.com/media/... :: net::ERR_FAILED
+```
+
+The toast the admin actually sees (from the previous session's `media-upload.ts` try/catch fix,
+confirmed working as designed):
+> "Upload couldn't reach storage. This usually means the storage bucket's CORS policy doesn't
+> allow this site's origin yet — check the browser DevTools Console/Network tab for a message
+> containing "CORS", then add this origin to the bucket's CORS settings."
+
+**This is the definitive proof the previous round could not get** (blocked from reading R2
+credentials/bucket config directly). Action needed in the Cloudflare dashboard, R2 → bucket
+behind `codekraft-public.49e4d7c7a96b5956fb8fdcead7bd1d5e.r2.cloudflarestorage.com` → Settings →
+CORS Policy → add `https://codekraft-admin.vercel.app` (and `https://codekraft-dusky.vercel.app`,
+`http://localhost:3000`) to `AllowedOrigins`, `PUT, GET, HEAD` to `AllowedMethods` — exact policy
+already spelled out in `docs/12-DEVOPS-DEPLOYMENT.md` line 161. No app-code fix is possible for
+this from inside the sandbox (same credential-materialization block as previous sessions; did not
+attempt to route around it, per instruction).
+
+### 4. Quotes — "New quote" → customer dropdown
+
+**Confirmed broken, real root cause found and fixed.** Real-browser evidence: the control at
+`#q-customer` is a real Radix `Select` (`tag=BUTTON role=combobox`), not a native `<select>` and
+not something structurally broken — clicking it did open without error. But:
+`Customer dropdown option count: 0` — zero `role=option` elements rendered, trigger text empty
+both before and after the click. The screenshot (`i4-03-dropdown-open.png`) shows no visible
+popup at all, because Radix renders nothing when `SelectContent` has zero `SelectItem` children —
+to an admin this looks exactly like "the dropdown doesn't work": click it, nothing happens.
+
+Root cause, found by reading `src/app/(admin)/admin/quotes/page.tsx` right after getting this
+result: it calls `listCustomersQuery({ limit: 200 }, ctx)`, but every list query in this codebase
+shares the `listParams` Zod schema (`src/modules/_shared/zod.ts`), whose `limit` field is
+`z.number().int().min(1).max(LIST_LIMIT_MAX).default(...)` with `LIST_LIMIT_MAX = 100`. `200`
+**always** failed validation, so `customersRes.ok` was `false` on every single page load, and the
+page's own fallback (`customersRes.ok ? ... : []`) silently produced an empty customer list with
+no error banner, no console warning, nothing — a pure silent-data-loss bug. Confirmed this wasn't
+"no real customers exist": `/admin/customers` (which calls the *same* `listCustomersQuery` with
+`limit: 100`) correctly lists 7 real users in production, including the two admin accounts and
+five customer/test accounts.
+
+**Fix:** `src/app/(admin)/admin/quotes/page.tsx` — changed `limit: 200` → `limit: 100` (the
+schema's actual max) on the `listCustomersQuery` call, with a comment explaining why.
+
+**Re-verified live after deploy:** see "Post-deploy re-verification" below.
+
+### 5. Incidental "coming soon"/locked-field sightings
+
+Nothing new beyond what the previous "Follow-up (user retested, still broken)" section above
+already catalogued file:line for (`ProductEditor.tsx` Preview button, Duplicate-as-draft,
+Industry/Requirements fields, Blog publish, Versions "Add version", Testimonials reorder — all
+real, intentional stubs, not regressions). One addition from this pass's screenshots: the Quotes
+"New quote" form's "Linked offering" dropdown (`#q-offering`) is `disabled` with the hint
+"Offering linking isn't available in this build yet" — already correctly marked as a stub per the
+"Settings + Quotes wired to real data" section above, visible again in `i4-02-new-quote-form.png`.
+
+### Post-deploy re-verification
+
+Fix commit: `bb9f601` ("fix(admin): real root causes for create-product UX and quotes customer
+dropdown"), pushed to `main`. `tsc --noEmit` 209 errors (unchanged baseline, none in touched
+files), targeted `eslint` clean on `quotes/page.tsx` (the 8 `ProductEditor.tsx` errors are the
+same pre-existing unused-import/unused-prop set documented earlier in this file, not touched by
+this diff), `pnpm build` compiles clean, existing `product-editor-offerings.test.tsx` +
+`p8-screens.test.tsx` (22 tests) still pass unchanged.
+
+Deployed: `vercel ls codekraft --prod` showed the new deployment (`dpl_9uXtRgDeW8amDCFPAXmSNr8vkxA4`,
+built at the push time) Ready within ~3 minutes; `vercel inspect` confirmed both
+`codekraft-admin.vercel.app` and `codekraft-dusky.vercel.app` alias to it.
+
+**Final real-browser re-confirmation against the new production deployment** (fresh Playwright
+run, same real sign-in flow):
+- **Create product:** filled Basics, clicked "Create product" — button held `disabled=true
+  aria-busy=true` continuously from t+1s through t+15s while still on `/admin/products/new` (no
+  more re-enabling mid-navigation), then `waitForURL` confirmed it landed on a real new product
+  id (`/admin/products/db238842-9181-4ddb-9c44-5377e590aa3f`) within the expected window. Fix
+  confirmed working exactly as intended.
+- **Quotes customer dropdown:** opened "New quote", clicked the customer dropdown —
+  **7 real options** rendered (`role=option`), matching `/admin/customers`' live roster exactly:
+  `"Overnight Verify · ck-verify-overnight-20261006@example.com"`,
+  `"Demo Customer · demo.customer@codekraft.test"`, `"Audit Test · claude-audit-test@example.com"`,
+  `"Diag Test 3 · claude-diag-test-3@example.com"`,
+  `"Sanket Shrikant · sanketshrikant42@gmail.com"`, `"yash bankar · yashbank2002@gmail.com"`,
+  `"Diag Test · claude-diag-test-1@example.com"`. Zero-options bug fully resolved.
+
+Both of this pass's fixes are confirmed live and working via real browser interaction against
+production, not just code review.
+
+### Summary verdict for the four user-reported issues
+
+1. **"Can't create a product"** — **FIXED** (perceived-frozen UX, not a hard failure). Creation
+   always actually succeeded server-side; the only real bug was zero loading feedback plus the
+   button re-enabling mid-navigation during a genuine ~15s cold-start round trip. Now shows a
+   spinner + explanatory text and stays busy until navigation lands. Re-confirmed live.
+2. **"Quotes customer dropdown doesn't work"** — **FIXED.** Real root cause: `limit: 200` on
+   `listCustomersQuery` exceeded the shared schema's `max(100)`, silently failing validation and
+   always yielding zero customers. Capped at 100. Re-confirmed live: 7 real options now render.
+3. **"Product media upload still fails"** — **BROKEN, infra not app code.** Definitively proven
+   via real browser console: the presigned PUT to
+   `codekraft-public.49e4d7c7a96b5956fb8fdcead7bd1d5e.r2.cloudflarestorage.com` is blocked by the
+   R2 bucket's CORS policy (`No 'Access-Control-Allow-Origin' header is present`). Needs Yash's
+   own Cloudflare dashboard action (R2 bucket → Settings → CORS Policy); the exact policy to add
+   is already documented in `docs/12-DEVOPS-DEPLOYMENT.md` line 161. Not fixable from this
+   sandbox (credential-materialization block, per standing instruction not to route around it).
+4. **"Various fields show empty/locked/coming soon"** — **mostly by design, confirmed real in
+   browser, not regressions.** The Offerings "Add offering" dropdowns (purchase model, delivery
+   type) work correctly live — both previously-fixed bugs (z-index, slug auto-fill) hold up under
+   real interaction. The remaining disabled/stub fields catalogued in the "Follow-up" section
+   above (Preview button, Duplicate-as-draft, Industry/Requirements, Blog publish, Versions "Add
+   version", Testimonials reorder, Quotes "Linked offering") are genuine, intentional stubs with
+   explicit `title`/hint text explaining why — not something this pass found newly broken.
