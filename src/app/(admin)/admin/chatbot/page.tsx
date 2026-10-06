@@ -21,7 +21,7 @@ export default async function AdminChatbotPage() {
   ]);
 
   const conversationRows = conversationsResult.ok ? conversationsResult.data.items : [];
-  const prompts = promptsResult.ok ? promptsResult.data.versions : [];
+  const prompts = promptsResult.ok ? promptsResult.data.items : [];
   const promptVersionLabelById = new Map(prompts.map((p) => [p.promptVersionId, `v${p.version}`]));
 
   const firstConversationId = conversationRows[0]?.conversationId;

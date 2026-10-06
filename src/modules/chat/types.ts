@@ -383,7 +383,7 @@ export interface PromptVersionRow {
 }
 
 export interface PromptVersionsResult {
-  versions: PromptVersionRow[];
+  items: PromptVersionRow[];
 }
 
 export interface ReindexResult {
