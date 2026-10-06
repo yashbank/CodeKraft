@@ -176,8 +176,9 @@ actionable message pointing at the storage bucket's CORS policy and what to chec
 action, see below) — it only makes the failure self-diagnosing the next time it's hit, instead
 of a dead-end "Failed to fetch." Verified: `tsc --noEmit` (209 errors, unchanged baseline, none
 new), `eslint` clean on the file, `pnpm build` clean (~140 routes), existing
-`product-editor-offerings.test.tsx` + `p8-screens.test.tsx` (22 tests) still pass. Committed as
-`<commit-sha-placeholder>`, deployed, confirmed via `get_deployment` that both aliases serve it.
+`product-editor-offerings.test.tsx` + `p8-screens.test.tsx` (22 tests) still pass. Committed as `450ace4`, pushed; deploy status and
+alias confirmation to follow once Vercel finishes building it (see git log / `get_deployment`
+for the final confirmation).
 
 ### What genuinely needs Yash's own action
 
