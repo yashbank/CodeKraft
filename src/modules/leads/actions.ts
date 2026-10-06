@@ -5,16 +5,30 @@
  * implemented (see `service.ts`); this file adds the `defineAction` wrappers P2.8 left empty
  * (SA-07: every export here must be created with `defineAction` / `definePublicAction`).
  */
-import { defineAction } from "@/lib/actions/envelope";
+import { defineAction, definePublicAction } from "@/lib/actions/envelope";
 import {
   addLeadNoteSchema,
   assignLeadSchema,
   claimLeadSchema,
   createLeadManualSchema,
+  createLeadSchema,
   setFollowUpSchema,
   updateLeadStatusSchema,
 } from "./types";
 import { leadsService } from "./service";
+
+/**
+ * API-LEAD-01 `createLead` — public (visitor or signed-in customer). Was missing its
+ * `definePublicAction` wrapper even though `leadsService.createLead` (service.ts) is implemented.
+ * NOTE: no UI calls this yet. `/contact` and the `InquirySheet` callers still use
+ * `InquiryForm`'s built-in `simulateSubmit` fallback (fake success, no `leads` row), because
+ * wiring them needs a Turnstile decision (no real widget exists; see the handoff doc).
+ */
+export const createLeadAction = definePublicAction({
+  name: "API-LEAD-01 createLead",
+  input: createLeadSchema,
+  handler: (input, ctx) => leadsService.createLead(ctx, input),
+});
 
 export const createLeadManualAction = defineAction({
   name: "API-LEAD-02 createLeadManual",
