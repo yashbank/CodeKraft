@@ -5,7 +5,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
-import { haveIBeenPwned, phoneNumber, twoFactor } from "better-auth/plugins";
+import { haveIBeenPwned, oneTimeToken, phoneNumber, twoFactor } from "better-auth/plugins";
 
 import { getEnv } from "@/lib/env";
 import { getDb } from "@/lib/db";
@@ -29,6 +29,9 @@ export function createAuth(host: AuthHost, opts: { phoneOtp?: boolean } = {}) {
   const phoneOtp = opts.phoneOtp ?? false;
 
   const plugins = [
+    // Cross-host handoff (site -> admin): the site mints a 2-minute single-use token from its own
+    // session, the admin host verifies it and sets its ckadm cookie, so admins sign in once.
+    oneTimeToken({ expiresIn: 2 }),
     twoFactor({
       issuer: "CodeKraft",
       skipVerificationOnEnable: false,

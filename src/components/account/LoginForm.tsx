@@ -80,7 +80,17 @@ export function LoginForm({
               const roleRes = await fetch("/api/auth/role", { cache: "no-store" });
               const { isAdminClass } = (await roleRes.json()) as { isAdminClass?: boolean };
               if (isAdminClass) {
+                // Hand the existing session across hosts with a one-time token instead of
+                // making the admin re-enter credentials on the admin host.
                 const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL ?? "";
+                const tokenRes = await fetch("/api/auth/one-time-token/generate", {
+                  cache: "no-store",
+                });
+                const { token } = (await tokenRes.json()) as { token?: string };
+                if (token) {
+                  window.location.href = `${adminUrl}/auth/handoff?token=${encodeURIComponent(token)}&next=/dashboard`;
+                  return;
+                }
                 window.location.href = `${adminUrl}/auth/login?next=/dashboard`;
                 return;
               }
