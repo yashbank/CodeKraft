@@ -504,13 +504,25 @@ export function ChatbotMonitor({
                 </Label>
                 <div className="flex gap-2">
                   <Input id="pt-msg" placeholder="Can I get a refund?" />
-                  <Button size="md" variant="secondary" disabled title="Not available yet — a dry-run endpoint isn't implemented in this phase">
+                  <Button
+                    size="md"
+                    variant="secondary"
+                    disabled
+                    title="Not available yet — a dry-run endpoint isn't implemented in this phase"
+                  >
                     Run
                   </Button>
                 </div>
               </div>
             </div>
             <div className="space-y-4 rounded-lg border border-border bg-surface p-4">
+              {!prompt ? (
+                <Banner tone="info" title="No prompt version yet">
+                  The editor unlocks once a prompt version exists. The built-in default is saved as
+                  version 1 when this page loads, or the first time someone starts a chat. Reload
+                  this page to retry; if this message stays, the seed failed (check the server log).
+                </Banner>
+              ) : null}
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-h4">Editor · {prompt?.version}</h2>
                 {prompt?.active ? (
@@ -523,6 +535,11 @@ export function ChatbotMonitor({
                     size="sm"
                     variant="secondary"
                     disabled={savingVersion || !prompt}
+                    title={
+                      prompt
+                        ? undefined
+                        : "Disabled: no prompt version exists yet. Version 1 is created on page load or the first chat."
+                    }
                     onClick={handleSaveAsNewVersion}
                   >
                     Save as new version

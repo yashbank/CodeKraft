@@ -119,6 +119,9 @@ export interface ChatService {
     input: ListPromptVersionsInput,
   ): Promise<PromptVersionsResult>;
 
+  /** Seeds the built-in default prompt as version 1 (active) only when no version exists. */
+  seedDefaultPromptVersion(ctx: RequestContext): Promise<{ seeded: boolean }>;
+
   /** API-CHAT-12 `createPromptVersion` — audited. */
   createPromptVersion(
     ctx: RequestContext,

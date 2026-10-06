@@ -1,6 +1,12 @@
 import { ChatbotMonitor } from "@/components/admin/crm/ChatbotMonitor";
 import { getAdminRequestContext } from "@/lib/authz/admin-request-context";
-import { mapConversationRow, mapPromptVersionRow, mapTranscript, mapUsage } from "@/lib/admin/chat-view";
+import {
+  mapConversationRow,
+  mapPromptVersionRow,
+  mapTranscript,
+  mapUsage,
+} from "@/lib/admin/chat-view";
+import { seedDefaultPromptVersionAction } from "@/modules/chat/actions";
 import {
   getChatUsageOverviewQuery,
   getKnowledgeIndexStatusQuery,
@@ -13,9 +19,16 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminChatbotPage() {
   const ctx = await getAdminRequestContext();
-  const [conversationsResult, promptsResult, usageResult, indexResult] = await Promise.all([
+  let promptsResult = await listPromptVersionsQuery({}, ctx);
+  if (promptsResult.ok && promptsResult.data.items.length === 0) {
+    // Empty prompt index (before the first chat): seed the built-in default as v1 so the editor
+    // is usable. Idempotent; a failure leaves the editor's explanation banner in place.
+    const seeded = await seedDefaultPromptVersionAction({}, ctx);
+    if (!seeded.ok) console.error("[admin/chatbot] seed default prompt failed", seeded.error);
+    if (seeded.ok && seeded.data.seeded) promptsResult = await listPromptVersionsQuery({}, ctx);
+  }
+  const [conversationsResult, usageResult, indexResult] = await Promise.all([
     listConversationsAdminQuery({ limit: 50 }, ctx),
-    listPromptVersionsQuery({}, ctx),
     getChatUsageOverviewQuery({}, ctx),
     getKnowledgeIndexStatusQuery({}, ctx),
   ]);

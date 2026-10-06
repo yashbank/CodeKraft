@@ -49,6 +49,11 @@ import type {
   Transcript,
 } from "./types";
 
+/** Built-in prompt seeded as version 1 (first chat, or the admin editor on an empty index). */
+const DEFAULT_PROMPT_NAME = "Default Assistant Prompt";
+const DEFAULT_PROMPT_TEXT =
+  "You are CodeKraft Assistant, an AI assistant for CodeKraft software solutions.";
+
 export class DefaultChatService implements ChatService {
   private _db?: any;
   constructor(db?: any) {
@@ -88,9 +93,8 @@ export class DefaultChatService implements ChatService {
       const [newVersion] = await this.db
         .insert(promptVersions)
         .values({
-          name: "Default Assistant Prompt",
-          systemPrompt:
-            "You are CodeKraft Assistant, an AI assistant for CodeKraft software solutions.",
+          name: DEFAULT_PROMPT_NAME,
+          systemPrompt: DEFAULT_PROMPT_TEXT,
           version: 1,
           isActive: true,
           createdBy: ctx.userId,
@@ -577,6 +581,29 @@ export class DefaultChatService implements ChatService {
         createdAt: p.createdAt.toISOString(),
       })),
     };
+  }
+
+  /**
+   * Seeds the built-in default prompt as version 1 (active) when the prompt table is empty, so the
+   * admin prompt editor is usable before the first chat. A no-op once any version exists. The
+   * partial unique index on `is_active` makes a concurrent second seed a no-op too.
+   */
+  async seedDefaultPromptVersion(ctx: RequestContext): Promise<{ seeded: boolean }> {
+    const existing = await this.db.select({ id: promptVersions.id }).from(promptVersions).limit(1);
+    if (existing.length > 0) return { seeded: false };
+
+    const inserted = await this.db
+      .insert(promptVersions)
+      .values({
+        name: DEFAULT_PROMPT_NAME,
+        systemPrompt: DEFAULT_PROMPT_TEXT,
+        version: 1,
+        isActive: true,
+        createdBy: ctx.userId,
+      })
+      .onConflictDoNothing()
+      .returning({ id: promptVersions.id });
+    return { seeded: inserted.length > 0 };
   }
 
   async createPromptVersion(

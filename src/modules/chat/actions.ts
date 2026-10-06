@@ -15,8 +15,16 @@ import {
   rollbackPromptVersionSchema,
   startConversationSchema,
 } from "./types";
+import { z } from "zod";
 import { defineAction } from "@/lib/actions/envelope";
 import { chatService } from "./service";
+
+export const seedDefaultPromptVersionAction = defineAction({
+  name: "API-CHAT-12 prompt_version.seed_default",
+  input: z.strictObject({}),
+  permission: "chat.prompts.write",
+  handler: (_input, ctx) => chatService.seedDefaultPromptVersion(ctx),
+});
 
 export const createPromptVersionAction = defineAction({
   name: "API-CHAT-12 prompt_version.create",
