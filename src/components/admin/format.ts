@@ -27,7 +27,11 @@ export function signedMoney(m: MoneyLike): { text: string; label: string; negati
   };
 }
 
+/** `""` / malformed input (e.g. a never-run index timestamp) renders "—" instead of throwing RangeError. */
+const isValidDate = (iso: string) => !Number.isNaN(new Date(iso).getTime());
+
 export function formatDate(iso: string): string {
+  if (!isValidDate(iso)) return "—";
   return new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",
     month: "short",
@@ -37,6 +41,7 @@ export function formatDate(iso: string): string {
 }
 
 export function formatDateTime(iso: string): string {
+  if (!isValidDate(iso)) return "—";
   return new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",
     month: "short",

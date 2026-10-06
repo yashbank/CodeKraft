@@ -28,7 +28,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Banner } from "../Banner";
+import { EmptyState } from "../EmptyState";
 import { formatDate } from "../format";
+import { PageHeader } from "../PageHeader";
 import { Field, RichTextField } from "../RichTextField";
 import type { LegalPage } from "../types";
 import { ContentEditorFrame } from "./ContentEditorFrame";
@@ -50,7 +52,19 @@ export function LegalEditor({
   const [saving, setSaving] = React.useState(false);
   const formRef = React.useRef<HTMLFormElement>(null);
   const page = pages.find((p) => p.key === active) ?? pages[0];
-  if (!page) return null;
+  if (!page) {
+    // Zero legal_pages rows (clean zero-data state): say so instead of rendering a blank screen.
+    // The public /legal/* routes serve built-in copy in the meantime; `pnpm db:seed` inserts the rows.
+    return (
+      <>
+        <PageHeader title="Legal pages" description="Privacy, terms, refunds and licence copy." />
+        <EmptyState
+          title="No legal pages in the database yet"
+          body="The public /legal/* pages show their built-in copy until these rows exist. Creating them is a seed step (pnpm db:seed), not something this screen does."
+        />
+      </>
+    );
+  }
   const rail = pages.map((p) => ({
     key: p.key,
     label: p.title,
