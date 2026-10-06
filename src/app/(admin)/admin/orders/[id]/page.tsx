@@ -36,7 +36,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
   ];
 
   const [ledgerResult, allocationResult, timelineResults, partnersResult] = await Promise.all([
-    listLedgerEntriesQuery({ filters: { orderNo: detail.order.orderNo }, limit: 200 }, ctx),
+    listLedgerEntriesQuery({ filters: { orderNo: detail.order.orderNo }, limit: 100 }, ctx),
     ALLOCATED_STATUSES.has(detail.order.status)
       ? getOrderAllocationQuery({ orderId: detail.order.id }, ctx)
       : Promise.resolve(null),
@@ -45,7 +45,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
     ),
     // `listPartners` needs `finance.ledger.read_all` or `users.admin.manage`; an admin without
     // either still gets the page, just with short partner ids instead of names (see orders-view).
-    listPartnersQuery({ limit: 200 }, ctx).catch(() => ({ ok: false as const })),
+    listPartnersQuery({ limit: 100 }, ctx).catch(() => ({ ok: false as const })),
   ]);
 
   const ledger = ledgerResult.ok ? ledgerResult.data.items : [];

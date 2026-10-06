@@ -80,7 +80,7 @@ export default async function AdminReportsPage() {
     getReportQuery({ report: "customer_credits", dateFrom, dateTo }, ctx).catch(
       () => ({ ok: false as const }),
     ),
-    listPartnersQuery({ limit: 200 }, ctx).catch(() => ({ ok: false as const })),
+    listPartnersQuery({ limit: 100 }, ctx).catch(() => ({ ok: false as const })),
   ]);
 
   const reports: ReportDefinition[] = REPORT_ORDER.map((key, i) => {

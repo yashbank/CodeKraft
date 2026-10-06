@@ -12,7 +12,7 @@ export default async function AdminAdjustmentsPage() {
 
   const [approvalsResult, partnersResult, balancesResult] = await Promise.all([
     listApprovalsAction({ filters: { type: "ledger.adjustment" }, limit: 100 }, ctx),
-    listPartnersQuery({ limit: 200 }, ctx).catch(() => ({ ok: false as const })),
+    listPartnersQuery({ limit: 100 }, ctx).catch(() => ({ ok: false as const })),
     getPartnerBalancesQuery({}, ctx).catch(() => ({ ok: false as const })),
   ]);
 

@@ -12,11 +12,11 @@ export default async function AdminExpensesPage() {
 
   const [expensesResult, productsResult, partnersResult, expenseLedgerResult] = await Promise.all([
     listExpensesQuery({ limit: 100 }, ctx),
-    listProductsAdminQuery({ limit: 200 }, ctx).catch(() => ({ ok: false as const })),
-    listPartnersQuery({ limit: 200 }, ctx).catch(() => ({ ok: false as const })),
+    listProductsAdminQuery({ limit: 100 }, ctx).catch(() => ({ ok: false as const })),
+    listPartnersQuery({ limit: 100 }, ctx).catch(() => ({ ok: false as const })),
     // Cross-referenced against `expenses.id` via `links.expenseId` to recover the ledger seq(s)
     // and INR total each expense posted -- `listExpenses`/`Expense` carry neither.
-    listLedgerEntriesQuery({ filters: { entryType: ["expense"] }, limit: 200 }, ctx),
+    listLedgerEntriesQuery({ filters: { entryType: ["expense"] }, limit: 100 }, ctx),
   ]);
 
   const expenses = expensesResult.ok ? expensesResult.data.items : [];

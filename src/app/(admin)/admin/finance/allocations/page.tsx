@@ -19,7 +19,7 @@ export default async function AdminAllocationsPage() {
 
   const [ordersResult, partnersResult] = await Promise.all([
     listOrdersAdminQuery({ limit: 100, sort: "createdAt:desc" }, ctx),
-    listPartnersQuery({ limit: 200 }, ctx).catch(() => ({ ok: false as const })),
+    listPartnersQuery({ limit: 100 }, ctx).catch(() => ({ ok: false as const })),
   ]);
 
   const { byPartnerId: partnerNames } = buildPartnerNameMaps(

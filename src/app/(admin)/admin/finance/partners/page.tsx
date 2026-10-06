@@ -21,7 +21,7 @@ export default async function AdminPartnersPayoutsPage() {
   const isSuperAdmin = ctx.roles.includes("super_admin");
 
   const [partnersResult, balancesResult, payoutsResult, payoutApprovalsResult] = await Promise.all([
-    listPartnersQuery({ limit: 200 }, ctx).catch(() => ({ ok: false as const })),
+    listPartnersQuery({ limit: 100 }, ctx).catch(() => ({ ok: false as const })),
     getPartnerBalancesQuery({}, ctx).catch(() => ({ ok: false as const })),
     listPayoutsQuery({ limit: 100 }, ctx),
     listApprovalsAction({ filters: { type: "payout.record" }, limit: 100 }, ctx),
@@ -38,7 +38,7 @@ export default async function AdminPartnersPayoutsPage() {
 
   const [payoutLedgerResult, ...rollupResults] = await Promise.all([
     payouts.length > 0
-      ? listLedgerEntriesQuery({ filters: { entryType: ["payout"] }, limit: 200 }, ctx)
+      ? listLedgerEntriesQuery({ filters: { entryType: ["payout"] }, limit: 100 }, ctx)
       : Promise.resolve({ ok: true as const, data: { items: [] as never[], nextCursor: null } }),
     ...partnerViews.map((p) =>
       listLedgerEntriesQuery(
