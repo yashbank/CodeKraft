@@ -1002,3 +1002,184 @@ follow-up pass was the right call here over shipping an unverifiable change.
 | Site `/products` | 1.3–3.3s | 1.0–3.1s | fine |
 | Site `/products/custom-web-apps` | 1.2–1.5s | 1.2–3.0s | fine |
 | Site `/products/mobile-apps` | 1.2–1.3s | 1.2–1.3s | fine |
+
+## Landing hero image + product/order/lead creation UX (2026-10-06, separate session)
+
+Scope: the landing/hero-image save path, and product/order/lead creation specifically. Did not
+touch finance/CRM-general/content-general/settings/audit/admin-users (other agents' areas),
+except where "lead creation" and "order creation" entry points themselves live inside the
+`crm`/`commerce` component folders — touched only the specific files needed for those two flows.
+
+### BUG 1 — hero image "succeeds" but never shows on the public site: ROOT CAUSE FOUND, FIXED, VERIFIED LIVE
+
+**Not a save bug, not a caching bug, not a media-key-reuse bug.** All three of the task's
+hypotheses were checked and ruled out by direct code + live-data inspection:
+
+- (a) **Save path is correct.** `LandingEditor.tsx`'s `handleSave` → `saveLandingChapter` (a real
+  `"use server"` action, `modules/content/admin-mutations.ts`) → `upsertLandingChapter`
+  (`modules/content/service.ts`) does a real DB `UPDATE`/`INSERT` on `landingChapters.media`,
+  returns `{ ok: true }`, and `revalidatePath("/", "layout")` + `revalidateTagsSafe(["content"])`
+  both fire. Confirmed live: the admin Landing editor for the "who" chapter shows a real
+  R2-hosted image (`https://…r2.cloudflarestorage.com/codekraft-public/media/2026/10/e394381e-…jpg`)
+  — Yash's upload genuinely persisted.
+- (b) **No caching bug.** `src/app/(site)/page.tsx` already has `export const dynamic =
+  "force-dynamic"` at the top.
+- (c) **No media-key reuse.** `modules/media/service.ts` `createUploadIntent` generates
+  `objectKey = media/${yyyy}/${mm}/${crypto.randomUUID()}${ext}` — genuinely unique per upload,
+  never reused.
+
+**Actual root cause: the public render path never reads `media.poster` at all.**
+`LandingContent` (`src/components/site/types.ts`) had no `poster` field; `page.tsx`'s
+`chapterCopy()` helper only extracted `{eyebrow, title, body}` from each chapter and silently
+dropped `media`; and the component that actually paints the hero visual,
+`src/components/site/landing/HeroPoster.tsx`, hardcoded `src="/images/hero-3d.jpg"` — a static
+local file, completely disconnected from the database, from `getLandingContentQuery`, from
+everything. The service-layer code that resolves `posterMediaId` → a real R2 URL
+(`DefaultContentService.getLandingContent`, `modules/content/service.ts`) was dead code as far as
+the public site was concerned: computed, then thrown away.
+
+Live proof, captured before the fix deployed (fresh Playwright context, no browser cache):
+```
+GET https://codekraft-dusky.vercel.app/  → hero <img>
+  src: /_next/image?url=%2Fimages%2Fhero-3d.jpg&w=3840&q=75
+  alt: "CodeKraft 3D System Architecture Render"   (the hardcoded default, not Yash's upload)
+```
+vs. the admin editor at the same moment, same chapter:
+```
+admin hero <img> src: https://…r2.cloudflarestorage.com/codekraft-public/media/2026/10/e394381e-….jpg
+```
+Two different images — confirms the disconnect precisely.
+
+The admin UI also actively misled: a banner under the "who" chapter said "Poster image upload is
+coming in a follow-up update," directly below a working-looking "Hero image" upload control that
+*was* saving data — just data nothing downstream ever read.
+
+**Fix** (commit `08bc295`): wired the "who" (hero) chapter's `media.poster` through end-to-end —
+`LandingContent.who` gained a `poster: {url, alt} | null` field, `page.tsx`'s chapter-copy builder
+now forwards it, `LandingHero.tsx` passes it to `HeroPoster`, and `HeroPoster.tsx` now renders
+`src ?? "/images/hero-3d.jpg"` (falls back to the original static image when no poster has been
+uploaded, so chapters with nothing uploaded yet look exactly as before). Removed the
+now-inaccurate "coming in a follow-up" banner. Did **not** wire the other four chapters
+(build/sell/proof/talk) — their `Chapter.tsx` layout has no image slot at all today (children are
+hardcoded per-section widgets: service list, product grid, proof stats, inquiry form), and giving
+each one an image slot is a layout/design decision, not a bug fix. Instead, the admin "Hero
+image" field's hint text for those four chapters now says plainly "Saved with this chapter, but
+not shown on the public page yet" instead of implying it works.
+
+**Verified live after deploy** (same methodology, fresh context): the public hero `<img>` now
+serves `…r2.cloudflarestorage.com/…/e394381e-….jpg` with `alt="Engineers who ship software that
+earns its keep"` (the real chapter title) — matching the admin editor exactly. Deployment
+`dpl_3nZXJMSG1MtoXvwaCXpn4SdXagt4`, commit `08bc295`, confirmed `READY` and aliased to both
+`codekraft-admin.vercel.app` and `codekraft-dusky.vercel.app` via `get_deployment`.
+
+Files: `src/components/site/types.ts`, `src/app/(site)/page.tsx`,
+`src/components/site/landing/LandingHero.tsx`, `src/components/site/landing/HeroPoster.tsx`,
+`src/components/admin/content/LandingEditor.tsx`, `src/app/dev/screens/_fixtures/site.ts`.
+
+### BUG 2 — product/order/lead creation: precise breakdown
+
+**Product creation: already fixed by the prior pass, confirmed still intact.** Re-verified live
+end-to-end (fresh product, `/admin/products/new` → fill name + short description → Create): the
+Save button correctly shows `data-loading="true"` the whole time (no regression), full
+create→navigate round trip measured at 12.25s this run — consistent with the prior pass's
+documented ~15s cold-start figure and this session's other independent measurement (13.7–15.1s,
+see "Performance audit" section above). Not touched further — nothing new to fix here, the
+loading-indicator fix is holding.
+
+**Order creation was completely unreachable — this was the real "we don't even have the option"
+bug, not a smoothness complaint.** `OrdersList`, `CustomerDetail`, and `LeadsScreen` (the "Mark
+won" dialog's "Create project order" button) all link "+ New manual order" to `/admin/orders/new`.
+That route never existed — Next.js matched the sibling `[id]` dynamic route instead, treated
+`"new"` as an order id, and rendered a plain "Order not found" error. Live proof, captured before
+the fix: `GET /admin/orders/new` → 200, body contains "Order not found / Some fields are invalid."
+The backend was already fully built (`createManualOrderAction` → `ordersService.createManualOrder`,
+`modules/orders/manual.ts`, handles both product and project-split order types, tax, payment
+confirmation, approval requests) — but every other module under `src/modules/*` has an
+`admin-mutations.ts` wrapper exposing its actions to client components; `orders` was the one
+module missing it. `ManualOrderForm.tsx` (the actual form component) was only ever mounted from a
+`/dev/screens` visual-preview route, and its "Create order" button called `toast.success(fake
+message)` with **no real mutation call at all**, for every order type — a dangerous
+silent-no-op-pretending-to-succeed pattern that was invisible in production only because the page
+that would have rendered it never existed.
+
+Fix (commit `08bc295`): added `src/modules/orders/admin-mutations.ts` (same `withCtx` pattern as
+every sibling module) and a real `src/app/(admin)/admin/orders/new/page.tsx` that loads
+registered customers, published-product offerings (fanned out via the existing per-product
+`listForProduct` query — no new cross-cutting query added, to avoid touching
+catalog/offerings module surface other agents might be mid-edit on), partners, and tax settings.
+Rewired `ManualOrderForm`'s "product order" path (registered customer + offering lines, optional
+immediate payment — no partner split involved) to call the real backend, added a loading state,
+and redirect to the created order on success. Left "project" orders (client invoice + partner
+revenue split, approval-gated) **not wired**: the form's own client-side split validation
+(`companyCutBps + partner shares === 10000`) doesn't match what the backend actually enforces
+(`zSplitSnapshot`'s `superRefine` only requires the partner `lines` array to independently sum to
+10000 bps — `companyCutBps` isn't part of that check at all), so guessing at the right mapping
+risked creating real orders with silently-wrong revenue splits. That path now shows an honest
+"not available from this screen yet, ask a super admin to create it directly" banner and a
+disabled button instead of the old fake-success toast — turned a dangerous lie into an honest gap,
+flagging it here for whoever owns finance/CRM to wire correctly with the real split invariant.
+
+Verified live after deploy: `/admin/orders/new` returns 200 with a real form (customer select
+populated with 14 real registered customers, "Create order" button present, no more "Order not
+found"). Full submission with a real offering could not be end-to-end verified in this session —
+**all 7 products currently in this environment are in `Draft` status** (zero published products
+at the moment, confirmed via `/admin/products`), so the offerings dropdown is correctly empty (not
+a bug — `manual.ts` requires `offering.status === "active"`, which only published products get).
+Validated the payload shape a different way instead: fed `ManualOrderForm`'s exact constructed
+payload (both with and without a recorded payment) through the real
+`createManualOrderInput.safeParse()` schema directly — both pass cleanly with realistic UUIDs,
+confirming the wiring is shape-correct and ready as soon as a product gets published. Whichever
+agent is managing product-publish state should pick one product to publish and do the final
+real-money-shaped smoke test this session couldn't complete.
+
+**Lead creation: both a real UX bug (fixed) and a real backend latency (not fixed, flagged).**
+A "+ New lead" button already existed and worked (`LeadsScreen.tsx`, calls the already-wired
+`createLeadManual` → `createLeadManualAction`) — so leads were never "impossible" to create, unlike
+orders. But: (1) the "Create lead"/"Mark won"/"Mark lost" buttons all set `disabled={submitting}`
+while the mutation was in flight but never passed `loading={submitting}` to the `Button` component
+— same missing-loading-indicator class of bug as the prior pass's product-creation fix, just in a
+different screen. Live-measured before fixing: button goes inert with zero visual feedback for the
+whole request. Fixed by adding `loading={submitting}` alongside the existing `disabled` (3 call
+sites). (2) Live-measured the actual round trip after the fix: sheet opens in 84ms (instant), but
+click→lead-created took **6.87s** — this matches the independent "Performance audit" section's own
+measurement of 6.9s for the same flow almost exactly, confirming it's a real, consistent backend
+latency (cold-start + however many sequential queries `createLeadManual` runs), not something the
+loading-indicator fix resolves — it only stops the 6.9s from *feeling* broken. Did not dig into
+server-side query cost for this session's time budget; flagging the number for whoever profiles
+cold-start/query latency next (the "Performance audit" section above already flagged this exact
+number independently, so two separate measurement passes now agree).
+
+**"No option to create a lead" on `/admin/customers` → `[id]` was real.** `CustomerDetail.tsx`'s
+row-actions menu had "New quote" and "New manual order" but nothing lead-related — a founder
+looking at a customer with no leads yet genuinely had no path to create one without leaving to
+`/admin/leads` and re-typing the name/email from memory. Added a "New lead" action that deep-links
+to `/admin/leads?prefillName=…&prefillEmail=…&prefillCompany=…`; `LeadsScreen` now accepts an
+`initialNewLead` prop and auto-opens the sheet pre-filled on mount when those query params are
+present (same imperative `document.getElementById(...).value =` pattern this file already used
+for the Lost/Won dialogs' uncontrolled fields). Verified live: clicking "New lead" from a real
+customer's row-actions menu produces the href
+`/admin/leads?prefillName=CK+Demo+Purchaser&prefillEmail=yashbank2002%2Bckdemo%40gmail.com`;
+navigating there opens the sheet with "New lead" visible and `#nl-name`/`#nl-email` pre-filled
+with exactly that name/email.
+
+### Test data left behind (safe to delete)
+
+- Product "Playwright Verify Product 1791287450683" (`/admin/products`, Draft status) — created
+  while re-verifying the already-fixed product-creation flow still works.
+- Lead "Playwright Verify Lead <timestamp>" (`/admin/leads`) — created while measuring the
+  create-lead round trip after the loading-indicator fix.
+- No test order was created (blocked on zero published products, see above) and no test media/
+  landing content beyond Yash's own real "who" chapter upload, which is the one this bug report
+  was about and is now correctly live.
+
+### Commit / deploy
+
+Commit `08bc295` (`fix(content,orders,leads): wire hero image to the public page, real
+manual-order creation, lead-sheet loading state`) — 12 files, `git add -- <exact paths>`, excluded
+`.gitignore` and `src/modules/leads/actions.ts` (both mid-edit by a concurrent agent at commit
+time, confirmed via `git status` showing them modified without any change from this session).
+`tsc --noEmit` error count unchanged at 229 before/after (all pre-existing, in
+finance/chat/delivery/entitlements modules other agents are actively working in — none in any file
+this session touched). `pnpm build` clean. Full unit suite: 745/745 passing. Pushed to `main`,
+deployed as `dpl_3nZXJMSG1MtoXvwaCXpn4SdXagt4`, confirmed `READY` + aliased to both production
+domains via `vercel inspect` and `mcp__claude_ai_Vercel__get_deployment`.
