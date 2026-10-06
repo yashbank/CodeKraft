@@ -132,10 +132,11 @@ export interface AuditLogRow {
 }
 
 export interface AuditExportResult {
-  /** 5-minute presigned GET to the CSV (D-1104); the export itself is audited. */
-  url: string;
+  /** Suggested download name, e.g. `audit-log.csv`. */
   filename: string;
-  expiresAt: string;
+  /** Full CSV (header row + one line per audit row). The client saves it as a Blob download. */
+  csv: string;
+  rowCount: number;
 }
 
 export type { AuditEvent, AuditLog };

@@ -291,11 +291,7 @@ export class DefaultAuditService implements AuditService {
       .orderBy(desc(auditLogs.createdAt), desc(auditLogs.id));
 
     const csvContent = formatAuditLogsCsv(rows.map(mapRowToAuditLogRow));
-    const filename = `audit-export-${new Date().toISOString().replace(/[:.]/g, "-")}.csv`;
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-
-    // 5-minute presigned document URL (P3.5 will wire real R2 client; fallback to local stub)
-    const url = `https://storage.codekraft.local/codekraft-documents/exports/${filename}?expires=300&sig=presigned`;
+    const filename = "audit-log.csv";
 
     const { withTx } = await import("@/lib/db");
     // Audit the export action in the provided or new transaction
@@ -311,9 +307,9 @@ export class DefaultAuditService implements AuditService {
     }, tx);
 
     return {
-      url,
       filename,
-      expiresAt,
+      csv: csvContent,
+      rowCount: rows.length,
     };
   }
 }

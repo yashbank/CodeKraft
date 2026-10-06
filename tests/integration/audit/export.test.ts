@@ -13,7 +13,7 @@ describe("audit exportAuditLogs (API-ADM-05, PHASE-03 P3.1)", () => {
     await migrateTestDb();
   });
 
-  it("exports CSV, returns presigned URL, and audits the export operation", async () => {
+  it("exports CSV inline (header + rows) and audits the export operation", async () => {
     await truncateAll(sql);
 
     const admin = await createUser({ role: "super_admin" });
@@ -38,9 +38,12 @@ describe("audit exportAuditLogs (API-ADM-05, PHASE-03 P3.1)", () => {
     // Run export
     const exportResult = await auditService.exportAuditLogs(adminCtx, {});
 
-    expect(exportResult.url).toContain("https://storage.codekraft.local");
-    expect(exportResult.filename).toMatch(/^audit-export-.*\.csv$/);
-    expect(new Date(exportResult.expiresAt).getTime()).toBeGreaterThan(Date.now());
+    expect(exportResult.filename).toBe("audit-log.csv");
+    expect(exportResult.rowCount).toBeGreaterThan(0);
+    const [header, ...lines] = exportResult.csv.split("\n");
+    expect(header).toMatch(/^id,/);
+    expect(lines.length).toBe(exportResult.rowCount);
+    expect(lines.join("\n")).toContain("API-CAT-01 product.create");
 
     // Verify the export itself was audited
     const [exportAuditRow] = await sql<{ id: string; action: string; subject_id: string }[]>`

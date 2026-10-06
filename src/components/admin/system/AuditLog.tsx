@@ -78,8 +78,18 @@ export function AuditLog({
       toast.error(result.error.message);
       return;
     }
-    toast.success(`Export ready — ${result.data.filename}`);
-    window.open(result.data.url, "_blank", "noopener,noreferrer");
+    // The server returns the CSV itself; save it locally as a Blob download (no external storage).
+    const objectUrl = URL.createObjectURL(
+      new Blob([result.data.csv], { type: "text/csv;charset=utf-8" }),
+    );
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = result.data.filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    toast.success(`Exported ${result.data.rowCount} rows to ${result.data.filename}`);
   }
 
   return (
