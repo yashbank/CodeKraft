@@ -268,8 +268,8 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
                     defaultValue={editing?.client === "Confidential client" ? "" : editing?.client}
                   />
                 </Field>
-                <Field id="cs-industry" label="Industry">
-                  <Input id="cs-industry" name="industry" defaultValue={editing?.industry} />
+                <Field id="cs-industry" label="Industry" required>
+                  <Input id="cs-industry" name="industry" defaultValue={editing?.industry} required aria-required />
                 </Field>
                 <Field id="cs-highlight" label="Result highlight" hint="Short headline stat, e.g. +40% conversion. 60 chars.">
                   <Input id="cs-highlight" name="resultHighlight" maxLength={60} defaultValue="" />
