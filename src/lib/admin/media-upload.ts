@@ -22,7 +22,24 @@ export async function uploadMediaFile(file: File, purpose: string): Promise<Uplo
   if (!intentResult.ok) throw new Error(intentResult.error.message);
   const { intentId, uploadUrl, headers } = intentResult.data;
 
-  const putRes = await fetch(uploadUrl, { method: "PUT", headers, body: file });
+  let putRes: Response;
+  try {
+    putRes = await fetch(uploadUrl, { method: "PUT", headers, body: file });
+  } catch {
+    // `fetch` *throwing* here (as opposed to resolving with a non-ok response, handled below)
+    // means the browser never got an HTTP response back from the storage bucket at all — the
+    // near-universal cause is a CORS preflight rejection: this PUT goes directly from the
+    // browser to the R2 bucket's own origin (docs/12-DEVOPS-DEPLOYMENT.md §6 "CORS (public and
+    // private buckets)"), which requires the bucket's CORS policy to explicitly allow this
+    // site's origin. That's infra config on the bucket itself (Cloudflare dashboard), not
+    // something this app's code, `tsc`, server logs or curl can set or detect — CORS is
+    // enforced entirely client-side, so a bare "Failed to fetch" here told the admin nothing.
+    throw new Error(
+      "Upload couldn't reach storage. This usually means the storage bucket's CORS policy " +
+        "doesn't allow this site's origin yet — check the browser DevTools Console/Network tab " +
+        "for a message containing \"CORS\", then add this origin to the bucket's CORS settings.",
+    );
+  }
   if (!putRes.ok) throw new Error(`Upload failed (${putRes.status})`);
 
   const completeResult = await completeMediaUpload({ intentId });
