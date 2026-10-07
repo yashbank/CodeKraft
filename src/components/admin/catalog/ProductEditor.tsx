@@ -453,7 +453,7 @@ export function ProductEditor({
   }
 
   async function submitOwnershipProposal(effectiveFrom: string) {
-    if (split.companyCutBps + split.lines.reduce((s, l) => s + l.bps, 0) !== 10000) return;
+    if (split.lines.reduce((s, l) => s + l.bps, 0) !== 10000) return;
     const result = await proposeOwnershipSplit({
       productId,
       companyCutBps: split.companyCutBps,
