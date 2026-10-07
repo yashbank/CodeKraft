@@ -5,6 +5,7 @@ import type { ProductEditorData } from "@/components/admin/types";
 import { getAdminRequestContext } from "@/lib/authz/admin-request-context";
 import { flattenCategoryNames, mapCategoryNode, mapProductGraphToEditorData } from "@/lib/admin/catalog-view";
 import { getProductAdminQuery, listCategoriesQuery } from "@/modules/catalog/queries";
+import { listAdminDirectoryQuery } from "@/modules/approvals/queries";
 import { listPartnersQuery } from "@/modules/users/queries";
 
 interface PageProps {
@@ -79,11 +80,17 @@ export default async function AdminProductEditorPage({ params }: PageProps) {
     product = mapProductGraphToEditorData(graphResult.data, { categoryName, partners });
   }
 
+  // Real approvers: every other active admin-class user (same rule the server applies).
+  const adminDirectory = await listAdminDirectoryQuery({}, ctx).catch(() => ({ ok: false as const }));
+  const approvers = adminDirectory.ok
+    ? adminDirectory.data.items.filter((a) => a.id !== ctx.userId).map((a) => a.name)
+    : [];
+
   return (
     <ProductEditor
       product={product}
       categories={categories}
-      approvers={["Priya Nair", "Arjun Patel"]}
+      approvers={approvers}
       listHref="/admin/products"
       approvalsHref="/admin/approvals"
       currencies={["INR", "USD"]}

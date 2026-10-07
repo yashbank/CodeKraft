@@ -2252,7 +2252,8 @@ function ProposeSplitForm({
 }) {
   const [effectiveFrom, setEffectiveFrom] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
-  const total = split.companyCutBps + split.lines.reduce((s, l) => s + l.bps, 0);
+  // Partner shares sum to 100 % of the partner pool; company cut is separate (server rule).
+  const total = split.lines.reduce((s, l) => s + l.bps, 0);
 
   return (
     <form

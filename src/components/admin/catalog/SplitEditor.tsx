@@ -49,7 +49,9 @@ export function SplitEditor({
   idPrefix: string;
   compact?: boolean;
 }) {
-  const total = value.companyCutBps + value.lines.reduce((s, l) => s + l.bps, 0);
+  // Partner shares are a percent of the partner pool (server rule: lines sum to 100 %).
+  // The company cut is separate and does not count toward this total.
+  const total = value.lines.reduce((s, l) => s + l.bps, 0);
   const ok = total === 10000;
   const update = (patch: Partial<SplitValue>) => onChange({ ...value, ...patch });
   const setLine = (i: number, patch: Partial<SplitLine>) =>
@@ -144,7 +146,7 @@ export function SplitEditor({
           aria-live="polite"
           className={cn("font-mono text-body-sm tnum", ok ? "text-success" : "text-danger")}
         >
-          Total {percentFromBps(total)}{" "}
+          Partner shares total {percentFromBps(total)}{" "}
           {ok
             ? "✔"
             : `— must equal 100.00 % (${total > 10000 ? "over" : "under"} by ${percentFromBps(Math.abs(10000 - total))})`}
