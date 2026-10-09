@@ -188,7 +188,8 @@ export class DefaultApprovalsService implements ApprovalsService {
     const [request] = await tx
       .select()
       .from(approvalRequests)
-      .where(eq(approvalRequests.id, requestId));
+      .where(eq(approvalRequests.id, requestId))
+      .for("update"); // serialise concurrent decisions/cancel on one request
 
     if (!request) {
       throw new AppError(ErrorCode.NOT_FOUND, "Approval request not found");
@@ -639,7 +640,8 @@ export class DefaultApprovalsService implements ApprovalsService {
       const [req] = await actionTx
         .select()
         .from(approvalRequests)
-        .where(eq(approvalRequests.id, input.approvalRequestId));
+        .where(eq(approvalRequests.id, input.approvalRequestId))
+        .for("update");
 
       if (!req) {
         throw new AppError(ErrorCode.NOT_FOUND, "Approval request not found");

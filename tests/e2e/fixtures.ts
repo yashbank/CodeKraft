@@ -43,6 +43,16 @@ function formatViolations(violations: Result[]): string {
  */
 export async function expectNoA11yViolations(page: Page, options: A11yOptions = {}): Promise<void> {
   const impact = options.impact ?? ["serious", "critical"];
+  await page.waitForLoadState("networkidle");
+  // Let finite fade/slide-in transitions finish: axe would otherwise sample mid-opacity colours.
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity)
+        .map((a) => a.finished.catch(() => undefined)),
+    ),
+  );
   let builder = new AxeBuilder({ page }).withTags(WCAG_TAGS);
   if (options.disableRules?.length) builder = builder.disableRules(options.disableRules);
   if (options.include) builder = builder.include(options.include);

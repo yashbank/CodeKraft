@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -53,6 +53,9 @@ export function LoginForm({
   const [error, setError] = useState<string | null>(initialError);
   const [pending, start] = useTransition();
   const busy = pending || forceLoading;
+  // Before hydration a click would post natively and drop the typed credentials.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
 
   return (
     <form
@@ -173,7 +176,13 @@ export function LoginForm({
           </Link>
         </div>
       ) : null}
-      <Button type="submit" className="w-full" size={designed ? "lg" : "md"} loading={busy}>
+      <Button
+        type="submit"
+        disabled={!hydrated}
+        className="w-full"
+        size={designed ? "lg" : "md"}
+        loading={busy}
+      >
         Sign in
       </Button>
       {designed ? (

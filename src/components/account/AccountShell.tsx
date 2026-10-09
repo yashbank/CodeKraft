@@ -16,10 +16,12 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { authClient } from "@/modules/auth/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -118,6 +120,7 @@ export function AccountShell({
   links,
   children,
 }: AccountShellProps) {
+  const router = useRouter();
   const [drawer, setDrawer] = React.useState(false);
   const nav = ACCOUNT_NAV.map((n) => ({ ...n, href: links?.[n.key] ?? n.href }));
   const activeItem = nav.find((n) => n.key === active);
@@ -304,7 +307,14 @@ export function AccountShell({
                 <DropdownMenuItem asChild>
                   <Link href="/">Back to site</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => {
+                    void authClient.signOut().then(() => {
+                      router.push("/");
+                      router.refresh();
+                    });
+                  }}
+                >
                   <LogOutIcon aria-hidden /> Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>

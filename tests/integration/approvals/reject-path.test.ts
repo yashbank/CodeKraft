@@ -68,5 +68,10 @@ describe("approvals reject path integration tests (PHASE-03 P3.2, API-ADM-03)", 
       select status from approval_requests where id = ${approvalRequestId}
     `;
     expect(row?.status).toBe("rejected");
+
+    // A later approve on the rejected request is refused
+    await expect(
+      approvalsService.approveRequest(approverCtx, { approvalRequestId }),
+    ).rejects.toMatchObject({ code: "STATE_INVALID" });
   });
 });

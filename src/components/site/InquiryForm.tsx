@@ -359,10 +359,7 @@ export function InquiryForm({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-caption text-fg-muted">
           By sending you agree to our{" "}
-          <Link
-            href="/legal/privacy"
-            className="text-accent-text underline-offset-2 hover:underline"
-          >
+          <Link href="/legal/privacy" className="text-accent-text underline underline-offset-2">
             Privacy policy
           </Link>
           . We reply by email within 2 working days.

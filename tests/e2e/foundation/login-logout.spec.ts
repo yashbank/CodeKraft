@@ -13,6 +13,11 @@ async function signUp(request: APIRequestContext, email: string) {
 }
 
 test.describe("login / logout (S-00, docs/09 §3)", () => {
+  // Dev compiles routes on first hit; warm the post-sign-in ones so the 10 s expect budget holds.
+  test.beforeAll(async ({ request }) => {
+    for (const path of ["/account", "/api/auth/role"]) await request.get(`${SITE}${path}`);
+  });
+
   test("customer signs in on the site host, sees the account page, signs out", async ({
     page,
     request,
@@ -24,8 +29,9 @@ test.describe("login / logout (S-00, docs/09 §3)", () => {
     await page.getByLabel("Password").fill(PW);
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/\/account$/);
-    await expect(page.getByTestId("account-email")).toContainText(email);
-    await page.getByRole("button", { name: "Sign out" }).click();
+    await page.getByRole("button", { name: /Account menu/ }).click();
+    await expect(page.getByRole("menu")).toContainText(email);
+    await page.getByRole("menuitem", { name: "Sign out" }).click();
     await expect(page).toHaveURL(`${SITE}/`);
     await page.goto(`${SITE}/account`);
     await expect(page).toHaveURL(/\/auth\/login/);
