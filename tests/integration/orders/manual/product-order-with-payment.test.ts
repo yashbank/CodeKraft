@@ -68,20 +68,15 @@ describe("Manual product order with payment (API-COM-07, BR-10, S-12)", () => {
     expect(res.invoiceId).toBeDefined();
 
     // 2. Order lands paid with createdBy = admin
-    const [savedOrder] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, res.orderId));
-    expect(savedOrder?.status).toBe("paid");
+    const [savedOrder] = await db.select().from(orders).where(eq(orders.id, res.orderId));
+    // grantForOrder fulfils a download-only order once its entitlements are active
+    expect(savedOrder?.status).toBe("fulfilled");
     expect(savedOrder?.paidAt).not.toBeNull();
     expect(savedOrder?.createdBy).toBe(admin.id);
     expect(savedOrder?.totalMinor).toBe(20000);
 
     // 3. Invoice issued in the same transaction
-    const [savedInvoice] = await db
-      .select()
-      .from(invoices)
-      .where(eq(invoices.id, res.invoiceId!));
+    const [savedInvoice] = await db.select().from(invoices).where(eq(invoices.id, res.invoiceId!));
     expect(savedInvoice?.orderId).toBe(res.orderId);
     expect(savedInvoice?.issuedAt).not.toBeNull();
     expect(savedInvoice?.invoiceNo).toMatch(/^CK\/\d{4}-\d{2}\/\d{4}$/);

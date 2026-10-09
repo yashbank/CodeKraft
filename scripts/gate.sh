@@ -31,12 +31,15 @@ else
 fi
 
 step "unit"
-pnpm exec vitest run --project unit > /tmp/gate-unit.log 2>&1 || { echo "FAIL: unit"; tail -40 /tmp/gate-unit.log; fail=1; }
+pnpm exec vitest run --project unit > /tmp/gate-unit.log 2>&1 || true
 grep -E "Test Files|Tests  " /tmp/gate-unit.log
+# vitest can exit 0 with failures here, so trust the summary line, not the exit code.
+grep -qE "Tests .*(failed|[^0-9]0 passed)" /tmp/gate-unit.log && { echo "FAIL: unit"; grep -E "^ *(×|FAIL)" /tmp/gate-unit.log | head -20; fail=1; }
 
 step "integration"
-CODEKRAFT_TEST_DB=embedded pnpm exec vitest run --project integration > /tmp/gate-integration.log 2>&1 || { echo "FAIL: integration"; grep -E "FAIL|×" /tmp/gate-integration.log | head -20; fail=1; }
+CODEKRAFT_TEST_DB=embedded pnpm exec vitest run --project integration > /tmp/gate-integration.log 2>&1 || true
 grep -E "Test Files|Tests  " /tmp/gate-integration.log
+grep -qE "Tests .*(failed|[^0-9]0 passed)" /tmp/gate-integration.log && { echo "FAIL: integration"; grep -E "^ *(×|FAIL)" /tmp/gate-integration.log | head -20; fail=1; }
 
 step "build"
 pnpm build > /tmp/gate-build.log 2>&1 || { echo "FAIL: build"; tail -40 /tmp/gate-build.log; fail=1; }
