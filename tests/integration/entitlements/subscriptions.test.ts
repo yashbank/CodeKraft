@@ -4,7 +4,6 @@ import { db, withTx } from "@/lib/db";
 import { subscriptionsService } from "@/modules/subscriptions/service";
 import { subscriptionsRemindGraceSuspendJob } from "@/jobs/subscriptions";
 import { entitlements, subscriptions } from "../../../drizzle/schema/delivery";
-import { orders } from "../../../drizzle/schema/commerce";
 import { migrateTestDb } from "../../setup/migrate";
 import { truncateAll } from "../../setup/db";
 import { createAdmin, createUser } from "../../factories/users";
@@ -128,7 +127,10 @@ describe("Subscriptions Lifecycle & Cron (API-DEL-04/05/14, BR-14, MASTER_SPEC Â
     const cron2 = await subscriptionsRemindGraceSuspendJob.run(new Date("2026-02-10T00:00:00Z"));
     expect(cron2.detail.suspended).toBe(1);
 
-    const [subSuspended] = await db.select().from(subscriptions).where(eq(subscriptions.id, sub.id));
+    const [subSuspended] = await db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.id, sub.id));
     expect(subSuspended?.status).toBe("suspended");
 
     const [entSuspended] = await db.select().from(entitlements).where(eq(entitlements.id, ent.id));

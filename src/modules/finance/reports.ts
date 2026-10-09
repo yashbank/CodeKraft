@@ -3,22 +3,13 @@
  *
  * Computed strictly from `ledger_entries`, `allocations`, and views (`partner_balances`, `customer_credits`).
  */
-import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { DbOrTx } from "@/lib/db";
 import { db } from "@/lib/db";
 import { assertPermission } from "@/lib/authz/assert";
 import type { RequestContext } from "@/lib/authz/context";
-import { ledgerEntries, allocations, type EntryType } from "../../../drizzle/schema/finance";
-import { orderItems, orders } from "../../../drizzle/schema/commerce";
-import { products } from "../../../drizzle/schema/catalog";
-import { partners } from "../../../drizzle/schema/users-ext";
-import {
-  getReportInput,
-  type Currency,
-  type GetReportInput,
-  type ReportCell,
-  type ReportResult,
-} from "./types";
+import { toMinor } from "./minor";
+import { getReportInput, type GetReportInput, type ReportResult } from "./types";
 
 export async function getReport(
   ctx: RequestContext,
@@ -30,7 +21,6 @@ export async function getReport(
 
   const fromDate = `${input.dateFrom}T00:00:00.000Z`;
   const toDate = `${input.dateTo}T23:59:59.999Z`;
-  const currencyMode = input.currency ?? "INR";
 
   switch (input.report) {
     case "revenue_by_product": {
@@ -76,12 +66,12 @@ export async function getReport(
       let totalOrders = 0;
 
       const reportRows = rows.map((r) => {
-        const gross = Number(r.gross_minor);
-        const discount = Number(r.discount_minor);
-        const tax = Number(r.tax_minor);
-        const refund = Number(r.refund_minor);
-        const net = Number(r.net_minor);
-        const orderCount = Number(r.order_count);
+        const gross = toMinor(r.gross_minor);
+        const discount = toMinor(r.discount_minor);
+        const tax = toMinor(r.tax_minor);
+        const refund = toMinor(r.refund_minor);
+        const net = toMinor(r.net_minor);
+        const orderCount = toMinor(r.order_count);
 
         totalGross += gross;
         totalDiscount += discount;
@@ -157,9 +147,9 @@ export async function getReport(
       let totalNet = 0;
 
       const reportRows = rows.map((r) => {
-        const allocated = Number(r.allocated_minor);
-        const refunded = Number(r.refunded_minor);
-        const net = Number(r.net_allocated_minor);
+        const allocated = toMinor(r.allocated_minor);
+        const refunded = toMinor(r.refunded_minor);
+        const net = toMinor(r.net_allocated_minor);
 
         totalAllocated += allocated;
         totalRefunded += refunded;
@@ -220,9 +210,9 @@ export async function getReport(
       let totalNet = 0;
 
       const reportRows = rows.map((r) => {
-        const gross = Number(r.gross_minor);
-        const refund = Number(r.refund_minor);
-        const net = Number(r.net_minor);
+        const gross = toMinor(r.gross_minor);
+        const refund = toMinor(r.refund_minor);
+        const net = toMinor(r.net_minor);
 
         totalGross += gross;
         totalRefund += refund;
@@ -282,9 +272,9 @@ export async function getReport(
       let totalNet = 0;
 
       const reportRows = rows.map((r) => {
-        const collected = Number(r.tax_collected_minor);
-        const refunded = Number(r.tax_refunded_minor);
-        const net = Number(r.net_tax_minor);
+        const collected = toMinor(r.tax_collected_minor);
+        const refunded = toMinor(r.tax_refunded_minor);
+        const net = toMinor(r.net_tax_minor);
 
         totalCollected += collected;
         totalRefunded += refunded;
@@ -340,7 +330,7 @@ export async function getReport(
 
       let totalRefunds = 0;
       const reportRows = rows.map((r) => {
-        const amt = Number(r.refund_total_minor);
+        const amt = toMinor(r.refund_total_minor);
         totalRefunds += amt;
         return {
           date: r.date,
@@ -390,13 +380,13 @@ export async function getReport(
 
       let totalInr = 0;
       const reportRows = rows.map((r) => {
-        const balInr = Number(r.balance_inr_minor);
+        const balInr = toMinor(r.balance_inr_minor);
         totalInr += balInr;
         return {
           partnerId: r.partner_id,
           partnerName: r.display_name,
           currency: r.currency,
-          balanceMinor: Number(r.balance_minor),
+          balanceMinor: toMinor(r.balance_minor),
           balanceInrMinor: balInr,
         };
       });
@@ -462,11 +452,11 @@ export async function getReport(
       let totalProfit = 0;
 
       const reportRows = rows.map((r) => {
-        const sale = Number(r.sale_minor);
-        const discount = Number(r.discount_minor);
-        const refund = Number(r.refund_minor);
-        const exp = Number(r.expense_minor);
-        const profit = Number(r.profit_minor);
+        const sale = toMinor(r.sale_minor);
+        const discount = toMinor(r.discount_minor);
+        const refund = toMinor(r.refund_minor);
+        const exp = toMinor(r.expense_minor);
+        const profit = toMinor(r.profit_minor);
 
         totalSales += sale;
         totalDiscounts += discount;
@@ -536,7 +526,7 @@ export async function getReport(
 
       let totalCreditInr = 0;
       const reportRows = rows.map((r) => {
-        const credInr = Number(r.credit_inr_minor);
+        const credInr = toMinor(r.credit_inr_minor);
         totalCreditInr += credInr;
         return {
           paymentId: r.payment_id,
@@ -545,13 +535,13 @@ export async function getReport(
           userId: r.user_id,
           clientEmail: r.client_email,
           currency: r.currency,
-          creditMinor: Number(r.credit_minor),
+          creditMinor: toMinor(r.credit_minor),
           creditInrMinor: credInr,
           // Not a `columns` entry (not shown in the generic reports table): the admin finance
           // reports page uses this to derive `CustomerCreditRow.state` ("refunded" once the view's
           // `amount_refunded_minor` covers the credit, "open" otherwise -- `customer_credits` has
           // no other state/status column, so "applied" is never derived here).
-          amountRefundedMinor: Number(r.amount_refunded_minor),
+          amountRefundedMinor: toMinor(r.amount_refunded_minor),
         };
       });
 

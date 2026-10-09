@@ -40,9 +40,7 @@ describe("allocation math (docs/06 §4.2, BR-06, BR-07, FI-01, FI-02)", () => {
       gatewayFeeMinor: 0,
       bankShortfallMinor: 0,
       companyCutBps: 0,
-      lines: [
-        { partnerId: "00000000-0000-4000-8000-000000000001", shareBps: 10000 },
-      ],
+      lines: [{ partnerId: "00000000-0000-4000-8000-000000000001", shareBps: 10000 }],
     });
 
     expect(res.distributableMinor).toBe(45000);
@@ -79,7 +77,9 @@ describe("allocation math (docs/06 §4.2, BR-06, BR-07, FI-01, FI-02)", () => {
     expect(res.lines[0]?.amount_minor).toBe(33);
     expect(res.lines[1]?.amount_minor).toBe(33);
     expect(res.lines[2]?.amount_minor).toBe(34);
-    expect(res.lines[0]!.amount_minor + res.lines[1]!.amount_minor + res.lines[2]!.amount_minor).toBe(100);
+    expect(
+      res.lines[0]!.amount_minor + res.lines[1]!.amount_minor + res.lines[2]!.amount_minor,
+    ).toBe(100);
   });
 
   it("spreadDeduction distributes order shortfall pro-rata by item total", () => {

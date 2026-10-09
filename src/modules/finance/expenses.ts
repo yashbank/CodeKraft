@@ -11,6 +11,7 @@ import { auditService } from "@/modules/audit/service";
 import { fxService } from "@/modules/fx/service";
 import { ownershipService } from "@/modules/ownership/service";
 import { allocateLargestRemainder, mulBps, type Currency } from "@/lib/money";
+import { toInrMinor } from "./minor";
 import { expenses, ledgerEntries, type Expense } from "../../../drizzle/schema/finance";
 import { partners } from "../../../drizzle/schema/users-ext";
 import { users } from "../../../drizzle/schema/auth";
@@ -67,7 +68,7 @@ export async function recordExpense(
       .returning();
 
     if (!exp) {
-      throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to insert expense record");
+      throw new AppError(ErrorCode.INTERNAL, "Failed to insert expense record");
     }
 
     // 2. Post ledger entries
@@ -108,11 +109,7 @@ export async function postExpense(
   actorUserId?: string,
 ): Promise<PostEntriesResult> {
   // Fetch expense
-  const [expense] = await tx
-    .select()
-    .from(expenses)
-    .where(eq(expenses.id, expenseId))
-    .limit(1);
+  const [expense] = await tx.select().from(expenses).where(eq(expenses.id, expenseId)).limit(1);
 
   if (!expense) {
     throw new AppError(ErrorCode.NOT_FOUND, `Expense ${expenseId} not found`);
@@ -130,15 +127,13 @@ export async function postExpense(
   }
 
   // FX rate to INR as of incurredOn
-  const fxResult = await fxService.getRate(
+  const fxRateToInr = await fxService.rateToInrOn(
     expense.currency as Currency,
-    "INR",
-    new Date(expense.incurredOn),
+    expense.incurredOn,
     tx,
   );
-  const fxRateToInr = fxResult.rate;
   const toInr = (amtMinor: number) =>
-    expense.currency === "INR" ? amtMinor : Math.round(amtMinor * Number(fxRateToInr));
+    expense.currency === "INR" ? amtMinor : toInrMinor(amtMinor, fxRateToInr);
 
   const memo = expense.description ?? expense.category;
 
@@ -171,9 +166,8 @@ export async function postExpense(
     const valuesToInsert = [];
 
     // Partner negative entries
-    for (let i = 0; i < ownership.lines.length; i++) {
-      const line = ownership.lines[i]!;
-      const partMinor = partnerAmounts[i]!;
+    for (const [i, line] of ownership.lines.entries()) {
+      const partMinor = partnerAmounts[i] ?? 0;
       if (partMinor > 0) {
         valuesToInsert.push({
           entryType: "expense" as const,
@@ -236,8 +230,10 @@ export async function postExpense(
       })
       .returning({ id: ledgerEntries.id });
 
+    if (!inserted) throw new AppError(ErrorCode.INTERNAL, "Expense ledger entry was not created");
+
     return {
-      entryIds: [inserted!.id],
+      entryIds: [inserted.id],
       entryCount: 1,
     };
   }
@@ -255,17 +251,17 @@ export async function listExpenses(
   assertPermission(ctx, "finance.ledger.read");
 
   const canReadAll = can(ctx, "finance.ledger.read_all");
-  let partnerFilter = input.partnerId;
+  let partnerFilter = input.filters?.partnerId;
 
   if (!canReadAll) {
     const [callerPartner] = await database
       .select({ id: partners.id })
       .from(partners)
-      .where(eq(partners.userId, ctx.userId!))
+      .where(eq(partners.userId, ctx.userId))
       .limit(1);
 
     if (!callerPartner) {
-      return { items: [], total: 0, nextCursor: null, hasMore: false };
+      return { items: [], total: 0, nextCursor: null };
     }
 
     if (partnerFilter && partnerFilter !== callerPartner.id) {
@@ -277,14 +273,15 @@ export async function listExpenses(
 
   const conditions = [];
 
-  if (input.productId) {
-    conditions.push(eq(expenses.productId, input.productId));
+  const { productId, dateFrom, dateTo } = input.filters ?? {};
+  if (productId) {
+    conditions.push(eq(expenses.productId, productId));
   }
-  if (input.dateFrom) {
-    conditions.push(gte(expenses.incurredOn, input.dateFrom));
+  if (dateFrom) {
+    conditions.push(gte(expenses.incurredOn, dateFrom));
   }
-  if (input.dateTo) {
-    conditions.push(lte(expenses.incurredOn, input.dateTo));
+  if (dateTo) {
+    conditions.push(lte(expenses.incurredOn, dateTo));
   }
 
   if (partnerFilter) {
@@ -303,7 +300,7 @@ export async function listExpenses(
     conditions.push(inArray(expenses.id, subquery));
   }
 
-  const limit = Math.min(input.limit ?? 50, 100);
+  const limit = Math.min(input.limit, 100);
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
   const [countRes] = await database
@@ -322,13 +319,12 @@ export async function listExpenses(
 
   const hasMore = rows.length > limit;
   const items = rows.slice(0, limit);
-  const nextCursor = hasMore ? items[items.length - 1]?.id ?? null : null;
+  const nextCursor = hasMore ? (items[items.length - 1]?.id ?? null) : null;
 
   return {
     items,
     total,
     nextCursor,
-    hasMore,
   };
 }
 

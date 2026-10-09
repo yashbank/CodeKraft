@@ -74,7 +74,9 @@ export function OrderDetail({
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [confirmBusy, setConfirmBusy] = React.useState(false);
   const [refundOpen, setRefundOpen] = React.useState(false);
-  const [refundAmount, setRefundAmount] = React.useState(() => (order.total.amountMinor / 100).toFixed(2));
+  const [refundAmount, setRefundAmount] = React.useState(() =>
+    (order.total.amountMinor / 100).toFixed(2),
+  );
   const [refundReason, setRefundReason] = React.useState("");
   const [refundQueryId, setRefundQueryId] = React.useState("");
   const [refundRevoke, setRefundRevoke] = React.useState(true);
@@ -109,7 +111,9 @@ export function OrderDetail({
       return;
     }
     toast.success(
-      res.data.invoiceNo ? `${order.number} marked Paid · invoice ${res.data.invoiceNo}` : `${order.number} marked Paid`,
+      res.data.invoiceNo
+        ? `${order.number} marked Paid · invoice ${res.data.invoiceNo}`
+        : `${order.number} marked Paid`,
     );
     setConfirmOpen(false);
     router.refresh();

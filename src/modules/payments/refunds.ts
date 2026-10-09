@@ -50,11 +50,7 @@ export async function proposeRefund(
     }
 
     // 2. Load order
-    const [order] = await tx
-      .select()
-      .from(orders)
-      .where(eq(orders.id, input.orderId))
-      .limit(1);
+    const [order] = await tx.select().from(orders).where(eq(orders.id, input.orderId)).limit(1);
 
     if (!order) {
       throw new AppError(ErrorCode.NOT_FOUND, "Order not found");
@@ -94,7 +90,12 @@ export async function proposeRefund(
         const refundableCheck = await tx
           .select({ id: products.id, isRefundable: products.isRefundable })
           .from(products)
-          .where(sql`${products.id} = ANY(ARRAY[${sql.join(productIds.map((id) => sql`${id}::uuid`), sql`, `)}])`);
+          .where(
+            sql`${products.id} = ANY(ARRAY[${sql.join(
+              productIds.map((id) => sql`${id}::uuid`),
+              sql`, `,
+            )}])`,
+          );
 
         const nonRefundable = refundableCheck.filter((p) => !p.isRefundable);
         if (nonRefundable.length > 0) {
@@ -129,33 +130,35 @@ export async function proposeRefund(
         reason: input.reason,
       })
       .returning();
+    if (!refundRow) throw new AppError(ErrorCode.INTERNAL, "refundRow missing");
 
     // 8. Create refund.issue approval request (BR-13: all other admins must approve)
     const { approvalRequestId } = await approvalsService.request(
       "refund.issue",
-      { type: "refund", id: refundRow!.id },
-      { refundId: refundRow!.id },
-      ctx.userId!,
+      { type: "refund", id: refundRow.id },
+      { refundId: refundRow.id },
+      ctx.userId,
       tx,
     );
 
     // 9. Update refunds row with approval request id
-    await tx
-      .update(refunds)
-      .set({ approvalRequestId })
-      .where(eq(refunds.id, refundRow!.id));
+    await tx.update(refunds).set({ approvalRequestId }).where(eq(refunds.id, refundRow.id));
 
     // 10. Audit log
     await auditService.log(
       ctx,
       "API-PAY-05 refund.proposed",
-      { type: "refund", id: refundRow!.id },
+      { type: "refund", id: refundRow.id },
       null,
-      { refundId: refundRow!.id, amountMinor: input.amountMinor, policyException: input.policyException },
+      {
+        refundId: refundRow.id,
+        amountMinor: input.amountMinor,
+        policyException: input.policyException,
+      },
       tx,
     );
 
-    return { refundId: refundRow!.id, approvalRequestId };
+    return { refundId: refundRow.id, approvalRequestId };
   };
 
   if (outerTx) return await runner(outerTx);
@@ -175,22 +178,14 @@ export async function applyRefund(
   const { refundId } = payload;
 
   // 1. Load refund (with lock)
-  const [refund] = await tx
-    .select()
-    .from(refunds)
-    .where(eq(refunds.id, refundId))
-    .for("update");
+  const [refund] = await tx.select().from(refunds).where(eq(refunds.id, refundId)).for("update");
 
   if (!refund) {
     throw new AppError(ErrorCode.NOT_FOUND, "Refund not found");
   }
 
   // 2. Load order
-  const [order] = await tx
-    .select()
-    .from(orders)
-    .where(eq(orders.id, refund.orderId))
-    .for("update");
+  const [order] = await tx.select().from(orders).where(eq(orders.id, refund.orderId)).for("update");
 
   if (!order) {
     throw new AppError(ErrorCode.NOT_FOUND, "Order not found");
@@ -214,7 +209,10 @@ export async function applyRefund(
 
   if (isFullRefund) {
     if (!PAYMENT_STATUS_TRANSITIONS["confirmed"].includes("refunded")) {
-      throw new AppError(ErrorCode.STATE_INVALID, "Payment cannot transition to refunded from current state");
+      throw new AppError(
+        ErrorCode.STATE_INVALID,
+        "Payment cannot transition to refunded from current state",
+      );
     }
     if (payment.status !== "confirmed") {
       throw new AppError(
@@ -228,10 +226,7 @@ export async function applyRefund(
   const executedBy = actorUserId ?? refund.executedBy ?? order.userId;
 
   // 5. Mark refund as executed
-  await tx
-    .update(refunds)
-    .set({ executedAt: now, executedBy })
-    .where(eq(refunds.id, refund.id));
+  await tx.update(refunds).set({ executedAt: now, executedBy }).where(eq(refunds.id, refund.id));
 
   // 6. Post finance refund entries (ledger)
   const financeResult = await financeService.postRefund(refund.id, tx);
@@ -271,6 +266,7 @@ export async function applyRefund(
     })
     .where(eq(orders.id, order.id))
     .returning();
+  if (!updatedOrder) throw new AppError(ErrorCode.INTERNAL, "updatedOrder missing");
 
   // 10. Revoke entitlements if revokeEntitlements=true (from refund reason / original input stored in reason field)
   // The revokeEntitlements flag is stored implicitly — we revoke when the full refund is applied.
@@ -290,7 +286,10 @@ export async function applyRefund(
         .from(entitlements)
         .where(
           and(
-            sql`${entitlements.orderItemId} = ANY(ARRAY[${sql.join(itemIds.map((id) => sql`${id}::uuid`), sql`, `)}])`,
+            sql`${entitlements.orderItemId} = ANY(ARRAY[${sql.join(
+              itemIds.map((id) => sql`${id}::uuid`),
+              sql`, `,
+            )}])`,
             eq(entitlements.status, "active"),
           ),
         );
@@ -298,7 +297,8 @@ export async function applyRefund(
       // Revoke each (call NotImplemented contract — will be filled in P5)
       for (const ent of activeEntitlements) {
         try {
-          const { createNotImplementedEntitlementsService } = await import("@/modules/entitlements/service");
+          const { createNotImplementedEntitlementsService } =
+            await import("@/modules/entitlements/service");
           const eSvc = createNotImplementedEntitlementsService();
           await eSvc.revoke(ent.id, "refund", tx).catch(() => {
             // P5: entitlements.revoke is not implemented yet; mark in DB directly
@@ -350,7 +350,7 @@ export async function applyRefund(
     creditNoteId: creditNoteRes.creditNoteId,
     ledgerEntryCount: financeResult.entryCount,
     revokedEntitlementIds,
-    orderStatus: updatedOrder!.status,
+    orderStatus: updatedOrder.status,
   };
 }
 

@@ -4,7 +4,7 @@ export function renderNotification(
   type: NotificationType,
   payload: NotificationPayload,
 ): RenderedNotification {
-  const p = payload as Record<string, any>;
+  const p = payload as Record<string, string | undefined>;
 
   switch (type) {
     case "order.created":
@@ -37,7 +37,9 @@ export function renderNotification(
     case "payment.failed":
       return {
         title: `Payment Failed #${p.orderNumber ?? p.orderId ?? ""}`.trim(),
-        body: p.reason ?? "Your payment could not be processed. Please try again or submit a new reference.",
+        body:
+          p.reason ??
+          "Your payment could not be processed. Please try again or submit a new reference.",
         link: p.orderId ? `/account/orders/${p.orderId}` : "/account/orders",
         emailTemplate: null,
         emailPriority: 1,

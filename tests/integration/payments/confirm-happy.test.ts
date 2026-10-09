@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { paymentsService } from "@/modules/payments/service";
 import { ordersService } from "@/modules/orders/service";
-import { orders, payments, userOfferingPurchases } from "../../../drizzle/schema/commerce";
+import { orders, userOfferingPurchases } from "../../../drizzle/schema/commerce";
 import { ledgerEntries, allocations } from "../../../drizzle/schema/finance";
 import { migrateTestDb } from "../../setup/migrate";
 import { truncateAll } from "../../setup/db";

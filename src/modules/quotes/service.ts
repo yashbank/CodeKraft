@@ -1,8 +1,8 @@
 /**
  * Custom quotes service implementation (docs/06 §2.3 API-COM-09, API-COM-10; D-520; MASTER_SPEC §7).
  */
-import { and, desc, eq, isNull, lte, sql } from "drizzle-orm";
-import { db, getDb, withTx, type TxCtx } from "@/lib/db";
+import { and, desc, eq, isNull, lte } from "drizzle-orm";
+import { getDb, withTx, type TxCtx } from "@/lib/db";
 import { customQuotes, type CustomQuote } from "../../../drizzle/schema/commerce";
 import { orders, orderItems } from "../../../drizzle/schema/commerce";
 import { offerings } from "../../../drizzle/schema/offerings";
@@ -85,18 +85,19 @@ export class DefaultQuotesService implements QuotesService {
           createdBy: ctx.userId,
         })
         .returning();
+      if (!newQuote) throw new AppError(ErrorCode.INTERNAL, "Write returned no row");
 
       await auditService.log(
         ctx,
         "quote.created",
-        { type: "custom_quote", id: newQuote!.id },
+        { type: "custom_quote", id: newQuote.id },
         null,
         newQuote,
         tx,
       );
 
       return {
-        quoteId: newQuote!.id,
+        quoteId: newQuote.id,
         token,
         payUrl: quotePayUrl(token),
       };
@@ -138,6 +139,7 @@ export class DefaultQuotesService implements QuotesService {
         .set({ status: "sent" })
         .where(eq(customQuotes.id, quote.id))
         .returning();
+      if (!updatedQuote) throw new AppError(ErrorCode.INTERNAL, "Write returned no row");
 
       // Get customer email
       const [customer] = await tx
@@ -183,7 +185,7 @@ export class DefaultQuotesService implements QuotesService {
         tx,
       );
 
-      return { quote: updatedQuote! };
+      return { quote: updatedQuote };
     };
 
     if (outerTx) return await runner(outerTx);
@@ -219,6 +221,7 @@ export class DefaultQuotesService implements QuotesService {
         .set({ status: "cancelled" })
         .where(eq(customQuotes.id, quote.id))
         .returning();
+      if (!updatedQuote) throw new AppError(ErrorCode.INTERNAL, "Write returned no row");
 
       // If there was an associated pending order, cancel it
       if (quote.orderId) {
@@ -245,7 +248,7 @@ export class DefaultQuotesService implements QuotesService {
         tx,
       );
 
-      return { quote: updatedQuote! };
+      return { quote: updatedQuote };
     };
 
     if (outerTx) return await runner(outerTx);
@@ -254,10 +257,7 @@ export class DefaultQuotesService implements QuotesService {
 
   // -- listQuotes --------------------------------------------------------------------------------
 
-  async listQuotes(
-    ctx: RequestContext,
-    input: ListQuotesInput,
-  ): Promise<ListResult<CustomQuote>> {
+  async listQuotes(ctx: RequestContext, input: ListQuotesInput): Promise<ListResult<CustomQuote>> {
     assertPermission(ctx, "orders.read");
     const db = await getDb();
 
@@ -303,8 +303,7 @@ export class DefaultQuotesService implements QuotesService {
 
     const isCustomer = ctx.userId !== null && ctx.userId === quote.customerId;
     const isExpired = quote.expiresAt !== null && quote.expiresAt < new Date();
-    const canAccept =
-      isCustomer && quote.status === "sent" && !isExpired && quote.orderId === null;
+    const canAccept = isCustomer && quote.status === "sent" && !isExpired && quote.orderId === null;
 
     return {
       quote: {
@@ -417,10 +416,11 @@ export class DefaultQuotesService implements QuotesService {
           expiresAt,
         })
         .returning();
+      if (!order) throw new AppError(ErrorCode.INTERNAL, "Write returned no row");
 
       // Create Order Item
       await tx.insert(orderItems).values({
-        orderId: order!.id,
+        orderId: order.id,
         offeringId: quote.offeringId ?? null,
         productId,
         description: quote.title,
@@ -437,13 +437,13 @@ export class DefaultQuotesService implements QuotesService {
         .update(customQuotes)
         .set({
           status: "accepted",
-          orderId: order!.id,
+          orderId: order.id,
         })
         .where(eq(customQuotes.id, quote.id));
 
       // Create payment intent
       const paymentIntent = await paymentsService.createIntentForOrder(
-        order!.id,
+        order.id,
         input.paymentMethod,
         tx,
       );
@@ -453,20 +453,20 @@ export class DefaultQuotesService implements QuotesService {
         "quote.accepted",
         { type: "custom_quote", id: quote.id },
         quote,
-        { status: "accepted", orderId: order!.id },
+        { status: "accepted", orderId: order.id },
         tx,
       );
 
       return {
-        orderId: order!.id,
-        orderNo: order!.orderNo,
+        orderId: order.id,
+        orderNo: order.orderNo,
         payment: {
           paymentId: paymentIntent.paymentId,
           method: input.paymentMethod,
           instructions: paymentIntent.instructions,
         },
-        expiresAt: order!.expiresAt
-          ? order!.expiresAt.toISOString()
+        expiresAt: order.expiresAt
+          ? order.expiresAt.toISOString()
           : new Date(Date.now() + 30 * 60 * 1000).toISOString(),
       };
     };
@@ -478,10 +478,7 @@ export class DefaultQuotesService implements QuotesService {
   // -- markPaid ----------------------------------------------------------------------------------
 
   async markPaid(quoteId: string, tx: TxCtx): Promise<void> {
-    await tx
-      .update(customQuotes)
-      .set({ status: "paid" })
-      .where(eq(customQuotes.id, quoteId));
+    await tx.update(customQuotes).set({ status: "paid" }).where(eq(customQuotes.id, quoteId));
   }
 
   // -- expireQuotes ------------------------------------------------------------------------------
@@ -506,10 +503,7 @@ export class DefaultQuotesService implements QuotesService {
       const expiredQuoteIds: string[] = [];
 
       for (const q of quotesToExpire) {
-        await tx
-          .update(customQuotes)
-          .set({ status: "expired" })
-          .where(eq(customQuotes.id, q.id));
+        await tx.update(customQuotes).set({ status: "expired" }).where(eq(customQuotes.id, q.id));
         expiredQuoteIds.push(q.id);
       }
 

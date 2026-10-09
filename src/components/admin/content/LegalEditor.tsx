@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogClose,
@@ -17,7 +16,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -49,7 +47,6 @@ export function LegalEditor({
   const [active, setActive] = React.useState<LegalPage["key"]>(pages[0]?.key ?? "privacy");
   const [publishOpen, setPublishOpen] = React.useState(false);
   const [summary, setSummary] = React.useState("");
-  const [saving, setSaving] = React.useState(false);
   const formRef = React.useRef<HTMLFormElement>(null);
   const page = pages.find((p) => p.key === active) ?? pages[0];
   if (!page) {
@@ -80,13 +77,11 @@ export function LegalEditor({
     const form = formRef.current;
     if (!form || !isSuperAdmin || !page) return;
     const data = new FormData(form);
-    setSaving(true);
     const result = await saveLegalPage({
       key: page.key,
       title: String(data.get("title") ?? "").trim(),
       bodyJson: fromPlainText(String(data.get("body") ?? "")),
     });
-    setSaving(false);
     if (!result.ok) {
       toast.error(result.error.message);
       return;
@@ -126,7 +121,10 @@ export function LegalEditor({
       }
       panel={
         <>
-          <section aria-label="Version history" className="rounded-lg border border-border bg-surface">
+          <section
+            aria-label="Version history"
+            className="rounded-lg border border-border bg-surface"
+          >
             <h2 className="border-b border-border px-4 py-3 text-h4">Version history</h2>
             <Table>
               <TableCaption className="sr-only">Versions</TableCaption>
@@ -199,12 +197,21 @@ export function LegalEditor({
               Publish {page.title} v{page.version + 1}?
             </DialogTitle>
             <DialogDescription>
-              Customers see the new effective date; checkout consent references the current
-              version. Save your draft first — publishing snapshots the currently saved text.
+              Customers see the new effective date; checkout consent references the current version.
+              Save your draft first — publishing snapshots the currently saved text.
             </DialogDescription>
           </DialogHeader>
-          <Field id="lg-summary" label="Change summary (internal note)" hint="Not stored yet — for your own reference while reviewing.">
-            <Input id="lg-summary" maxLength={200} value={summary} onChange={(e) => setSummary(e.target.value)} />
+          <Field
+            id="lg-summary"
+            label="Change summary (internal note)"
+            hint="Not stored yet — for your own reference while reviewing."
+          >
+            <Input
+              id="lg-summary"
+              maxLength={200}
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+            />
           </Field>
           <DialogFooter>
             <DialogClose asChild>

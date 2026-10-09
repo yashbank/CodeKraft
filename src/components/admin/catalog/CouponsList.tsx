@@ -117,7 +117,10 @@ export function CouponsList({
     }
     const startsAtRaw = String(fd.get("startsAt") ?? "");
     const maxRedemptions = max.trim() ? Number(max) : undefined;
-    if (maxRedemptions !== undefined && (!Number.isInteger(maxRedemptions) || maxRedemptions <= 0)) {
+    if (
+      maxRedemptions !== undefined &&
+      (!Number.isInteger(maxRedemptions) || maxRedemptions <= 0)
+    ) {
       toast.error("Max redemptions must be a whole number greater than 0.");
       return;
     }
@@ -309,7 +312,9 @@ export function CouponsList({
                   variant="secondary"
                   onClick={() => {
                     if (formRef.current) {
-                      const input = formRef.current.elements.namedItem("code") as HTMLInputElement | null;
+                      const input = formRef.current.elements.namedItem(
+                        "code",
+                      ) as HTMLInputElement | null;
                       if (input) {
                         input.value = `CK${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
                       }
@@ -405,9 +410,7 @@ export function CouponsList({
                       value={p.id}
                       className="accent-accent"
                       defaultChecked={
-                        editing !== null &&
-                        editing !== "new" &&
-                        editing.products.includes(p.name)
+                        editing !== null && editing !== "new" && editing.products.includes(p.name)
                       }
                     />{" "}
                     {p.name}
@@ -419,7 +422,9 @@ export function CouponsList({
               <Switch
                 id="cp-active"
                 name="active"
-                defaultChecked={editing === "new" || editing === null ? true : editing.state !== "inactive"}
+                defaultChecked={
+                  editing === "new" || editing === null ? true : editing.state !== "inactive"
+                }
               />
               <Label htmlFor="cp-active">Active</Label>
             </div>

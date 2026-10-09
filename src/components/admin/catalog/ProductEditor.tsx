@@ -42,14 +42,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -62,7 +54,6 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/components/ui/_utils";
 import { slugify } from "@/modules/catalog/slugs";
 import { fromPlainText, toPlainText } from "@/modules/content/render";
 import {
@@ -202,7 +193,6 @@ export function ProductEditor({
   approvers,
   listHref,
   approvalsHref,
-  currencies,
   gstinConfigured,
   initialTab = "basics",
   isNew = false,

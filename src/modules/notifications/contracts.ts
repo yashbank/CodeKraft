@@ -5,7 +5,7 @@
  * Implementation in P6; `tests/stubs/notifications.ts` (P2.8) collects calls.
  */
 import type { RequestContext } from "@/lib/authz/context";
-import type { TxCtx } from "@/lib/db";
+import type { DbOrTx, TxCtx } from "@/lib/db";
 import type { EmailMessage, EmailOutboxPort } from "@/lib/email/types";
 import type { Notification } from "../../../drizzle/schema/notifications";
 import type {
@@ -83,7 +83,7 @@ export interface NotificationsService {
     type: NotificationType,
     payload: NotificationPayload,
     channels: readonly NotificationChannelName[] | undefined,
-    tx: TxCtx,
+    tx: DbOrTx,
     options?: EmitOptions,
   ): Promise<EmitResult>;
 

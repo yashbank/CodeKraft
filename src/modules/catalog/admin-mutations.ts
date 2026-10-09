@@ -119,10 +119,9 @@ export async function proposeOwnershipSplit(raw: unknown) {
  * through this file so the client component only imports from one place.
  */
 async function withOfferingsCtx<T>(
-  pick: (actions: typeof import("@/modules/offerings/actions")) => (
-    raw: unknown,
-    ctx: Context,
-  ) => Promise<ActionResult<T>>,
+  pick: (
+    actions: typeof import("@/modules/offerings/actions"),
+  ) => (raw: unknown, ctx: Context) => Promise<ActionResult<T>>,
   raw: unknown,
 ): Promise<ActionResult<T>> {
   try {

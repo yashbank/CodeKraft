@@ -96,10 +96,7 @@ describe("Invoice PDF regenerate pending integration (docs/12 §11.3)", () => {
     expect(insertedInvoice!.pdfMediaId).toBeNull();
 
     // Verify it is currently pending
-    const pendingBefore = await db
-      .select()
-      .from(invoices)
-      .where(isNull(invoices.pdfMediaId));
+    const pendingBefore = await db.select().from(invoices).where(isNull(invoices.pdfMediaId));
     expect(pendingBefore).toHaveLength(1);
 
     // Run regeneratePending
@@ -107,10 +104,7 @@ describe("Invoice PDF regenerate pending integration (docs/12 §11.3)", () => {
     expect(res.count).toBe(1);
 
     // Verify it is no longer pending
-    const pendingAfter = await db
-      .select()
-      .from(invoices)
-      .where(isNull(invoices.pdfMediaId));
+    const pendingAfter = await db.select().from(invoices).where(isNull(invoices.pdfMediaId));
     expect(pendingAfter).toHaveLength(0);
 
     // Verify invoice row now has pdfMediaId set

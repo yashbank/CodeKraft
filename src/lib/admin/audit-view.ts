@@ -38,10 +38,15 @@ function humaniseAction(action: string): string {
 
 export function mapAuditRow(row: AuditLogRow): AuditRow {
   const kind: "admin" | "customer" | "system" =
-    row.actorId === null ? "system" : row.actorRole && ADMIN_CLASS_ROLES.has(row.actorRole) ? "admin" : "customer";
+    row.actorId === null
+      ? "system"
+      : row.actorRole && ADMIN_CLASS_ROLES.has(row.actorRole)
+        ? "admin"
+        : "customer";
 
   const name =
-    row.actorName ?? (kind === "system" ? (row.actorRole ?? "System") : (row.actorRole ?? "Unknown"));
+    row.actorName ??
+    (kind === "system" ? (row.actorRole ?? "System") : (row.actorRole ?? "Unknown"));
 
   return {
     id: row.id,

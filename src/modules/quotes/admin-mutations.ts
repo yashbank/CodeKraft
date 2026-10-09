@@ -17,10 +17,9 @@ import { fail } from "@/lib/actions/envelope";
 import type { Context } from "@/lib/authz/context";
 
 async function withCtx<T>(
-  pick: (actions: typeof import("./actions")) => (
-    raw: unknown,
-    ctx: Context,
-  ) => Promise<ActionResult<T>>,
+  pick: (
+    actions: typeof import("./actions"),
+  ) => (raw: unknown, ctx: Context) => Promise<ActionResult<T>>,
   raw: unknown,
 ): Promise<ActionResult<T>> {
   try {

@@ -15,6 +15,7 @@ import { createAdmin, createPartner } from "../../factories/users";
 import { createProduct } from "../../factories/catalog";
 import { createOffering } from "../../factories/offerings";
 import { createOrder, createPayment, createInvoice } from "../../factories/commerce";
+import { defined } from "../../setup/expect-defined";
 
 process.env.APP_ENV = "local";
 process.env.BETTER_AUTH_SECRET = "test-secret-test-secret-test-secret-1234";
@@ -60,17 +61,14 @@ describe("applyRefund — entitlement revocation", () => {
     });
 
     // Manually create an active entitlement for the order item
-    const [item] = await db
-      .select()
-      .from(orderItems)
-      .where(eq(orderItems.orderId, order.id));
+    const [item] = await db.select().from(orderItems).where(eq(orderItems.orderId, order.id));
 
-    const user = { id: order.userId! };
+    const user = { id: defined(order.userId, "order.userId") };
     if (item) {
       await db.insert(entitlements).values({
         userId: user.id,
-        offeringId: item.offeringId,
-        productId: item.productId!,
+        offeringId: defined(item.offeringId, "item.offeringId"),
+        productId: defined(item.productId, "item.productId"),
         orderItemId: item.id,
         deliveryType: "download",
         status: "active",
@@ -91,7 +89,7 @@ describe("applyRefund — entitlement revocation", () => {
       policyException: false,
     });
 
-    await approvalsService.approveRequest(ctx2, { approvalRequestId, comment: null });
+    await approvalsService.approveRequest(ctx2, { approvalRequestId });
 
     // All entitlements for this order's items should be revoked
     if (item) {

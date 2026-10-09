@@ -1,5 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
-import { type TxCtx, getDb } from "@/lib/db";
+import { type DbOrTx, getDb } from "@/lib/db";
 import { chatUsageDaily } from "../../../drizzle/schema/chat";
 import type { ChatCapGuard } from "./contracts";
 import type { CapCheck, ChatCaps } from "./types";
@@ -12,8 +12,8 @@ export class DefaultChatCapGuard implements ChatCapGuard {
 
   async caps(): Promise<ChatCaps> {
     return {
-      userCap: this.userCap,
-      platformCap: this.platformCap,
+      userDaily: this.userCap,
+      platformDaily: this.platformCap,
     };
   }
 
@@ -24,10 +24,7 @@ export class DefaultChatCapGuard implements ChatCapGuard {
       .select()
       .from(chatUsageDaily)
       .where(
-        and(
-          sql`${chatUsageDaily.scope} IN (${userId}, 'platform')`,
-          eq(chatUsageDaily.day, day),
-        ),
+        and(sql`${chatUsageDaily.scope} IN (${userId}, 'platform')`, eq(chatUsageDaily.day, day)),
       );
 
     const userCount = rows.find((r) => r.scope === userId)?.count ?? 0;
@@ -39,29 +36,27 @@ export class DefaultChatCapGuard implements ChatCapGuard {
     if (userCount >= this.userCap) {
       return {
         allowed: false,
-        reason: "user_cap",
-        remainingUser: 0,
-        remainingPlatform,
+        exceeded: "user",
+        usage: { userRemaining: 0, platformRemaining: remainingPlatform },
       };
     }
 
     if (platformCount >= this.platformCap) {
       return {
         allowed: false,
-        reason: "platform_cap",
-        remainingUser,
-        remainingPlatform: 0,
+        exceeded: "platform",
+        usage: { userRemaining: remainingUser, platformRemaining: 0 },
       };
     }
 
     return {
       allowed: true,
-      remainingUser,
-      remainingPlatform,
+      exceeded: null,
+      usage: { userRemaining: remainingUser, platformRemaining: remainingPlatform },
     };
   }
 
-  async increment(userId: string, day: string, tx: TxCtx): Promise<void> {
+  async increment(userId: string, day: string, tx: DbOrTx): Promise<void> {
     // User increment
     await tx
       .insert(chatUsageDaily)
@@ -81,15 +76,12 @@ export class DefaultChatCapGuard implements ChatCapGuard {
       });
   }
 
-  async decrement(userId: string, day: string, tx: TxCtx): Promise<void> {
+  async decrement(userId: string, day: string, tx: DbOrTx): Promise<void> {
     await tx
       .update(chatUsageDaily)
       .set({ count: sql`GREATEST(0, ${chatUsageDaily.count} - 1)` })
       .where(
-        and(
-          sql`${chatUsageDaily.scope} IN (${userId}, 'platform')`,
-          eq(chatUsageDaily.day, day),
-        ),
+        and(sql`${chatUsageDaily.scope} IN (${userId}, 'platform')`, eq(chatUsageDaily.day, day)),
       );
   }
 }

@@ -1,7 +1,8 @@
 import type { TxCtx } from "@/lib/db";
-import { AppError } from "@/lib/errors";
+import { AppError, ErrorCode } from "@/lib/errors";
 import type { Notification } from "../../../../drizzle/schema/notifications";
-import type { NotificationChannel, NotificationRecipient, RenderedNotification } from "../contracts";
+import type { NotificationChannel, NotificationRecipient } from "../contracts";
+import type { RenderedNotification } from "../types";
 
 export class WhatsAppNotificationChannel implements NotificationChannel {
   readonly name = "whatsapp" as const;
@@ -11,13 +12,13 @@ export class WhatsAppNotificationChannel implements NotificationChannel {
   }
 
   async deliver(
-    notification: Notification,
-    rendered: RenderedNotification,
-    recipient: NotificationRecipient,
-    tx: TxCtx,
+    _notification: Notification,
+    _rendered: RenderedNotification,
+    _recipient: NotificationRecipient,
+    _tx: TxCtx,
   ): Promise<void> {
     if (!this.enabled()) {
-      throw new AppError("BAD_REQUEST", "WhatsApp channel is disabled in this environment");
+      throw new AppError(ErrorCode.VALIDATION, "WhatsApp channel is disabled in this environment");
     }
   }
 }

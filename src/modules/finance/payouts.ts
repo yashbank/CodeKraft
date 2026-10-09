@@ -7,6 +7,8 @@ import { db, withTx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { assertPermission, can } from "@/lib/authz/assert";
 import type { RequestContext } from "@/lib/authz/context";
+import { type Currency } from "@/lib/money";
+import { toInrMinor, toMinor } from "./minor";
 import { auditService } from "@/modules/audit/service";
 import { approvalsService } from "@/modules/approvals/service";
 import { fxService } from "@/modules/fx/service";
@@ -16,7 +18,6 @@ import { partners } from "../../../drizzle/schema/users-ext";
 import { users } from "../../../drizzle/schema/auth";
 import { notifications } from "../../../drizzle/schema/notifications";
 import type {
-  Currency,
   ListPayoutsInput,
   Payout,
   PayoutRecordPayload,
@@ -38,7 +39,7 @@ async function getPartnerCurrencyBalance(
     sql`SELECT balance_minor FROM partner_balances WHERE partner_id = ${partnerId} AND currency = ${currency} LIMIT 1`,
   );
   if (!result || result.length === 0) return 0;
-  return Number(result[0]?.balance_minor ?? 0);
+  return toMinor(result[0]?.balance_minor);
 }
 
 // ----------------------------------------------------------------------------------------------------
@@ -78,7 +79,7 @@ export async function recordPayout(
       "payout.record",
       { type: "partner", id: input.partnerId },
       input,
-      ctx.userId!,
+      ctx.userId,
       tx,
     );
 
@@ -104,11 +105,7 @@ export async function recordPayout(
 // ----------------------------------------------------------------------------------------------------
 
 export async function postPayout(payoutId: string, tx: TxCtx): Promise<PostEntriesResult> {
-  const [payout] = await tx
-    .select()
-    .from(payouts)
-    .where(eq(payouts.id, payoutId))
-    .limit(1);
+  const [payout] = await tx.select().from(payouts).where(eq(payouts.id, payoutId)).limit(1);
 
   if (!payout) {
     throw new AppError(ErrorCode.NOT_FOUND, "Payout not found");
@@ -120,8 +117,7 @@ export async function postPayout(payoutId: string, tx: TxCtx): Promise<PostEntri
       ? "1.00000000"
       : await fxService.rateToInrOn(payout.currency as Currency, paidOnDate, tx);
 
-  const fxNum = parseFloat(fxRateToInr);
-  const amountInrMinor = Math.round(payout.amountMinor * fxNum);
+  const amountInrMinor = toInrMinor(payout.amountMinor, fxRateToInr);
 
   // Fallback user if recordedBy is null
   let createdBy = payout.recordedBy;
@@ -153,8 +149,10 @@ export async function postPayout(payoutId: string, tx: TxCtx): Promise<PostEntri
     })
     .returning({ id: ledgerEntries.id });
 
+  if (!entry) throw new AppError(ErrorCode.INTERNAL, "Payout ledger entry was not created");
+
   return {
-    entryIds: [entry!.id],
+    entryIds: [entry.id],
     entryCount: 1,
   };
 }
@@ -193,8 +191,10 @@ export async function applyPayout(
     })
     .returning();
 
+  if (!payout) throw new AppError(ErrorCode.INTERNAL, "Payout row was not created");
+
   // 2. Post ledger entry
-  const postResult = await postPayout(payout!.id, tx);
+  const postResult = await postPayout(payout.id, tx);
 
   // 3. Notify the partner
   const [partner] = await tx
@@ -216,10 +216,10 @@ export async function applyPayout(
   await auditService.log(
     { kind: "system", name: "system" },
     "API-FIN-05 payout.applied",
-    { type: "payout", id: payout!.id },
+    { type: "payout", id: payout.id },
     null,
     {
-      payoutId: payout!.id,
+      payoutId: payout.id,
       amountMinor: payload.amountMinor,
       currency: payload.currency,
       approvalRequestId,
@@ -228,7 +228,7 @@ export async function applyPayout(
   );
 
   return {
-    payoutId: payout!.id,
+    payoutId: payout.id,
     ...postResult,
   };
 }
@@ -245,17 +245,17 @@ export async function listPayouts(
   assertPermission(ctx, "finance.ledger.read");
 
   const canReadAll = can(ctx, "finance.ledger.read_all");
-  let partnerFilter = input.partnerId;
+  let partnerFilter = input.filters?.partnerId;
 
   if (!canReadAll) {
     const [callerPartner] = await database
       .select({ id: partners.id })
       .from(partners)
-      .where(eq(partners.userId, ctx.userId!))
+      .where(eq(partners.userId, ctx.userId))
       .limit(1);
 
     if (!callerPartner) {
-      return { items: [], total: 0, nextCursor: null, hasMore: false };
+      return { items: [], total: 0, nextCursor: null };
     }
 
     if (partnerFilter && partnerFilter !== callerPartner.id) {
@@ -269,14 +269,15 @@ export async function listPayouts(
   if (partnerFilter) {
     conditions.push(eq(payouts.partnerId, partnerFilter));
   }
-  if (input.dateFrom) {
-    conditions.push(gte(payouts.paidOn, input.dateFrom));
+  const { dateFrom, dateTo } = input.filters ?? {};
+  if (dateFrom) {
+    conditions.push(gte(payouts.paidOn, dateFrom));
   }
-  if (input.dateTo) {
-    conditions.push(lte(payouts.paidOn, input.dateTo));
+  if (dateTo) {
+    conditions.push(lte(payouts.paidOn, dateTo));
   }
 
-  const limit = Math.min(input.limit ?? 50, 100);
+  const limit = Math.min(input.limit, 100);
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
   const [countRes] = await database
@@ -295,13 +296,12 @@ export async function listPayouts(
 
   const hasMore = rows.length > limit;
   const items = rows.slice(0, limit);
-  const nextCursor = hasMore ? items[items.length - 1]?.id ?? null : null;
+  const nextCursor = hasMore ? (items[items.length - 1]?.id ?? null) : null;
 
   return {
     items,
     total,
     nextCursor,
-    hasMore,
   };
 }
 

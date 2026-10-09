@@ -5,7 +5,7 @@
 import { NextResponse } from "next/server";
 import { resolveRouteContext } from "@/lib/authz/resolve-route-context";
 import { requireContext } from "@/lib/authz/context";
-import { AppError, ErrorCode } from "@/lib/errors";
+import { ErrorCode } from "@/lib/errors";
 import { chatService } from "@/modules/chat/service";
 import { getLLMProvider } from "@/modules/chat/providers";
 import { encodeSse } from "@/modules/chat/sse";
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
             controller.enqueue(encodeSse(sseEvent));
           }
           controller.close();
-        } catch (err: any) {
+        } catch (err) {
           controller.error(err);
         }
       },
@@ -55,7 +55,8 @@ export async function POST(req: Request) {
         "X-Accel-Buffering": "no",
       },
     });
-  } catch (err: any) {
+  } catch (caught) {
+    const err = caught as { statusCode?: number; code?: string; message?: string };
     const status = err.statusCode ?? 500;
     return NextResponse.json(
       {

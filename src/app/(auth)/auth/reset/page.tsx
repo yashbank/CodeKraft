@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
-import { ResetPasswordScreen, type ResetPasswordStep } from "@/components/account/ResetPasswordScreen";
+import {
+  ResetPasswordScreen,
+  type ResetPasswordStep,
+} from "@/components/account/ResetPasswordScreen";
 
 export const metadata: Metadata = {
   title: "Reset password — CodeKraft",

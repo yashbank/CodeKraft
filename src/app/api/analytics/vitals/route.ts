@@ -23,14 +23,14 @@ export async function POST(req: Request) {
             message: parse.error.issues[0]?.message ?? "Invalid vital data",
           },
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     await analyticsService.trackWebVital(ctx, parse.data);
 
     return NextResponse.json({ ok: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         ok: false,
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
           message: "Failed to record web vital",
         },
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

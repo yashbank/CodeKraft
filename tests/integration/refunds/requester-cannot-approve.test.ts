@@ -68,7 +68,7 @@ describe("proposeRefund — BR-13 requester cannot self-approve", () => {
     await expect(
       approvalsService.approveRequest(
         buildContext({ user: { id: admin2.id }, session: { id: "sess-self" }, roles: ["admin"] }),
-        { approvalRequestId, comment: null },
+        { approvalRequestId },
       ),
     ).rejects.toThrow();
   });
@@ -123,7 +123,7 @@ describe("proposeRefund — BR-13 requester cannot self-approve", () => {
     });
 
     await expect(
-      approvalsService.approveRequest(approveCtx, { approvalRequestId, comment: null }),
+      approvalsService.approveRequest(approveCtx, { approvalRequestId }),
     ).resolves.not.toThrow();
   });
 });

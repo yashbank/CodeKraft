@@ -56,10 +56,7 @@ describe("orders expiry service (MASTER_SPEC §7, docs/06 §2.3)", () => {
 
     // 1. Manually set expiresAt in the past (e.g. 1 hour ago)
     const oneHourAgo = new Date(Date.now() - 3600_000);
-    await db
-      .update(orders)
-      .set({ expiresAt: oneHourAgo })
-      .where(eq(orders.id, createRes.orderId));
+    await db.update(orders).set({ expiresAt: oneHourAgo }).where(eq(orders.id, createRes.orderId));
 
     // 2. Run expiry service
     const expiryRes = await ordersService.expirePendingOrders();
@@ -69,7 +66,10 @@ describe("orders expiry service (MASTER_SPEC §7, docs/06 §2.3)", () => {
     const [dbOrder] = await db.select().from(orders).where(eq(orders.id, createRes.orderId));
     expect(dbOrder!.status).toBe("failed");
 
-    const [dbPayment] = await db.select().from(payments).where(eq(payments.orderId, createRes.orderId));
+    const [dbPayment] = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.orderId, createRes.orderId));
     expect(dbPayment!.status).toBe("failed");
     expect(dbPayment!.failureReason).toBe("expired");
   });

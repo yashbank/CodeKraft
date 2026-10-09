@@ -12,7 +12,10 @@ export async function POST(req: NextRequest) {
     const contentType = req.headers.get("content-type") ?? "";
     let report: unknown = null;
 
-    if (contentType.includes("application/csp-report") || contentType.includes("application/json")) {
+    if (
+      contentType.includes("application/csp-report") ||
+      contentType.includes("application/json")
+    ) {
       report = await req.json();
     } else {
       const text = await req.text();
@@ -25,7 +28,7 @@ export async function POST(req: NextRequest) {
 
     // Log CSP violation report
     await audit({
-      action: "system.csp_violation" as any,
+      action: "system.csp_violation",
       actorId: null,
       meta: {
         report,

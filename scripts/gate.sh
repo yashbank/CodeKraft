@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Push gate: run before every push to main (pnpm gate). Lint and tsc must not get worse than
 # the recorded baselines; unit, integration and build must be fully green.
-# shortcut: baselines instead of zero, drop them to 0 once the debt phase lands.
+# Baselines are 0 since 2026-10-10; keep them there.
 set -u
 cd "$(dirname "$0")/.."
 ROOT=$(pwd)

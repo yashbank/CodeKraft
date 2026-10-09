@@ -26,7 +26,15 @@ import { submitPaymentReference } from "@/modules/payments/customer-mutations";
 import type { PaymentInstructions } from "@/modules/payments/provider";
 import { Banner } from "./Banner";
 
-function Row({ label, value, mono = false }: { label: string; value: React.ReactNode; mono?: boolean }) {
+function Row({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: React.ReactNode;
+  mono?: boolean;
+}) {
   return (
     <div className="flex items-start justify-between gap-4 py-1 text-body-sm">
       <dt className="text-fg-muted">{label}</dt>

@@ -1,13 +1,12 @@
-import { and, desc, eq, gt, inArray, isNull, lt, notInArray, or, sql } from "drizzle-orm";
+import { type SQL, and, desc, eq, inArray, isNull, lt, notInArray, sql } from "drizzle-orm";
 import type { Context, RequestContext } from "@/lib/authz/context";
-import { type TxCtx, getDb } from "@/lib/db";
+import { type Db, type DbOrTx, getDb } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { assertTurnstileVerified, verifyTurnstile } from "@/lib/turnstile";
 import { notificationsService } from "@/modules/notifications/service";
 import type { JobContext, JobOutcome } from "@/modules/analytics/types";
 import type { ListResult } from "@/modules/_shared/zod";
 import { users } from "../../../drizzle/schema/auth";
-import { products } from "../../../drizzle/schema/catalog";
 import { orders } from "../../../drizzle/schema/commerce";
 import {
   type Query,
@@ -28,6 +27,7 @@ import type {
   ListQueriesAdminInput,
   QueriesAutoCloseDetail,
   QueryCreateResult,
+  QueryMessageView,
   QueryRow,
   QueryThread,
   ReopenQueryInput,
@@ -36,11 +36,11 @@ import type {
 } from "./types";
 
 export class DefaultQueriesService implements QueriesService {
-  private _db?: any;
-  constructor(db?: any) {
+  private _db?: Db;
+  constructor(db?: Db) {
     this._db = db;
   }
-  private get db(): any {
+  private get db(): Db {
     return this._db ?? getDb();
   }
 
@@ -59,6 +59,8 @@ export class DefaultQueriesService implements QueriesService {
           status: "open",
         })
         .returning();
+
+      if (!query) throw new AppError(ErrorCode.INTERNAL, "Insert returned no row");
 
       await this.db.insert(queryMessages).values({
         queryId: query.id,
@@ -93,16 +95,12 @@ export class DefaultQueriesService implements QueriesService {
       const existing = await this.db
         .select()
         .from(queries)
-        .where(
-          and(
-            eq(queries.orderId, input.orderId),
-            notInArray(queries.status, ["closed"]),
-          ),
-        )
+        .where(and(eq(queries.orderId, input.orderId), notInArray(queries.status, ["closed"])))
         .limit(1);
 
-      if (existing.length > 0) {
-        return { queryId: existing[0].id, existing: true };
+      const open = existing[0];
+      if (open) {
+        return { queryId: open.id, existing: true };
       }
     }
 
@@ -117,6 +115,8 @@ export class DefaultQueriesService implements QueriesService {
         status: "open",
       })
       .returning();
+
+    if (!query) throw new AppError(ErrorCode.INTERNAL, "Insert returned no row");
 
     await this.db.insert(queryMessages).values({
       queryId: query.id,
@@ -148,7 +148,8 @@ export class DefaultQueriesService implements QueriesService {
     const [query] = await this.db
       .insert(queries)
       .values({
-        userId: input.userId,
+        userId: input.userId ?? null,
+        guestEmail: input.guestEmail ?? null,
         subject: input.subject,
         source: input.source,
         orderId: input.orderId ?? null,
@@ -158,32 +159,36 @@ export class DefaultQueriesService implements QueriesService {
       })
       .returning();
 
+    if (!query) throw new AppError(ErrorCode.INTERNAL, "Insert returned no row");
+
     await this.db.insert(queryMessages).values({
       queryId: query.id,
       authorKind: "admin",
       authorId: ctx.userId,
       bodyJson: input.bodyJson,
-      attachments: input.attachments ?? [],
+      attachments: [],
     });
 
-    await notificationsService.emit(
-      input.userId,
-      "query.new",
-      {
-        queryId: query.id,
-        subject: query.subject,
-        preview: "New query opened by support",
-      },
-      ["inapp", "email"],
-      this.db,
-    );
+    if (input.userId) {
+      await notificationsService.emit(
+        input.userId,
+        "query.new",
+        {
+          queryId: query.id,
+          subject: query.subject,
+          preview: "New query opened by support",
+        },
+        ["inapp", "email"],
+        this.db,
+      );
+    }
 
     return { queryId: query.id, existing: false };
   }
 
   async createFromEscalation(
     input: CreateQueryFromEscalationInput,
-    tx: TxCtx,
+    tx: DbOrTx,
   ): Promise<QueryCreateResult> {
     const [query] = await tx
       .insert(queries)
@@ -195,6 +200,8 @@ export class DefaultQueriesService implements QueriesService {
         status: "open",
       })
       .returning();
+
+    if (!query) throw new AppError(ErrorCode.INTERNAL, "Insert returned no row");
 
     await tx.insert(queryMessages).values({
       queryId: query.id,
@@ -235,7 +242,7 @@ export class DefaultQueriesService implements QueriesService {
       throw new AppError(ErrorCode.UNAUTHENTICATED, "Authentication required");
     }
 
-    const conditions: any[] = [eq(queries.userId, ctx.userId)];
+    const conditions: SQL[] = [eq(queries.userId, ctx.userId)];
     if (input.filters?.status) {
       conditions.push(inArray(queries.status, input.filters.status));
     }
@@ -278,7 +285,7 @@ export class DefaultQueriesService implements QueriesService {
     return {
       items,
       total: countResult[0]?.count ?? 0,
-      nextCursor: hasNext ? items[items.length - 1].queryId : null,
+      nextCursor: hasNext ? (items.at(-1)?.queryId ?? null) : null,
     };
   }
 
@@ -297,28 +304,25 @@ export class DefaultQueriesService implements QueriesService {
       .where(and(eq(queries.id, input.queryId), eq(queries.userId, ctx.userId)))
       .limit(1);
 
-    if (rows.length === 0) {
+    const row = rows[0];
+    if (!row) {
       throw new AppError(ErrorCode.NOT_FOUND, "Query not found");
     }
 
-    return await this.buildThread(rows[0].query, rows[0].assigneeName);
+    return await this.buildThread(row.query, row.assigneeName);
   }
 
-  async replyToQuery(
-    ctx: RequestContext,
-    input: ReplyToQueryInput,
-  ): Promise<ReplyToQueryResult> {
+  async replyToQuery(ctx: RequestContext, input: ReplyToQueryInput): Promise<ReplyToQueryResult> {
     const existing = await this.db
       .select()
       .from(queries)
       .where(eq(queries.id, input.queryId))
       .limit(1);
 
-    if (existing.length === 0) {
+    const query = existing[0];
+    if (!query) {
       throw new AppError(ErrorCode.NOT_FOUND, "Query not found");
     }
-
-    const query = existing[0];
     if (query.status === "closed") {
       throw new AppError(ErrorCode.STATE_INVALID, "Cannot reply to a closed query");
     }
@@ -344,13 +348,15 @@ export class DefaultQueriesService implements QueriesService {
       nextStatus = input.setStatus ?? "waiting_customer";
     }
 
-    await this.db
+    const [updated] = await this.db
       .update(queries)
       .set({
         status: nextStatus,
         updatedAt: new Date(),
       })
-      .where(eq(queries.id, query.id));
+      .where(eq(queries.id, query.id))
+      .returning();
+    if (!updated) throw new AppError(ErrorCode.NOT_FOUND, "Query not found");
 
     const [msg] = await this.db
       .insert(queryMessages)
@@ -362,6 +368,7 @@ export class DefaultQueriesService implements QueriesService {
         attachments: input.attachments ?? [],
       })
       .returning();
+    if (!msg) throw new AppError(ErrorCode.INTERNAL, "Insert returned no row");
 
     if (isAdmin && query.userId) {
       await notificationsService.emit(
@@ -389,8 +396,8 @@ export class DefaultQueriesService implements QueriesService {
     }
 
     return {
-      messageId: msg.id,
-      status: nextStatus as any,
+      message: this.toMessageView(msg, null),
+      query: this.toQueryRow(updated, null),
     };
   }
 
@@ -398,7 +405,7 @@ export class DefaultQueriesService implements QueriesService {
     ctx: RequestContext,
     input: ListQueriesAdminInput,
   ): Promise<ListResult<QueryRow>> {
-    const conditions: any[] = [];
+    const conditions: SQL[] = [];
     if (input.filters?.status) {
       conditions.push(inArray(queries.status, input.filters.status));
     }
@@ -436,14 +443,11 @@ export class DefaultQueriesService implements QueriesService {
     return {
       items,
       total: countResult[0]?.count ?? 0,
-      nextCursor: hasNext ? items[items.length - 1].queryId : null,
+      nextCursor: hasNext ? (items.at(-1)?.queryId ?? null) : null,
     };
   }
 
-  async getQueryAdmin(
-    ctx: RequestContext,
-    input: GetQueryAdminInput,
-  ): Promise<QueryThread> {
+  async getQueryAdmin(ctx: RequestContext, input: GetQueryAdminInput): Promise<QueryThread> {
     const rows = await this.db
       .select({
         query: queries,
@@ -454,17 +458,15 @@ export class DefaultQueriesService implements QueriesService {
       .where(eq(queries.id, input.queryId))
       .limit(1);
 
-    if (rows.length === 0) {
+    const row = rows[0];
+    if (!row) {
       throw new AppError(ErrorCode.NOT_FOUND, "Query not found");
     }
 
-    return await this.buildThread(rows[0].query, rows[0].assigneeName);
+    return await this.buildThread(row.query, row.assigneeName);
   }
 
-  async assignQuery(
-    ctx: RequestContext,
-    input: AssignQueryInput,
-  ): Promise<QueryRow> {
+  async assignQuery(ctx: RequestContext, input: AssignQueryInput): Promise<QueryRow> {
     const [query] = await this.db
       .update(queries)
       .set({
@@ -478,10 +480,7 @@ export class DefaultQueriesService implements QueriesService {
     return this.toQueryRow(query, null);
   }
 
-  async closeQuery(
-    ctx: RequestContext,
-    input: CloseQueryInput,
-  ): Promise<QueryRow> {
+  async closeQuery(ctx: RequestContext, input: CloseQueryInput): Promise<QueryRow> {
     const [query] = await this.db
       .update(queries)
       .set({
@@ -509,10 +508,7 @@ export class DefaultQueriesService implements QueriesService {
     return this.toQueryRow(query, null);
   }
 
-  async reopenQuery(
-    ctx: RequestContext,
-    input: ReopenQueryInput,
-  ): Promise<QueryRow> {
+  async reopenQuery(ctx: RequestContext, input: ReopenQueryInput): Promise<QueryRow> {
     const [query] = await this.db
       .update(queries)
       .set({
@@ -526,9 +522,7 @@ export class DefaultQueriesService implements QueriesService {
     return this.toQueryRow(query, null);
   }
 
-  async runAutoCloseJob(
-    job: JobContext,
-  ): Promise<JobOutcome<QueriesAutoCloseDetail>> {
+  async runAutoCloseJob(job: JobContext): Promise<JobOutcome<QueriesAutoCloseDetail>> {
     const sevenDaysAgo = new Date(job.now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     const candidates = await this.db
@@ -565,15 +559,11 @@ export class DefaultQueriesService implements QueriesService {
       detail: {
         scanned: candidates.length,
         closed,
-        jobId: job.jobId,
       },
     };
   }
 
-  private async buildThread(
-    query: Query,
-    assigneeName: string | null,
-  ): Promise<QueryThread> {
+  private async buildThread(query: Query, assigneeName: string | null): Promise<QueryThread> {
     const messages = await this.db
       .select({
         msg: queryMessages,
@@ -584,13 +574,9 @@ export class DefaultQueriesService implements QueriesService {
       .where(eq(queryMessages.queryId, query.id))
       .orderBy(desc(queryMessages.createdAt));
 
-    let customer: any = null;
+    let customer: { id: string | null; name: string | null; email: string } | undefined;
     if (query.userId) {
-      const u = await this.db
-        .select()
-        .from(users)
-        .where(eq(users.id, query.userId))
-        .limit(1);
+      const u = await this.db.select().from(users).where(eq(users.id, query.userId)).limit(1);
       if (u[0]) {
         customer = { id: u[0].id, name: u[0].name, email: u[0].email };
       }
@@ -598,52 +584,41 @@ export class DefaultQueriesService implements QueriesService {
       customer = { id: null, name: "Guest", email: query.guestEmail };
     }
 
-    let linkedOrder: any = null;
+    let linkedOrder: QueryThread["linkedOrder"] = null;
     if (query.orderId) {
-      const o = await this.db
-        .select()
-        .from(orders)
-        .where(eq(orders.id, query.orderId))
-        .limit(1);
+      const o = await this.db.select().from(orders).where(eq(orders.id, query.orderId)).limit(1);
       if (o[0]) {
-        linkedOrder = { orderId: o[0].id, orderNo: o[0].orderNo };
-      }
-    }
-
-    let linkedProduct: any = null;
-    if (query.productId) {
-      const p = await this.db
-        .select()
-        .from(products)
-        .where(eq(products.id, query.productId))
-        .limit(1);
-      if (p[0]) {
-        linkedProduct = { id: p[0].id, name: p[0].title, slug: p[0].slug };
+        linkedOrder = {
+          orderId: o[0].id,
+          orderNo: o[0].orderNo,
+          status: o[0].status,
+          total: { amountMinor: o[0].totalMinor, currency: o[0].currency },
+        };
       }
     }
 
     return {
       query: this.toQueryRow(query, assigneeName, customer, linkedOrder?.orderNo ?? null),
-      messages: messages.map((m) => ({
-        messageId: m.msg.id,
-        authorKind: m.msg.authorKind as any,
-        author: m.msg.authorId ? { id: m.msg.authorId, name: m.authorName ?? null } : null,
-        bodyJson: m.msg.bodyJson as any,
-        attachments: (m.msg.attachments ?? []).map((id) => ({
-          mediaId: id,
-          filename: "attachment",
-          mime: "application/octet-stream",
-          sizeBytes: 1024,
-          url: `/api/files/query/${query.id}/${id}`,
-        })),
-        createdAt: m.msg.createdAt.toISOString(),
-      })),
-      customer,
+      messages: messages.map((m) => this.toMessageView(m.msg, m.authorName)),
       linkedOrder,
-      linkedProduct,
-      originatingConversation: query.conversationId
-        ? { conversationId: query.conversationId, escalatedQueryId: query.id }
-        : null,
+    };
+  }
+
+  private toMessageView(msg: QueryMessage, authorName: string | null): QueryMessageView {
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+    return {
+      messageId: msg.id,
+      authorKind: msg.authorKind,
+      author: msg.authorId ? { id: msg.authorId, name: authorName } : null,
+      bodyJson: msg.bodyJson as Record<string, unknown>,
+      attachments: (msg.attachments ?? []).map((id) => ({
+        mediaId: id,
+        name: "attachment",
+        sizeBytes: 1024,
+        url: `/api/files/query/${msg.queryId}/${id}`,
+        expiresAt,
+      })),
+      createdAt: msg.createdAt.toISOString(),
     };
   }
 
@@ -664,8 +639,8 @@ export class DefaultQueriesService implements QueriesService {
     return {
       queryId: query.id,
       subject: query.subject,
-      source: query.source as any,
-      status: query.status as any,
+      source: query.source,
+      status: query.status,
       assignedTo: query.assignedTo ? { id: query.assignedTo, name: assigneeName } : null,
       customer: customer ?? { id: query.userId, email: query.guestEmail ?? "", name: null },
       orderNo: orderNo ?? null,
@@ -681,7 +656,7 @@ export class DefaultQueriesService implements QueriesService {
 
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
 
-export function createQueriesService(db?: any): QueriesService {
+export function createQueriesService(db?: Db): QueriesService {
   return new DefaultQueriesService(db);
 }
 
@@ -695,7 +670,11 @@ export function createNotImplementedQueriesService(): QueriesService {
     assignQuery: "async",
     closeQuery: "async",
     reopenQuery: "async",
-    listQueries: "async",
-    getQueryDetail: "async",
+    createFromEscalation: "async",
+    listMyQueries: "async",
+    getMyQuery: "async",
+    listQueriesAdmin: "async",
+    getQueryAdmin: "async",
+    runAutoCloseJob: "async",
   });
 }

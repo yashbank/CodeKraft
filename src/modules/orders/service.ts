@@ -1,13 +1,13 @@
 /**
  * Orders service implementation (docs/06 API-COM-01..07, API-COM-14, master plan §5).
  */
-import { and, desc, asc, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray } from "drizzle-orm";
 import type { DbOrTx, TxCtx } from "@/lib/db";
 import { withTx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
-import { assertPermission, can } from "@/lib/authz/assert";
+import { assertPermission } from "@/lib/authz/assert";
 import type { RequestContext } from "@/lib/authz/context";
-import { type Currency, money } from "@/lib/money";
+import { type Currency, money, toDecimalString } from "@/lib/money";
 
 function findPriceIn(prices: { currency: string; amountMinor: number }[], currency: Currency) {
   const match = prices.find((p) => p.currency === currency);
@@ -18,15 +18,11 @@ function findPriceIn(prices: { currency: string; amountMinor: number }[], curren
 }
 import { settingsService } from "@/modules/settings/service";
 import { effectiveTaxRateBps } from "@/modules/settings/tax";
-import { fxService } from "@/modules/fx/service";
 import { ownershipService } from "@/modules/ownership/service";
 import { couponsService } from "@/modules/coupons/service";
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
 import {
   type Order,
-  type OrderItem,
-  type OrderStatus,
-  type Payment,
   coupons,
   customQuotes,
   orderItems,
@@ -35,18 +31,23 @@ import {
   refunds,
   userOfferingPurchases,
 } from "../../../drizzle/schema/commerce";
-import { offerings, offeringPrices, offeringPaymentMethods } from "../../../drizzle/schema/offerings";
+import {
+  offerings,
+  offeringPrices,
+  offeringPaymentMethods,
+} from "../../../drizzle/schema/offerings";
 import { products } from "../../../drizzle/schema/catalog";
 import { users } from "../../../drizzle/schema/auth";
 import { customerProfiles } from "../../../drizzle/schema/users-ext";
 import { emailOutbox, notifications } from "../../../drizzle/schema/notifications";
 import { approvalRequests } from "../../../drizzle/schema/approvals";
 import { creditNotes, invoices } from "../../../drizzle/schema/invoices";
+import { storedInstructions } from "@/modules/payments/provider";
 import { nextOrderNo } from "./numbering";
 import { createManualOrder } from "./manual";
 import { applyProjectOrderSplit } from "./project-split";
-import { assertCanTransitionOrder, markFulfilledIfComplete } from "./state";
-import { calculateItemPricing, calculateOrderTotals } from "./totals";
+import { markFulfilledIfComplete } from "./state";
+import { calculateItemPricing } from "./totals";
 import { expirePendingOrders } from "./expiry";
 import type { OrdersService } from "./contracts";
 import type {
@@ -112,7 +113,10 @@ export class DefaultOrdersService implements OrdersService {
     }
 
     if (offering.purchaseModel === "custom_quote") {
-      throw new AppError(ErrorCode.STATE_INVALID, "Custom quote offerings cannot be checked out directly");
+      throw new AppError(
+        ErrorCode.STATE_INVALID,
+        "Custom quote offerings cannot be checked out directly",
+      );
     }
 
     // 2. BR-10 duplicate purchase check
@@ -317,14 +321,15 @@ export class DefaultOrdersService implements OrdersService {
           .orderBy(desc(payments.createdAt))
           .limit(1);
 
-        if (openPayment && openPayment.instructions) {
+        const openInstructions = storedInstructions(openPayment?.instructions);
+        if (openPayment && openInstructions) {
           return {
             orderId: existingOrder.id,
             orderNo: existingOrder.orderNo,
             payment: {
               paymentId: openPayment.id,
               method: openPayment.provider as ManualPaymentMethod,
-              instructions: openPayment.instructions as any,
+              instructions: openInstructions,
             },
             expiresAt: (existingOrder.expiresAt ?? now).toISOString(),
           };
@@ -404,10 +409,11 @@ export class DefaultOrdersService implements OrdersService {
           updatedAt: now,
         })
         .returning();
+      if (!newOrder) throw new AppError(ErrorCode.INTERNAL, "newOrder missing");
 
       // 7. Insert order item
       await tx.insert(orderItems).values({
-        orderId: newOrder!.id,
+        orderId: newOrder.id,
         offeringId: offering.id,
         productId: product.id,
         description: offering.name,
@@ -422,8 +428,8 @@ export class DefaultOrdersService implements OrdersService {
       // 8. Generate payment instructions & insert payment via payments service
       const { paymentsService } = await import("@/modules/payments/service");
       const { paymentId, instructions } = await paymentsService.createIntentForOrder(
-        newOrder!.id,
-        input.paymentMethod as any,
+        newOrder.id,
+        input.paymentMethod,
         tx,
       );
 
@@ -460,30 +466,30 @@ export class DefaultOrdersService implements OrdersService {
         title: "Order placed",
         body: `Order ${orderNo} placed for ${offering.name}. Complete payment within 7 days.`,
         link: `/checkout/${offering.id}`,
-        payload: { orderId: newOrder!.id, orderNo },
+        payload: { orderId: newOrder.id, orderNo },
       });
 
       await tx.insert(emailOutbox).values({
         toEmail: input.billing.email,
         template: "order-created",
         payload: {
-          orderId: newOrder!.id,
+          orderId: newOrder.id,
           orderNo,
           name: input.billing.name,
           offeringName: offering.name,
-          amount: (itemPricing.totalMinor / 100).toFixed(2),
+          amount: toDecimalString(itemPricing.totalMinor),
         },
         priority: 5,
         status: "queued",
       });
 
       return {
-        orderId: newOrder!.id,
+        orderId: newOrder.id,
         orderNo,
         payment: {
-          paymentId: newPayment!.id,
+          paymentId: newPayment.id,
           method: input.paymentMethod,
-          instructions: instructions as any,
+          instructions,
         },
         expiresAt: expiresAt.toISOString(),
       };
@@ -503,11 +509,7 @@ export class DefaultOrdersService implements OrdersService {
     outerTx?: TxCtx,
   ): Promise<{ order: Order }> {
     const runner = async (tx: TxCtx): Promise<{ order: Order }> => {
-      const [order] = await tx
-        .select()
-        .from(orders)
-        .where(eq(orders.id, input.orderId))
-        .limit(1);
+      const [order] = await tx.select().from(orders).where(eq(orders.id, input.orderId)).limit(1);
 
       if (!order || order.userId !== ctx.userId) {
         throw new AppError(ErrorCode.NOT_FOUND, "Order not found");
@@ -530,6 +532,7 @@ export class DefaultOrdersService implements OrdersService {
         })
         .where(eq(orders.id, order.id))
         .returning();
+      if (!cancelledOrder) throw new AppError(ErrorCode.INTERNAL, "cancelledOrder missing");
 
       // Open payments become failed with reason cancelled
       await tx
@@ -539,13 +542,10 @@ export class DefaultOrdersService implements OrdersService {
           failureReason: "cancelled",
         })
         .where(
-          and(
-            eq(payments.orderId, order.id),
-            inArray(payments.status, ["initiated", "submitted"]),
-          ),
+          and(eq(payments.orderId, order.id), inArray(payments.status, ["initiated", "submitted"])),
         );
 
-      return { order: cancelledOrder! };
+      return { order: cancelledOrder };
     };
 
     if (outerTx) {
@@ -561,12 +561,10 @@ export class DefaultOrdersService implements OrdersService {
     input: RetryPaymentInput,
     outerTx?: TxCtx,
   ): Promise<{ payment: OrderPaymentHandle; expiresAt: string }> {
-    const runner = async (tx: TxCtx): Promise<{ payment: OrderPaymentHandle; expiresAt: string }> => {
-      const [order] = await tx
-        .select()
-        .from(orders)
-        .where(eq(orders.id, input.orderId))
-        .limit(1);
+    const runner = async (
+      tx: TxCtx,
+    ): Promise<{ payment: OrderPaymentHandle; expiresAt: string }> => {
+      const [order] = await tx.select().from(orders).where(eq(orders.id, input.orderId)).limit(1);
 
       if (!order || order.userId !== ctx.userId) {
         throw new AppError(ErrorCode.NOT_FOUND, "Order not found");
@@ -598,11 +596,10 @@ export class DefaultOrdersService implements OrdersService {
         );
       }
 
-      const settings = await settingsService.load(tx);
       const { paymentsService } = await import("@/modules/payments/service");
       const { paymentId, instructions } = await paymentsService.createIntentForOrder(
         order.id,
-        input.paymentMethod as any,
+        input.paymentMethod,
         tx,
       );
 
@@ -613,9 +610,9 @@ export class DefaultOrdersService implements OrdersService {
 
       return {
         payment: {
-          paymentId: newPayment!.id,
+          paymentId: newPayment.id,
           method: input.paymentMethod,
-          instructions: instructions as any,
+          instructions,
         },
         expiresAt: (order.expiresAt ?? now).toISOString(),
       };
@@ -688,8 +685,7 @@ export class DefaultOrdersService implements OrdersService {
         status: r.status,
         total: money(r.totalMinor, r.currency as Currency),
         itemCount: lineItems.length,
-        itemsSummary:
-          lineItems.length > 1 ? `${first} +${lineItems.length - 1} more` : first,
+        itemsSummary: lineItems.length > 1 ? `${first} +${lineItems.length - 1} more` : first,
         createdAt: r.createdAt.toISOString(),
         paidAt: r.paidAt ? r.paidAt.toISOString() : null,
         expiresAt: r.expiresAt ? r.expiresAt.toISOString() : null,
@@ -733,12 +729,18 @@ export class DefaultOrdersService implements OrdersService {
       method: p.provider,
       status: p.status,
       amountDue: money(p.amountDueMinor, p.currency as Currency),
-      amountReceived: p.amountReceivedMinor ? money(p.amountReceivedMinor, p.currency as Currency) : null,
-      instructions: p.instructions as any,
+      amountReceived: p.amountReceivedMinor
+        ? money(p.amountReceivedMinor, p.currency as Currency)
+        : null,
+      instructions: storedInstructions(p.instructions),
       customerReference: p.customerReference,
       customerSubmittedAt: p.customerSubmittedAt ? p.customerSubmittedAt.toISOString() : null,
-      bankShortfall: p.bankShortfallMinor ? money(p.bankShortfallMinor, p.currency as Currency) : null,
-      customerCredit: p.customerCreditMinor ? money(p.customerCreditMinor, p.currency as Currency) : null,
+      bankShortfall: p.bankShortfallMinor
+        ? money(p.bankShortfallMinor, p.currency as Currency)
+        : null,
+      customerCredit: p.customerCreditMinor
+        ? money(p.customerCreditMinor, p.currency as Currency)
+        : null,
       confirmedByName: null,
       confirmedAt: p.confirmedAt ? p.confirmedAt.toISOString() : null,
       failureReason: p.failureReason,
@@ -836,7 +838,9 @@ export class DefaultOrdersService implements OrdersService {
     // Invoice numbers for orders that have one (paid+) -- cheap batched lookup, `invoices.order_id`
     // is unique so at most one row per order.
     const paidOrderIds = rows
-      .filter((r) => r.status !== "pending_payment" && r.status !== "cancelled" && r.status !== "failed")
+      .filter(
+        (r) => r.status !== "pending_payment" && r.status !== "cancelled" && r.status !== "failed",
+      )
       .map((r) => r.id);
     const invoiceRows =
       paidOrderIds.length > 0
@@ -870,6 +874,7 @@ export class DefaultOrdersService implements OrdersService {
         paymentProvider: payment?.provider ?? null,
         paymentReference: payment?.customerReference ?? null,
         paymentCreatedAt: payment?.createdAt ? payment.createdAt.toISOString() : null,
+        itemsSummary: descriptions[0] ?? "",
         itemDescriptions: descriptions,
         invoiceNumber: invoiceByOrder.get(r.id) ?? null,
         // Only meaningful once a payment has been confirmed -- null before that (genuinely no
@@ -891,11 +896,7 @@ export class DefaultOrdersService implements OrdersService {
     assertPermission(ctx, "orders.read");
     const db = await getDatabase();
 
-    const [order] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, input.orderId))
-      .limit(1);
+    const [order] = await db.select().from(orders).where(eq(orders.id, input.orderId)).limit(1);
 
     if (!order) {
       throw new AppError(ErrorCode.NOT_FOUND, "Order not found");
@@ -963,12 +964,18 @@ export class DefaultOrdersService implements OrdersService {
       method: p.provider,
       status: p.status,
       amountDue: money(p.amountDueMinor, p.currency as Currency),
-      amountReceived: p.amountReceivedMinor ? money(p.amountReceivedMinor, p.currency as Currency) : null,
-      instructions: p.instructions as any,
+      amountReceived: p.amountReceivedMinor
+        ? money(p.amountReceivedMinor, p.currency as Currency)
+        : null,
+      instructions: storedInstructions(p.instructions),
       customerReference: p.customerReference,
       customerSubmittedAt: p.customerSubmittedAt ? p.customerSubmittedAt.toISOString() : null,
-      bankShortfall: p.bankShortfallMinor ? money(p.bankShortfallMinor, p.currency as Currency) : null,
-      customerCredit: p.customerCreditMinor ? money(p.customerCreditMinor, p.currency as Currency) : null,
+      bankShortfall: p.bankShortfallMinor
+        ? money(p.bankShortfallMinor, p.currency as Currency)
+        : null,
+      customerCredit: p.customerCreditMinor
+        ? money(p.customerCreditMinor, p.currency as Currency)
+        : null,
       confirmedByName: p.confirmedBy ? (confirmedByName.get(p.confirmedBy) ?? null) : null,
       confirmedAt: p.confirmedAt ? p.confirmedAt.toISOString() : null,
       failureReason: p.failureReason,
@@ -1012,7 +1019,10 @@ export class DefaultOrdersService implements OrdersService {
         .where(eq(approvalRequests.id, order.splitApprovalRequestId))
         .limit(1);
       if (approval) {
-        splitApproval = { status: approval.status, approvalRequestId: order.splitApprovalRequestId };
+        splitApproval = {
+          status: approval.status,
+          approvalRequestId: order.splitApprovalRequestId,
+        };
       }
     }
 
@@ -1060,7 +1070,9 @@ export class DefaultOrdersService implements OrdersService {
       items,
       itemMeta,
       payments: paymentViews,
-      invoice: invoiceRow ? { invoiceId: invoiceRow.id, invoiceNo: invoiceRow.invoiceNo } : undefined,
+      invoice: invoiceRow
+        ? { invoiceId: invoiceRow.id, invoiceNo: invoiceRow.invoiceNo }
+        : undefined,
       entitlements: [],
       instructionsHtml: "",
       refunds: refundViews,

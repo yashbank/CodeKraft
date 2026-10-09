@@ -419,7 +419,10 @@ export function LeadsScreen({
                       />
                     </TableCell>
                     <TableCell>
-                      <Link href={`${detailHref}/${l.id}`} className="font-medium hover:text-accent-text">
+                      <Link
+                        href={`${detailHref}/${l.id}`}
+                        className="font-medium hover:text-accent-text"
+                      >
                         {l.name}
                       </Link>
                       {l.company ? (
@@ -708,7 +711,11 @@ export function LeadsScreen({
             </DialogDescription>
           </DialogHeader>
           <Field id="won-order" label="Order" optional>
-            <Input id="won-order" placeholder="Order ID (UUID), if already created" className="font-mono" />
+            <Input
+              id="won-order"
+              placeholder="Order ID (UUID), if already created"
+              className="font-mono"
+            />
           </Field>
           <DialogFooter>
             <Button asChild variant="secondary">
@@ -752,7 +759,11 @@ export function LeadsScreen({
             <SheetTitle>New lead</SheetTitle>
             <SheetDescription>Source is fixed to Manual.</SheetDescription>
           </SheetHeader>
-          <form ref={newLeadFormRef} className="space-y-4 px-4" onSubmit={(e) => e.preventDefault()}>
+          <form
+            ref={newLeadFormRef}
+            className="space-y-4 px-4"
+            onSubmit={(e) => e.preventDefault()}
+          >
             <Field id="nl-name" label="Name" required>
               <Input id="nl-name" name="name" required aria-required />
             </Field>
@@ -766,7 +777,11 @@ export function LeadsScreen({
               <Input id="nl-company" name="company" />
             </Field>
             <Field id="nl-service" label="Service interest">
-              <Input id="nl-service" name="serviceInterest" placeholder="Custom software, Integrations…" />
+              <Input
+                id="nl-service"
+                name="serviceInterest"
+                placeholder="Custom software, Integrations…"
+              />
             </Field>
             <Field id="nl-product" label="Product" optional>
               <Select value={newProduct} onValueChange={setNewProduct}>
@@ -787,7 +802,10 @@ export function LeadsScreen({
               <Textarea id="nl-message" name="message" rows={3} />
             </Field>
             <Field id="nl-priority" label="Priority">
-              <Select value={newPriority} onValueChange={(v) => setNewPriority(v as typeof newPriority)}>
+              <Select
+                value={newPriority}
+                onValueChange={(v) => setNewPriority(v as typeof newPriority)}
+              >
                 <SelectTrigger id="nl-priority">
                   <SelectValue />
                 </SelectTrigger>

@@ -60,7 +60,7 @@ describe("InvoiceDocument PDF Component (D-1502, BR-08)", () => {
           sgst_minor: 810,
           rate_bps: 1800,
         }}
-      />
+      />,
     );
 
     expect(html).toContain("CGST:");
@@ -69,9 +69,7 @@ describe("InvoiceDocument PDF Component (D-1502, BR-08)", () => {
   });
 
   it("omits GST breakdown when absent", () => {
-    const html = renderToStaticMarkup(
-      <InvoiceDocument {...baseProps} gstBreakdown={null} />
-    );
+    const html = renderToStaticMarkup(<InvoiceDocument {...baseProps} gstBreakdown={null} />);
 
     expect(html).not.toContain("CGST:");
     expect(html).not.toContain("SGST:");

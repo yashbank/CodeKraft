@@ -1,4 +1,10 @@
-import type { AnthropicProviderConfig, LLMEvent, LLMMessage, LLMProvider, LLMStreamOptions } from "../llm";
+import type {
+  AnthropicProviderConfig,
+  LLMEvent,
+  LLMMessage,
+  LLMProvider,
+  LLMStreamOptions,
+} from "../llm";
 
 export class AnthropicProvider implements LLMProvider {
   readonly id = "anthropic";

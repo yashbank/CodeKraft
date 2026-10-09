@@ -21,8 +21,8 @@ describe("Gapless FY numbering 50 concurrent transactions (FI-08, BR-16)", () =>
       Array.from({ length: concurrency }, () =>
         db.transaction(async (tx) => {
           return await nextInvoiceNumber(fy, tx);
-        })
-      )
+        }),
+      ),
     );
 
     expect(allocations).toHaveLength(concurrency);
@@ -41,10 +41,7 @@ describe("Gapless FY numbering 50 concurrent transactions (FI-08, BR-16)", () =>
     }
 
     // Verify persisted sequence in DB
-    const [row] = await db
-      .select()
-      .from(invoiceSequences)
-      .where(eq(invoiceSequences.fy, fy));
+    const [row] = await db.select().from(invoiceSequences).where(eq(invoiceSequences.fy, fy));
     expect(row?.lastSeq).toBe(concurrency);
   });
 });

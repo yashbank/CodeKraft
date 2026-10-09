@@ -120,7 +120,12 @@ describe("mapEntitlementDetail (SCR-ACC-03)", () => {
     const serviceEntitlement = baseEntitlement({
       deliveryType: "service",
       serviceProgress: [
-        { key: "kickoff", title: "Kickoff call", description: "Intro call", doneAt: "2026-01-05T00:00:00Z" },
+        {
+          key: "kickoff",
+          title: "Kickoff call",
+          description: "Intro call",
+          doneAt: "2026-01-05T00:00:00Z",
+        },
         { key: "build", title: "Build", description: null, doneAt: null },
       ],
     });

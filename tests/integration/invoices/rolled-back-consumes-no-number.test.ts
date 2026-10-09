@@ -28,14 +28,11 @@ describe("Rolled back transaction consumes no number (BR-16)", () => {
       db.transaction(async (tx) => {
         await nextInvoiceNumber(fy, tx);
         throw new Error("Simulated failure in transaction");
-      })
+      }),
     ).rejects.toThrow("Simulated failure in transaction");
 
     // Sequence in table should still be 1
-    const [row] = await db
-      .select()
-      .from(invoiceSequences)
-      .where(eq(invoiceSequences.fy, fy));
+    const [row] = await db.select().from(invoiceSequences).where(eq(invoiceSequences.fy, fy));
     expect(row?.lastSeq).toBe(1);
 
     // 3. Next transaction should obtain sequence 2, NOT 3

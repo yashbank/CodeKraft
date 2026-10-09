@@ -100,14 +100,14 @@ export default async function AdminReportsPage() {
   const [reportResults, customerCreditsResult, partnersResult] = await Promise.all([
     Promise.all(
       REPORT_ORDER.map((key) =>
-        getReportQuery({ report: key as FinanceReportKey, dateFrom, dateTo }, ctx).catch(
-          () => ({ ok: false as const }),
-        ),
+        getReportQuery({ report: key as FinanceReportKey, dateFrom, dateTo }, ctx).catch(() => ({
+          ok: false as const,
+        })),
       ),
     ),
-    getReportQuery({ report: "customer_credits", dateFrom, dateTo }, ctx).catch(
-      () => ({ ok: false as const }),
-    ),
+    getReportQuery({ report: "customer_credits", dateFrom, dateTo }, ctx).catch(() => ({
+      ok: false as const,
+    })),
     listPartnersQuery({ limit: 100 }, ctx).catch(() => ({ ok: false as const })),
   ]);
 
@@ -124,7 +124,8 @@ export default async function AdminReportsPage() {
       ? mapCustomerCreditRows(customerCreditsResult.data)
       : [];
 
-  const partnerViews = "data" in partnersResult && partnersResult.ok ? partnersResult.data.items : [];
+  const partnerViews =
+    "data" in partnersResult && partnersResult.ok ? partnersResult.data.items : [];
   const { byPartnerId: partnerNames } = buildPartnerNameMaps(partnerViews);
   const firstPartner = partnerViews[0];
 
@@ -178,7 +179,9 @@ export default async function AdminReportsPage() {
   ).catch(() => ({ ok: false as const }));
   const statementHistory =
     "data" in statementHistoryResult && statementHistoryResult.ok
-      ? statementHistoryResult.data.items.map((row) => mapStatementExportLogToRow(row, partnerNames))
+      ? statementHistoryResult.data.items.map((row) =>
+          mapStatementExportLogToRow(row, partnerNames),
+        )
       : [];
 
   return (

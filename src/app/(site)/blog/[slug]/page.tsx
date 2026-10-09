@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import {
-  BLOG_POSTS,
-  PRODUCTS,
-  SERVICE_OPTIONS,
-} from "@/app/dev/screens/_fixtures/site";
+import { BLOG_POSTS, PRODUCTS, SERVICE_OPTIONS } from "@/app/dev/screens/_fixtures/site";
 import { BlogPostPage } from "@/components/site/BlogPostPage";
 
 interface PageProps {
@@ -39,10 +35,9 @@ export default async function BlogPostRoute({ params }: PageProps) {
     notFound();
   }
 
-  const post = BLOG_POSTS[postIndex]!;
-  const fallbackProduct = PRODUCTS[0]!;
-  const product =
-    PRODUCTS.find((p) => p.slug === post.product.slug) || fallbackProduct;
+  const post = BLOG_POSTS[postIndex];
+  const product = PRODUCTS.find((p) => p.slug === post?.product.slug) ?? PRODUCTS[0];
+  if (!post || !product) notFound();
 
   const prevPost = postIndex > 0 ? BLOG_POSTS[postIndex - 1] : undefined;
   const nextPost = postIndex < BLOG_POSTS.length - 1 ? BLOG_POSTS[postIndex + 1] : undefined;

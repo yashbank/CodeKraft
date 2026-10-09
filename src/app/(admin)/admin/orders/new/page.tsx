@@ -2,8 +2,7 @@ import { ManualOrderForm } from "@/components/admin/commerce/ManualOrderForm";
 import { getAdminRequestContext } from "@/lib/authz/admin-request-context";
 import { mapCustomerOptions } from "@/lib/admin/queries-view";
 import { listCustomersQuery, listPartnersQuery } from "@/modules/users/queries";
-import { catalogService } from "@/modules/catalog/service";
-import { offeringsService } from "@/modules/offerings/service";
+import { listPublishedProductOfferingOptions } from "@/modules/offerings/queries";
 import { settingsService } from "@/modules/settings/service";
 import type { CustomerOption, OfferingOption } from "@/components/admin/types";
 
@@ -54,22 +53,7 @@ export default async function AdminNewOrderPage() {
 
   let offerings: OfferingOption[] = [];
   try {
-    const productsPage = await catalogService.listProductsAdmin(ctx, { limit: 100 });
-    const withOfferings = productsPage.items.filter(
-      (p) => p.status === "published" && p.offeringCount > 0,
-    );
-    const offeringLists = await Promise.all(
-      withOfferings.map((p) => offeringsService.listForProduct(p.id, "INR")),
-    );
-    offerings = offeringLists
-      .flat()
-      .filter((o) => o.status === "active" && o.price !== null)
-      .map((o) => ({
-        id: o.id,
-        label: o.name,
-        price: (o.price as NonNullable<typeof o.price>).base,
-        oneTime: o.purchaseModel === "one_time",
-      }));
+    offerings = await listPublishedProductOfferingOptions(ctx);
   } catch {
     // leave offerings empty — the form shows "no offerings" rather than crashing the page
   }

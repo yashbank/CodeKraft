@@ -7,16 +7,8 @@ import { eq } from "drizzle-orm";
 import { db, withTx } from "@/lib/db";
 import { entitlementsService } from "@/modules/entitlements/service";
 import { deliveryService } from "@/modules/delivery/service";
-import { subscriptionsService } from "@/modules/subscriptions/service";
-import { subscriptionsRemindGraceSuspendJob, entitlementsExpireJob } from "@/jobs/subscriptions";
-import {
-  deliveryTasks,
-  downloads,
-  entitlements,
-  releaseFiles,
-  serviceProgress,
-  subscriptions,
-} from "../../../drizzle/schema/delivery";
+import { subscriptionsRemindGraceSuspendJob } from "@/jobs/subscriptions";
+import { entitlements, releaseFiles, subscriptions } from "../../../drizzle/schema/delivery";
 import { media } from "../../../drizzle/schema/media";
 import { orders } from "../../../drizzle/schema/commerce";
 import { migrateTestDb } from "../../setup/migrate";
@@ -47,12 +39,17 @@ describe("Phase 5 Gate Scenarios: Delivery & Subscriptions (P5.1..P5.9)", () => 
     const offService = await createOffering({
       productId: product.id,
       deliveryType: "service",
-      serviceSteps: [{ key: "s1", title: "Setup" }, { key: "s2", title: "Delivery" }],
+      serviceSteps: [
+        { key: "s1", title: "Setup" },
+        { key: "s2", title: "Delivery" },
+      ],
     });
 
     // 1. Download offering purchase: instantly fulfilled
     const ordDownload = await createOrder({ offering: offDownload, user: buyer, status: "paid" });
-    const [entDl] = await withTx(async (tx) => entitlementsService.grantForOrder(ordDownload.id, tx));
+    const [entDl] = await withTx(async (tx) =>
+      entitlementsService.grantForOrder(ordDownload.id, tx),
+    );
     expect(entDl?.status).toBe("active");
 
     const [ordDlAfter] = await db.select().from(orders).where(eq(orders.id, ordDownload.id));
@@ -60,13 +57,19 @@ describe("Phase 5 Gate Scenarios: Delivery & Subscriptions (P5.1..P5.9)", () => 
 
     // 2. License offering purchase: fulfilled only when license key set
     const ordLicense = await createOrder({ offering: offLicense, user: buyer, status: "paid" });
-    const [entLic] = await withTx(async (tx) => entitlementsService.grantForOrder(ordLicense.id, tx));
+    const [entLic] = await withTx(async (tx) =>
+      entitlementsService.grantForOrder(ordLicense.id, tx),
+    );
     expect(entLic?.status).toBe("active");
 
     const [ordLicInitial] = await db.select().from(orders).where(eq(orders.id, ordLicense.id));
     expect(ordLicInitial?.status).toBe("paid"); // Not fulfilled yet!
 
-    const adminCtx = buildContext({ user: { id: admin.id }, session: { id: "s-admin" }, roles: ["super_admin"] });
+    const adminCtx = buildContext({
+      user: { id: admin.id },
+      session: { id: "s-admin" },
+      roles: ["super_admin"],
+    });
     await deliveryService.setLicenseKey(adminCtx, {
       entitlementId: entLic!.entitlementId,
       licenseKey: "KEY-TEST-9999",
@@ -78,16 +81,26 @@ describe("Phase 5 Gate Scenarios: Delivery & Subscriptions (P5.1..P5.9)", () => 
 
     // 3. Service offering purchase: fulfilled only when all service steps marked done
     const ordService = await createOrder({ offering: offService, user: buyer, status: "paid" });
-    const [entSvc] = await withTx(async (tx) => entitlementsService.grantForOrder(ordService.id, tx));
+    const [entSvc] = await withTx(async (tx) =>
+      entitlementsService.grantForOrder(ordService.id, tx),
+    );
 
     const [ordSvcInitial] = await db.select().from(orders).where(eq(orders.id, ordService.id));
     expect(ordSvcInitial?.status).toBe("paid");
 
-    await deliveryService.markServiceStep(adminCtx, { entitlementId: entSvc!.entitlementId, stepKey: "s1", done: true });
+    await deliveryService.markServiceStep(adminCtx, {
+      entitlementId: entSvc!.entitlementId,
+      stepKey: "s1",
+      done: true,
+    });
     const [ordSvcStep1] = await db.select().from(orders).where(eq(orders.id, ordService.id));
     expect(ordSvcStep1?.status).toBe("paid");
 
-    await deliveryService.markServiceStep(adminCtx, { entitlementId: entSvc!.entitlementId, stepKey: "s2", done: true });
+    await deliveryService.markServiceStep(adminCtx, {
+      entitlementId: entSvc!.entitlementId,
+      stepKey: "s2",
+      done: true,
+    });
     const [ordSvcDone] = await db.select().from(orders).where(eq(orders.id, ordService.id));
     expect(ordSvcDone?.status).toBe("fulfilled");
   });
@@ -117,7 +130,9 @@ describe("Phase 5 Gate Scenarios: Delivery & Subscriptions (P5.1..P5.9)", () => 
       })
       .returning();
 
-    await db.insert(releaseFiles).values({ productId: product.id, version: "1.0", mediaId: med!.id });
+    await db
+      .insert(releaseFiles)
+      .values({ productId: product.id, version: "1.0", mediaId: med!.id });
 
     const ent = await createEntitlement({
       offering,
@@ -128,7 +143,11 @@ describe("Phase 5 Gate Scenarios: Delivery & Subscriptions (P5.1..P5.9)", () => 
       status: "active",
     });
 
-    const buyerCtx = buildContext({ user: { id: buyer.id }, session: { id: "s-buyer" }, roles: ["customer"] });
+    const buyerCtx = buildContext({
+      user: { id: buyer.id },
+      session: { id: "s-buyer" },
+      roles: ["customer"],
+    });
 
     // Download 1, 2, 3 succeed
     for (let i = 1; i <= 3; i++) {
@@ -186,7 +205,10 @@ describe("Phase 5 Gate Scenarios: Delivery & Subscriptions (P5.1..P5.9)", () => 
 
     // On June 10: past grace -> suspended
     await subscriptionsRemindGraceSuspendJob.run(new Date("2026-06-10T00:00:00Z"));
-    const [subSuspended] = await db.select().from(subscriptions).where(eq(subscriptions.id, sub.id));
+    const [subSuspended] = await db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.id, sub.id));
     expect(subSuspended?.status).toBe("suspended");
 
     const [entSuspended] = await db.select().from(entitlements).where(eq(entitlements.id, ent.id));
@@ -208,7 +230,11 @@ describe("Phase 5 Gate Scenarios: Delivery & Subscriptions (P5.1..P5.9)", () => 
       status: "active",
     });
 
-    const adminCtx = buildContext({ user: { id: admin.id }, session: { id: "s-admin" }, roles: ["super_admin"] });
+    const adminCtx = buildContext({
+      user: { id: admin.id },
+      session: { id: "s-admin" },
+      roles: ["super_admin"],
+    });
 
     // Admin revokes entitlement
     const revokeRes = await entitlementsService.revokeEntitlement(adminCtx, {
@@ -223,7 +249,11 @@ describe("Phase 5 Gate Scenarios: Delivery & Subscriptions (P5.1..P5.9)", () => 
     expect(entAfter?.revokedAt).toBeDefined();
 
     // Revoked entitlement cannot issue download links
-    const buyerCtx = buildContext({ user: { id: buyer.id }, session: { id: "s-buyer" }, roles: ["customer"] });
+    const buyerCtx = buildContext({
+      user: { id: buyer.id },
+      session: { id: "s-buyer" },
+      roles: ["customer"],
+    });
     await expect(
       entitlementsService.issueDownloadLink(buyerCtx, {
         entitlementId: ent.id,

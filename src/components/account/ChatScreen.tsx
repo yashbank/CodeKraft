@@ -93,15 +93,23 @@ function DataCard({ card }: { card: ChatCard }) {
   }
 }
 
+type SseFrame =
+  | { event: "meta"; data: { usage: { userRemaining: number } } }
+  | { event: "delta"; data: { text: string } }
+  | { event: "citations"; data: { chunks: { title: string; href: string }[] } }
+  | { event: "lead_intent"; data: { name: string; email: string; need: string } }
+  | { event: "fallback"; data: { reason?: string; message?: string; menu: MenuNode[] } }
+  | { event: "error" | "done"; data: unknown };
+
 /** One SSE frame ("event: x\ndata: {...}") -> its event name + parsed payload, or null if malformed. */
-function parseSseChunk(chunk: string): { event: string; data: any } | null {
+function parseSseChunk(chunk: string): SseFrame | null {
   const evMatch = chunk.match(/^event: (.+)$/m);
   const dataMatch = chunk.match(/^data: (.+)$/m);
   const event = evMatch?.[1];
   const dataStr = dataMatch?.[1];
   if (!event || !dataStr) return null;
   try {
-    return { event, data: JSON.parse(dataStr) };
+    return { event, data: JSON.parse(dataStr) } as SseFrame;
   } catch {
     return null;
   }
@@ -272,13 +280,17 @@ export function ChatScreen({
             const text2 = assistantText;
             patch((m) => ({ ...m, text: text2 }));
           } else if (frame.event === "citations") {
-            const citations = frame.data.chunks.map((c: { title: string; href: string }) => ({
+            const citations = frame.data.chunks.map((c) => ({
               label: c.title,
               href: c.href,
             }));
             patch((m) => ({ ...m, citations }));
           } else if (frame.event === "lead_intent") {
-            setPendingLead({ name: frame.data.name, email: frame.data.email, need: frame.data.need });
+            setPendingLead({
+              name: frame.data.name,
+              email: frame.data.email,
+              need: frame.data.need,
+            });
           } else if (frame.event === "fallback") {
             if (frame.data.reason === "limit") setCapReached(true);
             if (!gotAnyDelta) {
@@ -289,10 +301,15 @@ export function ChatScreen({
                   "I couldn't find that in our site content. Try one of these, or talk to a human.",
               }));
             }
-            const chips = mapMenuNodesToChips(frame.data.menu as MenuNode[]);
+            const chips = mapMenuNodesToChips(frame.data.menu);
             setMessages((prev) => [
               ...prev,
-              { id: `fallback-menu-${Date.now()}`, role: "menu", chips, at: new Date().toISOString() },
+              {
+                id: `fallback-menu-${Date.now()}`,
+                role: "menu",
+                chips,
+                at: new Date().toISOString(),
+              },
             ]);
           } else if (frame.event === "error") {
             patch((m) => ({ ...m, interrupted: true }));
@@ -312,7 +329,11 @@ export function ChatScreen({
       setEscalate(false);
       push({
         role: "assistant",
-        card: { kind: "lead_capture", summary: summary || "Conversation handed over", queryHref: links.queries },
+        card: {
+          kind: "lead_capture",
+          summary: summary || "Conversation handed over",
+          queryHref: links.queries,
+        },
       });
       toast.success("Query created");
       setSummary("");
@@ -323,7 +344,11 @@ export function ChatScreen({
       setEscalate(false);
       push({
         role: "assistant",
-        card: { kind: "lead_capture", summary: summary || "Conversation handed over", queryHref: links.queries },
+        card: {
+          kind: "lead_capture",
+          summary: summary || "Conversation handed over",
+          queryHref: links.queries,
+        },
       });
       toast.success("Query created");
       setSummary("");
@@ -514,9 +539,7 @@ export function ChatScreen({
         {pendingLead ? (
           <li className="flex justify-start">
             <div className="max-w-[85%] space-y-3 rounded-lg border border-border bg-surface p-4 text-body-sm">
-              <p className="text-fg">
-                Want us to follow up on &ldquo;{pendingLead.need}&rdquo;?
-              </p>
+              <p className="text-fg">Want us to follow up on &ldquo;{pendingLead.need}&rdquo;?</p>
               <div className="flex gap-2">
                 <Button size="sm" onClick={confirmLead}>
                   Send to our team
@@ -530,7 +553,10 @@ export function ChatScreen({
         ) : null}
         {escalate ? (
           <li className="flex justify-start">
-            <form className="max-w-[85%] space-y-3 rounded-lg border border-border bg-surface p-4 text-body-sm" onSubmit={handleEscalateSubmit}>
+            <form
+              className="max-w-[85%] space-y-3 rounded-lg border border-border bg-surface p-4 text-body-sm"
+              onSubmit={handleEscalateSubmit}
+            >
               <p className="text-fg">
                 I&apos;ll hand this to the team as a query. Add a short summary?
               </p>
@@ -596,7 +622,13 @@ export function ChatScreen({
             />
           </div>
           {streaming ? (
-            <Button type="button" variant="secondary" size="icon-md" aria-label="Stop generating" disabled>
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon-md"
+              aria-label="Stop generating"
+              disabled
+            >
               <SquareIcon aria-hidden />
             </Button>
           ) : (

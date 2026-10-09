@@ -72,7 +72,11 @@ export function NewQuerySheet({ trigger }: { trigger: React.ReactNode }) {
     });
     setPending(false);
     if (result.ok) {
-      toast.success(result.data.existing ? "You already have an open thread for this" : "Query sent — we'll reply within a working day");
+      toast.success(
+        result.data.existing
+          ? "You already have an open thread for this"
+          : "Query sent — we'll reply within a working day",
+      );
       setOpen(false);
       form.reset();
       router.refresh();
@@ -109,7 +113,8 @@ export function NewQuerySheet({ trigger }: { trigger: React.ReactNode }) {
             <Label htmlFor="nq-files">Attachments (optional)</Label>
             <Input id="nq-files" type="file" multiple accept="image/*,.pdf,.zip" disabled />
             <p className="text-caption text-fg-muted">
-              Attachment upload isn&apos;t wired up yet — mention files in your message and we&apos;ll ask for them.
+              Attachment upload isn&apos;t wired up yet — mention files in your message and
+              we&apos;ll ask for them.
             </p>
           </div>
           <Button type="submit" className="w-full" disabled={pending}>

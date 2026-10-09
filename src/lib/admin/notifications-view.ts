@@ -10,7 +10,10 @@
  *  - `action` (an inline CTA button distinct from the row's own link) is always `undefined`: the
  *    module only stores one `link` per notification, not a separate labelled action.
  */
-import type { NotificationItem, NotificationType as ModuleNotificationType } from "@/modules/notifications/types";
+import type {
+  NotificationItem,
+  NotificationType as ModuleNotificationType,
+} from "@/modules/notifications/types";
 import type { AdminNotification, NotificationType } from "@/components/admin/types";
 
 export const NOTIFICATION_TYPE_CATEGORY: Record<ModuleNotificationType, NotificationType> = {

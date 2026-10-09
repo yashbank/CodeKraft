@@ -1,6 +1,10 @@
 import { ExpensesScreen } from "@/components/admin/finance/ExpensesScreen";
 import { getAdminRequestContext } from "@/lib/authz/admin-request-context";
-import { buildExpenseLedgerIndex, buildPartnerNameMaps, mapExpenseToRow } from "@/lib/admin/finance-view";
+import {
+  buildExpenseLedgerIndex,
+  buildPartnerNameMaps,
+  mapExpenseToRow,
+} from "@/lib/admin/finance-view";
 import { listExpensesQuery, listLedgerEntriesQuery } from "@/modules/finance/queries";
 import { listProductsAdminQuery } from "@/modules/catalog/queries";
 import { listPartnersQuery } from "@/modules/users/queries";
@@ -32,7 +36,9 @@ export default async function AdminExpensesPage() {
     expenseLedgerResult.ok ? expenseLedgerResult.data.items : [],
   );
 
-  const rows = expenses.map((exp) => mapExpenseToRow(exp, { productNames, userNames, ledgerIndex }));
+  const rows = expenses.map((exp) =>
+    mapExpenseToRow(exp, { productNames, userNames, ledgerIndex }),
+  );
 
   return (
     <ExpensesScreen

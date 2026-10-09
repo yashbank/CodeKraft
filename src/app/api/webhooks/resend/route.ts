@@ -73,11 +73,12 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ ok: true });
-  } catch (err: any) {
+  } catch (caught) {
+    const err = caught as { message?: string };
     console.error("Resend webhook error:", err);
     return NextResponse.json(
       { ok: false, error: err.message || "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

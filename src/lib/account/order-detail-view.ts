@@ -125,7 +125,11 @@ export function mapOrderDetailToOrderView(detail: OrderDetail): OrderView {
     : undefined;
 
   const failedReason: OrderView["failedReason"] =
-    order.status === "failed" ? "expired" : order.status === "cancelled" ? "cancelled_by_customer" : undefined;
+    order.status === "failed"
+      ? "expired"
+      : order.status === "cancelled"
+        ? "cancelled_by_customer"
+        : undefined;
 
   const subtotal: Money = money(order.subtotalMinor, currency);
   const tax: Money | null = order.taxMinor > 0 ? money(order.taxMinor, currency) : null;
@@ -156,7 +160,9 @@ export function mapOrderDetailToOrderView(detail: OrderDetail): OrderView {
     payment,
     refund,
     refundable:
-      order.status === "paid" || order.status === "fulfilled" || order.status === "partially_refunded",
+      order.status === "paid" ||
+      order.status === "fulfilled" ||
+      order.status === "partially_refunded",
     entitlementId: detail.entitlements[0]?.entitlementId,
     invoiceNumber: detail.invoice?.invoiceNo,
     postPurchaseInstructions: mapPostPurchaseInstructions(detail.instructionsHtml),

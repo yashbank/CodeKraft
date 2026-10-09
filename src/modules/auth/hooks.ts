@@ -92,10 +92,7 @@ export function afterHook(host: AuthHost) {
           .insert(userRoles)
           .values({ userId: newSession.user.id, roleKey: "super_admin" })
           .onConflictDoNothing();
-        await db
-          .update(users)
-          .set({ emailVerified: true })
-          .where(eq(users.id, newSession.user.id));
+        await db.update(users).set({ emailVerified: true }).where(eq(users.id, newSession.user.id));
       }
     }
 

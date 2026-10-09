@@ -74,10 +74,7 @@ describe("failPayment integration (API-PAY-04)", () => {
     expect(pmt!.status).toBe("failed");
     expect(pmt!.failureReason).toBe("Invalid UTR");
 
-    const [ord] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, orderRes.orderId));
+    const [ord] = await db.select().from(orders).where(eq(orders.id, orderRes.orderId));
     expect(ord!.status).toBe("pending_payment");
 
     // Email outbox check
@@ -137,10 +134,7 @@ describe("failPayment integration (API-PAY-04)", () => {
     expect(failRes.payment.status).toBe("failed");
     expect(failRes.order.status).toBe("cancelled");
 
-    const [ord] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, orderRes.orderId));
+    const [ord] = await db.select().from(orders).where(eq(orders.id, orderRes.orderId));
     expect(ord!.status).toBe("cancelled");
   });
 });

@@ -38,7 +38,9 @@ export function HeroPoster({
       <div className="absolute inset-x-0 bottom-0 p-6">
         <div className="flex items-center justify-between rounded-xl border border-white/10 bg-surface/80 p-4 backdrop-blur-md">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-cyan-400">Architecture Node</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-cyan-400">
+              Architecture Node
+            </p>
             <p className="text-sm font-medium text-fg">Production Engine & Digital Assets</p>
           </div>
           <span className="flex size-2.5 rounded-full bg-cyan-400 animate-pulse" />

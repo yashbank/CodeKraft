@@ -2,6 +2,7 @@
  * GST breakdown rules (D-1501, BR-08, MASTER_SPEC §7 "Tax before GST registration").
  */
 import type { GstBreakdown } from "./types";
+import { divRoundHalfUp, toSafeNumber } from "@/lib/money";
 
 export interface ComputeGstInput {
   buyerState?: string | null;
@@ -29,7 +30,7 @@ export function computeGstBreakdown(input: ComputeGstInput): GstBreakdown | unde
   const isIntraState = Boolean(bState && sState && bState === sState);
 
   if (isIntraState) {
-    const cgst = Math.round(input.taxMinor / 2);
+    const cgst = toSafeNumber(divRoundHalfUp(BigInt(input.taxMinor), 2n));
     const sgst = input.taxMinor - cgst;
     return {
       cgst_minor: cgst,

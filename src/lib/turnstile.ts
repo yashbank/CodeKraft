@@ -2,7 +2,7 @@
  * Cloudflare Turnstile verification utility (docs/09 §7, PHASE-06 P6.3).
  * Fail-closed: invalid token yields CAPTCHA_FAILED error.
  */
-import { AppError } from "@/lib/errors";
+import { AppError, ErrorCode } from "@/lib/errors";
 
 export interface TurnstileVerificationResult {
   success: boolean;
@@ -36,7 +36,7 @@ export async function verifyTurnstile(
   if (!secret) {
     // Fail-closed in production if secret missing
     if (process.env.NODE_ENV === "production") {
-      throw new AppError("CAPTCHA_FAILED", "Turnstile verification unavailable");
+      throw new AppError(ErrorCode.CAPTCHA_FAILED, "Turnstile verification unavailable");
     }
     return { success: true };
   }
@@ -62,19 +62,19 @@ export async function verifyTurnstile(
     }
 
     return { success: true };
-  } catch (err: any) {
+  } catch {
     return { success: false, error: "CAPTCHA_FAILED" };
   }
 }
 
 export function assertTurnstileVerified(result: TurnstileVerificationResult): void {
   if (!result.success) {
-    throw new AppError("CAPTCHA_FAILED", "Turnstile verification failed");
+    throw new AppError(ErrorCode.CAPTCHA_FAILED, "Turnstile verification failed");
   }
 }
 
 export function checkHoneypot(honeypot?: string | null): void {
   if (honeypot && honeypot.trim().length > 0) {
-    throw new AppError("BAD_REQUEST", "Bot submission detected");
+    throw new AppError(ErrorCode.VALIDATION, "Bot submission detected");
   }
 }

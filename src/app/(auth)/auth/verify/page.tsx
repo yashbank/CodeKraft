@@ -13,11 +13,7 @@ interface PageProps {
 export default async function VerifyEmailPage({ searchParams }: PageProps) {
   const { token, error } = await searchParams;
 
-  const state: VerifyEmailState = error
-    ? "expired"
-    : token
-    ? "verified"
-    : "pending";
+  const state: VerifyEmailState = error ? "expired" : token ? "verified" : "pending";
 
   return <VerifyEmailScreen state={state} />;
 }

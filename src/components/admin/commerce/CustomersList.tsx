@@ -46,11 +46,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  reinstateCustomer,
-  sendResetLink,
-  suspendCustomer,
-} from "@/modules/users/admin-mutations";
+import { reinstateCustomer, sendResetLink, suspendCustomer } from "@/modules/users/admin-mutations";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
 import { formatDate, initials, inr, timeAgo } from "../format";
@@ -103,7 +99,9 @@ export function CustomersList({
     setSubmitting(true);
     const input = { userId: statusDialog.customer.id, reason: reason.trim() };
     const result =
-      statusDialog.mode === "suspend" ? await suspendCustomer(input) : await reinstateCustomer(input);
+      statusDialog.mode === "suspend"
+        ? await suspendCustomer(input)
+        : await reinstateCustomer(input);
     setSubmitting(false);
 
     if (!result.ok) {
@@ -330,7 +328,8 @@ export function CustomersList({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {statusDialog?.mode === "suspend" ? "Suspend" : "Reinstate"} {statusDialog?.customer.name}?
+              {statusDialog?.mode === "suspend" ? "Suspend" : "Reinstate"}{" "}
+              {statusDialog?.customer.name}?
             </DialogTitle>
             <DialogDescription>
               {statusDialog?.mode === "suspend"

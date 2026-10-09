@@ -43,7 +43,10 @@ export default async function ProjectsRoute() {
   const logos: ClientLogo[] = logoRows.map((l) => ({ id: l.id, name: l.name }));
 
   const serviceRows = servicesResult.ok ? servicesResult.data : [];
-  const serviceOptions: ServiceOption[] = serviceRows.map((s) => ({ slug: s.slug, title: s.title }));
+  const serviceOptions: ServiceOption[] = serviceRows.map((s) => ({
+    slug: s.slug,
+    title: s.title,
+  }));
 
   return (
     <CaseStudiesPage

@@ -95,7 +95,9 @@ describe("finance scoping by admin role (docs/06 API-FIN-01, API-FIN-02)", () =>
 
     // 3. Super admin sees all partner lines (both partner A and partner B)
     const listResSuper = await financeService.listLedgerEntries(ctxSuperAdmin, { limit: 50 });
-    const partnerEntriesSuper = listResSuper.items.filter((e) => e.entryType === "partner_allocation");
+    const partnerEntriesSuper = listResSuper.items.filter(
+      (e) => e.entryType === "partner_allocation",
+    );
     expect(partnerEntriesSuper).toHaveLength(2);
 
     // 4. Admin B calling getOrderAllocation sees only their own line in lines[]
@@ -104,7 +106,9 @@ describe("finance scoping by admin role (docs/06 API-FIN-01, API-FIN-02)", () =>
     expect(allocViewB.items[0]?.lines[0]?.partnerId).toBe(partnerB.id);
 
     // 5. Super admin sees all lines in getOrderAllocation
-    const allocViewSuper = await financeService.getOrderAllocation(ctxSuperAdmin, { orderId: order.id });
+    const allocViewSuper = await financeService.getOrderAllocation(ctxSuperAdmin, {
+      orderId: order.id,
+    });
     expect(allocViewSuper.items[0]?.lines).toHaveLength(2);
   });
 });

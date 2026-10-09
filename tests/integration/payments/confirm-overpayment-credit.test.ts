@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { paymentsService } from "@/modules/payments/service";
 import { ordersService } from "@/modules/orders/service";
 import { orders, payments } from "../../../drizzle/schema/commerce";
-import { allocations, ledgerEntries } from "../../../drizzle/schema/finance";
+import { allocations } from "../../../drizzle/schema/finance";
 import { migrateTestDb } from "../../setup/migrate";
 import { truncateAll } from "../../setup/db";
 import { createAdmin, createPartner, createUser } from "../../factories/users";
@@ -58,10 +58,7 @@ describe("confirmPayment overpayment integration (FR-PAY-07, MASTER_SPEC §7)", 
       billing: { name: "Cust", email: customer.email, country: "IN" },
     });
 
-    const [savedOrder] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, orderRes.orderId));
+    const [savedOrder] = await db.select().from(orders).where(eq(orders.id, orderRes.orderId));
 
     const total = savedOrder!.totalMinor;
     const received = total + 1000;
@@ -84,9 +81,7 @@ describe("confirmPayment overpayment integration (FR-PAY-07, MASTER_SPEC §7)", 
     expect(pmt!.customerCreditMinor).toBe(1000);
 
     // Verify allocations are based on total / amountDue (not total + 1000)
-    const allocRows = await db
-      .select()
-      .from(allocations);
+    const allocRows = await db.select().from(allocations);
 
     const totalAllocated = allocRows.reduce((sum, a) => {
       const lineSum = (a.lines as any[]).reduce((s, l) => s + l.amount_minor, 0);

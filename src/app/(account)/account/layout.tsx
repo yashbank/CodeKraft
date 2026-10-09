@@ -4,11 +4,7 @@ import { AccountShellWrapper } from "@/components/account/AccountShellWrapper";
 
 export const dynamic = "force-dynamic";
 
-export default async function AccountAreaLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function AccountAreaLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session) {
     redirect("/auth/login?next=/account");

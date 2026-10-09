@@ -1,4 +1,4 @@
-import { AppError } from "@/lib/errors";
+import { AppError, ErrorCode } from "@/lib/errors";
 import type { LeadStatus } from "./types";
 
 const VALID_TRANSITIONS: Record<LeadStatus, readonly LeadStatus[]> = {
@@ -25,14 +25,14 @@ export function assertValidLeadStatusTransition(
 
   if (!canTransitionLeadStatus(from, to)) {
     throw new AppError(
-      "STATE_INVALID",
+      ErrorCode.STATE_INVALID,
       `Invalid lead status transition from '${from}' to '${to}'`,
     );
   }
 
   if (to === "lost") {
     if (!lostReason || lostReason.trim().length === 0) {
-      throw new AppError("VALIDATION", "lostReason is required when marking lead as lost");
+      throw new AppError(ErrorCode.VALIDATION, "lostReason is required when marking lead as lost");
     }
   }
 

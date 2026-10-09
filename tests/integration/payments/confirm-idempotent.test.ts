@@ -58,10 +58,7 @@ describe("confirmPayment idempotency integration (docs/06 §1.5)", () => {
       billing: { name: "Cust", email: customer.email, country: "IN" },
     });
 
-    const [savedOrder] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, orderRes.orderId));
+    const [savedOrder] = await db.select().from(orders).where(eq(orders.id, orderRes.orderId));
 
     // First confirmation
     await paymentsService.confirmPayment(adminCtx, {

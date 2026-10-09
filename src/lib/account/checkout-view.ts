@@ -12,7 +12,12 @@
  *    from. The "Renew" flow (an existing subscription hitting this same page) isn't wired in this
  *    pass -- flagged rather than guessed at.
  */
-import type { BillingDetails, CheckoutOffering, DeliveryType, PaymentProvider } from "@/components/account/types";
+import type {
+  BillingDetails,
+  CheckoutOffering,
+  DeliveryType,
+  PaymentProvider,
+} from "@/components/account/types";
 import type { BillingInput, CheckoutPreview } from "@/modules/orders/types";
 import type { CustomerProfileView, UserView } from "@/modules/users/types";
 
@@ -37,10 +42,13 @@ export function mapCheckoutPreviewToOffering(preview: CheckoutPreview): Checkout
   return {
     productName: preview.product.title,
     offeringName: preview.offering.title,
-    purchaseModelLine: PURCHASE_MODEL_LINE[preview.offering.purchaseModel] ?? preview.offering.purchaseModel,
+    purchaseModelLine:
+      PURCHASE_MODEL_LINE[preview.offering.purchaseModel] ?? preview.offering.purchaseModel,
     deliveryType: preview.offering.deliveryType as DeliveryType,
     unit: preview.subtotal,
-    taxLabel: preview.product.taxEnabled ? `GST (${(preview.taxRateBps / 100).toFixed(0)}%)` : "Tax",
+    taxLabel: preview.product.taxEnabled
+      ? `GST (${(preview.taxRateBps / 100).toFixed(0)}%)`
+      : "Tax",
     tax: preview.product.taxEnabled ? preview.tax : null,
     enabledMethods: toManualPaymentProviders(preview.enabledMethods),
     displayCurrency: preview.displayTotal.currency,

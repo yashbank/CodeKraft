@@ -36,7 +36,8 @@ export function WebVitals() {
 
     // Report basic page performance metric
     if (window.performance && window.performance.timing) {
-      const ttfb = window.performance.timing.responseStart - window.performance.timing.navigationStart;
+      const ttfb =
+        window.performance.timing.responseStart - window.performance.timing.navigationStart;
       if (ttfb > 0) {
         reportVital("TTFB", ttfb, ttfb < 800 ? "good" : "needs-improvement");
       }

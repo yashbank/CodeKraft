@@ -2,13 +2,16 @@
  * Order expiry service (docs/06 §3.3, BR-10, D-412, MASTER_SPEC §7 "Order failed").
  */
 import { and, eq, inArray, lt } from "drizzle-orm";
-import type { DbOrTx, TxCtx } from "@/lib/db";
+import type { TxCtx } from "@/lib/db";
 import { withTx } from "@/lib/db";
 import { orders, payments } from "../../../drizzle/schema/commerce";
 import { emailOutbox, notifications } from "../../../drizzle/schema/notifications";
 import type { ExpireOrdersResult } from "./types";
 
-export async function expirePendingOrders(now: Date = new Date(), outerTx?: TxCtx): Promise<ExpireOrdersResult> {
+export async function expirePendingOrders(
+  now: Date = new Date(),
+  outerTx?: TxCtx,
+): Promise<ExpireOrdersResult> {
   const runner = async (tx: TxCtx): Promise<ExpireOrdersResult> => {
     // 1. Find all pending_payment orders whose expires_at < now
     const expiredOrders = await tx

@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import type { RequestContext } from "@/lib/authz/context";
-import { type TxCtx, getDb } from "@/lib/db";
+import { type Db, getDb } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { users } from "../../../drizzle/schema/auth";
 import {
@@ -11,7 +11,6 @@ import {
   knowledgeChunks,
   promptVersions,
 } from "../../../drizzle/schema/chat";
-import { queries } from "../../../drizzle/schema/queries";
 import { leadsService } from "@/modules/leads/service";
 import { notificationsService } from "@/modules/notifications/service";
 import { queriesService } from "@/modules/queries/service";
@@ -55,17 +54,17 @@ const DEFAULT_PROMPT_TEXT =
   "You are CodeKraft Assistant, an AI assistant for CodeKraft software solutions.";
 
 export class DefaultChatService implements ChatService {
-  private _db?: any;
-  constructor(db?: any) {
+  private _db?: Db;
+  constructor(db?: Db) {
     this._db = db;
   }
-  private get db(): any {
+  private get db(): Db {
     return this._db ?? getDb();
   }
 
   async startConversation(
     ctx: RequestContext,
-    input: StartConversationInput,
+    _input: StartConversationInput,
   ): Promise<StartConversationResult> {
     if (!ctx.userId) {
       throw new AppError(ErrorCode.UNAUTHENTICATED, "Authentication required to use AI chat");
@@ -78,13 +77,11 @@ export class DefaultChatService implements ChatService {
     }
 
     // Active prompt version
-    let activePrompt = await this.db
-      .select()
-      .from(promptVersions)
-      .where(eq(promptVersions.isActive, true))
-      .limit(1);
+    let activePrompt = (
+      await this.db.select().from(promptVersions).where(eq(promptVersions.isActive, true)).limit(1)
+    )[0];
 
-    if (activePrompt.length === 0) {
+    if (!activePrompt) {
       // Seed initial default prompt version if none exists
       const [newVersion] = await this.db
         .insert(promptVersions)
@@ -96,7 +93,8 @@ export class DefaultChatService implements ChatService {
           createdBy: ctx.userId,
         })
         .returning();
-      activePrompt = [newVersion];
+      if (!newVersion) throw new AppError(ErrorCode.INTERNAL, "Insert returned no row");
+      activePrompt = newVersion;
     }
 
     const now = new Date();
@@ -109,10 +107,11 @@ export class DefaultChatService implements ChatService {
       .values({
         userId: ctx.userId,
         model: "claude-3-5-sonnet-20241022",
-        promptVersionId: activePrompt[0].id,
+        promptVersionId: activePrompt.id,
         purgeAfter,
       })
       .returning();
+    if (!conv) throw new AppError(ErrorCode.INTERNAL, "Insert returned no row");
 
     const todayStr = now.toISOString().slice(0, 10);
     const capCheck = await chatCapGuard.check(ctx.userId, todayStr);
@@ -120,10 +119,7 @@ export class DefaultChatService implements ChatService {
     return {
       conversationId: conv.id,
       menu: ROOT_MENU_NODES,
-      usage: {
-        userRemaining: capCheck.remainingUser ?? 30,
-        platformRemaining: capCheck.remainingPlatform ?? 500,
-      },
+      usage: capCheck.usage,
     };
   }
 
@@ -141,7 +137,7 @@ export class DefaultChatService implements ChatService {
 
     if (!capCheck.allowed) {
       // Emit notification once per day if platform cap
-      if (capCheck.reason === "platform_cap") {
+      if (capCheck.exceeded === "platform") {
         await notificationsService.emit(
           "admins",
           "chat.cap_reached",
@@ -173,13 +169,13 @@ export class DefaultChatService implements ChatService {
     // Increment caps before calling provider
     await chatCapGuard.increment(ctx.userId, today, this.db);
 
-    const conv = await this.db
+    const [conv] = await this.db
       .select()
       .from(conversations)
       .where(eq(conversations.id, input.conversationId))
       .limit(1);
 
-    if (conv.length === 0 || conv[0].userId !== ctx.userId) {
+    if (!conv || conv.userId !== ctx.userId) {
       throw new AppError(ErrorCode.NOT_FOUND, "Conversation not found");
     }
 
@@ -196,22 +192,22 @@ export class DefaultChatService implements ChatService {
       data: {
         messageId: `msg-${Date.now()}`,
         usage: {
-          userRemaining: (capCheck.remainingUser ?? 1) - 1,
-          platformRemaining: (capCheck.remainingPlatform ?? 1) - 1,
+          userRemaining: capCheck.usage.userRemaining - 1,
+          platformRemaining: capCheck.usage.platformRemaining - 1,
         },
       },
     };
 
-    const { systemPrompt, tools } = await buildChatPrompt([], conv[0].promptVersionId);
+    const { systemPrompt, tools } = await buildChatPrompt([], conv.promptVersionId);
 
     let fullAssistantText = "";
     let tokensIn = 0;
     let tokensOut = 0;
-    let stopReason: any = "end_turn";
+    let stopReason: Extract<LLMEvent, { type: "done" }>["stopReason"] = "end_turn";
 
     try {
       const stream = provider.stream(systemPrompt, [{ role: "user", content: input.content }], {
-        model: conv[0].model,
+        model: conv.model,
         maxTokens: 600,
         timeoutMs: 20000,
         tools,
@@ -268,7 +264,7 @@ export class DefaultChatService implements ChatService {
           stopReason,
         },
       };
-    } catch (err: any) {
+    } catch {
       await chatCapGuard.decrement(ctx.userId, today, this.db);
       yield {
         event: "fallback",
@@ -292,17 +288,17 @@ export class DefaultChatService implements ChatService {
     ctx: RequestContext,
     input: EscalateConversationInput,
   ): Promise<EscalateConversationResult> {
-    const conv = await this.db
+    const [conv] = await this.db
       .select()
       .from(conversations)
       .where(and(eq(conversations.id, input.conversationId), eq(conversations.userId, ctx.userId)))
       .limit(1);
 
-    if (conv.length === 0) {
+    if (!conv) {
       throw new AppError(ErrorCode.NOT_FOUND, "Conversation not found");
     }
 
-    if (conv[0].escalatedQueryId) {
+    if (conv.escalatedQueryId) {
       throw new AppError(ErrorCode.STATE_INVALID, "Conversation already escalated");
     }
 
@@ -310,7 +306,7 @@ export class DefaultChatService implements ChatService {
     const msgs = await this.db
       .select()
       .from(chatMessages)
-      .where(eq(chatMessages.conversationId, conv[0].id))
+      .where(eq(chatMessages.conversationId, conv.id))
       .orderBy(desc(chatMessages.createdAt))
       .limit(10);
 
@@ -321,7 +317,7 @@ export class DefaultChatService implements ChatService {
 
     const queryResult = await queriesService.createFromEscalation(
       {
-        conversationId: conv[0].id,
+        conversationId: conv.id,
         userId: ctx.userId,
         subject: input.subject ?? "Escalated from Chatbot",
         transcriptExcerpt: excerpt,
@@ -335,7 +331,7 @@ export class DefaultChatService implements ChatService {
         escalatedQueryId: queryResult.queryId,
         endedAt: new Date(),
       })
-      .where(eq(conversations.id, conv[0].id));
+      .where(eq(conversations.id, conv.id));
 
     return { queryId: queryResult.queryId };
   }
@@ -344,27 +340,37 @@ export class DefaultChatService implements ChatService {
     ctx: RequestContext,
     input: ConfirmLeadCaptureInput,
   ): Promise<{ leadId: string }> {
-    const conv = await this.db
+    const [conv] = await this.db
       .select()
       .from(conversations)
       .where(and(eq(conversations.id, input.conversationId), eq(conversations.userId, ctx.userId)))
       .limit(1);
 
-    if (conv.length === 0) {
+    if (!conv) {
       throw new AppError(ErrorCode.NOT_FOUND, "Conversation not found");
     }
 
-    if (conv[0].endedAt) {
+    if (conv.endedAt) {
       throw new AppError(ErrorCode.STATE_INVALID, "Conversation has ended");
     }
+
+    // name/email are optional on the card; fall back to the signed-in customer's own details.
+    const [me] = await this.db
+      .select({ name: users.name, email: users.email })
+      .from(users)
+      .where(eq(users.id, ctx.userId))
+      .limit(1);
+    if (!me) throw new AppError(ErrorCode.NOT_FOUND, "User not found");
+    const name = input.name ?? me.name ?? me.email;
+    const email = input.email ?? me.email;
 
     const leadRes = await leadsService.createFromChatbot(
       {
         source: "chatbot",
         conversationId: input.conversationId,
         userId: ctx.userId,
-        name: input.name,
-        email: input.email,
+        name,
+        email,
         message: input.need,
       },
       this.db,
@@ -373,7 +379,7 @@ export class DefaultChatService implements ChatService {
     await this.db.insert(chatMessages).values({
       conversationId: input.conversationId,
       role: "system",
-      content: `Lead captured for ${input.name} (${input.email})`,
+      content: `Lead captured for ${name} (${email})`,
     });
 
     return { leadId: leadRes.leadId };
@@ -444,7 +450,7 @@ export class DefaultChatService implements ChatService {
     return {
       items,
       total: items.length,
-      nextCursor: hasNext ? items[items.length - 1].conversationId : null,
+      nextCursor: hasNext ? (items.at(-1)?.conversationId ?? null) : null,
     };
   }
 
@@ -502,43 +508,43 @@ export class DefaultChatService implements ChatService {
     return {
       items,
       total: items.length,
-      nextCursor: hasNext ? items[items.length - 1].conversationId : null,
+      nextCursor: hasNext ? (items.at(-1)?.conversationId ?? null) : null,
     };
   }
 
   async getTranscript(ctx: RequestContext, input: GetTranscriptInput): Promise<Transcript> {
-    const conv = await this.db
+    const [conv] = await this.db
       .select()
       .from(conversations)
       .where(eq(conversations.id, input.conversationId))
       .limit(1);
 
-    if (conv.length === 0) {
+    if (!conv) {
       throw new AppError(ErrorCode.NOT_FOUND, "Conversation not found");
     }
 
     const msgs = await this.db
       .select()
       .from(chatMessages)
-      .where(eq(chatMessages.conversationId, conv[0].id))
+      .where(eq(chatMessages.conversationId, conv.id))
       .orderBy(desc(chatMessages.createdAt));
 
     return {
       conversation: {
-        conversationId: conv[0].id,
-        userId: conv[0].userId,
-        startedAt: conv[0].startedAt.toISOString(),
-        endedAt: conv[0].endedAt ? conv[0].endedAt.toISOString() : null,
-        escalatedQueryId: conv[0].escalatedQueryId,
+        conversationId: conv.id,
+        userId: conv.userId,
+        startedAt: conv.startedAt.toISOString(),
+        endedAt: conv.endedAt ? conv.endedAt.toISOString() : null,
+        escalatedQueryId: conv.escalatedQueryId,
         messageCount: msgs.length,
         lastMessagePreview: msgs[0]?.content ?? null,
-        model: conv[0].model,
-        promptVersionId: conv[0].promptVersionId,
-        purgeAfter: conv[0].purgeAfter,
+        model: conv.model,
+        promptVersionId: conv.promptVersionId,
+        purgeAfter: conv.purgeAfter,
       },
       messages: msgs.map((m) => ({
         messageId: m.id,
-        role: m.role as any,
+        role: m.role,
         content: m.content,
         tokensIn: m.tokensIn,
         tokensOut: m.tokensOut,
@@ -555,18 +561,23 @@ export class DefaultChatService implements ChatService {
   }
 
   async listPromptVersions(
-    ctx: RequestContext,
-    input: ListPromptVersionsInput,
+    _ctx: RequestContext,
+    _input: ListPromptVersionsInput,
   ): Promise<PromptVersionsResult> {
-    const rows = await this.db.select().from(promptVersions).orderBy(desc(promptVersions.version));
+    const rows = await this.db
+      .select({ prompt: promptVersions, creatorName: users.name })
+      .from(promptVersions)
+      .leftJoin(users, eq(promptVersions.createdBy, users.id))
+      .orderBy(desc(promptVersions.version));
 
     return {
-      items: rows.map((p) => ({
+      items: rows.map(({ prompt: p, creatorName }) => ({
         promptVersionId: p.id,
         name: p.name,
         version: p.version,
         isActive: p.isActive,
         systemPrompt: p.systemPrompt,
+        createdBy: p.createdBy ? { id: p.createdBy, name: creatorName } : null,
         createdAt: p.createdAt.toISOString(),
       })),
     };
@@ -615,6 +626,7 @@ export class DefaultChatService implements ChatService {
         createdBy: ctx.userId,
       })
       .returning();
+    if (!row) throw new AppError(ErrorCode.INTERNAL, "Insert returned no row");
 
     return {
       promptVersionId: row.id,
@@ -622,6 +634,7 @@ export class DefaultChatService implements ChatService {
       version: row.version,
       isActive: row.isActive,
       systemPrompt: row.systemPrompt,
+      createdBy: row.createdBy ? { id: row.createdBy, name: null } : null,
       createdAt: row.createdAt.toISOString(),
     };
   }
@@ -678,8 +691,8 @@ export class DefaultChatService implements ChatService {
    * rather than fabricating a rebuild; the admin UI disables the "Rebuild" action and says so.
    */
   async reindexKnowledge(
-    ctx: RequestContext,
-    input: ReindexKnowledgeInput,
+    _ctx: RequestContext,
+    _input: ReindexKnowledgeInput,
   ): Promise<ReindexResult> {
     const rows = await this.db.select({ id: knowledgeChunks.id }).from(knowledgeChunks);
     return { chunks: rows.length };
@@ -732,20 +745,22 @@ export class DefaultChatService implements ChatService {
     return {
       status: "ok",
       detail: {
+        conversations: conversationsPurged,
+        messages: 0,
         conversationsPurged,
         messagesPurged: 0,
-        jobId: job.jobId,
       },
     };
   }
 
-  async runKnowledgeReindexJob(job: JobContext): Promise<JobOutcome<KnowledgeReindexDetail>> {
+  async runKnowledgeReindexJob(_job: JobContext): Promise<JobOutcome<KnowledgeReindexDetail>> {
     return {
       status: "ok",
       detail: {
+        chunks: 0,
+        bySource: {},
         reindexed: 0,
         errors: 0,
-        jobId: job.jobId,
       },
     };
   }
@@ -753,7 +768,7 @@ export class DefaultChatService implements ChatService {
 
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
 
-export function createChatService(db?: any): ChatService {
+export function createChatService(db?: Db): ChatService {
   return new DefaultChatService(db);
 }
 
@@ -762,15 +777,23 @@ export const chatService = new DefaultChatService();
 export function createNotImplementedChatService(): ChatService {
   return createNotImplemented<ChatService>("chat", "P6", {
     startConversation: "async",
-    handleMenuIntent: "async",
-    sendMessage: "async",
+    menuIntent: "async",
+    sendMessage: "sync",
     escalateConversation: "async",
     confirmLeadCapture: "async",
+    endConversation: "async",
+    listMyConversations: "async",
+    listConversationsAdmin: "async",
+    getTranscript: "async",
+    listPromptVersions: "async",
+    seedDefaultPromptVersion: "async",
     createPromptVersion: "async",
     activatePromptVersion: "async",
     rollbackPromptVersion: "async",
     reindexKnowledge: "async",
-    streamTurn: "async",
-    getMonitorData: "async",
+    purgeConversation: "async",
+    dryRun: "async",
+    runKnowledgeReindexJob: "async",
+    runRetentionPurgeJob: "async",
   });
 }

@@ -367,7 +367,11 @@ export function ExpensesScreen({
                   className="text-right font-mono tnum"
                 />
               </Field>
-              <Field id="ex-currency" label="Currency" hint="Converted to INR on the ledger at posting.">
+              <Field
+                id="ex-currency"
+                label="Currency"
+                hint="Converted to INR on the ledger at posting."
+              >
                 <Select value={currency} onValueChange={(v) => setCurrency(v as Currency)}>
                   <SelectTrigger id="ex-currency">
                     <SelectValue />
@@ -416,8 +420,8 @@ export function ExpensesScreen({
                 aria-live="polite"
                 className="rounded-md bg-elevated px-3 py-2 text-body-sm"
               >
-                Estimated split (illustrative 50/30 example) − partner A {inr(preview[0] ?? 0)} · partner B{" "}
-                {inr(preview[1] ?? 0)}
+                Estimated split (illustrative 50/30 example) − partner A {inr(preview[0] ?? 0)} ·
+                partner B {inr(preview[1] ?? 0)}
               </p>
             ) : null}
             <div className="rounded-lg border-2 border-dashed border-border-strong p-4 text-center text-body-sm text-fg-muted">

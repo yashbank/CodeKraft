@@ -294,9 +294,7 @@ describe("ProductEditor — media reorder (overnight item 3)", () => {
     await clickTab(/^Media,/);
 
     expect(screen.getByRole("button", { name: "Move hero-cover.webp up" })).toBeDisabled();
-    expect(
-      screen.getByRole("button", { name: "Move fitdesk-overview.pdf down" }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Move fitdesk-overview.pdf down" })).toBeDisabled();
 
     fireEvent.click(screen.getByRole("button", { name: "Move hero-cover.webp down" }));
 

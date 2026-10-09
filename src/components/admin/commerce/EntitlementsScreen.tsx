@@ -368,7 +368,11 @@ export function EntitlementsScreen({
                                 disabled: !e.downloadCap || submitting,
                                 onSelect: () => void doResetDownloads(e),
                               },
-                              { label: "Extend", disabled: submitting, onSelect: () => void doExtend(e) },
+                              {
+                                label: "Extend",
+                                disabled: submitting,
+                                onSelect: () => void doExtend(e),
+                              },
                               { label: "Cancel subscription", disabled: !e.subscription },
                               {
                                 label: "Revoke",

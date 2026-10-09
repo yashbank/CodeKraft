@@ -72,13 +72,10 @@ describe("applyRefund — credit note numbering", () => {
       policyException: false,
     });
 
-    await approvalsService.approveRequest(ctx2, { approvalRequestId, comment: null });
+    await approvalsService.approveRequest(ctx2, { approvalRequestId });
 
     // Check that credit note exists and has gapless number
-    const [refundRow] = await db
-      .select()
-      .from(refunds)
-      .where(eq(refunds.orderId, order.id));
+    const [refundRow] = await db.select().from(refunds).where(eq(refunds.orderId, order.id));
 
     expect(refundRow?.creditNoteId).not.toBeNull();
 

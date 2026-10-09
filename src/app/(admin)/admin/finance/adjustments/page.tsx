@@ -1,6 +1,10 @@
 import { AdjustmentsScreen } from "@/components/admin/finance/AdjustmentsScreen";
 import { getAdminRequestContext } from "@/lib/authz/admin-request-context";
-import { buildPartnerNameMaps, mapApprovalToAdjustmentRow, mapPartnerBalanceToRow } from "@/lib/admin/finance-view";
+import {
+  buildPartnerNameMaps,
+  mapApprovalToAdjustmentRow,
+  mapPartnerBalanceToRow,
+} from "@/lib/admin/finance-view";
 import { getPartnerBalancesQuery, listLedgerEntriesQuery } from "@/modules/finance/queries";
 import { listApprovalsAction } from "@/modules/approvals/queries";
 import { listPartnersQuery } from "@/modules/users/queries";
@@ -17,7 +21,8 @@ export default async function AdminAdjustmentsPage() {
   ]);
 
   const approvals = approvalsResult.ok ? approvalsResult.data.items : [];
-  const partnerViews = "data" in partnersResult && partnersResult.ok ? partnersResult.data.items : [];
+  const partnerViews =
+    "data" in partnersResult && partnersResult.ok ? partnersResult.data.items : [];
   const { byPartnerId: partnerNames, byUserId: userNames } = buildPartnerNameMaps(partnerViews);
   const balances = "data" in balancesResult && balancesResult.ok ? balancesResult.data : [];
   const balanceByPartnerId = new Map(balances.map((b) => [b.partnerId, b.balanceInrMinor]));

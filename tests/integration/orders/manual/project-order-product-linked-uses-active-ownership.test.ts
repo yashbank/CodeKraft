@@ -83,13 +83,7 @@ describe("Project order product-linked line uses active ownership (API-COM-07, M
     // If an approval request was created, dual-approve it
     if (res.approvalRequestId) {
       await withTx(async (tx) => {
-        await approvalsService.decide(
-          res.approvalRequestId!,
-          admin2.id,
-          "approve",
-          "Sign-off",
-          tx,
-        );
+        await approvalsService.decide(res.approvalRequestId!, admin2.id, "approve", "Sign-off", tx);
       });
     } else {
       // Even if no manual snapshot, payments require splitApprovalRequestId for project orders
@@ -98,11 +92,7 @@ describe("Project order product-linked line uses active ownership (API-COM-07, M
 
     // Create payment intent
     const intent = await withTx(async (tx) => {
-      return await paymentsService.createIntentForOrder(
-        res.orderId,
-        "manual_bank",
-        tx,
-      );
+      return await paymentsService.createIntentForOrder(res.orderId, "manual_bank", tx);
     });
 
     // If an approval request exists, confirm payment; otherwise approve first

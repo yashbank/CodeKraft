@@ -23,7 +23,11 @@ export function Preview({ state }: { state: string }) {
       customerEmail={customer.email}
       canAccept={state !== "readonly"}
       now={NOW}
-      links={{ newQuery: DEV_LINKS.queries, switchAccount: `${DEV_LINKS.login}?state=default`, dashboard: DEV_LINKS.purchases }}
+      links={{
+        newQuery: DEV_LINKS.queries,
+        switchAccount: `${DEV_LINKS.login}?state=default`,
+        dashboard: DEV_LINKS.purchases,
+      }}
       loading={state === "loading"}
     />
   );

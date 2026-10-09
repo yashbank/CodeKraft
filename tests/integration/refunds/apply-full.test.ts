@@ -8,7 +8,6 @@ import { paymentsService } from "@/modules/payments/service";
 import { approvalsService } from "@/modules/approvals/service";
 import { buildContext } from "@/lib/authz/context";
 import { orders, payments, refunds } from "../../../drizzle/schema/commerce";
-import { users } from "../../../drizzle/schema/auth";
 import { ledgerEntries } from "../../../drizzle/schema/finance";
 import { migrateTestDb } from "../../setup/migrate";
 import { truncateAll } from "../../setup/db";
@@ -85,22 +84,15 @@ describe("applyRefund — full refund AC", () => {
 
     await approvalsService.approveRequest(approveCtx, {
       approvalRequestId,
-      comment: null,
     });
 
     // Check payment → refunded
-    const [updatedPayment] = await db
-      .select()
-      .from(payments)
-      .where(eq(payments.id, payment.id));
+    const [updatedPayment] = await db.select().from(payments).where(eq(payments.id, payment.id));
     expect(updatedPayment?.status).toBe("refunded");
     expect(updatedPayment?.amountRefundedMinor).toBe(20_000);
 
     // Check order → refunded
-    const [updatedOrder] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, order.id));
+    const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, order.id));
     expect(updatedOrder?.status).toBe("refunded");
 
     // Check ledger: all entries (sale + refund) net to zero per order
@@ -113,10 +105,7 @@ describe("applyRefund — full refund AC", () => {
     expect(total).toBe(0);
 
     // Verify refund row exists with executedAt and creditNoteId set
-    const [refundRow] = await db
-      .select()
-      .from(refunds)
-      .where(eq(refunds.orderId, order.id));
+    const [refundRow] = await db.select().from(refunds).where(eq(refunds.orderId, order.id));
     expect(refundRow?.executedAt).not.toBeNull();
     expect(refundRow?.creditNoteId).not.toBeNull();
   });

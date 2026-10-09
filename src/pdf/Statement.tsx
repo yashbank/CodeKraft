@@ -21,16 +21,31 @@ export function StatementDocument(props: StatementProps) {
   const formatMoney = (minor: number) => (minor / 100).toFixed(2);
 
   return (
-    <div style={{ backgroundColor: "#ffffff", color: "#111827", padding: "40px", fontFamily: "sans-serif" }}>
-      <header style={{ borderBottom: "1px solid #e5e7eb", paddingBottom: "20px", marginBottom: "20px" }}>
+    <div
+      style={{
+        backgroundColor: "#ffffff",
+        color: "#111827",
+        padding: "40px",
+        fontFamily: "sans-serif",
+      }}
+    >
+      <header
+        style={{ borderBottom: "1px solid #e5e7eb", paddingBottom: "20px", marginBottom: "20px" }}
+      >
         <h1 style={{ fontSize: "24px", fontWeight: "bold", margin: 0 }}>PARTNER STATEMENT</h1>
         <p style={{ margin: "5px 0", color: "#6b7280" }}>Partner: {props.partnerName}</p>
-        <p style={{ margin: "5px 0", color: "#6b7280" }}>Period: {props.dateFrom} to {props.dateTo}</p>
+        <p style={{ margin: "5px 0", color: "#6b7280" }}>
+          Period: {props.dateFrom} to {props.dateTo}
+        </p>
       </header>
 
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px" }}>
-        <span>Opening Balance: {props.currency} {formatMoney(props.openingBalanceMinor)}</span>
-        <span>Closing Balance: {props.currency} {formatMoney(props.closingBalanceMinor)}</span>
+        <span>
+          Opening Balance: {props.currency} {formatMoney(props.openingBalanceMinor)}
+        </span>
+        <span>
+          Closing Balance: {props.currency} {formatMoney(props.closingBalanceMinor)}
+        </span>
       </div>
 
       <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "30px" }}>
@@ -48,7 +63,9 @@ export function StatementDocument(props: StatementProps) {
               <td style={{ padding: "8px" }}>{line.date}</td>
               <td style={{ padding: "8px" }}>{line.type}</td>
               <td style={{ padding: "8px" }}>{line.description}</td>
-              <td style={{ padding: "8px", textAlign: "right" }}>{formatMoney(line.amountMinor)}</td>
+              <td style={{ padding: "8px", textAlign: "right" }}>
+                {formatMoney(line.amountMinor)}
+              </td>
             </tr>
           ))}
         </tbody>

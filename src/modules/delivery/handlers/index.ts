@@ -1,7 +1,4 @@
-import {
-  createDeliveryHandlerRegistry,
-  type DeliveryHandlerRegistry,
-} from "../handler";
+import { createDeliveryHandlerRegistry, type DeliveryHandlerRegistry } from "../handler";
 import { downloadDeliveryHandler } from "./download";
 import { licenseDeliveryHandler } from "./license";
 import { saasDeliveryHandler } from "./saas";

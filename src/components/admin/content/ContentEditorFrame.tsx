@@ -127,33 +127,33 @@ export function ContentEditorFrame({
         {panel ? <aside className="space-y-4">{panel}</aside> : null}
       </div>
       {hideSaveBar ? null : (
-      <div className="sticky bottom-0 mt-6 -mx-4 flex items-center gap-3 border-t border-border bg-canvas px-4 py-3 lg:-mx-6 lg:px-6">
-        <span className="text-caption text-fg-muted" aria-live="polite">
-          {dirty ? "Unsaved changes" : `Saved ${savedAgoSeconds} s ago`}
-        </span>
-        <span className="ml-auto flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={!dirty}
-            onClick={() => {
-              setDirty(false);
-              toast("Changes discarded");
-            }}
-          >
-            Discard
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => {
-              setDirty(false);
-              (onSave ?? (() => toast.success("Saved")))();
-            }}
-          >
-            {saveLabel}
-          </Button>
-        </span>
-      </div>
+        <div className="sticky bottom-0 mt-6 -mx-4 flex items-center gap-3 border-t border-border bg-canvas px-4 py-3 lg:-mx-6 lg:px-6">
+          <span className="text-caption text-fg-muted" aria-live="polite">
+            {dirty ? "Unsaved changes" : `Saved ${savedAgoSeconds} s ago`}
+          </span>
+          <span className="ml-auto flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={!dirty}
+              onClick={() => {
+                setDirty(false);
+                toast("Changes discarded");
+              }}
+            >
+              Discard
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                setDirty(false);
+                (onSave ?? (() => toast.success("Saved")))();
+              }}
+            >
+              {saveLabel}
+            </Button>
+          </span>
+        </div>
       )}
     </>
   );

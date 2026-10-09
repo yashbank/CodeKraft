@@ -1,11 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import {
-  BLOG_POSTS,
-  CASE_STUDIES,
-  LEGAL_NAV,
-  PRODUCTS,
-} from "@/app/dev/screens/_fixtures/site";
+import { BLOG_POSTS, CASE_STUDIES, LEGAL_NAV, PRODUCTS } from "@/app/dev/screens/_fixtures/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://codekraft.in";
@@ -78,11 +73,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.5,
   }));
 
-  return [
-    ...staticRoutes,
-    ...productRoutes,
-    ...caseStudyRoutes,
-    ...blogRoutes,
-    ...legalRoutes,
-  ];
+  return [...staticRoutes, ...productRoutes, ...caseStudyRoutes, ...blogRoutes, ...legalRoutes];
 }

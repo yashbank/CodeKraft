@@ -29,15 +29,16 @@ export default async function AdminDashboardRoute() {
   const isSuperAdmin = ctx.roles.includes("super_admin");
   const firstName = session?.user.name?.split(" ")[0] || "there";
 
-  const [publishRes, splitRes, queriesRes, leadsRes, customersRes, productsRes] =
-    await Promise.all([
+  const [publishRes, splitRes, queriesRes, leadsRes, customersRes, productsRes] = await Promise.all(
+    [
       listApprovalsAction({ type: "product.publish", status: "pending", limit: 10 }, ctx),
       listApprovalsAction({ type: "project_order.split", status: "pending", limit: 10 }, ctx),
       listQueriesAdminQuery({ limit: 100, filters: { status: ["open"] } }, ctx),
       listLeadsQuery({ limit: 100 }, ctx),
       listCustomersQuery({ limit: 100 }, ctx),
       listProductsAdminQuery({ limit: 100 }, ctx),
-    ]);
+    ],
+  );
 
   const publishApprovals = publishRes.ok ? publishRes.data.items.map(approvalItem) : [];
   const splitApprovals = splitRes.ok ? splitRes.data.items.map(approvalItem) : [];

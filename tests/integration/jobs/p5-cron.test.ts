@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { retentionPurgeTokensJob, usersAnonymiseSweepJob } from "@/jobs/retention";
-import { entitlementsExpireJob, subscriptionsRemindGraceSuspendJob } from "@/jobs/subscriptions";
+import { entitlementsExpireJob } from "@/jobs/subscriptions";
 import { sessions, users, verifications } from "../../../drizzle/schema/auth";
 import { entitlements } from "../../../drizzle/schema/delivery";
 import { migrateTestDb } from "../../setup/migrate";
@@ -82,7 +82,7 @@ describe("Phase 5 Cron Jobs: Subscriptions & Retention (docs/06 §3.3)", () => {
     });
 
     const res = await entitlementsExpireJob.run(new Date("2026-01-02T00:00:00Z"));
-    expect(res.ok).toBe(true);
+    expect(res.status).toBe("ok");
     expect(res.detail.expired).toBe(1);
 
     const [entAfter] = await db.select().from(entitlements).where(eq(entitlements.id, ent.id));

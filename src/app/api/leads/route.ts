@@ -28,14 +28,15 @@ export async function POST(req: NextRequest) {
       reference: `CK-L-${result.leadId.slice(0, 8).toUpperCase()}`,
       leadId: result.leadId,
     });
-  } catch (error: any) {
+  } catch (caught) {
+    const error = caught as { message?: string; status?: number };
     console.error("Failed to create lead:", error);
     return NextResponse.json(
       {
         ok: false,
         error: error.message || "Failed to submit inquiry",
       },
-      { status: error.status || 400 }
+      { status: error.status || 400 },
     );
   }
 }

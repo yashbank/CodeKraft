@@ -62,7 +62,12 @@ export async function listActiveAdminUsers(database: DbOrTx): Promise<AdminDirec
     })
     .from(users)
     .innerJoin(userRoles, eq(users.id, userRoles.userId))
-    .where(and(eq(users.status, "active"), inArray(userRoles.roleKey, ["super_admin", "admin", "staff"])));
+    .where(
+      and(
+        eq(users.status, "active"),
+        inArray(userRoles.roleKey, ["super_admin", "admin", "staff"]),
+      ),
+    );
 
   const byId = new Map<string, AdminDirectoryEntry>();
   for (const r of rows) {

@@ -67,7 +67,7 @@ describe("applyRefund — payment state machine", () => {
       revokeEntitlements: false,
       policyException: false,
     });
-    await approvalsService.approveRequest(ctx2, { approvalRequestId, comment: null });
+    await approvalsService.approveRequest(ctx2, { approvalRequestId });
 
     // Second full refund attempt must be refused (already refunded in full)
     await expect(

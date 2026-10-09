@@ -556,7 +556,12 @@ export function ManualOrderForm({
               </div>
             </div>
             <Field id="mo-notes" label="Notes on invoice" optional>
-              <Textarea id="mo-notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+              <Textarea
+                id="mo-notes"
+                rows={2}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
             </Field>
           </fieldset>
 

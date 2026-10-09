@@ -10,7 +10,7 @@ import { createProduct } from "../../factories/catalog";
 import { createOffering } from "../../factories/offerings";
 import { createOwnership } from "../../factories/ownership";
 import { buildContext } from "@/lib/authz/context";
-import { AppError, ErrorCode } from "@/lib/errors";
+import { ErrorCode } from "@/lib/errors";
 
 describe("cancelMyOrder integration (API-COM-03, docs/06 §2.3)", () => {
   beforeAll(async () => {
@@ -66,7 +66,10 @@ describe("cancelMyOrder integration (API-COM-03, docs/06 §2.3)", () => {
     const [dbOrder] = await db.select().from(orders).where(eq(orders.id, createRes.orderId));
     expect(dbOrder!.status).toBe("cancelled");
 
-    const [dbPayment] = await db.select().from(payments).where(eq(payments.orderId, createRes.orderId));
+    const [dbPayment] = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.orderId, createRes.orderId));
     expect(dbPayment!.status).toBe("failed");
     expect(dbPayment!.failureReason).toBe("cancelled");
   });

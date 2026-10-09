@@ -1,7 +1,7 @@
 /**
  * Order state machine and fulfilment evaluator (docs/03 §3.1, MASTER_SPEC §7 "Order fulfilled").
  */
-import { and, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import type { TxCtx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { orderItems, orders } from "../../../drizzle/schema/commerce";

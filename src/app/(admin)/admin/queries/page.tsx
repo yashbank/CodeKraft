@@ -1,7 +1,16 @@
 import { QueriesInbox } from "@/components/admin/crm/QueriesInbox";
 import { getAdminRequestContext } from "@/lib/authz/admin-request-context";
-import { buildAdminNameMap, mapCustomerOptions, mapQueryRow, mapQueryThread } from "@/lib/admin/queries-view";
-import { listAssignableAdminsQuery, listQueriesAdminQuery, getQueryAdminQuery } from "@/modules/queries/queries";
+import {
+  buildAdminNameMap,
+  mapCustomerOptions,
+  mapQueryRow,
+  mapQueryThread,
+} from "@/lib/admin/queries-view";
+import {
+  listAssignableAdminsQuery,
+  listQueriesAdminQuery,
+  getQueryAdminQuery,
+} from "@/modules/queries/queries";
 import { listCustomersQuery } from "@/modules/users/queries";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { InboxIcon } from "lucide-react";
@@ -21,10 +30,16 @@ export default async function AdminQueriesPage() {
 
   const admins = adminsResult.ok ? adminsResult.data.items : [];
   const adminMap = buildAdminNameMap(admins);
-  const queries = queriesResult.ok ? queriesResult.data.items.map((q) => mapQueryRow(q, adminMap)) : [];
+  const queries = queriesResult.ok
+    ? queriesResult.data.items.map((q) => mapQueryRow(q, adminMap))
+    : [];
   const customers = mapCustomerOptions(
     "data" in customersResult && customersResult.ok
-      ? customersResult.data.items.map((c) => ({ id: c.user.id, name: c.user.name, email: c.user.email }))
+      ? customersResult.data.items.map((c) => ({
+          id: c.user.id,
+          name: c.user.name,
+          email: c.user.email,
+        }))
       : [],
   );
 
@@ -33,7 +48,11 @@ export default async function AdminQueriesPage() {
 
   if (!threadResult || !threadResult.ok) {
     return (
-      <EmptyState icon={InboxIcon} title="No queries yet" body="Customer and visitor queries will appear here." />
+      <EmptyState
+        icon={InboxIcon}
+        title="No queries yet"
+        body="Customer and visitor queries will appear here."
+      />
     );
   }
 

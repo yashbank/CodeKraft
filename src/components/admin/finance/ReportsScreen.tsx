@@ -106,7 +106,12 @@ export function ReportsScreen({
     }
     setGenerating(true);
     const { dateFrom, dateTo } = periodRange(stPeriod);
-    const result = await exportStatement({ partnerId: stPartnerId, dateFrom, dateTo, format: stFormat });
+    const result = await exportStatement({
+      partnerId: stPartnerId,
+      dateFrom,
+      dateTo,
+      format: stFormat,
+    });
     setGenerating(false);
     if (!result.ok) {
       toast.error(result.error.message);

@@ -16,10 +16,9 @@ import { approvalsService } from "@/modules/approvals/service";
 import { ownershipService } from "@/modules/ownership/service";
 import { reconcileFinance } from "@/modules/finance/reconcile";
 import { entitlementsStub } from "../../stubs/entitlements";
-import { orders, orderItems, payments, refunds } from "../../../drizzle/schema/commerce";
+import { orders, payments } from "../../../drizzle/schema/commerce";
 import { invoices, creditNotes } from "../../../drizzle/schema/invoices";
-import { ledgerEntries, allocations, payouts } from "../../../drizzle/schema/finance";
-import { approvalRequests } from "../../../drizzle/schema/approvals";
+import { ledgerEntries } from "../../../drizzle/schema/finance";
 import { migrateTestDb } from "../../setup/migrate";
 import { truncateAll } from "../../setup/db";
 import { createAdmin, createPartner, createUser } from "../../factories/users";
@@ -40,7 +39,7 @@ describe("Phase 4 Commerce & Finance Scenarios (S-02..S-22, SA-08..SA-24)", () =
     entitlementsStub.reset();
 
     const admin1 = await createAdmin();
-    const admin2 = await createAdmin();
+    await createAdmin();
     const partner = await createPartner({ userId: admin1.id });
     const product = await createProduct({ createdBy: admin1.id });
 
@@ -88,7 +87,7 @@ describe("Phase 4 Commerce & Finance Scenarios (S-02..S-22, SA-08..SA-24)", () =
     // 2. Submit payment reference
     await paymentsService.submitPaymentReference(buyerCtx, {
       paymentId: orderRes.payment.paymentId,
-      customerReference: "UTR-TEST-123456",
+      reference: "UTR-TEST-123456",
     });
 
     // 3. Admin confirms with shortfall of 2500 paise
@@ -180,6 +179,8 @@ describe("Phase 4 Commerce & Finance Scenarios (S-02..S-22, SA-08..SA-24)", () =
       paymentId: pmt.id,
       amountMinor: 30000,
       reason: "Customer requested cancellation",
+      revokeEntitlements: true,
+      policyException: false,
     });
 
     expect(refundProp.approvalRequestId).toBeDefined();

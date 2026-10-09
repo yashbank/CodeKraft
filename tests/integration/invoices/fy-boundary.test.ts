@@ -1,5 +1,4 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { invoiceSequences } from "../../../drizzle/schema/invoices";
 import { computeFy, nextInvoiceNumber } from "@/modules/invoices/numbering";

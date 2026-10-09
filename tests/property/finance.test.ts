@@ -42,7 +42,10 @@ const arbPartners = fc
         }));
       }),
   )
-  .filter((lines) => lines.every((l) => l.shareBps > 0) && lines.reduce((a, b) => a + b.shareBps, 0) === 10_000);
+  .filter(
+    (lines) =>
+      lines.every((l) => l.shareBps > 0) && lines.reduce((a, b) => a + b.shareBps, 0) === 10_000,
+  );
 
 // Order item deduction parameters
 const arbItemFinances = fc
@@ -55,7 +58,13 @@ const arbItemFinances = fc
     gatewayFeeBps: fc.integer({ min: 0, max: 300 }), // 0 - 3% gateway fee
     companyCutBps: fc.integer({ min: 0, max: 5000 }), // 0 - 50% company cut
     currency: arbCurrency,
-    fxRateToInr: fc.constantFrom("1.00000000", "84.50000000", "92.30000000", "108.10000000", "23.00000000"),
+    fxRateToInr: fc.constantFrom(
+      "1.00000000",
+      "84.50000000",
+      "92.30000000",
+      "108.10000000",
+      "23.00000000",
+    ),
   })
   .map((p) => {
     const grossMinor = p.unitMinor * p.quantity;
@@ -78,7 +87,9 @@ const arbItemFinances = fc
       quantity: p.quantity,
     };
   })
-  .filter((p) => p.discountMinor + p.taxMinor + p.shortfallMinor + p.gatewayFeeMinor <= p.grossMinor);
+  .filter(
+    (p) => p.discountMinor + p.taxMinor + p.shortfallMinor + p.gatewayFeeMinor <= p.grossMinor,
+  );
 
 describe("finance invariants (docs/10 §5 property tests)", () => {
   it("FI-01: Distributable = gross − discount − tax − gateway fee − bank shortfall", () => {
@@ -371,5 +382,3 @@ describe("finance invariants (docs/10 §5 property tests)", () => {
     );
   });
 });
-
-

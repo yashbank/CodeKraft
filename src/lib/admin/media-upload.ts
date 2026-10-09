@@ -37,7 +37,7 @@ export async function uploadMediaFile(file: File, purpose: string): Promise<Uplo
     throw new Error(
       "Upload couldn't reach storage. This usually means the storage bucket's CORS policy " +
         "doesn't allow this site's origin yet — check the browser DevTools Console/Network tab " +
-        "for a message containing \"CORS\", then add this origin to the bucket's CORS settings.",
+        'for a message containing "CORS", then add this origin to the bucket\'s CORS settings.',
     );
   }
   if (!putRes.ok) throw new Error(`Upload failed (${putRes.status})`);

@@ -106,7 +106,10 @@ describe("orders creation & manual payment integration (API-COM-01, API-COM-04, 
     expect(items).toHaveLength(1);
     expect(items[0]!.offeringId).toBe(offering.id);
 
-    const paymentRows = await db.select().from(payments).where(eq(payments.orderId, result.orderId));
+    const paymentRows = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.orderId, result.orderId));
     expect(paymentRows).toHaveLength(1);
     expect(paymentRows[0]!.status).toBe("initiated");
   });

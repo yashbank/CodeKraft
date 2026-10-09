@@ -5,7 +5,7 @@ import { ordersService } from "@/modules/orders/service";
 import { approvalsService } from "@/modules/approvals/service";
 import { paymentsService } from "@/modules/payments/service";
 import { invoicesService } from "@/modules/invoices/service";
-import { orders, orderItems } from "../../../../drizzle/schema/commerce";
+import { orderItems } from "../../../../drizzle/schema/commerce";
 import { invoices } from "../../../../drizzle/schema/invoices";
 import { allocations } from "../../../../drizzle/schema/finance";
 import { migrateTestDb } from "../../../setup/migrate";
@@ -86,11 +86,7 @@ describe("Project order blocked until approved (BR-05, S-12)", () => {
 
     // Create payment intent
     const intent = await withTx(async (tx) => {
-      return await paymentsService.createIntentForOrder(
-        res.orderId,
-        "manual_bank",
-        tx,
-      );
+      return await paymentsService.createIntentForOrder(res.orderId, "manual_bank", tx);
     });
 
     // 2. Before approval: payment confirmation throws STATE_INVALID
@@ -139,10 +135,7 @@ describe("Project order blocked until approved (BR-05, S-12)", () => {
     expect(confirmRes.invoiceNo).toMatch(/^CK\/\d{4}-\d{2}\/\d{4}$/);
 
     // 6. Verify allocations to both partners for both lines
-    const items = await db
-      .select()
-      .from(orderItems)
-      .where(eq(orderItems.orderId, res.orderId));
+    const items = await db.select().from(orderItems).where(eq(orderItems.orderId, res.orderId));
     expect(items.length).toBe(2);
 
     for (const item of items) {
@@ -160,10 +153,7 @@ describe("Project order blocked until approved (BR-05, S-12)", () => {
     }
 
     // 7. Verify invoice in DB
-    const [inv] = await db
-      .select()
-      .from(invoices)
-      .where(eq(invoices.id, confirmRes.invoiceId!));
+    const [inv] = await db.select().from(invoices).where(eq(invoices.id, confirmRes.invoiceId!));
     expect(inv?.orderId).toBe(res.orderId);
     expect(inv?.totalMinor).toBe(100000);
   });

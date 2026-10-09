@@ -439,7 +439,11 @@ export function PartnersPayouts({
               exceed the partner&rsquo;s current balance.
             </DialogDescription>
           </DialogHeader>
-          <form ref={formRef} className="grid gap-4 sm:grid-cols-2" onSubmit={(e) => e.preventDefault()}>
+          <form
+            ref={formRef}
+            className="grid gap-4 sm:grid-cols-2"
+            onSubmit={(e) => e.preventDefault()}
+          >
             <Field id="po-partner" label="Partner" required>
               <Select
                 value={partnerId}

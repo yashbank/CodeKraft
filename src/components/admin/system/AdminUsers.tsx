@@ -372,8 +372,8 @@ export function AdminUsers({
             <DialogHeader>
               <DialogTitle>Invite admin</DialogTitle>
               <DialogDescription>
-                The other admin(s) must approve before the invite is sent (BR-13). The email mentions
-                the admin host and recommends TOTP.
+                The other admin(s) must approve before the invite is sent (BR-13). The email
+                mentions the admin host and recommends TOTP.
               </DialogDescription>
             </DialogHeader>
             <Field id="inv-email" label="Email" required>
@@ -519,7 +519,13 @@ export function AdminUsers({
               </span>
             </Field>
             <Field id="pt-ifsc" label="IFSC">
-              <Input id="pt-ifsc" readOnly disabled defaultValue="HDFC0000123" className="font-mono" />
+              <Input
+                id="pt-ifsc"
+                readOnly
+                disabled
+                defaultValue="HDFC0000123"
+                className="font-mono"
+              />
             </Field>
             <Field id="pt-bank" label="Bank name">
               <Input id="pt-bank" readOnly disabled defaultValue="HDFC Bank" />

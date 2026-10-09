@@ -46,7 +46,7 @@ import { Banner } from "../Banner";
 import { formatDateTime, initials, money, timeAgo } from "../format";
 import { Field } from "../RichTextField";
 import { RowActions } from "../RowActions";
-import type { AdminUserRef, CustomerOption, QueryMessage, QueryRow, QueryThread } from "../types";
+import type { AdminUserRef, CustomerOption, QueryRow, QueryThread } from "../types";
 
 export interface QueriesInboxProps {
   queries: QueryRow[];
@@ -86,8 +86,8 @@ export function QueriesInbox({
   const [contextOpen, setContextOpen] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const logFormRef = React.useRef<HTMLFormElement>(null);
-  const [logCustomer, setLogCustomer] = React.useState('none');
-  const [logSource, setLogSource] = React.useState<'email' | 'manual'>('email');
+  const [logCustomer, setLogCustomer] = React.useState("none");
+  const [logSource, setLogSource] = React.useState<"email" | "manual">("email");
   const [logRefund, setLogRefund] = React.useState(false);
   const list = queries.filter((q) => q.status === status);
   const selected = queries.find((q) => q.id === selectedId) ?? activeThread.query;
@@ -109,8 +109,7 @@ export function QueriesInbox({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId]);
+  }, [selectedId, activeThread.query.id]);
 
   const send = async (resolve: boolean) => {
     if (!draft.trim()) return;
@@ -126,7 +125,9 @@ export function QueriesInbox({
       return;
     }
     setDraft("");
-    toast.success(resolve ? "Reply sent and resolved — customer emailed" : "Reply sent — customer emailed");
+    toast.success(
+      resolve ? "Reply sent and resolved — customer emailed" : "Reply sent — customer emailed",
+    );
     router.refresh();
     const refreshed = await fetchQueryThread(selected.id);
     if (refreshed.ok) setActiveThread(refreshed.data);
@@ -153,7 +154,10 @@ export function QueriesInbox({
 
   const closeThread = async () => {
     setSubmitting(true);
-    const result = await closeQuery({ queryId: selected.id, resolutionNote: draft.trim() || undefined });
+    const result = await closeQuery({
+      queryId: selected.id,
+      resolutionNote: draft.trim() || undefined,
+    });
     setSubmitting(false);
     if (!result.ok) {
       toast.error(result.error.message);
@@ -370,7 +374,9 @@ export function QueriesInbox({
             <Button
               size="sm"
               variant="secondary"
-              disabled={submitting || selected.status === "resolved" || selected.status === "closed"}
+              disabled={
+                submitting || selected.status === "resolved" || selected.status === "closed"
+              }
               onClick={() => void resolveThread()}
             >
               Resolve
@@ -457,48 +463,48 @@ export function QueriesInbox({
             <p className="py-6 text-center text-body-sm text-fg-muted">No messages yet.</p>
           ) : (
             messages.map((m) => (
-            <div
-              key={m.id}
-              className={cn(
-                "flex",
-                m.authorKind === "admin"
-                  ? "justify-end"
-                  : m.authorKind === "system"
-                    ? "justify-center"
-                    : "justify-start",
-              )}
-            >
               <div
+                key={m.id}
                 className={cn(
-                  "max-w-[78%] rounded-lg px-3 py-2 text-body-sm",
-                  m.authorKind === "customer" && "bg-accent-soft text-fg",
-                  m.authorKind === "admin" && !m.internal && "bg-info-soft text-fg",
-                  m.authorKind === "admin" &&
-                    m.internal &&
-                    "border border-dashed border-warning bg-warning-soft text-fg",
-                  m.authorKind === "system" && "bg-elevated text-caption text-fg-muted",
+                  "flex",
+                  m.authorKind === "admin"
+                    ? "justify-end"
+                    : m.authorKind === "system"
+                      ? "justify-center"
+                      : "justify-start",
                 )}
               >
-                {m.internal ? (
-                  <p className="mb-1 text-caption font-semibold text-warning">
-                    Internal note — never emailed
+                <div
+                  className={cn(
+                    "max-w-[78%] rounded-lg px-3 py-2 text-body-sm",
+                    m.authorKind === "customer" && "bg-accent-soft text-fg",
+                    m.authorKind === "admin" && !m.internal && "bg-info-soft text-fg",
+                    m.authorKind === "admin" &&
+                      m.internal &&
+                      "border border-dashed border-warning bg-warning-soft text-fg",
+                    m.authorKind === "system" && "bg-elevated text-caption text-fg-muted",
+                  )}
+                >
+                  {m.internal ? (
+                    <p className="mb-1 text-caption font-semibold text-warning">
+                      Internal note — never emailed
+                    </p>
+                  ) : null}
+                  <p>{m.text}</p>
+                  {m.attachments?.map((a) => (
+                    <p
+                      key={a}
+                      className="mt-1 inline-flex items-center gap-1 text-caption text-accent-text"
+                    >
+                      <PaperclipIcon aria-hidden className="size-3" />
+                      {a}
+                    </p>
+                  ))}
+                  <p className="mt-1 text-caption text-fg-muted">
+                    {m.author} · <time dateTime={m.at}>{formatDateTime(m.at)}</time>
                   </p>
-                ) : null}
-                <p>{m.text}</p>
-                {m.attachments?.map((a) => (
-                  <p
-                    key={a}
-                    className="mt-1 inline-flex items-center gap-1 text-caption text-accent-text"
-                  >
-                    <PaperclipIcon aria-hidden className="size-3" />
-                    {a}
-                  </p>
-                ))}
-                <p className="mt-1 text-caption text-fg-muted">
-                  {m.author} · <time dateTime={m.at}>{formatDateTime(m.at)}</time>
-                </p>
+                </div>
               </div>
-            </div>
             ))
           )}
         </div>
@@ -523,7 +529,10 @@ export function QueriesInbox({
                 ))}
               </PopoverContent>
             </Popover>
-            <div className="flex items-center gap-2" title="Internal notes are not supported by the backend yet">
+            <div
+              className="flex items-center gap-2"
+              title="Internal notes are not supported by the backend yet"
+            >
               <Switch id="q-internal" size="sm" checked={false} disabled />
               <Label htmlFor="q-internal" className="text-fg-subtle">
                 Internal note (not available yet)
@@ -553,7 +562,11 @@ export function QueriesInbox({
               >
                 Reply & resolve
               </Button>
-              <Button size="sm" onClick={() => void send(false)} disabled={!draft.trim() || submitting}>
+              <Button
+                size="sm"
+                onClick={() => void send(false)}
+                disabled={!draft.trim() || submitting}
+              >
                 Reply
               </Button>
             </span>
@@ -585,8 +598,18 @@ export function QueriesInbox({
                 </SelectContent>
               </Select>
             </Field>
-            <Field id="lq-email" label="Guest email" optional={logCustomer !== "none"} required={logCustomer === "none"}>
-              <Input id="lq-email" name="guestEmail" type="email" disabled={logCustomer !== "none"} />
+            <Field
+              id="lq-email"
+              label="Guest email"
+              optional={logCustomer !== "none"}
+              required={logCustomer === "none"}
+            >
+              <Input
+                id="lq-email"
+                name="guestEmail"
+                type="email"
+                disabled={logCustomer !== "none"}
+              />
             </Field>
             <Field id="lq-subject" label="Subject" required>
               <Input id="lq-subject" name="subject" required aria-required />
@@ -605,7 +628,12 @@ export function QueriesInbox({
                 </SelectContent>
               </Select>
             </Field>
-            <Field id="lq-order" label="Related order" optional hint="Order ID (UUID), not the order number.">
+            <Field
+              id="lq-order"
+              label="Related order"
+              optional
+              hint="Order ID (UUID), not the order number."
+            >
               <Input id="lq-order" name="orderId" className="font-mono" />
             </Field>
             <div className="flex items-center gap-2">

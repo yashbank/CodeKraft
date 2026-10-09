@@ -1,6 +1,7 @@
 import type { TxCtx } from "@/lib/db";
 import { type Notification, notifications } from "../../../../drizzle/schema/notifications";
-import type { NotificationChannel, NotificationRecipient, RenderedNotification } from "../contracts";
+import type { NotificationChannel, NotificationRecipient } from "../contracts";
+import type { RenderedNotification } from "../types";
 
 export class InAppNotificationChannel implements NotificationChannel {
   readonly name = "inapp" as const;

@@ -10,8 +10,12 @@ describe("Leads Unit: State Transitions", () => {
   });
 
   it("requires lostReason when transitioning to lost", () => {
-    expect(() => assertValidLeadStatusTransition("new", "lost", "")).toThrowError(/lostReason is required/);
-    expect(() => assertValidLeadStatusTransition("new", "lost", "Client budget too low")).not.toThrow();
+    expect(() => assertValidLeadStatusTransition("new", "lost", "")).toThrowError(
+      /lostReason is required/,
+    );
+    expect(() =>
+      assertValidLeadStatusTransition("new", "lost", "Client budget too low"),
+    ).not.toThrow();
   });
 
   it("allows reopening lost leads to new", () => {
@@ -22,6 +26,8 @@ describe("Leads Unit: State Transitions", () => {
   it("disallows invalid backward transitions", () => {
     expect(canTransitionLeadStatus("won", "new")).toBe(false);
     expect(canTransitionLeadStatus("won", "contacted")).toBe(false);
-    expect(() => assertValidLeadStatusTransition("won", "new")).toThrowError(/Invalid lead status transition/);
+    expect(() => assertValidLeadStatusTransition("won", "new")).toThrowError(
+      /Invalid lead status transition/,
+    );
   });
 });

@@ -17,11 +17,7 @@ export async function applyProjectOrderSplit(
   approvalRequestId: string,
   tx: TxCtx,
 ): Promise<void> {
-  const [order] = await tx
-    .select()
-    .from(orders)
-    .where(eq(orders.id, payload.orderId))
-    .limit(1);
+  const [order] = await tx.select().from(orders).where(eq(orders.id, payload.orderId)).limit(1);
 
   if (!order) {
     throw new AppError(ErrorCode.NOT_FOUND, "Order not found");
@@ -54,11 +50,7 @@ export async function rejectProjectOrderSplit(
   payload: ProjectOrderSplitPayload,
   tx: TxCtx,
 ): Promise<void> {
-  const [order] = await tx
-    .select()
-    .from(orders)
-    .where(eq(orders.id, payload.orderId))
-    .limit(1);
+  const [order] = await tx.select().from(orders).where(eq(orders.id, payload.orderId)).limit(1);
 
   if (order && order.status === "pending_payment") {
     await tx

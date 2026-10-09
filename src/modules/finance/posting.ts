@@ -7,12 +7,12 @@ import { and, eq } from "drizzle-orm";
 import type { TxCtx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { type Currency } from "@/lib/money";
+import { toInrMinor } from "./minor";
 import { fxService } from "@/modules/fx/service";
 import { ownershipService } from "@/modules/ownership/service";
 import { approvalRequests } from "../../../drizzle/schema/approvals";
 import { orderItems, orders, payments } from "../../../drizzle/schema/commerce";
 import {
-  type AllocationLine,
   type EntryType,
   type NewAllocation,
   type NewLedgerEntry,
@@ -63,9 +63,8 @@ export function buildItemPostingPlan(input: ItemPostingPlanInput): ItemPostingPl
     lines: input.lines,
   });
 
-  const rate = Number(input.fxRateToInr);
   const toInr = (amount: number) =>
-    input.currency === "INR" ? amount : Math.round(amount * rate);
+    input.currency === "INR" ? amount : toInrMinor(amount, input.fxRateToInr);
 
   const allocationRow: NewAllocation = {
     orderItemId: input.orderItemId,
@@ -218,8 +217,7 @@ export async function postOrderPaid(orderId: string, tx: TxCtx): Promise<PostOrd
   const allAllocationsToInsert: NewAllocation[] = [];
 
   // 6. Process each item
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i]!;
+  for (const [i, item] of items.entries()) {
     const itemShortfall = shortfallSpread[i] ?? 0;
     const itemFee = feeSpread[i] ?? 0;
     const grossMinor = item.unitMinor * item.quantity;
@@ -267,17 +265,11 @@ export async function postOrderPaid(orderId: string, tx: TxCtx): Promise<PostOrd
         .limit(1);
 
       if (!approval || approval.type !== "project_order.split" || approval.status !== "applied") {
-        throw new AppError(
-          ErrorCode.STATE_INVALID,
-          "Project order split approval must be applied",
-        );
+        throw new AppError(ErrorCode.STATE_INVALID, "Project order split approval must be applied");
       }
 
       if (!item.splitSnapshot) {
-        throw new AppError(
-          ErrorCode.STATE_INVALID,
-          "Project item is missing split snapshot",
-        );
+        throw new AppError(ErrorCode.STATE_INVALID, "Project item is missing split snapshot");
       }
 
       companyCutBps = item.splitSnapshot.company_cut_bps;

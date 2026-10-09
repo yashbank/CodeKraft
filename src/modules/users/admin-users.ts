@@ -1,7 +1,7 @@
 /**
  * Admin user operations with dual-admin approval workflows (API-ADM-11, MASTER_SPEC §7, PHASE-03 P3.4).
  */
-import { and, count, desc, eq, inArray, max } from "drizzle-orm";
+import { and, count, eq, inArray, max } from "drizzle-orm";
 import type { DbOrTx, TxCtx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { assertPermission } from "@/lib/authz/assert";
@@ -62,7 +62,11 @@ export async function hasActiveProductOwnershipShare(
   return Number(activeShare?.count ?? 0) > 0;
 }
 
-const ADMIN_ROLE_RANK: Record<string, number> = { super_admin: 3, admin: 2, staff: 1 };
+const ADMIN_ROLE_RANK: Record<"super_admin" | "admin" | "staff", number> = {
+  super_admin: 3,
+  admin: 2,
+  staff: 1,
+};
 
 /**
  * Admin users list (SCR-ADM-31 companion read; no numbered API row).
@@ -93,7 +97,7 @@ export async function listAdminUsers(
   for (const r of roleRows) {
     const role = r.roleKey as "super_admin" | "admin" | "staff";
     const current = roleByUser.get(r.userId);
-    if (!current || ADMIN_ROLE_RANK[role]! > ADMIN_ROLE_RANK[current]!) {
+    if (!current || ADMIN_ROLE_RANK[role] > ADMIN_ROLE_RANK[current]) {
       roleByUser.set(r.userId, role);
     }
   }
@@ -108,7 +112,10 @@ export async function listAdminUsers(
     .from(users)
     .where(and(inArray(users.id, userIds), inArray(users.status, ["active", "suspended"])));
 
-  const partnerRows = await database.select().from(partners).where(inArray(partners.userId, userIds));
+  const partnerRows = await database
+    .select()
+    .from(partners)
+    .where(inArray(partners.userId, userIds));
   const partnerByUser = new Map(partnerRows.map((p) => [p.userId, p]));
   const partnerIds = partnerRows.map((p) => p.id);
 
@@ -147,7 +154,9 @@ export async function listAdminUsers(
   const pendingRows = await database
     .select()
     .from(approvalRequests)
-    .where(and(eq(approvalRequests.type, "admin.user_change"), eq(approvalRequests.status, "pending")));
+    .where(
+      and(eq(approvalRequests.type, "admin.user_change"), eq(approvalRequests.status, "pending")),
+    );
 
   const pendingByUser = new Map<string, string>();
   const inviteRows: AdminUserRow[] = [];

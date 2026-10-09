@@ -13,7 +13,12 @@
  *    `SecurityOverview.lastLoginAt`; the screen's own empty state ("No recent sign-ins") covers
  *    this honestly rather than fabricating login events.
  */
-import type { AuthEvent, BillingDetails, CustomerProfile, SessionInfo } from "@/components/account/types";
+import type {
+  AuthEvent,
+  BillingDetails,
+  CustomerProfile,
+  SessionInfo,
+} from "@/components/account/types";
 import type { CustomerProfileView, Me, SessionView, UserView } from "@/modules/users/types";
 
 function initials(name: string): string {
@@ -28,7 +33,11 @@ function initials(name: string): string {
   );
 }
 
-export function mapCustomerProfile(user: UserView, me: Me, profile: CustomerProfileView): CustomerProfile {
+export function mapCustomerProfile(
+  user: UserView,
+  me: Me,
+  profile: CustomerProfileView,
+): CustomerProfile {
   const billing: BillingDetails = {
     name: profile.billingName ?? user.name,
     company: profile.company ?? undefined,

@@ -16,10 +16,7 @@ const VALID_TRANSITIONS: Record<EntitlementStatus, readonly EntitlementStatus[]>
   revoked: [],
 };
 
-export function canTransitionEntitlement(
-  from: EntitlementStatus,
-  to: EntitlementStatus,
-): boolean {
+export function canTransitionEntitlement(from: EntitlementStatus, to: EntitlementStatus): boolean {
   if (from === to) return true;
   return VALID_TRANSITIONS[from].includes(to);
 }

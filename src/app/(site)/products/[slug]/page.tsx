@@ -35,7 +35,9 @@ function changelogHtml(c: ChangelogJson | null): string {
   const sections: string[] = [];
   if (c.summary) sections.push(`<p>${c.summary}</p>`);
   const group = (label: string, items?: string[]) =>
-    items && items.length ? `<p><strong>${label}:</strong></p><ul>${items.map((i) => `<li>${i}</li>`).join("")}</ul>` : "";
+    items && items.length
+      ? `<p><strong>${label}:</strong></p><ul>${items.map((i) => `<li>${i}</li>`).join("")}</ul>`
+      : "";
   sections.push(group("Added", c.added));
   sections.push(group("Changed", c.changed));
   sections.push(group("Fixed", c.fixed));
@@ -104,7 +106,9 @@ async function loadProduct(slug: string): Promise<ProductDetail | null> {
     slug: p.slug,
     name: p.name,
     shortDescription: p.shortDescription,
-    category: p.category ? { slug: p.category.slug, name: p.category.name } : { slug: "uncategorized", name: "Uncategorized" },
+    category: p.category
+      ? { slug: p.category.slug, name: p.category.name }
+      : { slug: "uncategorized", name: "Uncategorized" },
     fromPrice: cheapest,
     purchaseModels: purchaseModels.length ? purchaseModels : ["custom_quote"],
     deliveryTypes: deliveryTypes.length ? deliveryTypes : ["custom"],
@@ -123,7 +127,9 @@ async function loadProduct(slug: string): Promise<ProductDetail | null> {
     benefits: p.benefits.map((b) => b.title),
     targetAudience: p.targetAudience.map((a) => a.title),
     useCases: p.useCases.map((u) => u.title),
-    requirements: p.requirements ? [toPlainText(p.requirements as unknown as RichTextDoc)].filter(Boolean) : [],
+    requirements: p.requirements
+      ? [toPlainText(p.requirements as unknown as RichTextDoc)].filter(Boolean)
+      : [],
     features: p.features.map((f) => f.title),
     offerings,
     media,

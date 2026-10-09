@@ -74,10 +74,7 @@ describe("confirmPayment coupon exhausted prompt integration", () => {
     // Exhaust coupon beforehand
     await db.update(coupons).set({ redemptionsCount: 1 }).where(eq(coupons.id, coupon.id));
 
-    const [savedOrder] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, orderRes.orderId));
+    const [savedOrder] = await db.select().from(orders).where(eq(orders.id, orderRes.orderId));
 
     // Confirming should fail with coupon limit exceeded prompt
     await expect(

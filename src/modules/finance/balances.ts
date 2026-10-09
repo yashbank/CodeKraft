@@ -3,19 +3,16 @@
  * Reads VIEW `partner_balances`.
  */
 import { eq, sql } from "drizzle-orm";
-import { db, withTx, type DbOrTx } from "@/lib/db";
+import { db, type DbOrTx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { assertPermission, can } from "@/lib/authz/assert";
 import type { RequestContext } from "@/lib/authz/context";
+import type { Currency } from "@/lib/money";
+import { toMinor } from "./minor";
 import { partners } from "../../../drizzle/schema/users-ext";
-import type {
-  GetPartnerBalancesInput,
-  PartnerBalance,
-  PartnerBalanceByCurrency,
-  Currency,
-} from "./types";
+import type { GetPartnerBalancesInput, PartnerBalance, PartnerBalanceByCurrency } from "./types";
 
-interface PartnerBalanceViewRow {
+type PartnerBalanceViewRow = {
   partner_id: string;
   currency: string;
   allocated_minor: string | number;
@@ -26,7 +23,7 @@ interface PartnerBalanceViewRow {
   balance_minor: string | number;
   balance_inr_minor: string | number;
   last_entry_at: Date | string | null;
-}
+};
 
 export async function getPartnerBalances(
   ctx: RequestContext,
@@ -43,7 +40,7 @@ export async function getPartnerBalances(
     const [callerPartner] = await database
       .select({ id: partners.id })
       .from(partners)
-      .where(eq(partners.userId, ctx.userId!))
+      .where(eq(partners.userId, ctx.userId))
       .limit(1);
 
     if (!callerPartner) {
@@ -82,26 +79,23 @@ export async function getPartnerBalances(
 
   for (const row of rows) {
     const pId = row.partner_id;
-    if (!partnerMap.has(pId)) {
-      partnerMap.set(pId, {
-        partnerId: pId,
-        byCurrency: [],
-        balanceInrMinor: 0,
-      });
+    let current = partnerMap.get(pId);
+    if (!current) {
+      current = { partnerId: pId, byCurrency: [], balanceInrMinor: 0 };
+      partnerMap.set(pId, current);
     }
 
-    const current = partnerMap.get(pId)!;
     const byCurr: PartnerBalanceByCurrency = {
       currency: row.currency as Currency,
-      allocated: Number(row.allocated_minor),
-      refunded: Number(row.refunded_minor),
-      expenses: Number(row.expenses_minor),
-      paidOut: Number(row.paid_out_minor),
-      balance: Number(row.balance_minor),
+      allocated: toMinor(row.allocated_minor),
+      refunded: toMinor(row.refunded_minor),
+      expenses: toMinor(row.expenses_minor),
+      paidOut: toMinor(row.paid_out_minor),
+      balance: toMinor(row.balance_minor),
     };
 
     current.byCurrency.push(byCurr);
-    current.balanceInrMinor += Number(row.balance_inr_minor);
+    current.balanceInrMinor += toMinor(row.balance_inr_minor);
   }
 
   // If specific partner was requested but has no ledger entries yet

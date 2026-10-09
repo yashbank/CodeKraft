@@ -29,7 +29,7 @@ describe("Project order split approval lifecycle (API-COM-07, API-COM-14, BR-05,
       roles: ["admin"],
     });
 
-    const admin2Ctx = buildContext({
+    void buildContext({
       user: { id: admin2.id },
       session: { id: "sess-admin-2" },
       roles: ["admin"],
@@ -70,10 +70,7 @@ describe("Project order split approval lifecycle (API-COM-07, API-COM-14, BR-05,
     expect(res.approvalRequestId).toBeDefined();
 
     // 2. Order exists in pending_payment with splitApprovalRequestId null
-    const [initialOrder] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, res.orderId));
+    const [initialOrder] = await db.select().from(orders).where(eq(orders.id, res.orderId));
     expect(initialOrder?.status).toBe("pending_payment");
     expect(initialOrder?.splitApprovalRequestId).toBeNull();
 
@@ -100,10 +97,7 @@ describe("Project order split approval lifecycle (API-COM-07, API-COM-14, BR-05,
     expect(decideRes.status).toBe("applied");
 
     // 5. Order is updated with splitApprovalRequestId
-    const [updatedOrder] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, res.orderId));
+    const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, res.orderId));
     expect(updatedOrder?.splitApprovalRequestId).toBe(res.approvalRequestId);
   });
 });

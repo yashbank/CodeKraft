@@ -82,14 +82,15 @@ export function mapQueryRow(
   };
 }
 
-function mapMessage(m: QueryMessageView, admins: ReadonlyMap<string, AdminDirectoryEntry>): QueryMessage {
+function mapMessage(
+  m: QueryMessageView,
+  admins: ReadonlyMap<string, AdminDirectoryEntry>,
+): QueryMessage {
   return {
     id: m.messageId,
     authorKind: m.authorKind,
     author:
-      m.authorKind === "customer"
-        ? (m.author?.name ?? "Customer")
-        : actorName(m.author, admins),
+      m.authorKind === "customer" ? (m.author?.name ?? "Customer") : actorName(m.author, admins),
     at: m.createdAt,
     text: toPlainText(m.bodyJson as never),
     attachments: m.attachments.length > 0 ? m.attachments.map((a) => a.name) : undefined,
@@ -107,7 +108,8 @@ export function mapQueryThread(
   admins: ReadonlyMap<string, AdminDirectoryEntry>,
 ): QueryThread {
   const row = mapQueryRow(t.query, admins);
-  row.snippet = t.messages.length > 0 ? toPlainText(t.messages.at(-1)!.bodyJson as never) : "";
+  const lastMessage = t.messages.at(-1);
+  row.snippet = lastMessage ? toPlainText(lastMessage.bodyJson as never) : "";
   if (t.linkedOrder) {
     row.related = [{ kind: "order", label: t.linkedOrder.orderNo }];
   }

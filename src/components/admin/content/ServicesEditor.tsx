@@ -73,7 +73,11 @@ export function ServicesEditor({ services: initial }: { services: ServiceRow[] }
     const data = new FormData(form);
     const title = String(data.get("title") ?? "").trim();
     const slug = String(data.get("slug") ?? "").trim() || slugify(title);
-    const deliverables = data.getAll("deliverable").map(String).map((d) => d.trim()).filter(Boolean);
+    const deliverables = data
+      .getAll("deliverable")
+      .map(String)
+      .map((d) => d.trim())
+      .filter(Boolean);
 
     setSaving(true);
     const result = await saveService({
@@ -176,7 +180,9 @@ export function ServicesEditor({ services: initial }: { services: ServiceRow[] }
                     });
                     if (!result.ok) {
                       toast.error(result.error.message);
-                      setServices((l) => l.map((x) => (x.id === s.id ? { ...x, published: !v } : x)));
+                      setServices((l) =>
+                        l.map((x) => (x.id === s.id ? { ...x, published: !v } : x)),
+                      );
                     } else {
                       router.refresh();
                     }

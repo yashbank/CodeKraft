@@ -4,10 +4,11 @@ import { notificationsService } from "@/modules/notifications/service";
 import { emailOutboxRetryJob } from "@/jobs/email-outbox";
 import { createUser } from "../../factories/users";
 import { userRoles } from "../../../drizzle/schema/auth";
-import { emailOutbox, notifications } from "../../../drizzle/schema/notifications";
+import { emailOutbox } from "../../../drizzle/schema/notifications";
 import { migrateTestDb } from "../../setup/migrate";
 import { truncateAll } from "../../setup/db";
 import { eq } from "drizzle-orm";
+import { defined } from "../../setup/expect-defined";
 
 describe("Notifications Integration", () => {
   beforeAll(async () => {
@@ -100,11 +101,10 @@ describe("Notifications Integration", () => {
     const updated = await db
       .select()
       .from(emailOutbox)
-      .where(eq(emailOutbox.id, row.id))
+      .where(eq(emailOutbox.id, defined(row, "row").id))
       .limit(1);
 
-    expect(updated[0].status).toBe("sent");
-    expect(updated[0].sentAt).toBeDefined();
+    expect(defined(updated[0], "updated[0]").status).toBe("sent");
+    expect(defined(updated[0], "updated[0]").sentAt).toBeDefined();
   });
 });
-

@@ -68,7 +68,12 @@ describe("Phase 7: Public Site & Customer UI", () => {
   });
 
   it("renders ServicesPage and enforces BR-01 (no prices on services page)", () => {
-    const { container } = render(<ServicesPage services={SERVICES} />);
+    const { container } = render(
+      <ServicesPage
+        services={SERVICES}
+        serviceOptions={SERVICES.map((s) => ({ slug: s.slug, title: s.title }))}
+      />,
+    );
 
     expect(screen.getByRole("heading", { name: "What we build", level: 1 })).toBeInTheDocument();
     // BR-01: No prices anywhere on services

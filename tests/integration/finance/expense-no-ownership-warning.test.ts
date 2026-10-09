@@ -23,11 +23,6 @@ describe("shared expense validation on product without active ownership (API-FIN
       user: { id: admin.id },
       session: { id: "sess-admin" },
       roles: ["admin"],
-      permissions: [
-        "finance.ledger.read",
-        "finance.ledger.read_all",
-        "finance.expense.write",
-      ],
     });
 
     await expect(

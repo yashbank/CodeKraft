@@ -225,4 +225,5 @@ export interface VitalsRollupDetail extends Record<string, unknown> {
 
 export interface TrackEventResult {
   ok: true;
+  eventId: string;
 }

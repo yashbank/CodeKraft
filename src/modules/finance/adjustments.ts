@@ -11,7 +11,8 @@ import { auditService } from "@/modules/audit/service";
 import { approvalsService } from "@/modules/approvals/service";
 import { fxService } from "@/modules/fx/service";
 import type { ApplyContext } from "@/modules/approvals/contracts";
-import type { Currency } from "@/lib/money";
+import { type Currency } from "@/lib/money";
+import { toInrMinor } from "./minor";
 import { ledgerEntries } from "../../../drizzle/schema/finance";
 import { approvalRequests } from "../../../drizzle/schema/approvals";
 import { users } from "../../../drizzle/schema/auth";
@@ -41,7 +42,7 @@ export async function proposeAdjustment(
       "ledger.adjustment",
       { type: "ledger", id: subjectId },
       parsed,
-      ctx.userId!,
+      ctx.userId,
       tx,
     );
 
@@ -102,15 +103,8 @@ export async function postAdjustment(
   const valuesToInsert = [];
 
   for (const line of payload.lines) {
-    const fx = await fxService.getRate(
-      line.currency as Currency,
-      "INR",
-      new Date(),
-      tx,
-    );
-    const fxRateToInr = fx.rate;
-    const toInr = (amt: number) =>
-      line.currency === "INR" ? amt : Math.round(amt * Number(fxRateToInr));
+    const fxRateToInr = await fxService.rateToInrOn(line.currency as Currency, new Date(), tx);
+    const toInr = (amt: number) => (line.currency === "INR" ? amt : toInrMinor(amt, fxRateToInr));
 
     valuesToInsert.push({
       entryType: "adjustment" as const,

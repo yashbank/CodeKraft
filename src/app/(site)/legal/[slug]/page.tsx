@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import {
-  LEGAL_NAV,
-  LEGAL_PRIVACY,
-} from "@/app/dev/screens/_fixtures/site";
+import { LEGAL_NAV, LEGAL_PRIVACY } from "@/app/dev/screens/_fixtures/site";
 import { LegalPage } from "@/components/site/LegalPage";
 import type { LegalKey, LegalPageView } from "@/components/site/types";
 

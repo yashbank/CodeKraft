@@ -5,7 +5,7 @@ import { migrateTestDb } from "../../setup/migrate";
 import { truncateAll } from "../../setup/db";
 import { createAdmin, createUser } from "../../factories/users";
 import { createCoupon, createOrder } from "../../factories/commerce";
-import { AppError, ErrorCode } from "@/lib/errors";
+import { ErrorCode } from "@/lib/errors";
 
 describe("coupon redemption exhaustion (docs/06 §2.3, S-08)", () => {
   beforeAll(async () => {

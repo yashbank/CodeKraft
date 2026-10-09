@@ -5,7 +5,8 @@ export class FakeProvider implements LLMProvider {
   readonly model = "fake-claude-test";
 
   /** Recorded requests for security testing (SA-20: assert no PII in provider requests) */
-  lastRequest: { system: string; messages: readonly LLMMessage[]; opts: LLMStreamOptions } | null = null;
+  lastRequest: { system: string; messages: readonly LLMMessage[]; opts: LLMStreamOptions } | null =
+    null;
 
   async *stream(
     system: string,

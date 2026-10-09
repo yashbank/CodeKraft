@@ -83,7 +83,9 @@ describe("computeItemRefundPlan (unit)", () => {
 
     const partnerTotal = pAlloc.reduce((acc, p) => acc + Math.abs(p.amountMinor), 0);
     expect(Math.abs(company?.amountMinor ?? 0) + partnerTotal).toBe(
-      (sale?.amountMinor ?? 0) - Math.abs(discount?.amountMinor ?? 0) - Math.abs(tax?.amountMinor ?? 0),
+      (sale?.amountMinor ?? 0) -
+        Math.abs(discount?.amountMinor ?? 0) -
+        Math.abs(tax?.amountMinor ?? 0),
     );
   });
 

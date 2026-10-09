@@ -73,10 +73,7 @@ describe("Quote keeps negotiated order price and stays accepted after expiry (AP
     expect(quote?.orderId).toBe(acceptRes.orderId);
 
     // Verify order in DB preserves original negotiated price
-    const [order] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, acceptRes.orderId));
+    const [order] = await db.select().from(orders).where(eq(orders.id, acceptRes.orderId));
     expect(order?.totalMinor).toBe(40000);
   });
 });

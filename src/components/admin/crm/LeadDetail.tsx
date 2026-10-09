@@ -259,11 +259,7 @@ export function LeadDetail({
               <PopoverContent className="w-72 space-y-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="fu-date">Follow-up date</Label>
-                  <Input
-                    id="fu-date"
-                    type="date"
-                    defaultValue={nextFollowUpAt?.slice(0, 10)}
-                  />
+                  <Input id="fu-date" type="date" defaultValue={nextFollowUpAt?.slice(0, 10)} />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="fu-note">Note</Label>

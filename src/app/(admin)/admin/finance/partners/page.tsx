@@ -9,7 +9,11 @@ import {
   mapPartnerBalanceToRow,
   mapPayoutApprovalToRow,
 } from "@/lib/admin/finance-view";
-import { getPartnerBalancesQuery, listLedgerEntriesQuery, listPayoutsQuery } from "@/modules/finance/queries";
+import {
+  getPartnerBalancesQuery,
+  listLedgerEntriesQuery,
+  listPayoutsQuery,
+} from "@/modules/finance/queries";
 import { listApprovalsAction } from "@/modules/approvals/queries";
 import { listPartnersQuery } from "@/modules/users/queries";
 import type { PayoutRow } from "@/components/admin/types";
@@ -29,7 +33,8 @@ export default async function AdminPartnersPayoutsPage() {
     // know which payouts came back.
   ]);
 
-  const partnerViews = "data" in partnersResult && partnersResult.ok ? partnersResult.data.items : [];
+  const partnerViews =
+    "data" in partnersResult && partnersResult.ok ? partnersResult.data.items : [];
   const { byPartnerId: partnerNames, byUserId: userNames } = buildPartnerNameMaps(partnerViews);
   const balances = "data" in balancesResult && balancesResult.ok ? balancesResult.data : [];
   const balanceByPartnerId = new Map(balances.map((b) => [b.partnerId, b]));
@@ -73,7 +78,8 @@ export default async function AdminPartnersPayoutsPage() {
     return mapPartnerBalanceToRow({
       partner: p,
       balanceInrMinor: balance?.balanceInrMinor ?? 0,
-      perCurrency: balance?.byCurrency.map((c) => ({ currency: c.currency, balance: c.balance })) ?? [],
+      perCurrency:
+        balance?.byCurrency.map((c) => ({ currency: c.currency, balance: c.balance })) ?? [],
       rollup,
       pendingPayoutApprovals,
     });

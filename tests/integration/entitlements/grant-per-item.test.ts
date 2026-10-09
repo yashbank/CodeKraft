@@ -3,7 +3,6 @@ import { eq } from "drizzle-orm";
 import { db, withTx } from "@/lib/db";
 import { entitlementsService } from "@/modules/entitlements/service";
 import { entitlements, subscriptions } from "../../../drizzle/schema/delivery";
-import { orders } from "../../../drizzle/schema/commerce";
 import { migrateTestDb } from "../../setup/migrate";
 import { truncateAll } from "../../setup/db";
 import { createAdmin, createUser } from "../../factories/users";

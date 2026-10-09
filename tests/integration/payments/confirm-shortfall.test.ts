@@ -58,10 +58,7 @@ describe("confirmPayment shortfall integration (SA-24, API-PAY-03)", () => {
       billing: { name: "Cust", email: customer.email, country: "IN" },
     });
 
-    const [savedOrder] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, orderRes.orderId));
+    const [savedOrder] = await db.select().from(orders).where(eq(orders.id, orderRes.orderId));
 
     const total = savedOrder!.totalMinor;
     const received = total - 2500;

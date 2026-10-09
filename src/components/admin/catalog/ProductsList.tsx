@@ -319,7 +319,12 @@ export function ProductsList({
               role="status"
             >
               <span className="font-medium text-accent-text">{selected.size} selected</span>
-              <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={bulkSubmitForApproval}>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={bulkBusy}
+                onClick={bulkSubmitForApproval}
+              >
                 Submit for approval
               </Button>
               <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={bulkUnpublish}>
@@ -818,12 +823,7 @@ export function CategoriesPanel({
                 Delete
               </Button>
             ) : (
-              <Button
-                size="sm"
-                variant="ghost"
-                type="button"
-                onClick={() => setCreatingNew(false)}
-              >
+              <Button size="sm" variant="ghost" type="button" onClick={() => setCreatingNew(false)}>
                 Cancel
               </Button>
             )}

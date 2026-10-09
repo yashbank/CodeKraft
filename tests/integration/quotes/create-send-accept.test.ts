@@ -106,10 +106,7 @@ describe("Custom Quotes create-send-accept integration (API-COM-09, API-COM-10)"
     expect(acceptRes.payment.paymentId).toBeDefined();
 
     // Verify order in database
-    const [savedOrder] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, acceptRes.orderId));
+    const [savedOrder] = await db.select().from(orders).where(eq(orders.id, acceptRes.orderId));
     expect(savedOrder?.customQuoteId).toBe(createRes.quoteId);
     expect(savedOrder?.totalMinor).toBe(15000);
 

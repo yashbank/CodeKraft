@@ -31,10 +31,7 @@ export function calculateItemPricing(input: ItemPricingInput): ItemPricingResult
   const taxRateBps = Math.max(0, input.taxRateBps ?? 0);
 
   // Round half up on tax
-  const taxBig = divRoundHalfUp(
-    BigInt(taxableMinor) * BigInt(taxRateBps),
-    10_000n,
-  );
+  const taxBig = divRoundHalfUp(BigInt(taxableMinor) * BigInt(taxRateBps), 10_000n);
   const taxMinor = toSafeNumber(taxBig, "taxMinor");
 
   // FI-12: item total = unit * qty - discount + tax

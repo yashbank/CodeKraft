@@ -73,7 +73,9 @@ describe("payout approval and apply lifecycle (API-FIN-04, API-FIN-05, FI-06, BR
     });
 
     // 1. Initial partner balance is 40,000 INR
-    const initialBalances = await financeService.getPartnerBalances(admin1Ctx, { partnerId: partner.id });
+    const initialBalances = await financeService.getPartnerBalances(admin1Ctx, {
+      partnerId: partner.id,
+    });
     const initialInr = initialBalances[0]?.byCurrency.find((c) => c.currency === "INR");
     expect(initialInr?.balance).toBe(40000);
 
@@ -118,14 +120,19 @@ describe("payout approval and apply lifecycle (API-FIN-04, API-FIN-05, FI-06, BR
     expect(entry.amountMinor).toBe(-15000);
 
     // 6. FI-06: Balance reduced exactly by payout amount (40,000 - 15,000 = 25,000)
-    const updatedBalances = await financeService.getPartnerBalances(admin1Ctx, { partnerId: partner.id });
+    const updatedBalances = await financeService.getPartnerBalances(admin1Ctx, {
+      partnerId: partner.id,
+    });
     const updatedInr = updatedBalances[0]?.byCurrency.find((c) => c.currency === "INR");
     expect(updatedInr?.balance).toBe(25000);
     expect(updatedInr?.paidOut).toBe(15000);
     expect(updatedBalances[0]?.balanceInrMinor).toBe(25000);
 
     // 7. listPayouts returns the recorded payout
-    const payoutsList = await financeService.listPayouts(admin1Ctx, { partnerId: partner.id });
+    const payoutsList = await financeService.listPayouts(admin1Ctx, {
+      limit: 50,
+      filters: { partnerId: partner.id },
+    });
     expect(payoutsList.items).toHaveLength(1);
     expect(payoutsList.items[0]?.id).toBe(payoutRow!.id);
   });

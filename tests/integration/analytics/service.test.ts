@@ -6,6 +6,7 @@ import { migrateTestDb } from "../../setup/migrate";
 import { truncateAll } from "../../setup/db";
 import { analyticsEvents } from "../../../drizzle/schema/ops";
 import { eq } from "drizzle-orm";
+import { defined } from "../../setup/expect-defined";
 
 describe("Analytics Integration (P6.8)", () => {
   beforeAll(async () => {
@@ -20,37 +21,28 @@ describe("Analytics Integration (P6.8)", () => {
     const user = await createUser({ email: "analytics-user@test.com" });
 
     // Client allowed: page_view
-    const res = await analyticsService.trackEvent(
-      { userId: user.id, roles: ["customer"] } as any,
-      {
-        name: "page_view",
-        props: { path: "/products" },
-      },
-    );
+    const res = await analyticsService.trackEvent({ userId: user.id, roles: ["customer"] } as any, {
+      name: "page_view",
+      props: { path: "/products" },
+    });
     expect(res.eventId).toBeDefined();
 
     // Client blocked from server-only event: payment_confirmed -> FORBIDDEN
     await expect(
-      analyticsService.trackEvent(
-        { userId: user.id, roles: ["customer"] } as any,
-        {
-          name: "payment_confirmed" as any,
-          props: { amount: 5000 },
-        },
-      ),
+      analyticsService.trackEvent({ userId: user.id, roles: ["customer"] } as any, {
+        name: "payment_confirmed" as any,
+        props: { amount: 5000 },
+      }),
     ).rejects.toThrowError(/server-only event/);
   });
 
   it("records web vitals without user identifiers", async () => {
-    const res = await analyticsService.trackWebVital(
-      { userId: null, roles: [] } as any,
-      {
-        metric: "LCP",
-        value: 1200,
-        rating: "good",
-        route: "/products/[slug]",
-      },
-    );
+    const res = await analyticsService.trackWebVital({ userId: null, roles: [] } as any, {
+      metric: "LCP",
+      value: 1200,
+      rating: "good",
+      route: "/products/[slug]",
+    });
     expect(res.eventId).toBeDefined();
 
     const db = getDb();
@@ -60,14 +52,15 @@ describe("Analytics Integration (P6.8)", () => {
       .where(eq(analyticsEvents.id, res.eventId))
       .limit(1);
 
-    expect(event[0].name).toBe("web_vital");
-    expect(event[0].userId).toBeNull();
+    expect(defined(event[0], "event[0]").name).toBe("web_vital");
+    expect(defined(event[0], "event[0]").userId).toBeNull();
   });
 
   it("returns system health widget data", async () => {
-    const health = await analyticsService.getSystemHealthWidget(
-      { userId: "admin", roles: ["admin"] } as any,
-    );
+    const health = await analyticsService.getSystemHealthWidget({
+      userId: "admin",
+      roles: ["admin"],
+    } as any);
 
     expect(health.emailOutbox).toBeDefined();
     expect(health.chatUsage).toBeDefined();

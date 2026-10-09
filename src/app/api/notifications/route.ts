@@ -33,7 +33,8 @@ export async function GET(req: Request) {
 
     const result = await notificationsService.pollNotifications(authedCtx, parse.data);
     return NextResponse.json({ ok: true, data: result });
-  } catch (err: any) {
+  } catch (caught) {
+    const err = caught as { statusCode?: number; code?: string; message?: string };
     const status = err.statusCode ?? 500;
     return NextResponse.json(
       {

@@ -72,13 +72,13 @@ export function middleware(req: NextRequest): NextResponse {
   res.headers.set("X-Frame-Options", "DENY");
   res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   res.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
-  
+
   if (APP_ENV === "production" || APP_ENV === "staging") {
     res.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
   }
 
   res.headers.set("x-nonce", nonce);
-  
+
   // CSP Policy with nonce and CSP violation reporting
   const cspPolicy = [
     "default-src 'self'",

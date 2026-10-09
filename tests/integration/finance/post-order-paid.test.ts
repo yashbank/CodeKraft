@@ -177,7 +177,10 @@ describe("postOrderPaid integration (docs/06 §4.2, §5.1, master plan §5)", ()
     expect(allocs[0]?.distributableMinor).toBe(2970);
     expect(allocs[1]?.distributableMinor).toBe(6930);
 
-    const entries = await db.select().from(ledgerEntries).where(eq(ledgerEntries.orderId, order.id));
+    const entries = await db
+      .select()
+      .from(ledgerEntries)
+      .where(eq(ledgerEntries.orderId, order.id));
     const sum = entries.reduce((acc, e) => acc + e.amountMinor, 0);
     expect(sum).toBe(0);
   });

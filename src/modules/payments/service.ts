@@ -1,7 +1,8 @@
+import { type Currency, divRoundHalfUp, toDecimalString, toSafeNumber } from "@/lib/money";
 /**
  * Payments service implementation (docs/06 §2.4 API-PAY-01..08, §4.1 orchestration, master plan §5).
  */
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { type DbOrTx, type TxCtx, getDb, withTx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { assertPermission } from "@/lib/authz/assert";
@@ -10,7 +11,7 @@ import { auditService } from "@/modules/audit/service";
 import { ordersService } from "@/modules/orders/service";
 import { financeService } from "@/modules/finance/service";
 import { quotesService } from "@/modules/quotes/service";
-import { orders, payments } from "../../../drizzle/schema/commerce";
+import { type Payment, orders, payments } from "../../../drizzle/schema/commerce";
 import { approvalRequests } from "../../../drizzle/schema/approvals";
 import { userRoles } from "../../../drizzle/schema/auth";
 import { emailOutbox, notifications } from "../../../drizzle/schema/notifications";
@@ -264,6 +265,7 @@ export class DefaultPaymentsService implements PaymentsService {
         })
         .where(eq(payments.id, payment.id))
         .returning();
+      if (!confirmedPayment) throw new AppError(ErrorCode.INTERNAL, "confirmedPayment missing");
 
       if (parsed.dropCoupon && order.couponId) {
         await tx
@@ -331,7 +333,7 @@ export class DefaultPaymentsService implements PaymentsService {
           payload: {
             orderId: order.id,
             orderNo: order.orderNo,
-            amountPaid: (result.amountReceivedMinor / 100).toFixed(2),
+            amountPaid: toDecimalString(result.amountReceivedMinor),
             currency: order.currency,
           },
           priority: 1,
@@ -349,7 +351,7 @@ export class DefaultPaymentsService implements PaymentsService {
       );
 
       return {
-        payment: confirmedPayment!,
+        payment: confirmedPayment,
         order: updatedOrder,
         invoiceNo: invoiceRes.invoiceNo,
         invoiceId: invoiceRes.invoiceId,
@@ -397,6 +399,7 @@ export class DefaultPaymentsService implements PaymentsService {
         })
         .where(eq(payments.id, payment.id))
         .returning();
+      if (!failedPayment) throw new AppError(ErrorCode.INTERNAL, "failedPayment missing");
 
       let [order] = await tx.select().from(orders).where(eq(orders.id, payment.orderId)).limit(1);
 
@@ -414,7 +417,8 @@ export class DefaultPaymentsService implements PaymentsService {
           })
           .where(eq(orders.id, order.id))
           .returning();
-        order = cancelledOrder!;
+        if (!cancelledOrder) throw new AppError(ErrorCode.INTERNAL, "cancelledOrder missing");
+        order = cancelledOrder;
       }
 
       if (order.billingSnapshot?.email) {
@@ -439,7 +443,7 @@ export class DefaultPaymentsService implements PaymentsService {
         tx,
       );
 
-      return { payment: failedPayment!, order };
+      return { payment: failedPayment, order };
     };
 
     if (outerTx) return await runner(outerTx);
@@ -473,7 +477,9 @@ export class DefaultPaymentsService implements PaymentsService {
     assertPermission(ctx, "orders.read");
     const db = await getDb();
 
-    const statuses = input.status ? [input.status] : ["submitted", "initiated"];
+    const statuses: Array<"submitted" | "initiated"> = input.status
+      ? [input.status]
+      : ["submitted", "initiated"];
 
     const rows = await db
       .select({
@@ -482,14 +488,14 @@ export class DefaultPaymentsService implements PaymentsService {
       })
       .from(payments)
       .innerJoin(orders, eq(payments.orderId, orders.id))
-      .where(inArray(payments.status, statuses as any))
+      .where(inArray(payments.status, statuses))
       .orderBy(desc(payments.createdAt));
 
     const now = new Date();
     return rows.map((r) => {
-      const ageHours = Math.max(
-        0,
-        Math.floor((now.getTime() - r.payment.createdAt.getTime()) / 3600_000),
+      const ageMs = Math.max(0, now.getTime() - r.payment.createdAt.getTime());
+      const ageHours = toSafeNumber(
+        divRoundHalfUp(BigInt(ageMs - (ageMs % 3_600_000)), 3_600_000n),
       );
       return {
         paymentId: r.payment.id,
@@ -552,7 +558,7 @@ export class DefaultPaymentsService implements PaymentsService {
         orderNo: order.orderNo,
         amountDue: {
           amountMinor: order.totalMinor,
-          currency: order.currency as any,
+          currency: order.currency as Currency,
         },
         customer: {
           name: order.billingSnapshot?.name || "",
@@ -570,13 +576,14 @@ export class DefaultPaymentsService implements PaymentsService {
         status: "initiated",
         amountDueMinor: order.totalMinor,
         currency: order.currency,
-        instructions: intent.instructions as any,
+        instructions: intent.instructions as unknown as Payment["instructions"],
         providerPayload: intent.providerPayload as Record<string, unknown> | undefined,
       })
       .returning();
+    if (!payment) throw new AppError(ErrorCode.INTERNAL, "payment missing");
 
     return {
-      paymentId: payment!.id,
+      paymentId: payment.id,
       instructions: intent.instructions,
     };
   }

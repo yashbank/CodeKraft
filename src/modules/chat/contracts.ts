@@ -4,7 +4,7 @@
  * Implementation in P6.
  */
 import type { RequestContext } from "@/lib/authz/context";
-import type { TxCtx } from "@/lib/db";
+import type { DbOrTx } from "@/lib/db";
 import type { JobContext, JobOutcome } from "@/modules/analytics/types";
 import type { ListResult } from "@/modules/_shared/zod";
 import type { LLMProvider } from "./llm";
@@ -57,8 +57,8 @@ export interface ChatCapGuard {
   caps(): Promise<ChatCaps>;
   check(userId: string, day: string): Promise<CapCheck>;
   /** Increment inside the request; `decrement` when the provider fails before the first token. */
-  increment(userId: string, day: string, tx: TxCtx): Promise<void>;
-  decrement(userId: string, day: string, tx: TxCtx): Promise<void>;
+  increment(userId: string, day: string, tx: DbOrTx): Promise<void>;
+  decrement(userId: string, day: string, tx: DbOrTx): Promise<void>;
 }
 
 export interface ChatService {

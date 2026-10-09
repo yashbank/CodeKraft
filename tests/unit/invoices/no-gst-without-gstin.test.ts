@@ -10,7 +10,7 @@ describe("No GST without GSTIN (D-1501, BR-08)", () => {
         taxMinor: 1800,
         taxRateBps: 1800,
         gstin: null,
-      })
+      }),
     ).toBeUndefined();
 
     expect(
@@ -20,7 +20,7 @@ describe("No GST without GSTIN (D-1501, BR-08)", () => {
         taxMinor: 1800,
         taxRateBps: 1800,
         gstin: "",
-      })
+      }),
     ).toBeUndefined();
 
     expect(
@@ -30,7 +30,7 @@ describe("No GST without GSTIN (D-1501, BR-08)", () => {
         taxMinor: 1800,
         taxRateBps: 1800,
         gstin: "   ",
-      })
+      }),
     ).toBeUndefined();
   });
 });

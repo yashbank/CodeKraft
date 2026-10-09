@@ -58,7 +58,10 @@ export async function runDailyJobs(now: Date = new Date()): Promise<JobExecution
   const reports: JobExecutionReport[] = [];
 
   const dailyJobs = [
-    { name: "subscriptions.remind_grace_suspend", fn: () => subscriptionsRemindGraceSuspendJob.run(now) },
+    {
+      name: "subscriptions.remind_grace_suspend",
+      fn: () => subscriptionsRemindGraceSuspendJob.run(now),
+    },
     { name: "entitlements.expire", fn: () => entitlementsExpireJob.run(now) },
     { name: "fx.refresh", fn: () => fxRefreshJob.run(now) },
     { name: "knowledge.reindex", fn: () => knowledgeReindexJob.run(now) },

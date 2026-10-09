@@ -65,10 +65,7 @@ describe("confirmPayment concurrent lock integration", () => {
       billing: { name: "Cust", email: customer.email, country: "IN" },
     });
 
-    const [savedOrder] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, orderRes.orderId));
+    const [savedOrder] = await db.select().from(orders).where(eq(orders.id, orderRes.orderId));
 
     // Run both confirms in parallel
     const results = await Promise.allSettled([

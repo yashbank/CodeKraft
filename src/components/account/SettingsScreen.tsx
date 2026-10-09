@@ -92,20 +92,21 @@ export function SettingsScreen({
   const [deleteAccountPw, setDeleteAccountPw] = React.useState("");
 
   function billingInput(b: BillingDetails) {
-    const hasAddress = Boolean(b.line1 && b.city && b.postalCode);
+    const { line1, city, postalCode } = b;
     return {
       billingName: b.name,
       company: b.company || undefined,
-      address: hasAddress
-        ? {
-            line1: b.line1!,
-            line2: b.line2 || undefined,
-            city: b.city!,
-            state: b.state || undefined,
-            postalCode: b.postalCode!,
-            country: b.country,
-          }
-        : undefined,
+      address:
+        line1 && city && postalCode
+          ? {
+              line1,
+              line2: b.line2 || undefined,
+              city,
+              state: b.state || undefined,
+              postalCode,
+              country: b.country,
+            }
+          : undefined,
       country: b.country,
       gstNumber: b.gstNumber || undefined,
     };

@@ -1,5 +1,8 @@
 import { InvoicesScreen } from "@/components/account/InvoicesScreen";
-import { mapInvoiceRowsToSummaries, mapPaymentHistoryToSummaries } from "@/lib/account/invoices-view";
+import {
+  mapInvoiceRowsToSummaries,
+  mapPaymentHistoryToSummaries,
+} from "@/lib/account/invoices-view";
 import { listMyInvoicesQuery } from "@/modules/invoices/queries";
 import { getPaymentHistoryQuery } from "@/modules/users/queries";
 

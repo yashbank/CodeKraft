@@ -3,11 +3,7 @@
  */
 import { and, eq } from "drizzle-orm";
 import { type TxCtx, withTx } from "@/lib/db";
-import {
-  orderItems,
-  orders,
-  userOfferingPurchases,
-} from "../../../drizzle/schema/commerce";
+import { orderItems, orders, userOfferingPurchases } from "../../../drizzle/schema/commerce";
 import { offerings, offeringPrices } from "../../../drizzle/schema/offerings";
 import { products } from "../../../drizzle/schema/catalog";
 import { users } from "../../../drizzle/schema/auth";
@@ -84,10 +80,7 @@ export async function createManualOrder(
     if (input.type === "product") {
       for (const item of input.items) {
         if (isProjectLine(item)) {
-          throw new AppError(
-            ErrorCode.VALIDATION,
-            "Product orders take offering lines",
-          );
+          throw new AppError(ErrorCode.VALIDATION, "Product orders take offering lines");
         }
 
         const [offering] = await tx
@@ -173,10 +166,7 @@ export async function createManualOrder(
       // type === "project"
       for (const item of input.items) {
         if (!isProjectLine(item)) {
-          throw new AppError(
-            ErrorCode.VALIDATION,
-            "Project orders take project lines",
-          );
+          throw new AppError(ErrorCode.VALIDATION, "Project orders take project lines");
         }
 
         const pricing = calculateItemPricing({
@@ -231,14 +221,8 @@ export async function createManualOrder(
     }
 
     // 4. Calculate order totals
-    const subtotalMinor = preparedItems.reduce(
-      (acc, it) => acc + it.unitMinor * it.quantity,
-      0,
-    );
-    const discountMinor = Math.min(
-      subtotalMinor,
-      Math.max(0, input.discountMinor ?? 0),
-    );
+    const subtotalMinor = preparedItems.reduce((acc, it) => acc + it.unitMinor * it.quantity, 0);
+    const discountMinor = Math.min(subtotalMinor, Math.max(0, input.discountMinor ?? 0));
     const taxMinor = preparedItems.reduce((acc, it) => acc + it.taxMinor, 0);
     const totalMinor = subtotalMinor - discountMinor + taxMinor;
 
@@ -268,11 +252,12 @@ export async function createManualOrder(
         createdBy: ctx.userId,
       })
       .returning();
+    if (!order) throw new AppError(ErrorCode.INTERNAL, "order missing");
 
     // 6. Insert order items
     await tx.insert(orderItems).values(
       preparedItems.map((it) => ({
-        orderId: order!.id,
+        orderId: order.id,
         ...it,
       })),
     );
@@ -282,9 +267,9 @@ export async function createManualOrder(
     if (input.type === "project") {
       const req = await approvalsService.request(
         "project_order.split",
-        { type: "order", id: order!.id },
-        { orderId: order!.id },
-        ctx.userId!,
+        { type: "order", id: order.id },
+        { orderId: order.id },
+        ctx.userId,
         tx,
       );
       approvalRequestId = req.approvalRequestId;
@@ -295,11 +280,7 @@ export async function createManualOrder(
     let invoiceId: string | undefined = undefined;
 
     if (input.type === "product" && input.payment) {
-      const intent = await paymentsService.createIntentForOrder(
-        order!.id,
-        input.payment.method,
-        tx,
-      );
+      const intent = await paymentsService.createIntentForOrder(order.id, input.payment.method, tx);
       paymentId = intent.paymentId;
 
       const confirmResult = await paymentsService.confirmPayment(
@@ -319,20 +300,20 @@ export async function createManualOrder(
     await auditService.log(
       ctx,
       "order.created",
-      { type: "order", id: order!.id },
+      { type: "order", id: order.id },
       null,
       {
-        orderNo: order!.orderNo,
-        type: order!.type,
-        totalMinor: order!.totalMinor,
-        currency: order!.currency,
+        orderNo: order.orderNo,
+        type: order.type,
+        totalMinor: order.totalMinor,
+        currency: order.currency,
       },
       tx,
     );
 
     return {
-      orderId: order!.id,
-      orderNo: order!.orderNo,
+      orderId: order.id,
+      orderNo: order.orderNo,
       approvalRequestId,
       paymentId,
       invoiceId,

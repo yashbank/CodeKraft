@@ -8,7 +8,11 @@ import { createUser } from "../../factories/users";
 import { createOrder } from "../../factories/commerce";
 
 function ctxFor(userId: string) {
-  return buildContext({ user: { id: userId }, session: { id: `sess-${userId}` }, roles: ["customer"] });
+  return buildContext({
+    user: { id: userId },
+    session: { id: `sess-${userId}` },
+    roles: ["customer"],
+  });
 }
 
 describe("getMyOrderQuery (API-COM-05, SCR-ACC-11 order status page)", () => {

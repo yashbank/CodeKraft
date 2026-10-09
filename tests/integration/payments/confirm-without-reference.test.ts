@@ -57,10 +57,7 @@ describe("confirmPayment without customer reference (API-PAY-03)", () => {
       billing: { name: "Cust", email: customer.email, country: "IN" },
     });
 
-    const [savedOrder] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, orderRes.orderId));
+    const [savedOrder] = await db.select().from(orders).where(eq(orders.id, orderRes.orderId));
 
     // Confirm directly while still 'initiated'
     const confirmRes = await paymentsService.confirmPayment(adminCtx, {

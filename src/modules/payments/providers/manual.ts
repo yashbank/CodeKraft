@@ -1,9 +1,11 @@
+import { toDecimalString } from "@/lib/money";
 /**
  * Manual payment provider (UPI and NEFT/RTGS bank transfers, docs/06 §4.2, D-501).
  */
 import type { TxCtx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { settingsService } from "@/modules/settings/service";
+import type { BankDetails as SettingsBankDetails } from "@/modules/settings/types";
 import type {
   BankDetails,
   ConfirmInput,
@@ -25,7 +27,8 @@ export const defaultManualDeps: ManualProviderDeps = {
   },
   async getBankDetails(tx: TxCtx): Promise<BankDetails | null> {
     const settings = await settingsService.load(tx);
-    const b = settings.bankDetails as any;
+    const b: (SettingsBankDetails & { accountNo?: string; swift?: string }) | null =
+      settings.bankDetails;
     if (!b) {
       return {
         accountName: "CodeKraft Inc.",
@@ -66,14 +69,11 @@ export class ManualProvider implements PaymentProvider {
   ): Promise<CreateIntentResult> {
     if (method === "manual_upi") {
       if (order.amountDue.currency !== "INR") {
-        throw new AppError(
-          ErrorCode.STATE_INVALID,
-          "UPI is only available for INR payments",
-        );
+        throw new AppError(ErrorCode.STATE_INVALID, "UPI is only available for INR payments");
       }
 
       const vpa = (await this.deps.getUpiVpa(ctx)) || "codekraft@upi";
-      const dueRupees = (order.amountDue.amountMinor / 100).toFixed(2);
+      const dueRupees = toDecimalString(order.amountDue.amountMinor);
       const upiUri = `upi://pay?pa=${vpa}&pn=CodeKraft&am=${dueRupees}&cu=INR&tn=${order.orderNo}`;
       const qrDataUrl = await this.deps.renderQr(upiUri);
 
@@ -113,21 +113,11 @@ export class ManualProvider implements PaymentProvider {
       };
     }
 
-    throw new AppError(
-      ErrorCode.STATE_INVALID,
-      `Unsupported manual payment method: ${method}`,
-    );
+    throw new AppError(ErrorCode.STATE_INVALID, `Unsupported manual payment method: ${method}`);
   }
 
-  async confirm(
-    _ctx: TxCtx,
-    payment: PaymentRow,
-    input: ConfirmInput,
-  ): Promise<PaymentResult> {
-    const amounts = computeManualConfirmAmounts(
-      payment.amountDueMinor,
-      input.amountReceivedMinor,
-    );
+  async confirm(_ctx: TxCtx, payment: PaymentRow, input: ConfirmInput): Promise<PaymentResult> {
+    const amounts = computeManualConfirmAmounts(payment.amountDueMinor, input.amountReceivedMinor);
 
     return {
       status: "confirmed",

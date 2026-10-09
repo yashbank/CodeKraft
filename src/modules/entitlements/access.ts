@@ -4,19 +4,16 @@
  *   - null / undefined / 0: lifetime access (returns null)
  *   - > 0: computes startsAt + accessMonths, clamping month-end dates correctly.
  */
-export function calculateAccessEndsAt(
-  startsAt: Date,
-  accessMonths?: number | null,
-): Date | null {
+export function calculateAccessEndsAt(startsAt: Date, accessMonths?: number | null): Date | null {
   if (accessMonths === null || accessMonths === undefined || accessMonths <= 0) {
     return null;
   }
 
   const result = new Date(startsAt.getTime());
   const currentDay = result.getUTCDate();
-  
+
   result.setUTCMonth(result.getUTCMonth() + accessMonths);
-  
+
   // If date overflowed to next month (e.g. Jan 31 + 1 mo -> Mar 2 in leap year / Mar 3), clamp to last day of target month
   if (result.getUTCDate() !== currentDay) {
     result.setUTCDate(0); // Sets to last day of previous month

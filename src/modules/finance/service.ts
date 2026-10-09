@@ -1,7 +1,7 @@
 /**
  * `finance` service implementation (docs/06 §2.6 API-FIN-01..11, master plan §5, PHASE-04).
  */
-import type { DbOrTx, TxCtx } from "@/lib/db";
+import type { TxCtx } from "@/lib/db";
 import type { RequestContext } from "@/lib/authz/context";
 import type { ListResult } from "@/modules/_shared/zod";
 import { createNotImplemented } from "@/modules/_shared/not-implemented";

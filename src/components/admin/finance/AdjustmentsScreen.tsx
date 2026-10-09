@@ -118,7 +118,8 @@ export function AdjustmentsScreen({
     const payload = {
       reason,
       lines: lines.map((l) => {
-        const partner = l.partyType === "partner" ? partners.find((p) => p.name === l.partner) : undefined;
+        const partner =
+          l.partyType === "partner" ? partners.find((p) => p.name === l.partner) : undefined;
         return {
           partyType: l.partyType,
           ...(partner ? { partnerId: partner.id } : {}),

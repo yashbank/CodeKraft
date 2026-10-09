@@ -11,11 +11,7 @@ import { getEnv } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminAppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function AdminAppLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session) redirect("/auth/login?next=/dashboard");
 
@@ -46,7 +42,8 @@ export default async function AdminAppLayout({
     : [];
 
   const appEnv = getEnv().APP_ENV;
-  const environment = appEnv === "production" ? "production" : appEnv === "staging" ? "staging" : "development";
+  const environment =
+    appEnv === "production" ? "production" : appEnv === "staging" ? "staging" : "development";
 
   return (
     <AdminShellWrapper

@@ -51,7 +51,6 @@ export function LandingEditor({
   const [active, setActive] = React.useState<LandingChapter["key"]>(chapters[0]?.key ?? "who");
   const [featuredIds, setFeaturedIds] = React.useState(initialFeaturedIds);
   const [published, setPublished] = React.useState(false);
-  const [saving, setSaving] = React.useState(false);
   const formRef = React.useRef<HTMLFormElement>(null);
   const posterFileInputRef = React.useRef<HTMLInputElement>(null);
   const chapter = chapters.find((c) => c.key === active) ?? chapters[0];
@@ -100,7 +99,6 @@ export function LandingEditor({
     const form = formRef.current;
     if (!form) return;
     const data = new FormData(form);
-    setSaving(true);
     const result = await saveLandingChapter({
       key: chapter.key,
       eyebrow: String(data.get("eyebrow") ?? "").trim() || undefined,
@@ -125,7 +123,6 @@ export function LandingEditor({
       position: chapters.indexOf(chapter),
       published: canPublish ? published : chapter.published,
     });
-    setSaving(false);
     if (!result.ok) {
       toast.error(result.error.message);
       return;
@@ -156,7 +153,12 @@ export function LandingEditor({
       previewHref="/?preview=draft"
       onSave={handleSave}
     >
-      <form ref={formRef} className="space-y-5" onSubmit={(e) => e.preventDefault()} key={chapter.key}>
+      <form
+        ref={formRef}
+        className="space-y-5"
+        onSubmit={(e) => e.preventDefault()}
+        key={chapter.key}
+      >
         <h2 className="text-h3">
           {CHAPTER_LABEL[chapter.key]}{" "}
           <span className="font-mono text-caption text-fg-muted">
@@ -170,7 +172,7 @@ export function LandingEditor({
           hint={
             chapter.key === "who"
               ? "Shown behind the opening hero text on the public site."
-              : "Saved with this chapter, but not shown on the public page yet — only the \"Who we are\" hero image renders today."
+              : 'Saved with this chapter, but not shown on the public page yet — only the "Who we are" hero image renders today.'
           }
         >
           <input
@@ -181,7 +183,7 @@ export function LandingEditor({
             onChange={handlePosterChosen}
           />
           <div className="flex items-center gap-3">
-            {pendingPosterPreview ?? chapter.poster ? (
+            {(pendingPosterPreview ?? chapter.poster) ? (
               // eslint-disable-next-line @next/next/no-img-element -- admin preview of a user-uploaded R2 URL, not a next/image-optimizable static asset
               <img
                 src={pendingPosterPreview ?? chapter.poster}
@@ -204,14 +206,23 @@ export function LandingEditor({
             </Button>
           </div>
         </Field>
-        <Field id="ch-eyebrow" label="Eyebrow" optional hint="Small label above the title. 60 chars.">
+        <Field
+          id="ch-eyebrow"
+          label="Eyebrow"
+          optional
+          hint="Small label above the title. 60 chars."
+        >
           <Input id="ch-eyebrow" name="eyebrow" maxLength={60} defaultValue={chapter.eyebrow} />
         </Field>
         <Field
           id="ch-title"
           label="Title"
           required
-          hint={chapter.key === "who" ? "Keep the hero title under 60 characters for the 3D scene layout." : undefined}
+          hint={
+            chapter.key === "who"
+              ? "Keep the hero title under 60 characters for the 3D scene layout."
+              : undefined
+          }
         >
           <Input
             id="ch-title"
@@ -227,7 +238,11 @@ export function LandingEditor({
         <RichTextField id="ch-body" name="body" label="Body" defaultValue={chapter.body} rows={4} />
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="ch-cta1" label="Primary CTA label">
-            <Input id="ch-cta1" name="cta1" defaultValue={chapter.ctaPrimary?.label ?? "Start a project"} />
+            <Input
+              id="ch-cta1"
+              name="cta1"
+              defaultValue={chapter.ctaPrimary?.label ?? "Start a project"}
+            />
           </Field>
           <Field id="ch-cta1-target" label="Primary CTA target">
             <Select name="cta1-target" defaultValue={chapter.ctaPrimary?.target ?? "inquiry"}>
@@ -265,8 +280,8 @@ export function LandingEditor({
           <div className="space-y-2 rounded-lg border border-border bg-surface p-4">
             <h3 className="text-h4">Services shown here</h3>
             <p className="text-caption text-fg-muted">
-              Every published service appears automatically. Manage publish state from the
-              Services editor.
+              Every published service appears automatically. Manage publish state from the Services
+              editor.
             </p>
             <ul className="grid gap-2 sm:grid-cols-2">
               {services.map((s) => (
@@ -282,7 +297,9 @@ export function LandingEditor({
           <div className="space-y-3 rounded-lg border border-border bg-surface p-4">
             <h3 className="text-h4">
               Featured products{" "}
-              <span className="text-caption font-normal text-fg-muted">(max 8, published only)</span>
+              <span className="text-caption font-normal text-fg-muted">
+                (max 8, published only)
+              </span>
             </h3>
             <ol className="space-y-2">
               {featuredNames.map((p, i) => (
@@ -309,10 +326,15 @@ export function LandingEditor({
                 <p className="text-body-sm text-fg-muted">No featured products yet.</p>
               ) : null}
             </ol>
-            <Field id="ch-add-featured" label="Add product" hint="Unlisted products are excluded (D-314).">
+            <Field
+              id="ch-add-featured"
+              label="Add product"
+              hint="Unlisted products are excluded (D-314)."
+            >
               <Select
                 onValueChange={(v) => {
-                  if (!featuredIds.includes(v) && featuredIds.length < 8) persistFeatured([...featuredIds, v]);
+                  if (!featuredIds.includes(v) && featuredIds.length < 8)
+                    persistFeatured([...featuredIds, v]);
                 }}
               >
                 <SelectTrigger id="ch-add-featured">
@@ -332,9 +354,16 @@ export function LandingEditor({
           </div>
         ) : null}
         <div className="flex items-center gap-3">
-          <Switch id="ch-published" checked={published} onCheckedChange={setPublished} disabled={!canPublish} />
+          <Switch
+            id="ch-published"
+            checked={published}
+            onCheckedChange={setPublished}
+            disabled={!canPublish}
+          />
           <Label htmlFor="ch-published">Published</Label>
-          {!canPublish ? <span className="text-caption text-fg-muted">Requires content.publish</span> : null}
+          {!canPublish ? (
+            <span className="text-caption text-fg-muted">Requires content.publish</span>
+          ) : null}
         </div>
       </form>
     </ContentEditorFrame>

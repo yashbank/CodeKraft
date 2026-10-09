@@ -39,7 +39,7 @@ describe("first purchase only coupon restriction (docs/06 §2.3, A-401)", () => 
       price: { amountMinor: 10000, currency: "INR" },
     });
 
-    const coupon = await createCoupon({
+    await createCoupon({
       code: "WELCOME10",
       kind: "percent",
       value: 1000, // 10%

@@ -78,13 +78,13 @@ describe("Scoped presigned invoice URL access (SA-10, BR-16)", () => {
     expect(invoiceId).toBeDefined();
 
     // 1. Foreign customer Customer 2 attempts to get invoice URL -> must throw NOT_FOUND (SA-10)
-    await expect(
-      invoicesService.getInvoicePdfUrl(cust2Ctx, { invoiceId })
-    ).rejects.toSatisfy((err: unknown) => {
-      expect(err).toBeInstanceOf(AppError);
-      expect((err as AppError).code).toBe(ErrorCode.NOT_FOUND);
-      return true;
-    });
+    await expect(invoicesService.getInvoicePdfUrl(cust2Ctx, { invoiceId })).rejects.toSatisfy(
+      (err: unknown) => {
+        expect(err).toBeInstanceOf(AppError);
+        expect((err as AppError).code).toBe(ErrorCode.NOT_FOUND);
+        return true;
+      },
+    );
 
     // 2. Owner Customer 1 gets invoice URL -> succeeds
     const ownerUrlRes = await invoicesService.getInvoicePdfUrl(cust1Ctx, { invoiceId });
@@ -95,10 +95,7 @@ describe("Scoped presigned invoice URL access (SA-10, BR-16)", () => {
     const adminUrlRes = await invoicesService.getInvoicePdfUrl(adminCtx, { invoiceId });
     expect(adminUrlRes.url).toBeDefined();
 
-    const [audit] = await db
-      .select()
-      .from(auditLogs)
-      .where(eq(auditLogs.action, "invoice.viewed"));
+    const [audit] = await db.select().from(auditLogs).where(eq(auditLogs.action, "invoice.viewed"));
 
     expect(audit).toBeDefined();
     expect(audit?.actorId).toBe(admin.id);

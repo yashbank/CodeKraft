@@ -20,7 +20,7 @@ describe("expired and inactive coupon rejection (docs/06 §2.3)", () => {
     const product = await createProduct({ createdBy: admin.id });
 
     // 1. Expired coupon
-    const expiredCoupon = await createCoupon({
+    await createCoupon({
       code: "EXPIRED50",
       kind: "percent",
       value: 5000,
@@ -40,7 +40,7 @@ describe("expired and inactive coupon rejection (docs/06 §2.3)", () => {
     }
 
     // 2. Future coupon (not started)
-    const futureCoupon = await createCoupon({
+    await createCoupon({
       code: "FUTURE50",
       kind: "percent",
       value: 5000,
@@ -60,7 +60,7 @@ describe("expired and inactive coupon rejection (docs/06 §2.3)", () => {
     }
 
     // 3. Deactivated coupon
-    const inactiveCoupon = await createCoupon({
+    await createCoupon({
       code: "INACTIVE50",
       kind: "percent",
       value: 5000,

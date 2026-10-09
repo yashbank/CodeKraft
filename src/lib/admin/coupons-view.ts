@@ -37,8 +37,9 @@ export function mapCouponToRow(
   productNameById: ReadonlyMap<string, string>,
   now: string,
 ): CouponRow {
-  const products = (coupon.productIds ?? [])
-    .map((id) => productNameById.get(id) ?? `Product ${shortId(id)}`);
+  const products = (coupon.productIds ?? []).map(
+    (id) => productNameById.get(id) ?? `Product ${shortId(id)}`,
+  );
 
   return {
     id: coupon.id,

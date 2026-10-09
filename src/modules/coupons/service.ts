@@ -2,6 +2,7 @@
  * Coupons service implementation (docs/06 §2.3 API-COM-08, master plan §5, P4.3).
  */
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { type DbOrTx, type TxCtx, getDb, withTx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { assertPermission } from "@/lib/authz/assert";
@@ -174,10 +175,7 @@ export class DefaultCouponsService implements CouponsService {
     return await withTx(runner);
   }
 
-  async listCoupons(
-    ctx: RequestContext,
-    input: ListCouponsInput,
-  ): Promise<ListResult<Coupon>> {
+  async listCoupons(ctx: RequestContext, input: ListCouponsInput): Promise<ListResult<Coupon>> {
     assertPermission(ctx, "orders.manual.write");
     const db = await getDb();
 
@@ -192,12 +190,12 @@ export class DefaultCouponsService implements CouponsService {
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
     const pageSize = input.limit ?? 25;
 
-    let sortCol = coupons.createdAt;
+    let sortCol: AnyPgColumn = coupons.createdAt;
     let isAsc = false;
     if (input.sort) {
       const [col, dir] = input.sort.split(":");
-      if (col === "code") sortCol = coupons.code as any;
-      if (col === "endsAt") sortCol = coupons.endsAt as any;
+      if (col === "code") sortCol = coupons.code;
+      if (col === "endsAt") sortCol = coupons.endsAt;
       if (dir === "asc") isAsc = true;
     }
     const orderClause = isAsc ? asc(sortCol) : desc(sortCol);
@@ -221,10 +219,7 @@ export class DefaultCouponsService implements CouponsService {
     };
   }
 
-  async validateForOrder(
-    input: ValidateCouponInput,
-    tx?: TxCtx,
-  ): Promise<CouponValidation> {
+  async validateForOrder(input: ValidateCouponInput, tx?: TxCtx): Promise<CouponValidation> {
     const db: DbOrTx = tx ?? (await getDb());
 
     const [coupon] = await db

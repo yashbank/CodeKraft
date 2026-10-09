@@ -1,13 +1,17 @@
 import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { sendEmail } from "@/lib/email/transport";
+import type { EmailTemplate } from "@/lib/email/types";
 import { emailOutbox } from "../../drizzle/schema/notifications";
 import { jobRuns } from "../../drizzle/schema/ops";
+
+const errMessage = (err: unknown, fallback: string) =>
+  err instanceof Error ? err.message : fallback;
 
 export const emailOutboxRetryJob = {
   key: "email.outbox_retry" as const,
 
-  async run(now: Date = new Date(), jobId: string = `outbox-retry-${Date.now()}`) {
+  async run(now: Date = new Date(), _jobId: string = `outbox-retry-${Date.now()}`) {
     const db = getDb();
     const [runRow] = await db
       .insert(jobRuns)
@@ -35,10 +39,7 @@ export const emailOutboxRetryJob = {
         .select()
         .from(emailOutbox)
         .where(
-          and(
-            inArray(emailOutbox.status, ["queued", "failed"]),
-            sql`${emailOutbox.attempts} < 5`,
-          ),
+          and(inArray(emailOutbox.status, ["queued", "failed"]), sql`${emailOutbox.attempts} < 5`),
         )
         .orderBy(asc(emailOutbox.priority), asc(emailOutbox.createdAt))
         .limit(50);
@@ -59,7 +60,7 @@ export const emailOutboxRetryJob = {
             await sendEmail({
               to: row.toEmail,
               subject: `Notification: ${row.template}`,
-              template: row.template as any,
+              template: row.template as EmailTemplate,
               data: (row.payload as Record<string, unknown>) ?? {},
               priority: row.priority,
             });
@@ -76,15 +77,14 @@ export const emailOutboxRetryJob = {
             .where(eq(emailOutbox.id, row.id));
 
           sentCount++;
-        } catch (err: any) {
-
+        } catch (err) {
           const nextAttempts = row.attempts + 1;
           await db
             .update(emailOutbox)
             .set({
               status: nextAttempts >= 5 ? "failed" : "failed",
               attempts: nextAttempts,
-              lastError: err?.message ?? "Send error",
+              lastError: errMessage(err, "Send error"),
               updatedAt: now,
             })
             .where(eq(emailOutbox.id, row.id));
@@ -110,14 +110,14 @@ export const emailOutboxRetryJob = {
         failedCount,
         deferredCount,
       };
-    } catch (err: any) {
+    } catch (err) {
       if (runRow) {
         await db
           .update(jobRuns)
           .set({
             status: "error",
             finishedAt: new Date(),
-            detail: { error: err?.message ?? "Execution failed" },
+            detail: { error: errMessage(err, "Execution failed") },
           })
           .where(eq(jobRuns.id, runRow.id));
       }

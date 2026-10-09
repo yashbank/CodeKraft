@@ -59,10 +59,7 @@ describe("Project order split rejection cancels order (API-ADM-03, MASTER_SPEC Â
     expect(res.approvalRequestId).toBeDefined();
 
     // 2. Verify order is pending_payment
-    const [initialOrder] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, res.orderId));
+    const [initialOrder] = await db.select().from(orders).where(eq(orders.id, res.orderId));
     expect(initialOrder?.status).toBe("pending_payment");
 
     // 3. Admin 2 rejects the split proposal
@@ -85,10 +82,7 @@ describe("Project order split rejection cancels order (API-ADM-03, MASTER_SPEC Â
     expect(req?.status).toBe("rejected");
 
     // 5. Verify order status transitioned to cancelled with cancelledAt timestamp
-    const [cancelledOrder] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, res.orderId));
+    const [cancelledOrder] = await db.select().from(orders).where(eq(orders.id, res.orderId));
     expect(cancelledOrder?.status).toBe("cancelled");
     expect(cancelledOrder?.cancelledAt).not.toBeNull();
   });

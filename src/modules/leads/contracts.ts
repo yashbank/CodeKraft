@@ -3,7 +3,7 @@
  * R-701. Leads are a 7-year record class (BR-18). Implementation in P6.
  */
 import type { Context, RequestContext } from "@/lib/authz/context";
-import type { TxCtx } from "@/lib/db";
+import type { DbOrTx } from "@/lib/db";
 import type { JobContext, JobOutcome } from "@/modules/analytics/types";
 import type {
   AddLeadNoteInput,
@@ -37,7 +37,7 @@ export interface LeadsService {
   createLeadManual(ctx: RequestContext, input: CreateLeadManualInput): Promise<LeadCreateResult>;
 
   /** API-CHAT-15 back-end: `leads(source='chatbot')` inside the chat module's transaction; `N: lead.new`. */
-  createFromChatbot(input: CreateLeadFromChatbotInput, tx: TxCtx): Promise<LeadCreateResult>;
+  createFromChatbot(input: CreateLeadFromChatbotInput, tx: DbOrTx): Promise<LeadCreateResult>;
 
   /** API-LEAD-03 `listLeads` — `leads.read` / `leads.read_all`. */
   listLeads(ctx: RequestContext, input: ListLeadsInput): Promise<ListResult<LeadRow>>;

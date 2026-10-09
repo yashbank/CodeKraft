@@ -9,9 +9,7 @@ export function isDuplicateUtr(
   const normalized = candidateRef.trim().toLowerCase();
   if (!normalized) return false;
 
-  return existingReferences.some(
-    (ref) => ref && ref.trim().toLowerCase() === normalized,
-  );
+  return existingReferences.some((ref) => ref && ref.trim().toLowerCase() === normalized);
 }
 
 export function findDuplicateUtrWarnings(

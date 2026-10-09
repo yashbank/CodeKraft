@@ -10,7 +10,9 @@ export default async function AdminOrdersPage() {
   const now = new Date().toISOString();
 
   const result = await listOrdersAdminQuery({ limit: 100 }, ctx);
-  const orders = result.ok ? result.data.items.map((row) => mapOrderAdminRowToOrderRow(row, now)) : [];
+  const orders = result.ok
+    ? result.data.items.map((row) => mapOrderAdminRowToOrderRow(row, now))
+    : [];
 
   return (
     <OrdersList

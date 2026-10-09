@@ -25,6 +25,6 @@ export async function GET(req: NextRequest) {
       timestamp: new Date().toISOString(),
       reports,
     },
-    { status: hasErrors ? 500 : 200 }
+    { status: hasErrors ? 500 : 200 },
   );
 }

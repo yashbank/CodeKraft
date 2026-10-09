@@ -1,9 +1,10 @@
+import { toDecimalString } from "@/lib/money";
 /**
  * Invoices service implementation (docs/06 §2.3 API-COM-11..13, API-PAY-06, BR-16, D-1501).
  */
 import crypto from "node:crypto";
-import { and, desc, eq, gt, gte, inArray, lte, sql } from "drizzle-orm";
-import type { DbOrTx, TxCtx } from "@/lib/db";
+import { desc, eq, sql } from "drizzle-orm";
+import type { TxCtx } from "@/lib/db";
 import { getDb, withTx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { assertPermission } from "@/lib/authz/assert";
@@ -15,7 +16,6 @@ import {
   invoices,
   creditNotes,
   type BuyerSnapshot,
-  type GstBreakdown,
   type InvoiceLine,
   type SellerSnapshot,
 } from "../../../drizzle/schema/invoices";
@@ -62,11 +62,7 @@ export class DefaultInvoicesService implements InvoicesService {
       throw new AppError(ErrorCode.STATE_INVALID, "Invoice already exists for this order");
     }
 
-    const [order] = await tx
-      .select()
-      .from(orders)
-      .where(eq(orders.id, input.orderId))
-      .limit(1);
+    const [order] = await tx.select().from(orders).where(eq(orders.id, input.orderId)).limit(1);
 
     if (!order) {
       throw new AppError(ErrorCode.NOT_FOUND, "Order not found");
@@ -93,10 +89,7 @@ export class DefaultInvoicesService implements InvoicesService {
       }
     }
 
-    const items = await tx
-      .select()
-      .from(orderItems)
-      .where(eq(orderItems.orderId, order.id));
+    const items = await tx.select().from(orderItems).where(eq(orderItems.orderId, order.id));
 
     if (items.length === 0) {
       throw new AppError(ErrorCode.STATE_INVALID, "Order has no items to invoice");
@@ -167,9 +160,10 @@ export class DefaultInvoicesService implements InvoicesService {
         gstBreakdown: gstBreakdown ?? null,
       })
       .returning();
+    if (!newInvoice) throw new AppError(ErrorCode.INTERNAL, "newInvoice missing");
 
     // Render PDF and upload
-    const { pdfMediaId } = await this.renderInvoicePdf(newInvoice!.id, tx);
+    const { pdfMediaId } = await this.renderInvoicePdf(newInvoice.id, tx);
 
     // Customer notification
     if (order.userId) {
@@ -179,7 +173,7 @@ export class DefaultInvoicesService implements InvoicesService {
         title: "Invoice issued",
         body: `Invoice ${seqAlloc.number} has been issued`,
         link: `/account/invoices`,
-        payload: { invoiceId: newInvoice!.id, invoiceNo: seqAlloc.number },
+        payload: { invoiceId: newInvoice.id, invoiceNo: seqAlloc.number },
       });
     }
 
@@ -189,10 +183,10 @@ export class DefaultInvoicesService implements InvoicesService {
         toEmail: buyerSnapshot.email,
         template: "invoice",
         payload: {
-          invoiceId: newInvoice!.id,
+          invoiceId: newInvoice.id,
           invoiceNo: seqAlloc.number,
           orderNo: order.orderNo,
-          total: (order.totalMinor / 100).toFixed(2),
+          total: toDecimalString(order.totalMinor),
           currency: order.currency,
         },
         priority: 2,
@@ -200,7 +194,7 @@ export class DefaultInvoicesService implements InvoicesService {
     }
 
     return {
-      invoiceId: newInvoice!.id,
+      invoiceId: newInvoice.id,
       invoiceNo: seqAlloc.number,
       pdfMediaId,
     };
@@ -213,11 +207,7 @@ export class DefaultInvoicesService implements InvoicesService {
     actor: { userId: string | null },
     tx: TxCtx,
   ): Promise<IssueCreditNoteResult> {
-    const [refund] = await tx
-      .select()
-      .from(refunds)
-      .where(eq(refunds.id, input.refundId))
-      .limit(1);
+    const [refund] = await tx.select().from(refunds).where(eq(refunds.id, input.refundId)).limit(1);
 
     if (!refund) {
       throw new AppError(ErrorCode.NOT_FOUND, "Refund not found");
@@ -249,16 +239,14 @@ export class DefaultInvoicesService implements InvoicesService {
         issuedAt: new Date(),
       })
       .returning();
+    if (!cn) throw new AppError(ErrorCode.INTERNAL, "cn missing");
 
-    await tx
-      .update(refunds)
-      .set({ creditNoteId: cn!.id })
-      .where(eq(refunds.id, refund.id));
+    await tx.update(refunds).set({ creditNoteId: cn.id }).where(eq(refunds.id, refund.id));
 
-    const { pdfMediaId } = await this.renderCreditNotePdf(cn!.id, tx);
+    const { pdfMediaId } = await this.renderCreditNotePdf(cn.id, tx);
 
     return {
-      creditNoteId: cn!.id,
+      creditNoteId: cn.id,
       creditNo: seqAlloc.number,
       pdfMediaId,
     };
@@ -266,16 +254,11 @@ export class DefaultInvoicesService implements InvoicesService {
 
   // -- API-COM-12 getInvoicePdfUrl ---------------------------------------------------------------
 
-  async getInvoicePdfUrl(
-    ctx: RequestContext,
-    input: GetInvoicePdfUrlInput,
-  ): Promise<PdfUrlResult> {
+  async getInvoicePdfUrl(ctx: RequestContext, input: GetInvoicePdfUrlInput): Promise<PdfUrlResult> {
     const db = await getDb();
     const isAdmin = ctx.roles.includes("admin") || ctx.roles.includes("super_admin");
 
     let objectKey: string;
-    let entityId: string;
-    let entityNo: string;
 
     if ("invoiceId" in input) {
       const [row] = await db
@@ -309,8 +292,6 @@ export class DefaultInvoicesService implements InvoicesService {
       }
 
       objectKey = `invoices/${row.invoice.fy}/${row.invoice.invoiceNo.replace(/\//g, "-")}.pdf`;
-      entityId = row.invoice.id;
-      entityNo = row.invoice.invoiceNo;
     } else {
       const [row] = await db
         .select({
@@ -345,8 +326,6 @@ export class DefaultInvoicesService implements InvoicesService {
       }
 
       objectKey = `credit_notes/${row.creditNote.fy}/${row.creditNote.creditNo.replace(/\//g, "-")}.pdf`;
-      entityId = row.creditNote.id;
-      entityNo = row.creditNote.creditNo;
     }
 
     const driver = getStorageDriver();
@@ -452,11 +431,7 @@ export class DefaultInvoicesService implements InvoicesService {
   }
 
   async renderInvoicePdf(invoiceId: string, tx: TxCtx): Promise<{ pdfMediaId: string }> {
-    const [invoice] = await tx
-      .select()
-      .from(invoices)
-      .where(eq(invoices.id, invoiceId))
-      .limit(1);
+    const [invoice] = await tx.select().from(invoices).where(eq(invoices.id, invoiceId)).limit(1);
 
     if (!invoice) {
       throw new AppError(ErrorCode.NOT_FOUND, "Invoice not found");
@@ -472,7 +447,7 @@ export class DefaultInvoicesService implements InvoicesService {
       `Date: ${invoice.issuedAt.toISOString()}`,
       `Seller: ${invoice.sellerSnapshot.name}`,
       `Buyer: ${invoice.buyerSnapshot.name}`,
-      `Total: ${invoice.currency} ${(invoice.totalMinor / 100).toFixed(2)}`,
+      `Total: ${invoice.currency} ${toDecimalString(invoice.totalMinor)}`,
     ];
     const pdfBuf = buildPdfBuffer(`Tax Invoice - ${invoice.invoiceNo}`, lines);
 
@@ -499,16 +474,15 @@ export class DefaultInvoicesService implements InvoicesService {
           sizeBytes: pdfBuf.length,
           checksum,
           visibility: "private",
-          uploadedBy: invoice.sellerSnapshot.adminUserId as string || (await this.getFallbackAdminId(tx)),
+          uploadedBy:
+            (invoice.sellerSnapshot.adminUserId as string) || (await this.getFallbackAdminId(tx)),
         })
         .returning();
-      mediaId = mediaRow!.id;
+      if (!mediaRow) throw new AppError(ErrorCode.INTERNAL, "mediaRow missing");
+      mediaId = mediaRow.id;
     }
 
-    await tx
-      .update(invoices)
-      .set({ pdfMediaId: mediaId })
-      .where(eq(invoices.id, invoice.id));
+    await tx.update(invoices).set({ pdfMediaId: mediaId }).where(eq(invoices.id, invoice.id));
 
     return { pdfMediaId: mediaId };
   }
@@ -532,7 +506,7 @@ export class DefaultInvoicesService implements InvoicesService {
     const lines = [
       `Credit Note: ${cn.creditNo}`,
       `Date: ${cn.issuedAt.toISOString()}`,
-      `Amount: ${cn.currency} ${(cn.amountMinor / 100).toFixed(2)}`,
+      `Amount: ${cn.currency} ${toDecimalString(cn.amountMinor)}`,
     ];
     const pdfBuf = buildPdfBuffer(`Credit Note - ${cn.creditNo}`, lines);
 
@@ -561,18 +535,16 @@ export class DefaultInvoicesService implements InvoicesService {
           uploadedBy: await this.getFallbackAdminId(tx),
         })
         .returning();
-      mediaId = mediaRow!.id;
+      if (!mediaRow) throw new AppError(ErrorCode.INTERNAL, "mediaRow missing");
+      mediaId = mediaRow.id;
     }
 
-    await tx
-      .update(creditNotes)
-      .set({ pdfMediaId: mediaId })
-      .where(eq(creditNotes.id, cn.id));
+    await tx.update(creditNotes).set({ pdfMediaId: mediaId }).where(eq(creditNotes.id, cn.id));
 
     return { pdfMediaId: mediaId };
   }
 
-  async regeneratePending(now: Date = new Date()): Promise<{ count: number }> {
+  async regeneratePending(_now: Date = new Date()): Promise<{ count: number }> {
     const db = await getDb();
     const pendingInvoices = await db
       .select({ id: invoices.id })

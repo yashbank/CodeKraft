@@ -86,7 +86,10 @@ describe("project split snapshot (docs/06 §4.2, MASTER_SPEC §7)", () => {
       withItem: false,
     });
 
-    await db.update(orders).set({ splitApprovalRequestId: approval!.id }).where(eq(orders.id, order.id));
+    await db
+      .update(orders)
+      .set({ splitApprovalRequestId: approval!.id })
+      .where(eq(orders.id, order.id));
 
     await db.insert(orderItems).values({
       orderId: order.id,
@@ -146,7 +149,10 @@ describe("project split snapshot (docs/06 §4.2, MASTER_SPEC §7)", () => {
       withItem: false,
     });
 
-    await db.update(orders).set({ splitApprovalRequestId: approval!.id }).where(eq(orders.id, order.id));
+    await db
+      .update(orders)
+      .set({ splitApprovalRequestId: approval!.id })
+      .where(eq(orders.id, order.id));
 
     // Custom project order item with 10% company cut, 70/30 split between A and B
     await db.insert(orderItems).values({
@@ -200,7 +206,10 @@ describe("project split snapshot (docs/06 §4.2, MASTER_SPEC §7)", () => {
     ]);
 
     // Assert ledger entries
-    const entries = await db.select().from(ledgerEntries).where(eq(ledgerEntries.orderId, order.id));
+    const entries = await db
+      .select()
+      .from(ledgerEntries)
+      .where(eq(ledgerEntries.orderId, order.id));
     const partnerAEntry = entries.find((e) => e.partnerId === partnerA.id)!;
     const partnerBEntry = entries.find((e) => e.partnerId === partnerB.id)!;
     expect(partnerAEntry.amountMinor).toBe(126000);

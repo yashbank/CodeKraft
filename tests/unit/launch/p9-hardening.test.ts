@@ -6,9 +6,14 @@ for (const line of readFileSync(".env.example", "utf8").split("\n")) {
 }
 process.env.APP_ENV ??= "test";
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { resolveHostKind } from "@/middleware";
-import { checkClass, assertRateLimit, InMemoryRateLimitStore, setRateLimitStore } from "@/lib/rate-limit";
+import {
+  checkClass,
+  assertRateLimit,
+  InMemoryRateLimitStore,
+  setRateLimitStore,
+} from "@/lib/rate-limit";
 import { runFrequentJobs, runDailyJobs } from "@/jobs/registry";
 
 describe("Phase 9: Hardening & Performance Verification", () => {

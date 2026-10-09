@@ -30,7 +30,9 @@ export function buildAdminNameMap(admins: AdminDirectoryEntry[]): Map<string, Ad
   return new Map(admins.map((a) => [a.id, a]));
 }
 
-export function buildProductNameMap(products: Array<{ id: string; name: string }>): Map<string, string> {
+export function buildProductNameMap(
+  products: Array<{ id: string; name: string }>,
+): Map<string, string> {
   return new Map(products.map((p) => [p.id, p.name]));
 }
 
@@ -56,7 +58,9 @@ export function mapLeadRow(
     email: l.email ?? "",
     phone: l.phone ?? undefined,
     source: l.source,
-    product: l.productId ? (productNames.get(l.productId) ?? `Product ${shortId(l.productId)}`) : undefined,
+    product: l.productId
+      ? (productNames.get(l.productId) ?? `Product ${shortId(l.productId)}`)
+      : undefined,
     services: [],
     status: l.status,
     assignee: adminRef(l.assignedTo, admins),
@@ -67,7 +71,10 @@ export function mapLeadRow(
   };
 }
 
-function mapActivity(a: LeadActivityRow, admins: ReadonlyMap<string, AdminDirectoryEntry>): LeadActivity {
+function mapActivity(
+  a: LeadActivityRow,
+  admins: ReadonlyMap<string, AdminDirectoryEntry>,
+): LeadActivity {
   const actorName = a.actor
     ? (admins.get(a.actor.id)?.name ?? a.actor.name ?? `Admin ${shortId(a.actor.id)}`)
     : "System";

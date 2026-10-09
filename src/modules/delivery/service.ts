@@ -1,16 +1,12 @@
 import { alias } from "drizzle-orm/pg-core";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { type DbOrTx, type TxCtx, getDb, withTx } from "@/lib/db";
 import { assertPermission } from "@/lib/authz/assert";
 import type { RequestContext } from "@/lib/authz/context";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { encrypt } from "@/lib/crypto";
 import { auditService } from "@/modules/audit/service";
-import {
-  deliveryTasks,
-  entitlements,
-  serviceProgress,
-} from "../../../drizzle/schema/delivery";
+import { deliveryTasks, entitlements, serviceProgress } from "../../../drizzle/schema/delivery";
 import { orders, orderItems } from "../../../drizzle/schema/commerce";
 import { offerings } from "../../../drizzle/schema/offerings";
 
@@ -80,6 +76,7 @@ export class DefaultDeliveryService implements DeliveryService {
         })
         .where(eq(entitlements.id, entitlement.id))
         .returning();
+      if (!updated) throw new AppError(ErrorCode.INTERNAL, "updated missing");
 
       // Close open provision task
       await tx
@@ -102,7 +99,7 @@ export class DefaultDeliveryService implements DeliveryService {
         "entitlement.provisioned",
         { type: "entitlement", id: entitlement.id },
         { provisioningState: entitlement.provisioningState, status: entitlement.status },
-        { provisioningState: updated!.provisioningState, status: updated!.status },
+        { provisioningState: updated.provisioningState, status: updated.status },
         tx,
       );
 
@@ -117,7 +114,7 @@ export class DefaultDeliveryService implements DeliveryService {
         }
       }
 
-      return await this.buildAdminRow(updated!, tx);
+      return await this.buildAdminRow(updated, tx);
     });
   }
 
@@ -140,7 +137,10 @@ export class DefaultDeliveryService implements DeliveryService {
       }
 
       if (entitlement.status === "revoked") {
-        throw new AppError(ErrorCode.STATE_INVALID, "Cannot set license key on revoked entitlement");
+        throw new AppError(
+          ErrorCode.STATE_INVALID,
+          "Cannot set license key on revoked entitlement",
+        );
       }
 
       const encryptedKey = encrypt(input.licenseKey);
@@ -154,6 +154,7 @@ export class DefaultDeliveryService implements DeliveryService {
         })
         .where(eq(entitlements.id, entitlement.id))
         .returning();
+      if (!updated) throw new AppError(ErrorCode.INTERNAL, "updated missing");
 
       // Close open provision task
       await tx
@@ -190,7 +191,7 @@ export class DefaultDeliveryService implements DeliveryService {
         }
       }
 
-      return await this.buildAdminRow(updated!, tx);
+      return await this.buildAdminRow(updated, tx);
     });
   }
 
@@ -266,7 +267,7 @@ export class DefaultDeliveryService implements DeliveryService {
           doneAt: s.doneAt ? s.doneAt.toISOString() : null,
           note: s.note,
         })),
-        allDone,
+        fulfilled: allDone,
       };
     });
   }
@@ -280,14 +281,15 @@ export class DefaultDeliveryService implements DeliveryService {
     const db = await getDb();
 
     const conditions = [];
-    if (input.filters.kind) {
-      conditions.push(eq(deliveryTasks.kind, input.filters.kind));
+    if (input.filters?.kind) {
+      conditions.push(eq(deliveryTasks.kind, input.filters?.kind));
     }
-    if (input.filters.status) {
-      conditions.push(eq(deliveryTasks.status, input.filters.status));
+    if (input.filters?.status) {
+      conditions.push(eq(deliveryTasks.status, input.filters?.status));
     }
-    if (input.filters.assignedTo) {
-      const targetUser = input.filters.assignedTo === "me" ? ctx.userId : input.filters.assignedTo;
+    if (input.filters?.assignedTo) {
+      const targetUser =
+        input.filters?.assignedTo === "me" ? ctx.userId : input.filters?.assignedTo;
       if (targetUser) {
         conditions.push(eq(deliveryTasks.assignedTo, targetUser));
       }
@@ -325,9 +327,11 @@ export class DefaultDeliveryService implements DeliveryService {
       entitlementStatus: r.entitlement.status,
       product: { id: r.product.id, name: r.product.name },
       offeringName: r.offering?.name ?? null,
-      order: r.order?.id ? { id: r.order.id, orderNo: r.order.orderNo! } : null,
+      order: r.order?.id ? { id: r.order.id, orderNo: r.order.orderNo } : null,
       customer: { id: r.customer.id, email: r.customer.email, name: r.customer.name },
-      assignedTo: r.task.assignedTo ? { id: r.task.assignedTo, name: r.assignee?.name ?? null } : null,
+      assignedTo: r.task.assignedTo
+        ? { id: r.task.assignedTo, name: r.assignee?.name ?? null }
+        : null,
       note: r.task.note,
       createdAt: r.task.createdAt.toISOString(),
       doneAt: r.task.doneAt ? r.task.doneAt.toISOString() : null,
@@ -335,7 +339,7 @@ export class DefaultDeliveryService implements DeliveryService {
 
     return {
       items,
-      nextCursor: hasNext ? items[items.length - 1]?.taskId ?? null : null,
+      nextCursor: hasNext ? (items[items.length - 1]?.taskId ?? null) : null,
     };
   }
 
@@ -372,6 +376,7 @@ export class DefaultDeliveryService implements DeliveryService {
         })
         .where(eq(deliveryTasks.id, task.id))
         .returning();
+      if (!updatedTask) throw new AppError(ErrorCode.INTERNAL, "updatedTask missing");
 
       // If revoke_external completed, ensure entitlement is marked revoked
       if (task.kind === "revoke_external") {
@@ -390,7 +395,7 @@ export class DefaultDeliveryService implements DeliveryService {
         "delivery_task.completed",
         { type: "delivery_task", id: task.id },
         { status: task.status },
-        { status: updatedTask!.status },
+        { status: updatedTask.status },
         tx,
       );
 
@@ -398,32 +403,29 @@ export class DefaultDeliveryService implements DeliveryService {
         .select()
         .from(entitlements)
         .where(eq(entitlements.id, task.entitlementId));
-      const [prod] = await tx
-        .select()
-        .from(products)
-        .where(eq(products.id, ent!.productId));
-      const [cust] = await tx
-        .select()
-        .from(users)
-        .where(eq(users.id, ent!.userId));
-      const extras = await hydrateTaskExtras(tx, ent!, updatedTask!.assignedTo);
+      if (!ent) throw new AppError(ErrorCode.INTERNAL, "ent missing");
+      const [prod] = await tx.select().from(products).where(eq(products.id, ent.productId));
+      if (!prod) throw new AppError(ErrorCode.INTERNAL, "prod missing");
+      const [cust] = await tx.select().from(users).where(eq(users.id, ent.userId));
+      if (!cust) throw new AppError(ErrorCode.INTERNAL, "cust missing");
+      const extras = await hydrateTaskExtras(tx, ent, updatedTask.assignedTo);
 
       return {
-        taskId: updatedTask!.id,
-        kind: updatedTask!.kind,
-        status: updatedTask!.status,
-        entitlementId: updatedTask!.entitlementId,
-        entitlementStatus: ent!.status,
-        product: { id: prod!.id, name: prod!.name },
+        taskId: updatedTask.id,
+        kind: updatedTask.kind,
+        status: updatedTask.status,
+        entitlementId: updatedTask.entitlementId,
+        entitlementStatus: ent.status,
+        product: { id: prod.id, name: prod.name },
         offeringName: extras.offeringName,
         order: extras.order,
-        customer: { id: cust!.id, email: cust!.email, name: cust!.name },
-        assignedTo: updatedTask!.assignedTo
-          ? { id: updatedTask!.assignedTo, name: extras.assigneeName }
+        customer: { id: cust.id, email: cust.email, name: cust.name },
+        assignedTo: updatedTask.assignedTo
+          ? { id: updatedTask.assignedTo, name: extras.assigneeName }
           : null,
-        note: updatedTask!.note,
-        createdAt: updatedTask!.createdAt.toISOString(),
-        doneAt: updatedTask!.doneAt ? updatedTask!.doneAt.toISOString() : null,
+        note: updatedTask.note,
+        createdAt: updatedTask.createdAt.toISOString(),
+        doneAt: updatedTask.doneAt ? updatedTask.doneAt.toISOString() : null,
       };
     });
   }
@@ -454,56 +456,47 @@ export class DefaultDeliveryService implements DeliveryService {
         })
         .where(eq(deliveryTasks.id, task.id))
         .returning();
+      if (!updatedTask) throw new AppError(ErrorCode.INTERNAL, "updatedTask missing");
 
       const [ent] = await tx
         .select()
         .from(entitlements)
         .where(eq(entitlements.id, task.entitlementId));
-      const [prod] = await tx
-        .select()
-        .from(products)
-        .where(eq(products.id, ent!.productId));
-      const [cust] = await tx
-        .select()
-        .from(users)
-        .where(eq(users.id, ent!.userId));
-      const extras = await hydrateTaskExtras(tx, ent!, updatedTask!.assignedTo);
+      if (!ent) throw new AppError(ErrorCode.INTERNAL, "ent missing");
+      const [prod] = await tx.select().from(products).where(eq(products.id, ent.productId));
+      if (!prod) throw new AppError(ErrorCode.INTERNAL, "prod missing");
+      const [cust] = await tx.select().from(users).where(eq(users.id, ent.userId));
+      if (!cust) throw new AppError(ErrorCode.INTERNAL, "cust missing");
+      const extras = await hydrateTaskExtras(tx, ent, updatedTask.assignedTo);
 
       return {
-        taskId: updatedTask!.id,
-        kind: updatedTask!.kind,
-        status: updatedTask!.status,
-        entitlementId: updatedTask!.entitlementId,
-        entitlementStatus: ent!.status,
-        product: { id: prod!.id, name: prod!.name },
+        taskId: updatedTask.id,
+        kind: updatedTask.kind,
+        status: updatedTask.status,
+        entitlementId: updatedTask.entitlementId,
+        entitlementStatus: ent.status,
+        product: { id: prod.id, name: prod.name },
         offeringName: extras.offeringName,
         order: extras.order,
-        customer: { id: cust!.id, email: cust!.email, name: cust!.name },
-        assignedTo: updatedTask!.assignedTo
-          ? { id: updatedTask!.assignedTo, name: extras.assigneeName }
+        customer: { id: cust.id, email: cust.email, name: cust.name },
+        assignedTo: updatedTask.assignedTo
+          ? { id: updatedTask.assignedTo, name: extras.assigneeName }
           : null,
-        note: updatedTask!.note,
-        createdAt: updatedTask!.createdAt.toISOString(),
-        doneAt: updatedTask!.doneAt ? updatedTask!.doneAt.toISOString() : null,
+        note: updatedTask.note,
+        createdAt: updatedTask.createdAt.toISOString(),
+        doneAt: updatedTask.doneAt ? updatedTask.doneAt.toISOString() : null,
       };
     });
   }
 
   async evaluateOrderFulfilment(orderId: string, tx: TxCtx): Promise<boolean> {
-    const [order] = await tx
-      .select()
-      .from(orders)
-      .where(eq(orders.id, orderId))
-      .for("update");
+    const [order] = await tx.select().from(orders).where(eq(orders.id, orderId)).for("update");
 
     if (!order || order.status === "fulfilled" || order.status === "cancelled") {
       return false;
     }
 
-    const items = await tx
-      .select()
-      .from(orderItems)
-      .where(eq(orderItems.orderId, orderId));
+    const items = await tx.select().from(orderItems).where(eq(orderItems.orderId, orderId));
 
     if (items.length === 0) return false;
 
@@ -532,7 +525,7 @@ export class DefaultDeliveryService implements DeliveryService {
       }
     }
 
-    // All fulfilled!
+    // All fulfilled
     const now = new Date();
     await tx
       .update(orders)
@@ -546,10 +539,16 @@ export class DefaultDeliveryService implements DeliveryService {
     return true;
   }
 
-  private async buildAdminRow(ent: typeof entitlements.$inferSelect, tx: TxCtx): Promise<EntitlementAdminRow> {
+  private async buildAdminRow(
+    ent: typeof entitlements.$inferSelect,
+    tx: TxCtx,
+  ): Promise<EntitlementAdminRow> {
     const [user] = await tx.select().from(users).where(eq(users.id, ent.userId));
+    if (!user) throw new AppError(ErrorCode.INTERNAL, "user missing");
     const [prod] = await tx.select().from(products).where(eq(products.id, ent.productId));
+    if (!prod) throw new AppError(ErrorCode.INTERNAL, "prod missing");
     const [offering] = await tx.select().from(offerings).where(eq(offerings.id, ent.offeringId));
+    if (!offering) throw new AppError(ErrorCode.INTERNAL, "offering missing");
 
     const openTasks = await tx
       .select()
@@ -570,9 +569,9 @@ export class DefaultDeliveryService implements DeliveryService {
 
     return {
       entitlementId: ent.id,
-      user: { id: user!.id, email: user!.email, name: user!.name },
-      product: { id: prod!.id, name: prod!.name },
-      offering: { id: offering!.id, name: offering!.name },
+      user: { id: user.id, email: user.email, name: user.name },
+      product: { id: prod.id, name: prod.name },
+      offering: { id: offering.id, name: offering.name },
       deliveryType: ent.deliveryType,
       status: ent.status,
       provisioningState: ent.provisioningState,
@@ -621,7 +620,10 @@ async function hydrateTaskExtras(
 
   let assigneeName: string | null = null;
   if (assignedTo) {
-    const [assignee] = await db.select({ name: users.name }).from(users).where(eq(users.id, assignedTo));
+    const [assignee] = await db
+      .select({ name: users.name })
+      .from(users)
+      .where(eq(users.id, assignedTo));
     assigneeName = assignee?.name ?? null;
   }
 
@@ -636,6 +638,6 @@ export function createNotImplementedDeliveryService(): DeliveryService {
     listDeliveryTasks: "async",
     completeDeliveryTask: "async",
     assignDeliveryTask: "async",
-    handlers: "sync",
+    evaluateOrderFulfilment: "async",
   });
 }

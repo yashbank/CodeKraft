@@ -11,7 +11,8 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { DbOrTx } from "@/lib/db";
 import { db } from "@/lib/db";
-import { orders, orderItems, payments } from "../../../drizzle/schema/commerce";
+import { toMinor } from "./minor";
+import { orders, orderItems } from "../../../drizzle/schema/commerce";
 import { allocations, ledgerEntries } from "../../../drizzle/schema/finance";
 import { notifications } from "../../../drizzle/schema/notifications";
 import { userRoles, users } from "../../../drizzle/schema/auth";
@@ -32,7 +33,7 @@ export interface ReconcileResult {
 }
 
 export async function reconcileFinance(
-  now: Date = new Date(),
+  _now: Date = new Date(),
   database: DbOrTx = db,
 ): Promise<ReconcileResult> {
   const discrepancies: ReconcileDiscrepancy[] = [];
@@ -55,7 +56,7 @@ export async function reconcileFinance(
       .from(ledgerEntries)
       .where(eq(ledgerEntries.orderId, order.id));
 
-    const totalMinor = Number(entrySum?.sumMinor ?? 0);
+    const totalMinor = toMinor(entrySum?.sumMinor);
     if (totalMinor !== 0) {
       discrepancies.push({
         orderId: order.id,
@@ -78,17 +79,6 @@ export async function reconcileFinance(
       })
       .from(orderItems)
       .where(eq(orderItems.orderId, order.id));
-
-    // Get order payments to check bank shortfalls if stored
-    const [pmt] = await database
-      .select({
-        bankShortfallMinor: payments.bankShortfallMinor,
-      })
-      .from(payments)
-      .where(eq(payments.orderId, order.id))
-      .limit(1);
-
-    const bankShortfall = pmt?.bankShortfallMinor ?? 0;
 
     for (const item of items) {
       const [alloc] = await database
@@ -132,12 +122,7 @@ export async function reconcileFinance(
       .select({ userId: users.id })
       .from(users)
       .innerJoin(userRoles, eq(users.id, userRoles.userId))
-      .where(
-        and(
-          eq(users.status, "active"),
-          inArray(userRoles.roleKey, ["super_admin", "admin"]),
-        ),
-      );
+      .where(and(eq(users.status, "active"), inArray(userRoles.roleKey, ["super_admin", "admin"])));
 
     const adminIds = Array.from(new Set(activeAdmins.map((a) => a.userId)));
 

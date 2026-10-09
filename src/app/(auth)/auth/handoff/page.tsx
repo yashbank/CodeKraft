@@ -42,7 +42,10 @@ export default function AdminHandoffPage() {
           <>
             <h1 className="text-h2">Sign-in link expired</h1>
             <p className="text-body text-fg-muted">Sign in again to continue to the admin.</p>
-            <Link href="/auth/login?next=/dashboard" className="text-accent-text underline underline-offset-4">
+            <Link
+              href="/auth/login?next=/dashboard"
+              className="text-accent-text underline underline-offset-4"
+            >
               Go to sign in
             </Link>
           </>

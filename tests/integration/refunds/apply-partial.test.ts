@@ -84,21 +84,14 @@ describe("applyRefund — partial refund AC", () => {
 
     await approvalsService.approveRequest(approveCtx, {
       approvalRequestId,
-      comment: null,
     });
 
     // order → partially_refunded (not fully refunded)
-    const [updatedOrder] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, order.id));
+    const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, order.id));
     expect(updatedOrder?.status).toBe("partially_refunded");
 
     // payment not refunded
-    const [updatedPayment] = await db
-      .select()
-      .from(payments)
-      .where(eq(payments.id, payment.id));
+    const [updatedPayment] = await db.select().from(payments).where(eq(payments.id, payment.id));
     expect(updatedPayment?.status).toBe("confirmed"); // still confirmed, not fully refunded
     expect(updatedPayment?.amountRefundedMinor).toBe(5_000);
 

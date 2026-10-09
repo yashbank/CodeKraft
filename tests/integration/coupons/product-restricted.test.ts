@@ -20,7 +20,7 @@ describe("product-restricted coupon validation (docs/06 §2.3, A-401)", () => {
     const productA = await createProduct({ createdBy: admin.id });
     const productB = await createProduct({ createdBy: admin.id });
 
-    const coupon = await createCoupon({
+    await createCoupon({
       code: "PROD20ONLY",
       kind: "percent",
       value: 2000,

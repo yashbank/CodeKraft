@@ -11,11 +11,8 @@ import type { RequestContext } from "@/lib/authz/context";
 import { type Currency, money } from "@/lib/money";
 import { productOwnerships } from "../../../drizzle/schema/ownership";
 import { orderItems, orders } from "../../../drizzle/schema/commerce";
-import {
-  type EntryType,
-  allocations,
-  ledgerEntries,
-} from "../../../drizzle/schema/finance";
+import { type EntryType, allocations, ledgerEntries } from "../../../drizzle/schema/finance";
+import { toMinor } from "./minor";
 import { partners } from "../../../drizzle/schema/users-ext";
 import { products } from "../../../drizzle/schema/catalog";
 import type {
@@ -79,7 +76,12 @@ export async function getOrderAllocation(
       ? await db
           .select()
           .from(allocations)
-          .where(inArray(allocations.orderItemId, items.map((i) => i.id)))
+          .where(
+            inArray(
+              allocations.orderItemId,
+              items.map((i) => i.id),
+            ),
+          )
       : [];
 
   const allocationByItemId = new Map(itemAllocations.map((a) => [a.orderItemId, a]));
@@ -155,11 +157,14 @@ export async function getOrderAllocation(
     const hasOrderAccess = items.some(
       (item) =>
         (item.productId && ownedProductIds.has(item.productId)) ||
-        (allocationByItemId.get(item.id)?.lines.some((l) => l.partner_id === myPartnerId)),
+        allocationByItemId.get(item.id)?.lines.some((l) => l.partner_id === myPartnerId),
     );
 
     if (!hasOrderAccess) {
-      throw new AppError(ErrorCode.FORBIDDEN, "Forbidden: insufficient access to order allocations");
+      throw new AppError(
+        ErrorCode.FORBIDDEN,
+        "Forbidden: insufficient access to order allocations",
+      );
     }
   }
 
@@ -322,8 +327,8 @@ export async function listLedgerEntries(
   const isAsc = input.sort === "seq:asc";
 
   if (input.cursor) {
-    const cursorSeq = Number(input.cursor);
-    if (!Number.isNaN(cursorSeq)) {
+    if (/^\d+$/.test(input.cursor)) {
+      const cursorSeq = toMinor(input.cursor);
       if (isAsc) {
         conditions.push(sql`${ledgerEntries.seq} > ${cursorSeq}`);
       } else {

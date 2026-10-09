@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, withTx } from "@/lib/db";
 import { financeService } from "@/modules/finance/service";
-import { expenses, ledgerEntries } from "../../../drizzle/schema/finance";
+import { ledgerEntries } from "../../../drizzle/schema/finance";
 import { migrateTestDb } from "../../setup/migrate";
 import { truncateAll } from "../../setup/db";
 import { createAdmin, createPartner, createUser } from "../../factories/users";
@@ -74,8 +74,12 @@ describe("shared expense reduces partner balances by their bps (FI-13, API-FIN-0
       roles: ["super_admin"],
     });
 
-    const [bal1Before] = await financeService.getPartnerBalances(adminCtx, { partnerId: partner1.id });
-    const [bal2Before] = await financeService.getPartnerBalances(adminCtx, { partnerId: partner2.id });
+    const [bal1Before] = await financeService.getPartnerBalances(adminCtx, {
+      partnerId: partner1.id,
+    });
+    const [bal2Before] = await financeService.getPartnerBalances(adminCtx, {
+      partnerId: partner2.id,
+    });
     expect(bal1Before?.byCurrency[0]?.balance).toBe(54000);
     expect(bal2Before?.byCurrency[0]?.balance).toBe(36000);
 
@@ -108,21 +112,32 @@ describe("shared expense reduces partner balances by their bps (FI-13, API-FIN-0
     const companyEntry = expEntries.find((e) => e.partyType === "company");
     expect(companyEntry?.amountMinor).toBe(-1000);
 
-    const p1Entry = expEntries.find((e) => e.partyType === "partner" && e.partnerId === partner1.id);
+    const p1Entry = expEntries.find(
+      (e) => e.partyType === "partner" && e.partnerId === partner1.id,
+    );
     expect(p1Entry?.amountMinor).toBe(-5400);
 
-    const p2Entry = expEntries.find((e) => e.partyType === "partner" && e.partnerId === partner2.id);
+    const p2Entry = expEntries.find(
+      (e) => e.partyType === "partner" && e.partnerId === partner2.id,
+    );
     expect(p2Entry?.amountMinor).toBe(-3600);
 
     // Check updated balances
-    const [bal1After] = await financeService.getPartnerBalances(adminCtx, { partnerId: partner1.id });
-    const [bal2After] = await financeService.getPartnerBalances(adminCtx, { partnerId: partner2.id });
+    const [bal1After] = await financeService.getPartnerBalances(adminCtx, {
+      partnerId: partner1.id,
+    });
+    const [bal2After] = await financeService.getPartnerBalances(adminCtx, {
+      partnerId: partner2.id,
+    });
 
     expect(bal1After?.byCurrency[0]?.balance).toBe(54000 - 5400); // 48600
     expect(bal2After?.byCurrency[0]?.balance).toBe(36000 - 3600); // 32400
 
     // List expenses
-    const listRes = await financeService.listExpenses(adminCtx, { productId: product.id });
+    const listRes = await financeService.listExpenses(adminCtx, {
+      limit: 50,
+      filters: { productId: product.id },
+    });
     expect(listRes.items.length).toBe(1);
     expect(listRes.items[0]?.id).toBe(res.expenseId);
   });

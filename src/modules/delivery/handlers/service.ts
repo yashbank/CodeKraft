@@ -66,8 +66,7 @@ export class ServiceDeliveryHandler implements DeliveryHandler<"service"> {
       };
     });
 
-    const fulfilled =
-      steps.length > 0 && steps.every((s) => Boolean(stepMap.get(s.key)?.doneAt));
+    const fulfilled = steps.length > 0 && steps.every((s) => Boolean(stepMap.get(s.key)?.doneAt));
 
     return {
       type: "service",
@@ -100,7 +99,10 @@ export class ServiceDeliveryHandler implements DeliveryHandler<"service"> {
     ];
   }
 
-  isFulfilled(_entitlement: Entitlement, progress: typeof serviceProgress.$inferSelect[]): boolean {
+  isFulfilled(
+    _entitlement: Entitlement,
+    progress: (typeof serviceProgress.$inferSelect)[],
+  ): boolean {
     if (progress.length === 0) return true;
     return progress.every((p) => p.doneAt !== null);
   }

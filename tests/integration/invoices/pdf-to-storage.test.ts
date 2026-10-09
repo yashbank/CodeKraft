@@ -78,17 +78,11 @@ describe("Invoice PDF to storage integration (D-1502, BR-16)", () => {
     expect(renderRes.pdfMediaId).toBeDefined();
 
     // Verify invoice row has pdfMediaId linked
-    const [inv] = await db
-      .select()
-      .from(invoices)
-      .where(eq(invoices.id, confirmRes.invoiceId!));
+    const [inv] = await db.select().from(invoices).where(eq(invoices.id, confirmRes.invoiceId!));
     expect(inv?.pdfMediaId).toBe(renderRes.pdfMediaId);
 
     // Verify media table row
-    const [mediaRow] = await db
-      .select()
-      .from(media)
-      .where(eq(media.id, renderRes.pdfMediaId));
+    const [mediaRow] = await db.select().from(media).where(eq(media.id, renderRes.pdfMediaId));
     expect(mediaRow).toBeDefined();
     expect(mediaRow?.bucket).toBe(getDocumentsBucketName());
     expect(mediaRow?.mime).toBe("application/pdf");

@@ -1,11 +1,8 @@
 import type { TxCtx } from "@/lib/db";
 import type { EmailMessage, EmailOutboxPort } from "@/lib/email/types";
 import { type Notification, emailOutbox } from "../../../../drizzle/schema/notifications";
-import type {
-  EmailNotificationChannel,
-  NotificationRecipient,
-  RenderedNotification,
-} from "../contracts";
+import type { EmailNotificationChannel, NotificationRecipient } from "../contracts";
+import type { RenderedNotification } from "../types";
 
 export class DefaultEmailNotificationChannel implements EmailNotificationChannel {
   readonly name = "email" as const;
@@ -13,7 +10,7 @@ export class DefaultEmailNotificationChannel implements EmailNotificationChannel
 
   constructor(outboxPort?: EmailOutboxPort) {
     this.outbox = outboxPort ?? {
-      async enqueue(msg: EmailMessage) {
+      async enqueue(_msg: EmailMessage) {
         return { id: "outbox-noop" };
       },
     };

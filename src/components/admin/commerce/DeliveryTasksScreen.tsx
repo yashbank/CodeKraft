@@ -217,7 +217,8 @@ export function DeliveryTasksScreen({
                           value={t.assignedTo ?? "none"}
                           disabled={assigningId === t.id}
                           onValueChange={(v) => {
-                            const adminId = v === "none" ? null : admins.find((a) => a.name === v)?.id ?? null;
+                            const adminId =
+                              v === "none" ? null : (admins.find((a) => a.name === v)?.id ?? null);
                             handleAssign(t.id, adminId);
                           }}
                         >

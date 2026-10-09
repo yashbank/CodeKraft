@@ -3,7 +3,7 @@
  * §5.6 (escalation), BR-09, D-702, D-1002, FR-LEAD-09. Implementation in P6.
  */
 import type { Context, RequestContext } from "@/lib/authz/context";
-import type { TxCtx } from "@/lib/db";
+import type { DbOrTx } from "@/lib/db";
 import type { JobContext, JobOutcome } from "@/modules/analytics/types";
 import type { ListResult } from "@/modules/_shared/zod";
 import type {
@@ -44,7 +44,7 @@ export interface QueriesService {
    */
   createFromEscalation(
     input: CreateQueryFromEscalationInput,
-    tx: TxCtx,
+    tx: DbOrTx,
   ): Promise<QueryCreateResult>;
 
   /** API-CHAT-02 `listMyQueries` — own rows only. */

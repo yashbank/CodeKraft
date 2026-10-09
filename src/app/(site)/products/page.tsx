@@ -39,11 +39,6 @@ export default async function ProductsPage({ searchParams }: PageProps) {
   const categories = categoriesResult.ok ? toCategoryTree(categoriesResult.data) : [];
 
   return (
-    <ProductsListPage
-      products={products}
-      categories={categories}
-      pageSize={12}
-      initialQuery={q}
-    />
+    <ProductsListPage products={products} categories={categories} pageSize={12} initialQuery={q} />
   );
 }

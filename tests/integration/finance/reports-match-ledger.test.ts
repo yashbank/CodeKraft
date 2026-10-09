@@ -2,7 +2,6 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { eq, sql } from "drizzle-orm";
 import { db, withTx } from "@/lib/db";
 import { financeService } from "@/modules/finance/service";
-import { paymentsService } from "@/modules/payments/service";
 import { ledgerEntries } from "../../../drizzle/schema/finance";
 import { migrateTestDb } from "../../setup/migrate";
 import { truncateAll } from "../../setup/db";
@@ -48,7 +47,7 @@ describe("reports match ledger recomputations (API-FIN-09, FR-FIN-10..14, master
       currency: "INR",
     });
 
-    const payment = await createPayment({
+    await createPayment({
       order,
       status: "confirmed",
       amountReceivedMinor: 100000,

@@ -10,7 +10,11 @@ import { createOffering } from "../../factories/offerings";
 import { createEntitlement } from "../../factories/delivery";
 
 function ctxFor(userId: string) {
-  return buildContext({ user: { id: userId }, session: { id: `sess-${userId}` }, roles: ["customer"] });
+  return buildContext({
+    user: { id: userId },
+    session: { id: `sess-${userId}` },
+    roles: ["customer"],
+  });
 }
 
 describe("getMyEntitlementQuery (API-DEL-01, SCR-ACC-03 entitlement detail page)", () => {

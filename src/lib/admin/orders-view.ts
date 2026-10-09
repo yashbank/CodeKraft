@@ -53,7 +53,11 @@ function formatInstructions(instructions: PaymentInstructions | null): string {
   return `${instructions.method} · ${instructions.kind}`;
 }
 
-function isAwaiting(paymentStatus: string | null, paymentCreatedAt: string | null, now: Date): boolean {
+function isAwaiting(
+  paymentStatus: string | null,
+  paymentCreatedAt: string | null,
+  now: Date,
+): boolean {
   if (paymentStatus === "submitted") return true;
   if (paymentStatus !== "initiated" || !paymentCreatedAt) return false;
   return now.getTime() - new Date(paymentCreatedAt).getTime() >= AWAITING_AGE_MS;
@@ -81,7 +85,10 @@ export function mapOrderAdminRowToOrderRow(row: OrderAdminRow, now: string): Ord
   };
 }
 
-function mapLedgerEntry(e: LedgerEntryView, partnerNames: ReadonlyMap<string, string>): LedgerEntry {
+function mapLedgerEntry(
+  e: LedgerEntryView,
+  partnerNames: ReadonlyMap<string, string>,
+): LedgerEntry {
   const party =
     e.partyType === "partner"
       ? partnerLabel(e.partnerId, partnerNames)
@@ -209,28 +216,34 @@ export function mapOrderDetailToOrderDetailData(
   const allocation: OrderDetailData["allocation"] = extras.allocation
     ? {
         companyCut: extras.allocation.items.reduce<MoneyLike>(
-          (acc, i) => ({ amountMinor: acc.amountMinor + i.companyCut.amountMinor, currency: acc.currency }),
+          (acc, i) => ({
+            amountMinor: acc.amountMinor + i.companyCut.amountMinor,
+            currency: acc.currency,
+          }),
           { amountMinor: 0, currency: extras.allocation.currency },
         ),
         lines: Object.values(
-          extras.allocation.items.reduce<Record<string, { partner: string; amount: MoneyLike; bps: number }>>(
-            (acc, item) => {
-              for (const line of item.lines) {
-                const key = line.partnerId;
-                const existing = acc[key];
-                if (existing) {
-                  existing.amount = {
-                    amountMinor: existing.amount.amountMinor + line.amount.amountMinor,
-                    currency: existing.amount.currency,
-                  };
-                } else {
-                  acc[key] = { partner: partnerLabel(line.partnerId, extras.partnerNames), amount: line.amount, bps: line.shareBps };
-                }
+          extras.allocation.items.reduce<
+            Record<string, { partner: string; amount: MoneyLike; bps: number }>
+          >((acc, item) => {
+            for (const line of item.lines) {
+              const key = line.partnerId;
+              const existing = acc[key];
+              if (existing) {
+                existing.amount = {
+                  amountMinor: existing.amount.amountMinor + line.amount.amountMinor,
+                  currency: existing.amount.currency,
+                };
+              } else {
+                acc[key] = {
+                  partner: partnerLabel(line.partnerId, extras.partnerNames),
+                  amount: line.amount,
+                  bps: line.shareBps,
+                };
               }
-              return acc;
-            },
-            {},
-          ),
+            }
+            return acc;
+          }, {}),
         ),
       }
     : undefined;
@@ -238,7 +251,11 @@ export function mapOrderDetailToOrderDetailData(
   return {
     order: orderRow,
     splitApproval: splitApproval
-      ? { status: splitApproval.status, approver: "Pending decision", approvalId: splitApproval.approvalRequestId }
+      ? {
+          status: splitApproval.status,
+          approver: "Pending decision",
+          approvalId: splitApproval.approvalRequestId,
+        }
       : undefined,
     payment: {
       provider: (latestPayment?.method ?? "manual_upi") as StatusValue<"payments.provider">,
@@ -277,7 +294,9 @@ export function mapOrderDetailToOrderDetailData(
       address: order.billingSnapshot?.address ?? "",
       country: order.billingSnapshot?.country ?? "",
     },
-    coupon: coupon ? { code: coupon.code, discount: { amountMinor: coupon.discountMinor, currency } } : undefined,
+    coupon: coupon
+      ? { code: coupon.code, discount: { amountMinor: coupon.discountMinor, currency } }
+      : undefined,
     quote: quote ? { id: quote.id, title: quote.title } : undefined,
     refunds: refunds.map((r) => ({
       id: r.refundId,
@@ -287,7 +306,10 @@ export function mapOrderDetailToOrderDetailData(
       at: r.createdAt,
       reason: r.reason,
     })),
-    refundable: order.status === "paid" || order.status === "fulfilled" || order.status === "partially_refunded",
+    refundable:
+      order.status === "paid" ||
+      order.status === "fulfilled" ||
+      order.status === "partially_refunded",
     linkedQueries: [],
   };
 }

@@ -28,7 +28,14 @@
  *    exact timestamp field), so it is accurate to the hour, not the second.
  */
 import type { Currency } from "@/lib/money";
-import type { Expense, LedgerEntryView, OrderAllocationView, Payout, ReportCell, ReportResult } from "@/modules/finance/types";
+import type {
+  Expense,
+  LedgerEntryView,
+  OrderAllocationView,
+  Payout,
+  ReportCell,
+  ReportResult,
+} from "@/modules/finance/types";
 import type { ApprovalView } from "@/modules/approvals/types";
 import type { AuditLogRow } from "@/modules/audit/types";
 import type { PartnerView } from "@/modules/users/types";
@@ -173,7 +180,9 @@ export interface ExpenseLedgerInfo {
 }
 
 /** `expenseId -> {minSeq, amountInrMinor}` built from a page of `entryType: ["expense"]` ledger entries. */
-export function buildExpenseLedgerIndex(entries: LedgerEntryView[]): Map<string, ExpenseLedgerInfo> {
+export function buildExpenseLedgerIndex(
+  entries: LedgerEntryView[],
+): Map<string, ExpenseLedgerInfo> {
   const index = new Map<string, ExpenseLedgerInfo>();
   for (const e of entries) {
     const expenseId = e.links.expenseId;
@@ -249,7 +258,9 @@ export function mapApprovalToAdjustmentRow(
     lines: payload.lines.map((l) => ({
       partyType: l.partyType,
       partner:
-        l.partyType === "partner" && l.partnerId ? partnerLabel(l.partnerId, opts.partnerNames) : undefined,
+        l.partyType === "partner" && l.partnerId
+          ? partnerLabel(l.partnerId, opts.partnerNames)
+          : undefined,
       amount: { amountMinor: l.amountMinor, currency: l.currency },
       memo: l.memo,
       order: l.orderId ? shortId(l.orderId) : undefined,
@@ -284,7 +295,11 @@ export interface PartnerRollup {
   sparkline: number[];
 }
 
-const MONTH_LABEL = new Intl.DateTimeFormat("en-IN", { month: "short", year: "numeric", timeZone: "UTC" });
+const MONTH_LABEL = new Intl.DateTimeFormat("en-IN", {
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
 
 function monthKey(iso: string): string {
   return iso.slice(0, 7); // "YYYY-MM"
@@ -301,7 +316,13 @@ export function computePartnerRollup(
 
   for (const e of entries) {
     const key = monthKey(e.createdAt);
-    const bucket = buckets.get(key) ?? { month: key, allocations: 0, refunds: 0, expenses: 0, payouts: 0 };
+    const bucket = buckets.get(key) ?? {
+      month: key,
+      allocations: 0,
+      refunds: 0,
+      expenses: 0,
+      payouts: 0,
+    };
     if (e.entryType === "partner_allocation") {
       bucket.allocations += e.amountInrMinor;
       earnedInrMinor += e.amountInrMinor;
@@ -338,7 +359,12 @@ export function computePartnerRollup(
     .reverse()
     .map((m) => Math.abs(m.allocations));
 
-  return { earnedInrMinor, paidOutInrMinor, history, sparkline: sparkline.length > 0 ? sparkline : [0] };
+  return {
+    earnedInrMinor,
+    paidOutInrMinor,
+    history,
+    sparkline: sparkline.length > 0 ? sparkline : [0],
+  };
 }
 
 export function mapPartnerBalanceToRow(opts: {
@@ -402,7 +428,8 @@ export function mapPayoutApprovalToRow(
 ): PayoutRow {
   const payload = a.payload as unknown as PayoutApprovalPayload;
   const lastDecision = a.decisions[a.decisions.length - 1];
-  const status: PayoutRow["status"] = a.status === "applied" ? "applied" : a.status === "rejected" ? "rejected" : "pending";
+  const status: PayoutRow["status"] =
+    a.status === "applied" ? "applied" : a.status === "rejected" ? "rejected" : "pending";
   return {
     id: a.id,
     paidOn: payload.paidOn,
@@ -440,7 +467,10 @@ export function computeCompanyTotals(entries: LedgerEntryView[]): CompanyTotals 
 // Reports & statements (SCR-ADM-22)
 // ---------------------------------------------------------------------------------------------
 
-function formatCell(value: ReportCell | undefined, kind: "text" | "money" | "count" | "date"): string | number {
+function formatCell(
+  value: ReportCell | undefined,
+  kind: "text" | "money" | "count" | "date",
+): string | number {
   if (value === null || value === undefined) return kind === "money" || kind === "count" ? 0 : "—";
   if (kind === "money") return typeof value === "number" ? value / 100 : value;
   return value;
@@ -462,7 +492,8 @@ export function mapReportResultToDefinition(
   const moneyOrCountCols = result.columns.filter((c) => c.kind === "money" || c.kind === "count");
   const tiles = moneyOrCountCols.map((c) => ({
     label: c.label,
-    valueInr: c.kind === "count" ? Number(result.totals[c.key] ?? 0) : moneyCell(result.totals[c.key]),
+    valueInr:
+      c.kind === "count" ? Number(result.totals[c.key] ?? 0) : moneyCell(result.totals[c.key]),
   }));
 
   // Label column: index 1 when it's text/date (skips a leading id column), else index 0.
@@ -473,8 +504,9 @@ export function mapReportResultToDefinition(
   const valueCol = moneyOrCountCols[moneyOrCountCols.length - 1];
   const series = valueCol
     ? result.rows.map((row) => ({
-        label: String(row[labelCol!.key] ?? ""),
-        value: valueCol.kind === "count" ? Number(row[valueCol.key] ?? 0) : moneyCell(row[valueCol.key]),
+        label: String((labelCol && row[labelCol.key]) ?? ""),
+        value:
+          valueCol.kind === "count" ? Number(row[valueCol.key] ?? 0) : moneyCell(row[valueCol.key]),
       }))
     : [];
 
@@ -530,7 +562,10 @@ export function computeStatementPreview(opts: {
   for (const e of opts.entries) {
     periodSum += e.amountInrMinor;
     if (e.entryType === "partner_allocation") {
-      allocations.push({ order: e.links.orderNo ?? shortId(e.links.orderId), amount: e.amountInrMinor });
+      allocations.push({
+        order: e.links.orderNo ?? shortId(e.links.orderId),
+        amount: e.amountInrMinor,
+      });
     } else if (e.entryType === "refund_partner_allocation") {
       refunds += e.amountInrMinor;
     } else if (e.entryType === "expense") {

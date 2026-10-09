@@ -1,7 +1,7 @@
-import { and, desc, eq, gt, inArray, isNull, lt, notInArray, or, sql } from "drizzle-orm";
+import { type SQL, and, desc, eq, inArray, isNull, lt, notInArray, or, sql } from "drizzle-orm";
 import type { Context, RequestContext } from "@/lib/authz/context";
-import { type TxCtx, getDb } from "@/lib/db";
-import { AppError } from "@/lib/errors";
+import { type Db, type DbOrTx, getDb } from "@/lib/db";
+import { AppError, ErrorCode } from "@/lib/errors";
 import { assertTurnstileVerified, checkHoneypot, verifyTurnstile } from "@/lib/turnstile";
 import { notificationsService } from "@/modules/notifications/service";
 import type { JobContext, JobOutcome } from "@/modules/analytics/types";
@@ -9,13 +9,7 @@ import type { ListResult } from "@/modules/_shared/zod";
 import { users } from "../../../drizzle/schema/auth";
 import { products } from "../../../drizzle/schema/catalog";
 import { orders } from "../../../drizzle/schema/commerce";
-import { deliveryTasks } from "../../../drizzle/schema/delivery";
-import {
-  type Lead,
-  type LeadActivity,
-  leadActivities,
-  leads,
-} from "../../../drizzle/schema/leads";
+import { type Lead, leadActivities, leads } from "../../../drizzle/schema/leads";
 import type { LeadsService } from "./contracts";
 import { assertValidLeadStatusTransition } from "./state";
 import type {
@@ -38,11 +32,11 @@ import type {
 } from "./types";
 
 export class DefaultLeadsService implements LeadsService {
-  private _db?: any;
-  constructor(db?: any) {
+  private _db?: Db;
+  constructor(db?: Db) {
     this._db = db;
   }
-  private get db(): any {
+  private get db(): Db {
     return this._db ?? getDb();
   }
 
@@ -50,7 +44,7 @@ export class DefaultLeadsService implements LeadsService {
     const turnstileRes = await verifyTurnstile(input.turnstileToken);
     assertTurnstileVerified(turnstileRes);
 
-    checkHoneypot((input as any).website);
+    checkHoneypot((input as { website?: string }).website);
 
     const [lead] = await this.db
       .insert(leads)
@@ -70,6 +64,8 @@ export class DefaultLeadsService implements LeadsService {
         turnstileVerified: true,
       })
       .returning();
+
+    if (!lead) throw new AppError(ErrorCode.INTERNAL, "Insert returned no row");
 
     await this.db.insert(leadActivities).values({
       leadId: lead.id,
@@ -118,6 +114,8 @@ export class DefaultLeadsService implements LeadsService {
       })
       .returning();
 
+    if (!lead) throw new AppError(ErrorCode.INTERNAL, "Insert returned no row");
+
     await this.db.insert(leadActivities).values({
       leadId: lead.id,
       actorId: ctx.userId,
@@ -140,7 +138,7 @@ export class DefaultLeadsService implements LeadsService {
 
   async createFromChatbot(
     input: CreateLeadFromChatbotInput,
-    tx: TxCtx,
+    tx: DbOrTx,
   ): Promise<LeadCreateResult> {
     const [lead] = await tx
       .insert(leads)
@@ -155,6 +153,8 @@ export class DefaultLeadsService implements LeadsService {
         turnstileVerified: true,
       })
       .returning();
+
+    if (!lead) throw new AppError(ErrorCode.INTERNAL, "Insert returned no row");
 
     await tx.insert(leadActivities).values({
       leadId: lead.id,
@@ -179,11 +179,8 @@ export class DefaultLeadsService implements LeadsService {
     return { leadId: lead.id };
   }
 
-  async listLeads(
-    ctx: RequestContext,
-    input: ListLeadsInput,
-  ): Promise<ListResult<LeadRow>> {
-    const conditions: any[] = [];
+  async listLeads(ctx: RequestContext, input: ListLeadsInput): Promise<ListResult<LeadRow>> {
+    const conditions: (SQL | undefined)[] = [];
 
     // Role-scoping: if regular admin, only see assigned to self or unassigned
     const isAdmin = ctx.roles.includes("admin");
@@ -193,27 +190,25 @@ export class DefaultLeadsService implements LeadsService {
       conditions.push(or(eq(leads.assignedTo, ctx.userId), isNull(leads.assignedTo)));
     }
 
-    if (input.status) {
-      conditions.push(eq(leads.status, input.status));
+    const filters = input.filters;
+    if (filters?.status) {
+      conditions.push(inArray(leads.status, filters.status));
     }
 
-    if (input.assignedTo) {
-      if (input.assignedTo === "me") {
+    if (filters?.assignedTo) {
+      if (filters.assignedTo === "me") {
         conditions.push(eq(leads.assignedTo, ctx.userId));
-      } else if (input.assignedTo === "unassigned") {
+      } else if (filters.assignedTo === "unassigned") {
         conditions.push(isNull(leads.assignedTo));
       } else {
-        conditions.push(eq(leads.assignedTo, input.assignedTo));
+        conditions.push(eq(leads.assignedTo, filters.assignedTo));
       }
     }
 
-    if (input.overdue) {
+    if (filters?.overdue) {
       const now = new Date();
       conditions.push(
-        and(
-          lt(leads.nextFollowUpAt, now),
-          notInArray(leads.status, ["won", "lost"]),
-        ),
+        and(lt(leads.nextFollowUpAt, now), notInArray(leads.status, ["won", "lost"])),
       );
     }
 
@@ -245,20 +240,18 @@ export class DefaultLeadsService implements LeadsService {
 
       return {
         leadId: r.lead.id,
-        source: r.lead.source as any,
+        source: r.lead.source,
         name: r.lead.name,
         email: r.lead.email,
         phone: r.lead.phone,
         company: r.lead.company,
-        status: r.lead.status as any,
-        priority: r.lead.priority as any,
+        status: r.lead.status,
+        priority: r.lead.priority,
         assignedTo: r.lead.assignedTo
           ? { id: r.lead.assignedTo, name: r.assigneeName ?? null }
           : null,
         productId: r.lead.productId,
-        nextFollowUpAt: r.lead.nextFollowUpAt
-          ? r.lead.nextFollowUpAt.toISOString()
-          : null,
+        nextFollowUpAt: r.lead.nextFollowUpAt ? r.lead.nextFollowUpAt.toISOString() : null,
         overdue: isOverdue,
         createdAt: r.lead.createdAt.toISOString(),
         updatedAt: r.lead.updatedAt.toISOString(),
@@ -268,7 +261,7 @@ export class DefaultLeadsService implements LeadsService {
     return {
       items,
       total: countResult[0]?.count ?? 0,
-      nextCursor: hasNext ? items[items.length - 1].leadId : null,
+      nextCursor: hasNext ? (items.at(-1)?.leadId ?? null) : null,
     };
   }
 
@@ -283,16 +276,17 @@ export class DefaultLeadsService implements LeadsService {
       .where(eq(leads.id, input.leadId))
       .limit(1);
 
-    if (rows.length === 0) {
-      throw new AppError("NOT_FOUND", "Lead not found");
+    const row = rows[0];
+    if (!row) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Lead not found");
     }
 
-    const { lead, assigneeName } = rows[0];
+    const { lead, assigneeName } = row;
 
     // Check scope
     const isSuperAdmin = ctx.roles.includes("super_admin");
     if (!isSuperAdmin && lead.assignedTo && lead.assignedTo !== ctx.userId) {
-      throw new AppError("FORBIDDEN", "Access denied to this lead");
+      throw new AppError(ErrorCode.FORBIDDEN, "Access denied to this lead");
     }
 
     const activities = await this.db
@@ -305,7 +299,7 @@ export class DefaultLeadsService implements LeadsService {
       .where(eq(leadActivities.leadId, lead.id))
       .orderBy(desc(leadActivities.createdAt));
 
-    let linkedProduct: any = null;
+    let linkedProduct: LeadDetail["linkedProduct"] = null;
     if (lead.productId) {
       const p = await this.db
         .select()
@@ -313,56 +307,42 @@ export class DefaultLeadsService implements LeadsService {
         .where(eq(products.id, lead.productId))
         .limit(1);
       if (p[0]) {
-        linkedProduct = { id: p[0].id, name: p[0].title, slug: p[0].slug };
+        linkedProduct = { id: p[0].id, name: p[0].name, slug: p[0].slug };
       }
     }
 
-    let linkedUser: any = null;
+    let linkedUser: LeadDetail["linkedUser"] = null;
     if (lead.userId) {
-      const u = await this.db
-        .select()
-        .from(users)
-        .where(eq(users.id, lead.userId))
-        .limit(1);
+      const u = await this.db.select().from(users).where(eq(users.id, lead.userId)).limit(1);
       if (u[0]) {
         linkedUser = { id: u[0].id, email: u[0].email, name: u[0].name };
       }
     }
 
-    let wonOrder: any = null;
+    let wonOrder: LeadDetail["wonOrder"] = null;
     if (lead.wonOrderId) {
-      const o = await this.db
-        .select()
-        .from(orders)
-        .where(eq(orders.id, lead.wonOrderId))
-        .limit(1);
+      const o = await this.db.select().from(orders).where(eq(orders.id, lead.wonOrderId)).limit(1);
       if (o[0]) {
-        wonOrder = { orderId: o[0].id, orderNo: o[0].orderNumber };
+        wonOrder = { orderId: o[0].id, orderNo: o[0].orderNo };
       }
     }
 
     const now = new Date();
     const isOverdue =
-      !!lead.nextFollowUpAt &&
-      lead.nextFollowUpAt < now &&
-      !["won", "lost"].includes(lead.status);
+      !!lead.nextFollowUpAt && lead.nextFollowUpAt < now && !["won", "lost"].includes(lead.status);
 
     const leadRow: LeadRow = {
       leadId: lead.id,
-      source: lead.source as any,
+      source: lead.source,
       name: lead.name,
       email: lead.email,
       phone: lead.phone,
       company: lead.company,
-      status: lead.status as any,
-      priority: lead.priority as any,
-      assignedTo: lead.assignedTo
-        ? { id: lead.assignedTo, name: assigneeName ?? null }
-        : null,
+      status: lead.status,
+      priority: lead.priority,
+      assignedTo: lead.assignedTo ? { id: lead.assignedTo, name: assigneeName ?? null } : null,
       productId: lead.productId,
-      nextFollowUpAt: lead.nextFollowUpAt
-        ? lead.nextFollowUpAt.toISOString()
-        : null,
+      nextFollowUpAt: lead.nextFollowUpAt ? lead.nextFollowUpAt.toISOString() : null,
       overdue: isOverdue,
       createdAt: lead.createdAt.toISOString(),
       updatedAt: lead.updatedAt.toISOString(),
@@ -379,10 +359,8 @@ export class DefaultLeadsService implements LeadsService {
       },
       activities: activities.map((a) => ({
         activityId: a.activity.id,
-        kind: a.activity.kind as any,
-        actor: a.activity.actorId
-          ? { id: a.activity.actorId, name: a.actorName ?? null }
-          : null,
+        kind: a.activity.kind,
+        actor: a.activity.actorId ? { id: a.activity.actorId, name: a.actorName ?? null } : null,
         body: a.activity.body,
         meta: (a.activity.meta as Record<string, unknown>) ?? null,
         createdAt: a.activity.createdAt.toISOString(),
@@ -394,10 +372,7 @@ export class DefaultLeadsService implements LeadsService {
     };
   }
 
-  async assignLead(
-    ctx: RequestContext,
-    input: AssignLeadInput,
-  ): Promise<LeadRow> {
+  async assignLead(ctx: RequestContext, input: AssignLeadInput): Promise<LeadRow> {
     const [lead] = await this.db
       .update(leads)
       .set({
@@ -407,7 +382,7 @@ export class DefaultLeadsService implements LeadsService {
       .where(eq(leads.id, input.leadId))
       .returning();
 
-    if (!lead) throw new AppError("NOT_FOUND", "Lead not found");
+    if (!lead) throw new AppError(ErrorCode.NOT_FOUND, "Lead not found");
 
     await this.db.insert(leadActivities).values({
       leadId: lead.id,
@@ -416,33 +391,29 @@ export class DefaultLeadsService implements LeadsService {
       body: `Assigned to user ${input.assignedTo}`,
     });
 
-    await notificationsService.emit(
-      input.assignedTo,
-      "lead.assigned",
-      { leadId: lead.id, leadName: lead.name },
-      undefined,
-      this.db,
-    );
+    if (input.assignedTo) {
+      await notificationsService.emit(
+        input.assignedTo,
+        "lead.assigned",
+        { leadId: lead.id, leadName: lead.name },
+        undefined,
+        this.db,
+      );
+    }
 
     return this.toLeadRow(lead);
   }
 
-  async claimLead(
-    ctx: RequestContext,
-    input: ClaimLeadInput,
-  ): Promise<LeadRow> {
-    const existing = await this.db
-      .select()
-      .from(leads)
-      .where(eq(leads.id, input.leadId))
-      .limit(1);
+  async claimLead(ctx: RequestContext, input: ClaimLeadInput): Promise<LeadRow> {
+    const existing = await this.db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
 
-    if (existing.length === 0) {
-      throw new AppError("NOT_FOUND", "Lead not found");
+    const current = existing[0];
+    if (!current) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Lead not found");
     }
 
-    if (existing[0].assignedTo && existing[0].assignedTo !== ctx.userId) {
-      throw new AppError("CONFLICT", "Lead already claimed by another user");
+    if (current.assignedTo && current.assignedTo !== ctx.userId) {
+      throw new AppError(ErrorCode.CONFLICT, "Lead already claimed by another user");
     }
 
     const [lead] = await this.db
@@ -454,6 +425,8 @@ export class DefaultLeadsService implements LeadsService {
       .where(eq(leads.id, input.leadId))
       .returning();
 
+    if (!lead) throw new AppError(ErrorCode.INTERNAL, "Insert returned no row");
+
     await this.db.insert(leadActivities).values({
       leadId: lead.id,
       actorId: ctx.userId,
@@ -464,23 +437,16 @@ export class DefaultLeadsService implements LeadsService {
     return this.toLeadRow(lead);
   }
 
-  async updateLeadStatus(
-    ctx: RequestContext,
-    input: UpdateLeadStatusInput,
-  ): Promise<LeadRow> {
-    const existing = await this.db
-      .select()
-      .from(leads)
-      .where(eq(leads.id, input.leadId))
-      .limit(1);
-
-    if (existing.length === 0) {
-      throw new AppError("NOT_FOUND", "Lead not found");
-    }
+  async updateLeadStatus(ctx: RequestContext, input: UpdateLeadStatusInput): Promise<LeadRow> {
+    const existing = await this.db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
 
     const current = existing[0];
+    if (!current) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Lead not found");
+    }
+
     assertValidLeadStatusTransition(
-      current.status as any,
+      current.status,
       input.status,
       input.lostReason,
       input.wonOrderId,
@@ -497,6 +463,8 @@ export class DefaultLeadsService implements LeadsService {
       .where(eq(leads.id, input.leadId))
       .returning();
 
+    if (!lead) throw new AppError(ErrorCode.INTERNAL, "Insert returned no row");
+
     await this.db.insert(leadActivities).values({
       leadId: lead.id,
       actorId: ctx.userId,
@@ -509,10 +477,7 @@ export class DefaultLeadsService implements LeadsService {
     return this.toLeadRow(lead);
   }
 
-  async addLeadNote(
-    ctx: RequestContext,
-    input: AddLeadNoteInput,
-  ): Promise<LeadActivityRow> {
+  async addLeadNote(ctx: RequestContext, input: AddLeadNoteInput): Promise<LeadActivityRow> {
     const [activity] = await this.db
       .insert(leadActivities)
       .values({
@@ -522,6 +487,8 @@ export class DefaultLeadsService implements LeadsService {
         body: input.body,
       })
       .returning();
+
+    if (!activity) throw new AppError(ErrorCode.INTERNAL, "Insert returned no row");
 
     return {
       activityId: activity.id,
@@ -533,13 +500,8 @@ export class DefaultLeadsService implements LeadsService {
     };
   }
 
-  async setFollowUp(
-    ctx: RequestContext,
-    input: SetFollowUpInput,
-  ): Promise<LeadRow> {
-    const nextFollowUpAt = input.nextFollowUpAt
-      ? new Date(input.nextFollowUpAt)
-      : null;
+  async setFollowUp(ctx: RequestContext, input: SetFollowUpInput): Promise<LeadRow> {
+    const nextFollowUpAt = input.nextFollowUpAt ? new Date(input.nextFollowUpAt) : null;
 
     const [lead] = await this.db
       .update(leads)
@@ -551,7 +513,7 @@ export class DefaultLeadsService implements LeadsService {
       .where(eq(leads.id, input.leadId))
       .returning();
 
-    if (!lead) throw new AppError("NOT_FOUND", "Lead not found");
+    if (!lead) throw new AppError(ErrorCode.NOT_FOUND, "Lead not found");
 
     await this.db.insert(leadActivities).values({
       leadId: lead.id,
@@ -572,48 +534,26 @@ export class DefaultLeadsService implements LeadsService {
       })
       .from(leads)
       .innerJoin(users, eq(leads.assignedTo, users.id))
-      .where(
-        and(
-          lt(leads.nextFollowUpAt, now),
-          notInArray(leads.status, ["won", "lost"]),
-        ),
-      );
-
-    // Open revoke external tasks
-    const openRevokeTasks = await this.db
-      .select()
-      .from(deliveryTasks)
-      .where(
-        and(
-          eq(deliveryTasks.kind, "revoke_external"),
-          eq(deliveryTasks.status, "open"),
-        ),
-      );
-
-
+      .where(and(lt(leads.nextFollowUpAt, now), notInArray(leads.status, ["won", "lost"])));
 
     const digestMap = new Map<string, OverdueDigestForAdmin>();
 
     for (const row of overdueLeads) {
-      if (!digestMap.has(row.adminId)) {
-        digestMap.set(row.adminId, {
-          adminId: row.adminId,
-          email: row.email,
-          leads: [],
-          revokeTasks: [],
-        });
+      const due = row.lead.nextFollowUpAt;
+      if (!due) continue;
+      let entry = digestMap.get(row.adminId);
+      if (!entry) {
+        entry = { adminId: row.adminId, email: row.email, leads: [], revokeTasks: [] };
+        digestMap.set(row.adminId, entry);
       }
       const daysOverdue = Math.max(
         1,
-        Math.floor(
-          (now.getTime() - new Date(row.lead.nextFollowUpAt!).getTime()) /
-            (1000 * 60 * 60 * 24),
-        ),
+        Math.floor((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24)),
       );
-      digestMap.get(row.adminId)!.leads.push({
+      entry.leads.push({
         leadId: row.lead.id,
         name: row.lead.name,
-        nextFollowUpAt: row.lead.nextFollowUpAt!.toISOString(),
+        nextFollowUpAt: due.toISOString(),
         daysOverdue,
       });
     }
@@ -621,9 +561,7 @@ export class DefaultLeadsService implements LeadsService {
     return Array.from(digestMap.values());
   }
 
-  async runOverdueDigestJob(
-    job: JobContext,
-  ): Promise<JobOutcome<OverdueDigestDetail>> {
+  async runOverdueDigestJob(job: JobContext): Promise<JobOutcome<OverdueDigestDetail>> {
     const digests = await this.collectOverdueDigest(job.now);
 
     let emailsQueued = 0;
@@ -660,26 +598,20 @@ export class DefaultLeadsService implements LeadsService {
   private toLeadRow(lead: Lead): LeadRow {
     const now = new Date();
     const isOverdue =
-      !!lead.nextFollowUpAt &&
-      lead.nextFollowUpAt < now &&
-      !["won", "lost"].includes(lead.status);
+      !!lead.nextFollowUpAt && lead.nextFollowUpAt < now && !["won", "lost"].includes(lead.status);
 
     return {
       leadId: lead.id,
-      source: lead.source as any,
+      source: lead.source,
       name: lead.name,
       email: lead.email,
       phone: lead.phone,
       company: lead.company,
-      status: lead.status as any,
-      priority: lead.priority as any,
-      assignedTo: lead.assignedTo
-        ? { id: lead.assignedTo, name: null }
-        : null,
+      status: lead.status,
+      priority: lead.priority,
+      assignedTo: lead.assignedTo ? { id: lead.assignedTo, name: null } : null,
       productId: lead.productId,
-      nextFollowUpAt: lead.nextFollowUpAt
-        ? lead.nextFollowUpAt.toISOString()
-        : null,
+      nextFollowUpAt: lead.nextFollowUpAt ? lead.nextFollowUpAt.toISOString() : null,
       overdue: isOverdue,
       createdAt: lead.createdAt.toISOString(),
       updatedAt: lead.updatedAt.toISOString(),
@@ -689,7 +621,7 @@ export class DefaultLeadsService implements LeadsService {
 
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
 
-export function createLeadsService(db?: any): LeadsService {
+export function createLeadsService(db?: Db): LeadsService {
   return new DefaultLeadsService(db);
 }
 
@@ -704,6 +636,10 @@ export function createNotImplementedLeadsService(): LeadsService {
     addLeadNote: "async",
     setFollowUp: "async",
     listLeads: "async",
-    getLeadDetail: "async",
+    getLead: "async",
+    claimLead: "async",
+    createFromChatbot: "async",
+    collectOverdueDigest: "async",
+    runOverdueDigestJob: "async",
   });
 }

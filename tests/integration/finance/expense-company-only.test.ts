@@ -63,7 +63,9 @@ describe("company-only expense reduces company only (FI-13, API-FIN-06, D-514)",
       roles: ["super_admin"],
     });
 
-    const [balBefore] = await financeService.getPartnerBalances(adminCtx, { partnerId: partner.id });
+    const [balBefore] = await financeService.getPartnerBalances(adminCtx, {
+      partnerId: partner.id,
+    });
     expect(balBefore?.byCurrency[0]?.balance).toBe(40000); // 80% of 50000
 
     // Record company-only expense (sharedBySplit: false)

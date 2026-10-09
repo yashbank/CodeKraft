@@ -18,9 +18,7 @@ import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/actions/envelope";
 import { fail } from "@/lib/actions/envelope";
 
-export async function toggleWishlist(
-  raw: unknown,
-): Promise<ActionResult<{ wishlisted: boolean }>> {
+export async function toggleWishlist(raw: unknown): Promise<ActionResult<{ wishlisted: boolean }>> {
   try {
     const [{ getSiteRequestContext }, { toggleWishlistAction }] = await Promise.all([
       import("@/lib/authz/site-request-context"),

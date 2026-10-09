@@ -1,5 +1,5 @@
-import { and, desc, eq, inArray, isNull, lte, sql } from "drizzle-orm";
-import { type TxCtx, getDb, withTx } from "@/lib/db";
+import { and, desc, eq, inArray, lte, sql } from "drizzle-orm";
+import { type DbOrTx, type TxCtx, getDb, withTx } from "@/lib/db";
 import { assertPermission } from "@/lib/authz/assert";
 import type { RequestContext } from "@/lib/authz/context";
 import { AppError, ErrorCode } from "@/lib/errors";
@@ -56,7 +56,13 @@ import {
 } from "./types";
 import { assertValidEntitlementTransition } from "./state";
 import { calculateAccessEndsAt, isWithinAccessWindow } from "./access";
+import { buildHandlerCtx, required } from "@/modules/_shared/handler-ctx";
 import type { JobContext, JobOutcome } from "@/modules/analytics/types";
+
+function userIdOf(ctx: RequestContext): string {
+  if (ctx.userId === null) throw new AppError(ErrorCode.UNAUTHENTICATED, "Sign in required");
+  return ctx.userId;
+}
 
 export class DefaultEntitlementsService implements EntitlementsService {
   constructor(
@@ -113,39 +119,37 @@ export class DefaultEntitlementsService implements EntitlementsService {
 
       const [product] = await tx.select().from(products).where(eq(products.id, offering.productId));
 
-      const [user] = await tx.select().from(users).where(eq(users.id, order.userId!));
+      if (!order.userId) {
+        throw new AppError(ErrorCode.STATE_INVALID, "Order has no customer to grant to");
+      }
+      const userId = order.userId;
+      const [user] = await tx.select().from(users).where(eq(users.id, userId));
 
       const startsAt = order.paidAt ?? new Date();
       let endsAt: Date | null = null;
 
       if (offering.purchaseModel === "subscription") {
-        endsAt = advancePeriod(startsAt, (offering.billingInterval ?? "monthly") as any);
+        endsAt = advancePeriod(startsAt, offering.billingInterval ?? "monthly");
       } else {
-        endsAt = calculateAccessEndsAt(startsAt, offering.accessMonths);
+        endsAt = calculateAccessEndsAt(startsAt, offering.deliveryConfig.accessMonths);
       }
 
       // Handler context
       const handler = this.registry.get(offering.deliveryType);
-      const handlerCtx = {
-        actorId: null,
-        requestId: order.id,
-        offering: {
-          id: offering.id,
-          name: offering.name,
-          deliveryConfig: offering.deliveryConfig as any,
-          serviceSteps: offering.serviceSteps as any,
-          purchaseModel: offering.purchaseModel as any,
-        },
-        product: { id: product!.id, name: product!.name, slug: product!.slug },
-        customer: { id: user!.id, email: user!.email, name: user!.name },
-        subscription: null,
-        manualGrant: false,
-      };
+      const handlerCtx = buildHandlerCtx(
+        order.id,
+        null,
+        offering,
+        required(product, "Product"),
+        required(user, "User"),
+        null,
+        false,
+      );
 
       const [newEnt] = await tx
         .insert(entitlements)
         .values({
-          userId: order.userId!,
+          userId,
           offeringId: offering.id,
           orderItemId: item.id,
           productId: offering.productId,
@@ -153,40 +157,42 @@ export class DefaultEntitlementsService implements EntitlementsService {
           status: "pending", // will be updated by handler outcome
           accessStartsAt: startsAt,
           accessEndsAt: endsAt,
-          updatePolicy: (offering.deliveryConfig as any)?.updatePolicy ?? "all_free",
-          downloadCap: (offering.deliveryConfig as any)?.downloadCap ?? null,
+          updatePolicy: offering.deliveryConfig.updatePolicy ?? "all_free",
+          downloadCap: offering.deliveryConfig.downloadCap ?? null,
           provisioningState: "n/a",
         })
         .returning();
 
-      const outcome = await handler.onGranted(handlerCtx, newEnt!, tx);
+      const created = required(newEnt, "Entitlement");
+      const outcome = await handler.onGranted(handlerCtx, created, tx);
 
-      const [updatedEnt] = await tx
+      const [updatedEntRow] = await tx
         .update(entitlements)
         .set({
           status: outcome.status,
           provisioningState: outcome.provisioningState,
           updatedAt: new Date(),
         })
-        .where(eq(entitlements.id, newEnt!.id))
+        .where(eq(entitlements.id, created.id))
         .returning();
+      const updatedEnt = required(updatedEntRow, "Entitlement");
 
       // If subscription, insert subscriptions row
       if (offering.purchaseModel === "subscription") {
         await tx.insert(subscriptions).values({
-          entitlementId: updatedEnt!.id,
-          interval: (offering.billingInterval ?? "monthly") as any,
+          entitlementId: updatedEnt.id,
+          interval: offering.billingInterval ?? "monthly",
           currentPeriodStart: startsAt,
-          currentPeriodEnd: endsAt!,
+          currentPeriodEnd: required(endsAt, "Period end"),
           status: "active",
         });
       }
 
       granted.push({
-        entitlementId: updatedEnt!.id,
+        entitlementId: updatedEnt.id,
         orderItemId: item.id,
-        deliveryType: updatedEnt!.deliveryType,
-        status: updatedEnt!.status,
+        deliveryType: updatedEnt.deliveryType,
+        status: updatedEnt.status,
         taskIds: outcome.taskIds,
       });
     }
@@ -246,25 +252,21 @@ export class DefaultEntitlementsService implements EntitlementsService {
 
       const startsAt = new Date();
       const accessMonths =
-        input.accessMonths !== undefined ? input.accessMonths : offering.accessMonths;
+        input.accessMonths !== undefined
+          ? input.accessMonths
+          : offering.deliveryConfig.accessMonths;
       const endsAt = calculateAccessEndsAt(startsAt, accessMonths);
 
       const handler = this.registry.get(offering.deliveryType);
-      const handlerCtx = {
-        actorId: ctx.userId,
-        requestId: ctx.requestId ?? "manual-grant",
-        offering: {
-          id: offering.id,
-          name: offering.name,
-          deliveryConfig: offering.deliveryConfig as any,
-          serviceSteps: offering.serviceSteps as any,
-          purchaseModel: offering.purchaseModel as any,
-        },
-        product: { id: product!.id, name: product!.name, slug: product!.slug },
-        customer: { id: user.id, email: user.email, name: user.name },
-        subscription: null,
-        manualGrant: true,
-      };
+      const handlerCtx = buildHandlerCtx(
+        ctx.requestId ?? "manual-grant",
+        ctx.userId,
+        offering,
+        required(product, "Product"),
+        user,
+        null,
+        true,
+      );
 
       const [newEnt] = await tx
         .insert(entitlements)
@@ -277,29 +279,31 @@ export class DefaultEntitlementsService implements EntitlementsService {
           status: "pending",
           accessStartsAt: startsAt,
           accessEndsAt: endsAt,
-          updatePolicy: (offering.deliveryConfig as any)?.updatePolicy ?? "all_free",
-          downloadCap: (offering.deliveryConfig as any)?.downloadCap ?? null,
+          updatePolicy: offering.deliveryConfig.updatePolicy ?? "all_free",
+          downloadCap: offering.deliveryConfig.downloadCap ?? null,
           provisioningState: "n/a",
           grantedManuallyBy: ctx.userId,
         })
         .returning();
 
-      const outcome = await handler.onGranted(handlerCtx, newEnt!, tx);
+      const created = required(newEnt, "Entitlement");
+      const outcome = await handler.onGranted(handlerCtx, created, tx);
 
-      const [updatedEnt] = await tx
+      const [updatedEntRow] = await tx
         .update(entitlements)
         .set({
           status: outcome.status,
           provisioningState: outcome.provisioningState,
           updatedAt: new Date(),
         })
-        .where(eq(entitlements.id, newEnt!.id))
+        .where(eq(entitlements.id, created.id))
         .returning();
+      const updatedEnt = required(updatedEntRow, "Entitlement");
 
       await auditService.log(
         ctx,
         "entitlement.granted_manually",
-        { type: "entitlement", id: updatedEnt!.id },
+        { type: "entitlement", id: updatedEnt.id },
         null,
         {
           userId: input.userId,
@@ -311,7 +315,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
       );
 
       return {
-        entitlementId: updatedEnt!.id,
+        entitlementId: updatedEnt.id,
       };
     };
 
@@ -341,21 +345,15 @@ export class DefaultEntitlementsService implements EntitlementsService {
     const [user] = await tx.select().from(users).where(eq(users.id, ent.userId));
 
     const handler = this.registry.get(ent.deliveryType);
-    const handlerCtx = {
-      actorId: null,
-      requestId: "revoke",
-      offering: {
-        id: offering!.id,
-        name: offering!.name,
-        deliveryConfig: offering!.deliveryConfig as any,
-        serviceSteps: offering!.serviceSteps as any,
-        purchaseModel: offering!.purchaseModel as any,
-      },
-      product: { id: product!.id, name: product!.name, slug: product!.slug },
-      customer: { id: user!.id, email: user!.email, name: user!.name },
-      subscription: null,
-      manualGrant: ent.orderItemId === null,
-    };
+    const handlerCtx = buildHandlerCtx(
+      "revoke",
+      null,
+      required(offering, "Offering"),
+      required(product, "Product"),
+      required(user, "User"),
+      null,
+      ent.orderItemId === null,
+    );
 
     const outcome = await handler.onRevoked(handlerCtx, ent, { mode: "hard", reason }, tx);
 
@@ -371,7 +369,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
       .where(eq(entitlements.id, ent.id))
       .returning();
 
-    const adminRow = await this.buildAdminRow(updated!, tx);
+    const adminRow = await this.buildAdminRow(required(updated, "Entitlement"), tx);
 
     return {
       entitlement: adminRow,
@@ -410,7 +408,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
     const input = listMyEntitlementsSchema.parse(rawInput);
     const db = await getDb();
 
-    const conditions = [eq(entitlements.userId, ctx.userId!)];
+    const conditions = [eq(entitlements.userId, userIdOf(ctx))];
     if (input.filters?.status) {
       conditions.push(eq(entitlements.status, input.filters?.status));
     }
@@ -450,7 +448,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
     const [row] = await db
       .select()
       .from(entitlements)
-      .where(and(eq(entitlements.id, input.entitlementId), eq(entitlements.userId, ctx.userId!)));
+      .where(and(eq(entitlements.id, input.entitlementId), eq(entitlements.userId, userIdOf(ctx))));
 
     if (!row) {
       throw new AppError(ErrorCode.NOT_FOUND, "Entitlement not found");
@@ -542,7 +540,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
           })
           .where(eq(entitlements.id, ent.id))
           .returning();
-        updatedEnt = res!;
+        updatedEnt = required(res, "Entitlement");
       }
 
       // Record download log
@@ -559,7 +557,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
         "download.issued",
         { type: "entitlement", id: ent.id },
         null,
-        { mediaId: input.mediaId, downloadsUsed: updatedEnt!.downloadsUsed },
+        { mediaId: input.mediaId, downloadsUsed: updatedEnt.downloadsUsed },
         tx,
       );
 
@@ -571,9 +569,9 @@ export class DefaultEntitlementsService implements EntitlementsService {
       const url = await storage.createPresignedGet(bucket, storageKey, 300);
 
       const remaining =
-        updatedEnt!.downloadCap === null
+        updatedEnt.downloadCap === null
           ? 999999
-          : Math.max(0, updatedEnt!.downloadCap - updatedEnt!.downloadsUsed);
+          : Math.max(0, updatedEnt.downloadCap - updatedEnt.downloadsUsed);
 
       return {
         url,
@@ -672,7 +670,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
 
     const items: EntitlementAdminRow[] = [];
     for (const r of currentRows) {
-      items.push(await this.buildAdminRow(r, db as any));
+      items.push(await this.buildAdminRow(r, db));
     }
 
     return {
@@ -698,7 +696,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
       throw new AppError(ErrorCode.NOT_FOUND, "Entitlement not found");
     }
 
-    return await this.buildAdminRow(ent, db as any);
+    return await this.buildAdminRow(ent, db);
   }
 
   async resetDownloadCount(
@@ -727,22 +725,23 @@ export class DefaultEntitlementsService implements EntitlementsService {
         updateData.downloadCap = input.newCap;
       }
 
-      const [updated] = await tx
+      const [updatedRow] = await tx
         .update(entitlements)
         .set(updateData)
         .where(eq(entitlements.id, ent.id))
         .returning();
+      const updated = required(updatedRow, "Entitlement");
 
       await auditService.log(
         ctx,
         "entitlement.download_reset",
         { type: "entitlement", id: ent.id },
         { downloadsUsed: ent.downloadsUsed, downloadCap: ent.downloadCap },
-        { downloadsUsed: updated!.downloadsUsed, downloadCap: updated!.downloadCap },
+        { downloadsUsed: updated.downloadsUsed, downloadCap: updated.downloadCap },
         tx,
       );
 
-      return await this.buildAdminRow(updated!, tx);
+      return await this.buildAdminRow(updated, tx);
     });
   }
 
@@ -777,7 +776,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
           })
           .where(eq(entitlements.id, ent.id))
           .returning();
-        updated = res!;
+        updated = required(res, "Entitlement");
       }
 
       if (input.periodEnd !== undefined) {
@@ -801,7 +800,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
           })
           .where(eq(entitlements.id, ent.id))
           .returning();
-        updated = res!;
+        updated = required(res, "Entitlement");
       }
 
       await auditService.log(
@@ -839,7 +838,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
         .returning({ id: entitlements.id });
 
       return {
-        ok: true,
+        status: "ok",
         detail: {
           expired: expiredRows.length,
         },
@@ -847,7 +846,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
     });
   }
 
-  private async buildCustomerView(ent: Entitlement, db: any): Promise<EntitlementView> {
+  private async buildCustomerView(ent: Entitlement, db: DbOrTx): Promise<EntitlementView> {
     const [prod] = await db.select().from(products).where(eq(products.id, ent.productId));
     const [offering] = await db.select().from(offerings).where(eq(offerings.id, ent.offeringId));
     const [user] = await db.select().from(users).where(eq(users.id, ent.userId));
@@ -889,30 +888,26 @@ export class DefaultEntitlementsService implements EntitlementsService {
       .where(and(eq(deliveryTasks.entitlementId, ent.id), eq(deliveryTasks.status, "open")));
 
     const handler = this.registry.get(ent.deliveryType);
-    const handlerCtx = {
-      actorId: null,
-      requestId: "customer-view",
-      offering: {
-        id: offering!.id,
-        name: offering!.name,
-        deliveryConfig: offering!.deliveryConfig as any,
-        serviceSteps: offering!.serviceSteps as any,
-        purchaseModel: offering!.purchaseModel as any,
-      },
-      product: { id: prod!.id, name: prod!.name, slug: prod!.slug },
-      customer: { id: user!.id, email: user!.email, name: user!.name },
-      subscription: sub ?? null,
-      manualGrant: ent.orderItemId === null,
-    };
+    const offeringRow = required(offering, "Offering");
+    const prodRow = required(prod, "Product");
+    const handlerCtx = buildHandlerCtx(
+      "customer-view",
+      null,
+      offeringRow,
+      prodRow,
+      required(user, "User"),
+      sub ?? null,
+      ent.orderItemId === null,
+    );
 
     const source = {
       entitlement: ent,
       ctx: handlerCtx,
       serviceProgress: progressRows,
-      releaseFiles: files.map((f: any) => ({
+      releaseFiles: files.map((f) => ({
         mediaId: f.rf.mediaId,
         version: f.rf.version,
-        name: f.med.name,
+        name: f.med.objectKey.split("/").pop() ?? f.med.objectKey,
         sizeBytes: f.med.sizeBytes,
         releasedAt: f.rf.releasedAt,
         notes: f.rf.notes,
@@ -925,8 +920,8 @@ export class DefaultEntitlementsService implements EntitlementsService {
     const subscriptionView = sub
       ? {
           subscriptionId: sub.id,
-          interval: sub.interval as any,
-          status: sub.status as any,
+          interval: sub.interval,
+          status: sub.status,
           periodStart: sub.currentPeriodStart.toISOString(),
           periodEnd: sub.currentPeriodEnd.toISOString(),
           graceUntil: sub.graceUntil ? sub.graceUntil.toISOString() : null,
@@ -939,12 +934,12 @@ export class DefaultEntitlementsService implements EntitlementsService {
     return {
       entitlementId: ent.id,
       product: {
-        id: prod!.id,
-        name: prod!.name,
-        slug: prod!.slug,
-        published: prod!.status === "published",
+        id: prodRow.id,
+        name: prodRow.name,
+        slug: prodRow.slug,
+        published: prodRow.status === "published",
       },
-      offering: { id: offering!.id, name: offering!.name },
+      offering: { id: offeringRow.id, name: offeringRow.name },
       deliveryType: ent.deliveryType,
       status: ent.status,
       access: {
@@ -966,7 +961,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
     };
   }
 
-  private async buildAdminRow(ent: Entitlement, tx: TxCtx): Promise<EntitlementAdminRow> {
+  private async buildAdminRow(ent: Entitlement, tx: DbOrTx): Promise<EntitlementAdminRow> {
     const [user] = await tx.select().from(users).where(eq(users.id, ent.userId));
     const [prod] = await tx.select().from(products).where(eq(products.id, ent.productId));
     const [offering] = await tx.select().from(offerings).where(eq(offerings.id, ent.offeringId));
@@ -987,12 +982,15 @@ export class DefaultEntitlementsService implements EntitlementsService {
 
     const handler = this.registry.get(ent.deliveryType);
     const actions = handler.adminActions(ent, openTasks);
+    const userRow = required(user, "User");
+    const prodRow = required(prod, "Product");
+    const offeringRow = required(offering, "Offering");
 
     return {
       entitlementId: ent.id,
-      user: { id: user!.id, email: user!.email, name: user!.name },
-      product: { id: prod!.id, name: prod!.name },
-      offering: { id: offering!.id, name: offering!.name },
+      user: { id: userRow.id, email: userRow.email, name: userRow.name },
+      product: { id: prodRow.id, name: prodRow.name },
+      offering: { id: offeringRow.id, name: offeringRow.name },
       deliveryType: ent.deliveryType,
       status: ent.status,
       provisioningState: ent.provisioningState,
@@ -1014,16 +1012,18 @@ export const entitlementsService = new DefaultEntitlementsService();
 
 export function createNotImplementedEntitlementsService(): EntitlementsService {
   return createNotImplemented<EntitlementsService>("entitlements", "P5", {
-    grantEntitlement: "async",
     grantForOrder: "async",
-    revokeEntitlement: "async",
+    grantManual: "async",
     revoke: "async",
-    resetDownloadCount: "async",
+    revokeEntitlement: "async",
+    listMyEntitlements: "async",
+    getMyEntitlement: "async",
     issueDownloadLink: "async",
     revealLicenseKey: "async",
+    listEntitlementsAdmin: "async",
+    getEntitlementAdmin: "async",
+    resetDownloadCount: "async",
     extendAccess: "async",
-    listEntitlements: "async",
-    getEntitlementView: "async",
-    checkEntitlementAccess: "async",
+    runExpireJob: "async",
   });
 }

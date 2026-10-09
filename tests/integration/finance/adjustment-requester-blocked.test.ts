@@ -24,12 +24,6 @@ describe("adjustment requester self-approval prevention (BR-13, SA-09, API-ADM-0
       user: { id: admin1.id },
       session: { id: "sess-admin-1" },
       roles: ["admin"],
-      permissions: [
-        "finance.ledger.read",
-        "finance.ledger.read_all",
-        "finance.adjustment.propose",
-        "approvals.decide",
-      ],
     });
 
     const { approvalRequestId } = await financeService.proposeAdjustment(admin1Ctx, {

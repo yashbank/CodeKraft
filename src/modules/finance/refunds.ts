@@ -5,10 +5,10 @@
  * Gateway fees and bank charges are never reversed.
  * Full refund nets to zero for the order.
  */
-import { and, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import type { TxCtx } from "@/lib/db";
-import { allocateLargestRemainder } from "@/lib/money";
-import { type Currency } from "@/lib/money";
+import { allocateLargestRemainder, type Currency } from "@/lib/money";
+import { prorate, toInrMinor } from "./minor";
 import {
   type EntryType,
   type NewLedgerEntry,
@@ -64,9 +64,7 @@ export function computeItemRefundPlan(input: ComputeItemRefundPlanInput): NewLed
     return [];
   }
 
-  const rate = Number(fxRateToInr);
-  const toInr = (amount: number) =>
-    currency === "INR" ? amount : Math.round(amount * rate);
+  const toInr = (amount: number) => (currency === "INR" ? amount : toInrMinor(amount, fxRateToInr));
 
   const entries: NewLedgerEntry[] = [];
 
@@ -112,10 +110,8 @@ export function computeItemRefundPlan(input: ComputeItemRefundPlanInput): NewLed
     refundCompany = refundGross - refundDiscount - refundTax - partnersTotal;
   } else {
     // Proportional fraction f = refundAmount / total
-    const f = itemRefundAmountMinor / itemTotalMinor;
-
-    refundDiscount = Math.round(f * discountMinor);
-    refundTax = Math.round(f * taxMinor);
+    refundDiscount = prorate(discountMinor, itemRefundAmountMinor, itemTotalMinor);
+    refundTax = prorate(taxMinor, itemRefundAmountMinor, itemTotalMinor);
 
     // Balance refundGross so that customer net refund (gross - discount + tax) matches itemRefundAmountMinor
     refundGross = itemRefundAmountMinor + refundDiscount - refundTax;
@@ -154,8 +150,7 @@ export function computeItemRefundPlan(input: ComputeItemRefundPlanInput): NewLed
   addEntry("refund_company_cut", "company", -refundCompany, null, "Refund company cut");
 
   // 5. Refund Partner Allocation (- debit to each partner)
-  for (let i = 0; i < partnerLines.length; i++) {
-    const pLine = partnerLines[i]!;
+  for (const [i, pLine] of partnerLines.entries()) {
     const pRefund = refundPartners[i] ?? 0;
     addEntry(
       "refund_partner_allocation",
@@ -171,22 +166,14 @@ export function computeItemRefundPlan(input: ComputeItemRefundPlanInput): NewLed
 
 export async function postRefund(refundId: string, tx: TxCtx): Promise<PostEntriesResult> {
   // 1. Load refund
-  const [refund] = await tx
-    .select()
-    .from(refunds)
-    .where(eq(refunds.id, refundId))
-    .limit(1);
+  const [refund] = await tx.select().from(refunds).where(eq(refunds.id, refundId)).limit(1);
 
   if (!refund) {
     throw new AppError(ErrorCode.NOT_FOUND, "Refund not found");
   }
 
   // 2. Load order
-  const [order] = await tx
-    .select()
-    .from(orders)
-    .where(eq(orders.id, refund.orderId))
-    .limit(1);
+  const [order] = await tx.select().from(orders).where(eq(orders.id, refund.orderId)).limit(1);
 
   if (!order) {
     throw new AppError(ErrorCode.NOT_FOUND, "Order not found");
@@ -206,7 +193,12 @@ export async function postRefund(refundId: string, tx: TxCtx): Promise<PostEntri
   const itemAllocations = await tx
     .select()
     .from(allocations)
-    .where(inArray(allocations.orderItemId, items.map((i) => i.id)));
+    .where(
+      inArray(
+        allocations.orderItemId,
+        items.map((i) => i.id),
+      ),
+    );
 
   const allocationByItemId = new Map(itemAllocations.map((a) => [a.orderItemId, a]));
 
@@ -217,8 +209,7 @@ export async function postRefund(refundId: string, tx: TxCtx): Promise<PostEntri
   const allEntriesToInsert: NewLedgerEntry[] = [];
   const now = refund.executedAt ?? new Date();
 
-  for (let idx = 0; idx < items.length; idx++) {
-    const item = items[idx]!;
+  for (const [idx, item] of items.entries()) {
     const itemRefundMinor = refundPerItem[idx] ?? 0;
     if (itemRefundMinor <= 0) continue;
 
@@ -230,6 +221,14 @@ export async function postRefund(refundId: string, tx: TxCtx): Promise<PostEntri
         amountMinor: l.amount_minor,
       })) ?? [];
 
+    const createdBy = refund.executedBy ?? order.createdBy ?? order.userId;
+    if (!createdBy) {
+      throw new AppError(
+        ErrorCode.STATE_INVALID,
+        "Refund has no actor to attribute ledger entries to",
+      );
+    }
+
     const itemEntries = computeItemRefundPlan({
       orderId: order.id,
       orderItemId: item.id,
@@ -237,7 +236,7 @@ export async function postRefund(refundId: string, tx: TxCtx): Promise<PostEntri
       refundId: refund.id,
       currency: order.currency as Currency,
       fxRateToInr: String(order.fxRateToInr),
-      createdBy: refund.executedBy ?? order.createdBy ?? order.userId!,
+      createdBy,
       createdAt: now,
       grossMinor: item.unitMinor * item.quantity,
       discountMinor: item.discountMinor,

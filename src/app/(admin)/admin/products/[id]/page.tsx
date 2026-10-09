@@ -3,7 +3,11 @@ import { notFound } from "next/navigation";
 import { ProductEditor } from "@/components/admin/catalog/ProductEditor";
 import type { ProductEditorData } from "@/components/admin/types";
 import { getAdminRequestContext } from "@/lib/authz/admin-request-context";
-import { flattenCategoryNames, mapCategoryNode, mapProductGraphToEditorData } from "@/lib/admin/catalog-view";
+import {
+  flattenCategoryNames,
+  mapCategoryNode,
+  mapProductGraphToEditorData,
+} from "@/lib/admin/catalog-view";
 import { getProductAdminQuery, listCategoriesQuery } from "@/modules/catalog/queries";
 import { listAdminDirectoryQuery } from "@/modules/approvals/queries";
 import { listPartnersQuery } from "@/modules/users/queries";
@@ -81,7 +85,9 @@ export default async function AdminProductEditorPage({ params }: PageProps) {
   }
 
   // Real approvers: every other active admin-class user (same rule the server applies).
-  const adminDirectory = await listAdminDirectoryQuery({}, ctx).catch(() => ({ ok: false as const }));
+  const adminDirectory = await listAdminDirectoryQuery({}, ctx).catch(() => ({
+    ok: false as const,
+  }));
   const approvers = adminDirectory.ok
     ? adminDirectory.data.items.filter((a) => a.id !== ctx.userId).map((a) => a.name)
     : [];

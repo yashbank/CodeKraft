@@ -27,7 +27,7 @@ export default function RegisterPage() {
   const handleSubmit = async (values: { name: string; email: string; password: string }) => {
     setState("loading");
     try {
-      const { data, error } = await authClient.signUp.email({
+      const { error } = await authClient.signUp.email({
         email: values.email,
         password: values.password,
         name: values.name,
@@ -45,7 +45,7 @@ export default function RegisterPage() {
 
       setSentTo(values.email);
       setState("sent");
-    } catch (err) {
+    } catch {
       setErrorMessage("Something went wrong. Please try again.");
       setState("error");
     }

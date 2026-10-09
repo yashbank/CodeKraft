@@ -1,13 +1,14 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import type { Context, RequestContext } from "@/lib/authz/context";
-import { type TxCtx, getDb } from "@/lib/db";
-import { AppError } from "@/lib/errors";
+import { type Db, type TxCtx, getDb } from "@/lib/db";
+import { AppError, ErrorCode } from "@/lib/errors";
 import { emailOutbox } from "../../../drizzle/schema/notifications";
 import { analyticsEvents, jobRuns } from "../../../drizzle/schema/ops";
 import { chatUsageDaily } from "../../../drizzle/schema/chat";
 import type { AnalyticsService } from "./contracts";
 import {
   CLIENT_ANALYTICS_EVENTS,
+  type CronJobKey,
   type JobContext,
   type JobOutcome,
   type JobRunsResult,
@@ -21,17 +22,20 @@ import {
 } from "./types";
 
 export class DefaultAnalyticsService implements AnalyticsService {
-  private _db?: any;
-  constructor(db?: any) {
+  private _db?: Db;
+  constructor(db?: Db) {
     this._db = db;
   }
-  private get db(): any {
+  private get db(): Db {
     return this._db ?? getDb();
   }
 
   async trackEvent(ctx: Context, input: TrackEventInput): Promise<TrackEventResult> {
-    if (!CLIENT_ANALYTICS_EVENTS.includes(input.name as any)) {
-      throw new AppError("FORBIDDEN", `Client cannot record server-only event: ${input.name}`);
+    if (!(CLIENT_ANALYTICS_EVENTS as readonly string[]).includes(input.name)) {
+      throw new AppError(
+        ErrorCode.FORBIDDEN,
+        `Client cannot record server-only event: ${input.name}`,
+      );
     }
 
     const [row] = await this.db
@@ -39,14 +43,15 @@ export class DefaultAnalyticsService implements AnalyticsService {
       .values({
         name: input.name,
         userId: ctx.userId ?? null,
-        anonId: ctx.userId ? null : input.anonId ?? null,
+        anonId: ctx.userId ? null : (input.anonId ?? null),
         productId: input.productId ?? null,
         orderId: input.orderId ?? null,
         props: input.props ?? null,
       })
       .returning();
 
-    return { eventId: row.id };
+    if (!row) throw new AppError(ErrorCode.INTERNAL, "analytics event insert returned no row");
+    return { ok: true, eventId: row.id };
   }
 
   async trackWebVital(ctx: Context, input: WebVitalInput): Promise<TrackEventResult> {
@@ -68,7 +73,8 @@ export class DefaultAnalyticsService implements AnalyticsService {
       })
       .returning();
 
-    return { eventId: row.id };
+    if (!row) throw new AppError(ErrorCode.INTERNAL, "analytics event insert returned no row");
+    return { ok: true, eventId: row.id };
   }
 
   async recordServerEvent(event: ServerAnalyticsEvent, tx: TxCtx): Promise<void> {
@@ -82,13 +88,10 @@ export class DefaultAnalyticsService implements AnalyticsService {
     });
   }
 
-  async listJobRuns(
-    ctx: RequestContext,
-    input: ListJobRunsInput,
-  ): Promise<JobRunsResult> {
+  async listJobRuns(_ctx: RequestContext, input: ListJobRunsInput): Promise<JobRunsResult> {
     const conditions = [];
-    if (input.job) {
-      conditions.push(eq(jobRuns.job, input.job));
+    if (input.filters?.job) {
+      conditions.push(eq(jobRuns.job, input.filters.job));
     }
 
     const rows = await this.db
@@ -103,19 +106,20 @@ export class DefaultAnalyticsService implements AnalyticsService {
 
     return {
       items: selected.map((r) => ({
-        runId: r.id,
-        job: r.job as any,
+        id: r.id,
+        job: r.job as CronJobKey,
         startedAt: r.startedAt.toISOString(),
         finishedAt: r.finishedAt ? r.finishedAt.toISOString() : null,
-        status: (r.status as any) ?? "running",
-        detail: (r.detail as Record<string, unknown>) ?? null,
+        status: r.status,
+        detail: (r.detail as Record<string, unknown> | null) ?? null,
       })),
-      total: selected.length,
-      nextCursor: hasNext ? selected[selected.length - 1].id : null,
+      nextCursor: hasNext ? (selected[selected.length - 1]?.id ?? null) : null,
+      // shortcut: per-job last-run summary not computed, add when the System widget needs it
+      lastRuns: [],
     };
   }
 
-  async getSystemHealthWidget(ctx: RequestContext): Promise<SystemHealth> {
+  async getSystemHealthWidget(_ctx: RequestContext): Promise<SystemHealth> {
     const today = new Date().toISOString().slice(0, 10);
 
     const outboxCounts = await this.db
@@ -146,37 +150,20 @@ export class DefaultAnalyticsService implements AnalyticsService {
         platformToday,
         platformCap: 500,
       },
-      jobs: [
-        {
-          job: "daily" as any,
-          lastRunAt: new Date().toISOString(),
-          status: "ok",
-          missed: false,
-        },
-      ],
-      vitalsP75ByRoute: [],
+      jobs: [],
+      vitals: [],
       sentryLink: "https://sentry.io",
     };
   }
 
-  async runVitalsRollupJob(
-    job: JobContext,
-  ): Promise<JobOutcome<VitalsRollupDetail>> {
-    return {
-      status: "ok",
-      detail: {
-        routesRolledUp: 0,
-        poorCount: 0,
-        alertsSent: 0,
-        jobId: job.jobId,
-      },
-    };
+  async runVitalsRollupJob(_job: JobContext): Promise<JobOutcome<VitalsRollupDetail>> {
+    return { status: "ok", detail: { routes: 0, metrics: 0, alerts: [] } };
   }
 }
 
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
 
-export function createAnalyticsService(db?: any): AnalyticsService {
+export function createAnalyticsService(db?: Db): AnalyticsService {
   return new DefaultAnalyticsService(db);
 }
 
@@ -185,10 +172,10 @@ export const analyticsService = new DefaultAnalyticsService();
 export function createNotImplementedAnalyticsService(): AnalyticsService {
   return createNotImplemented<AnalyticsService>("analytics", "P6", {
     trackEvent: "async",
-    rollupVitals: "async",
-    getVitalsSummary: "async",
-    getSystemHealth: "async",
+    trackWebVital: "async",
+    recordServerEvent: "async",
     listJobRuns: "async",
-    recordJobRun: "async",
+    getSystemHealthWidget: "async",
+    runVitalsRollupJob: "async",
   });
 }

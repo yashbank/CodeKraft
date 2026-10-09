@@ -103,7 +103,7 @@ describe("Delivery Tasks & Service Progress (API-DEL-07..10, D-601, D-608)", () 
       done: true,
       note: "Kickoff call held on Zoom",
     });
-    expect(res1.allDone).toBe(false);
+    expect(res1.fulfilled).toBe(false);
 
     // Mark step 2 done
     const res2 = await deliveryService.markServiceStep(adminCtx, {
@@ -112,6 +112,6 @@ describe("Delivery Tasks & Service Progress (API-DEL-07..10, D-601, D-608)", () 
       done: true,
       note: "All code deployed to production",
     });
-    expect(res2.allDone).toBe(true);
+    expect(res2.fulfilled).toBe(true);
   });
 });

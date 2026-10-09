@@ -53,10 +53,7 @@ describe("Quote expiry job idempotency (docs/06 §3.3)", () => {
     expect(run1.expiredQuoteIds).toContain(quote2.quoteId);
 
     // Verify DB states
-    const [q1] = await db
-      .select()
-      .from(customQuotes)
-      .where(eq(customQuotes.id, quote1.quoteId));
+    const [q1] = await db.select().from(customQuotes).where(eq(customQuotes.id, quote1.quoteId));
     expect(q1?.status).toBe("expired");
 
     // Run 2: idempotent, no more quotes to expire

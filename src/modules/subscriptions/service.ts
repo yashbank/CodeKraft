@@ -1,16 +1,13 @@
-import { and, eq, lte, or, sql } from "drizzle-orm";
-import { type TxCtx, getDb, withTx } from "@/lib/db";
+import { and, eq, lte, or } from "drizzle-orm";
+import { type TxCtx, withTx } from "@/lib/db";
 import { assertPermission } from "@/lib/authz/assert";
 import type { RequestContext } from "@/lib/authz/context";
 import { AppError, ErrorCode } from "@/lib/errors";
+import { buildHandlerCtx, required } from "@/modules/_shared/handler-ctx";
 import { auditService } from "@/modules/audit/service";
 import { paymentsService } from "@/modules/payments/service";
 import { defaultDeliveryHandlerRegistry } from "@/modules/delivery/handlers";
-import {
-  entitlements,
-  subscriptions,
-  type Subscription,
-} from "../../../drizzle/schema/delivery";
+import { entitlements, subscriptions, type Subscription } from "../../../drizzle/schema/delivery";
 import { orders, orderItems } from "../../../drizzle/schema/commerce";
 import { offerings, offeringPrices } from "../../../drizzle/schema/offerings";
 import { products } from "../../../drizzle/schema/catalog";
@@ -44,10 +41,7 @@ export function advancePeriod(from: Date, interval: BillingInterval): Date {
 export class DefaultSubscriptionsService implements SubscriptionsService {
   constructor(private readonly registry = defaultDeliveryHandlerRegistry) {}
 
-  async renew(
-    ctx: RequestContext,
-    rawInput: RenewSubscriptionInput,
-  ): Promise<RenewalOrderResult> {
+  async renew(ctx: RequestContext, rawInput: RenewSubscriptionInput): Promise<RenewalOrderResult> {
     assertPermission(ctx, "commerce.self");
     const input = renewSubscriptionSchema.parse(rawInput);
 
@@ -63,10 +57,7 @@ export class DefaultSubscriptionsService implements SubscriptionsService {
       }
 
       if (sub.status === "cancelled") {
-        throw new AppError(
-          ErrorCode.STATE_INVALID,
-          "Cannot renew a cancelled subscription",
-        );
+        throw new AppError(ErrorCode.STATE_INVALID, "Cannot renew a cancelled subscription");
       }
 
       const [ent] = await tx
@@ -74,7 +65,13 @@ export class DefaultSubscriptionsService implements SubscriptionsService {
         .from(entitlements)
         .where(eq(entitlements.id, sub.entitlementId));
 
-      if (!ent || (ctx.userId && ent.userId !== ctx.userId && !ctx.roles.includes("super_admin") && !ctx.roles.includes("admin"))) {
+      if (
+        !ent ||
+        (ctx.userId &&
+          ent.userId !== ctx.userId &&
+          !ctx.roles.includes("super_admin") &&
+          !ctx.roles.includes("admin"))
+      ) {
         throw new AppError(ErrorCode.NOT_FOUND, "Entitlement not found");
       }
 
@@ -99,17 +96,18 @@ export class DefaultSubscriptionsService implements SubscriptionsService {
               method: input.paymentMethod,
               instructions: intent.instructions as unknown as Record<string, unknown>,
             },
-            expiresAt: (existingOrder.expiresAt ?? sub.graceUntil ?? sub.currentPeriodEnd).toISOString(),
+            expiresAt: (
+              existingOrder.expiresAt ??
+              sub.graceUntil ??
+              sub.currentPeriodEnd
+            ).toISOString(),
             existing: true,
           };
         }
       }
 
       // Load offering to get current price
-      const [offering] = await tx
-        .select()
-        .from(offerings)
-        .where(eq(offerings.id, ent.offeringId));
+      const [offering] = await tx.select().from(offerings).where(eq(offerings.id, ent.offeringId));
 
       if (!offering) {
         throw new AppError(ErrorCode.NOT_FOUND, "Offering not found");
@@ -121,7 +119,8 @@ export class DefaultSubscriptionsService implements SubscriptionsService {
         .where(and(eq(offeringPrices.offeringId, offering.id), eq(offeringPrices.currency, "INR")));
 
       const unitMinor = price?.amountMinor ?? 10000;
-      const orderExpiresAt = sub.graceUntil ?? new Date(sub.currentPeriodEnd.getTime() + 7 * 86400000);
+      const orderExpiresAt =
+        sub.graceUntil ?? new Date(sub.currentPeriodEnd.getTime() + 7 * 86400000);
 
       // Determine billing info
       const [user] = await tx.select().from(users).where(eq(users.id, ent.userId));
@@ -133,7 +132,7 @@ export class DefaultSubscriptionsService implements SubscriptionsService {
 
       const orderNo = `CK-ORD-${Math.floor(100000 + Math.random() * 900000)}`;
 
-      const [newOrder] = await tx
+      const [newOrderRow] = await tx
         .insert(orders)
         .values({
           orderNo,
@@ -152,9 +151,10 @@ export class DefaultSubscriptionsService implements SubscriptionsService {
           createdBy: ctx.userId ?? ent.userId,
         })
         .returning();
+      const newOrder = required(newOrderRow, "Order");
 
       await tx.insert(orderItems).values({
-        orderId: newOrder!.id,
+        orderId: newOrder.id,
         offeringId: offering.id,
         productId: ent.productId,
         description: `${offering.name} (Renewal)`,
@@ -169,20 +169,20 @@ export class DefaultSubscriptionsService implements SubscriptionsService {
       await tx
         .update(subscriptions)
         .set({
-          renewalOrderId: newOrder!.id,
+          renewalOrderId: newOrder.id,
           updatedAt: new Date(),
         })
         .where(eq(subscriptions.id, sub.id));
 
       const intent = await paymentsService.createIntentForOrder(
-        newOrder!.id,
+        newOrder.id,
         input.paymentMethod,
         tx,
       );
 
       return {
-        orderId: newOrder!.id,
-        orderNo: newOrder!.orderNo,
+        orderId: newOrder.id,
+        orderNo: newOrder.orderNo,
         payment: {
           paymentId: intent.paymentId,
           method: input.paymentMethod,
@@ -239,7 +239,7 @@ export class DefaultSubscriptionsService implements SubscriptionsService {
       })
       .where(eq(entitlements.id, sub.entitlementId));
 
-    return this.toDetail(updatedSub!);
+    return this.toDetail(required(updatedSub, "Subscription"));
   }
 
   async cancelAtPeriodEnd(
@@ -278,7 +278,7 @@ export class DefaultSubscriptionsService implements SubscriptionsService {
         tx,
       );
 
-      return this.toDetail(updated!);
+      return this.toDetail(required(updated, "Subscription"));
     });
   }
 
@@ -330,7 +330,7 @@ export class DefaultSubscriptionsService implements SubscriptionsService {
           tx,
         );
 
-        return this.toDetail(updated!);
+        return this.toDetail(required(updated, "Subscription"));
       } else {
         const [updated] = await tx
           .update(subscriptions)
@@ -350,7 +350,7 @@ export class DefaultSubscriptionsService implements SubscriptionsService {
           tx,
         );
 
-        return this.toDetail(updated!);
+        return this.toDetail(required(updated, "Subscription"));
       }
     });
   }
@@ -358,8 +358,8 @@ export class DefaultSubscriptionsService implements SubscriptionsService {
   async runRemindGraceSuspendJob(job: JobContext): Promise<JobOutcome<RemindGraceSuspendDetail>> {
     return await withTx(async (tx) => {
       const now = job.now ?? new Date();
-      let reminded7d = 0;
-      let reminded1d = 0;
+      const reminded7d = 0;
+      const reminded1d = 0;
       let movedToPastDue = 0;
       let suspended = 0;
       let cancelled = 0;
@@ -426,12 +426,7 @@ export class DefaultSubscriptionsService implements SubscriptionsService {
       const pastGrace = await tx
         .select()
         .from(subscriptions)
-        .where(
-          and(
-            eq(subscriptions.status, "past_due"),
-            lte(subscriptions.graceUntil, now),
-          ),
-        );
+        .where(and(eq(subscriptions.status, "past_due"), lte(subscriptions.graceUntil, now)));
 
       for (const sub of pastGrace) {
         await tx
@@ -461,30 +456,18 @@ export class DefaultSubscriptionsService implements SubscriptionsService {
             .select()
             .from(offerings)
             .where(eq(offerings.id, ent.offeringId));
-          const [product] = await tx
-            .select()
-            .from(products)
-            .where(eq(products.id, ent.productId));
-          const [user] = await tx
-            .select()
-            .from(users)
-            .where(eq(users.id, ent.userId));
+          const [product] = await tx.select().from(products).where(eq(products.id, ent.productId));
+          const [user] = await tx.select().from(users).where(eq(users.id, ent.userId));
 
-          const handlerCtx = {
-            actorId: null,
-            requestId: job.jobId,
-            offering: {
-              id: offering!.id,
-              name: offering!.name,
-              deliveryConfig: offering!.deliveryConfig as any,
-              serviceSteps: offering!.serviceSteps as any,
-              purchaseModel: offering!.purchaseModel as any,
-            },
-            product: { id: product!.id, name: product!.name, slug: product!.slug },
-            customer: { id: user!.id, email: user!.email, name: user!.name },
-            subscription: sub,
-            manualGrant: ent.orderItemId === null,
-          };
+          const handlerCtx = buildHandlerCtx(
+            job.runId,
+            null,
+            required(offering, "Offering"),
+            required(product, "Product"),
+            required(user, "User"),
+            sub,
+            ent.orderItemId === null,
+          );
 
           const revokeRes = await handler.onRevoked(
             handlerCtx,
@@ -507,7 +490,7 @@ export class DefaultSubscriptionsService implements SubscriptionsService {
       };
 
       return {
-        ok: true,
+        status: "ok",
         detail,
       };
     });
@@ -535,9 +518,10 @@ export const subscriptionsService = new DefaultSubscriptionsService();
 
 export function createNotImplementedSubscriptionsService(): SubscriptionsService {
   return createNotImplemented<SubscriptionsService>("subscriptions", "P5", {
-    renewSubscription: "async",
-    cancelSubscription: "async",
-    cancelSubscriptionAdmin: "async",
-    processRemindersAndGrace: "async",
+    renew: "async",
+    onRenewalPaid: "async",
+    cancelAtPeriodEnd: "async",
+    cancelAdmin: "async",
+    runRemindGraceSuspendJob: "async",
   });
 }

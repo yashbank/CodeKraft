@@ -64,7 +64,10 @@ export default async function ProjectDetailRoute(props: { params: Promise<{ slug
   };
 
   const serviceRows = servicesResult.ok ? servicesResult.data : [];
-  const serviceOptions: ServiceOption[] = serviceRows.map((sv) => ({ slug: sv.slug, title: sv.title }));
+  const serviceOptions: ServiceOption[] = serviceRows.map((sv) => ({
+    slug: sv.slug,
+    title: sv.title,
+  }));
 
   const items = listResult.ok ? listResult.data.items : [];
   const currentIndex = items.findIndex((c) => c.slug === params.slug);

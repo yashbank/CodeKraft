@@ -5,10 +5,8 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "@/lib/db";
 import { leadsService } from "@/modules/leads/service";
-import { notificationsService } from "@/modules/notifications/service";
 import { queriesService } from "@/modules/queries/service";
 import { chatService } from "@/modules/chat/service";
-import { analyticsService } from "@/modules/analytics/service";
 import { FakeProvider } from "@/modules/chat/providers/fake";
 import { leadDigestJob } from "@/jobs/lead-digest";
 import { chatPurgeJob } from "@/jobs/chat-purge";
@@ -16,10 +14,9 @@ import { createAdmin, createUser } from "../../factories/users";
 import { createOrder } from "../../factories/commerce";
 import { migrateTestDb } from "../../setup/migrate";
 import { truncateAll } from "../../setup/db";
-import { leads } from "../../../drizzle/schema/leads";
 import { queries } from "../../../drizzle/schema/queries";
-import { conversations, chatMessages } from "../../../drizzle/schema/chat";
 import { eq } from "drizzle-orm";
+import { defined } from "../../setup/expect-defined";
 
 describe("Phase 6 Gate Scenarios (P6.1..P6.9)", () => {
   beforeAll(async () => {
@@ -35,46 +32,41 @@ describe("Phase 6 Gate Scenarios (P6.1..P6.9)", () => {
     const admin2 = await createAdmin({ email: "lead-admin-2@test.com" });
 
     // Step 1: Turnstile validation & lead creation
-    const leadRes = await leadsService.createLead(
-      { userId: null, roles: [] } as any,
-      {
-        source: "inquiry_form",
-        name: "Enterprise Buyer",
-        email: "enterprise@client.com",
-        company: "Global Tech Inc",
-        message: "We need custom enterprise architecture and implementation support",
-        turnstileToken: "test-valid-token",
-      },
-    );
+    const leadRes = await leadsService.createLead({ userId: null, roles: [] } as any, {
+      source: "inquiry_form",
+      name: "Enterprise Buyer",
+      email: "enterprise@client.com",
+      company: "Global Tech Inc",
+      message: "We need custom enterprise architecture and implementation support",
+      turnstileToken: "test-valid-token",
+    });
 
     expect(leadRes.leadId).toBeDefined();
 
     // Step 2: Lead claimed & conflict check (SA-16)
-    const claimed = await leadsService.claimLead(
-      { userId: admin1.id, roles: ["admin"] } as any,
-      { leadId: leadRes.leadId },
-    );
+    const claimed = await leadsService.claimLead({ userId: admin1.id, roles: ["admin"] } as any, {
+      leadId: leadRes.leadId,
+    });
     expect(claimed.assignedTo?.id).toBe(admin1.id);
 
     await expect(
-      leadsService.claimLead(
-        { userId: admin2.id, roles: ["admin"] } as any,
-        { leadId: leadRes.leadId },
-      ),
+      leadsService.claimLead({ userId: admin2.id, roles: ["admin"] } as any, {
+        leadId: leadRes.leadId,
+      }),
     ).rejects.toThrowError(/already claimed/);
 
     // Step 3: Status progression & validation
-    await leadsService.updateLeadStatus(
-      { userId: admin1.id, roles: ["admin"] } as any,
-      { leadId: leadRes.leadId, status: "contacted" },
-    );
+    await leadsService.updateLeadStatus({ userId: admin1.id, roles: ["admin"] } as any, {
+      leadId: leadRes.leadId,
+      status: "contacted",
+    });
 
     // Step 4: Overdue digest
     const pastDate = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
-    await leadsService.setFollowUp(
-      { userId: admin1.id, roles: ["admin"] } as any,
-      { leadId: leadRes.leadId, nextFollowUpAt: pastDate },
-    );
+    await leadsService.setFollowUp({ userId: admin1.id, roles: ["admin"] } as any, {
+      leadId: leadRes.leadId,
+      nextFollowUpAt: pastDate,
+    });
 
     const digestOutcome = await leadDigestJob.run(new Date());
     expect(digestOutcome.status).toBe("ok");
@@ -97,10 +89,10 @@ describe("Phase 6 Gate Scenarios (P6.1..P6.9)", () => {
     // Step 2: Menu answer without LLM call
     const menuRes = await chatService.menuIntent(
       { userId: customer.id, roles: ["customer"] } as any,
-      { intent: "order_status" },
+      { conversationId: started.conversationId, intent: "order_status" },
     );
-    expect(menuRes.messages[0].card?.kind).toBe("order");
-    expect(menuRes.messages[0].content).toContain(order.orderNo);
+    expect(defined(menuRes.messages[0], "menuRes.messages[0]").card?.kind).toBe("order");
+    expect(defined(menuRes.messages[0], "menuRes.messages[0]").content).toContain(order.orderNo);
 
     // Step 3: Stream message with FakeProvider
     const fakeProvider = new FakeProvider();
@@ -153,8 +145,8 @@ describe("Phase 6 Gate Scenarios (P6.1..P6.9)", () => {
       .where(eq(queries.id, escalation.queryId))
       .limit(1);
 
-    expect(query[0].source).toBe("chatbot");
-    expect(query[0].conversationId).toBe(started.conversationId);
+    expect(defined(query[0], "query[0]").source).toBe("chatbot");
+    expect(defined(query[0], "query[0]").conversationId).toBe(started.conversationId);
 
     // Step 7: Retention purge sweep
     const outcome = await chatPurgeJob.run(new Date());

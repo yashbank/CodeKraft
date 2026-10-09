@@ -21,7 +21,7 @@ process.env.APP_ENCRYPTION_KEY ??= "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";
 
-import type { TxCtx } from "@/lib/db";
+import type { DbOrTx, TxCtx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { PERMISSIONS, isPermission } from "@/lib/authz/permissions";
 
@@ -320,7 +320,7 @@ describe("notifications.emit contract (master plan §5)", () => {
     expectTypeOf<P[1]>().toEqualTypeOf<NotificationType>();
     expectTypeOf<P[2]>().toEqualTypeOf<NotificationPayload>();
     expectTypeOf<P[3]>().toEqualTypeOf<readonly NotificationChannelName[] | undefined>();
-    expectTypeOf<P[4]>().toEqualTypeOf<TxCtx>();
+    expectTypeOf<P[4]>().toEqualTypeOf<DbOrTx>();
     expectTypeOf<P[5]>().toEqualTypeOf<EmitOptions | undefined>();
     expectTypeOf<ReturnType<NotificationsService["emit"]>>().toEqualTypeOf<Promise<EmitResult>>();
   });

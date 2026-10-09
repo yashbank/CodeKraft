@@ -1,7 +1,7 @@
 import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import type { RequestContext } from "@/lib/authz/context";
-import { type TxCtx, getDb } from "@/lib/db";
-import { AppError } from "@/lib/errors";
+import { type Db, type DbOrTx, getDb } from "@/lib/db";
+import { AppError, ErrorCode } from "@/lib/errors";
 import { users, userRoles } from "../../../drizzle/schema/auth";
 import {
   type Notification,
@@ -9,11 +9,7 @@ import {
   notifications,
 } from "../../../drizzle/schema/notifications";
 import { customerProfiles } from "../../../drizzle/schema/users-ext";
-import type {
-  EmitOptions,
-  NotificationRecipient,
-  NotificationsService,
-} from "./contracts";
+import type { EmitOptions, NotificationRecipient, NotificationsService } from "./contracts";
 import { renderNotification } from "./templates";
 import type {
   EmitResult,
@@ -33,11 +29,11 @@ import type {
 } from "./types";
 
 export class DefaultNotificationsService implements NotificationsService {
-  private _db?: any;
-  constructor(db?: any) {
+  private _db?: Db;
+  constructor(db?: Db) {
     this._db = db;
   }
-  private get db(): any {
+  private get db(): Db {
     return this._db ?? getDb();
   }
 
@@ -46,15 +42,14 @@ export class DefaultNotificationsService implements NotificationsService {
     type: NotificationType,
     payload: NotificationPayload,
     channels?: readonly NotificationChannelName[],
-    tx: TxCtx = this.db,
+    tx: DbOrTx = this.db,
     options?: EmitOptions,
   ): Promise<EmitResult> {
     const rendered = renderNotification(type, payload);
     const recipients: NotificationRecipient[] = [];
 
     if (target === "admins" || target === "super_admins") {
-      const allowedRoles =
-        target === "super_admins" ? ["super_admin"] : ["admin", "super_admin"];
+      const allowedRoles = target === "super_admins" ? ["super_admin"] : ["admin", "super_admin"];
       const adminUsers = await tx
         .select({
           id: users.id,
@@ -64,17 +59,15 @@ export class DefaultNotificationsService implements NotificationsService {
         })
         .from(users)
         .innerJoin(userRoles, eq(users.id, userRoles.userId))
-        .where(
-          and(
-            eq(users.status, "active"),
-            inArray(userRoles.roleKey, allowedRoles),
-          ),
-        );
+        .where(and(eq(users.status, "active"), inArray(userRoles.roleKey, allowedRoles)));
 
-      const map = new Map<string, NotificationRecipient>();
+      const map = new Map<string, Omit<NotificationRecipient, "roles"> & { roles: string[] }>();
       for (const u of adminUsers) {
         if (options?.excludeUserId && u.id === options.excludeUserId) continue;
-        if (!map.has(u.id)) {
+        const existing = map.get(u.id);
+        if (existing) {
+          existing.roles.push(u.role);
+        } else {
           map.set(u.id, {
             userId: u.id,
             email: u.email,
@@ -82,8 +75,6 @@ export class DefaultNotificationsService implements NotificationsService {
             roles: [u.role],
             preferences: null,
           });
-        } else {
-          map.get(u.id)!.roles.push(u.role);
         }
       }
       recipients.push(...map.values());
@@ -106,7 +97,7 @@ export class DefaultNotificationsService implements NotificationsService {
             .where(eq(customerProfiles.userId, u.id))
             .limit(1);
 
-          const rawPrefs = profile[0]?.notificationPrefs as any;
+          const rawPrefs = profile[0]?.notificationPrefs;
           const preferences: NotificationPreferences = {
             email: {
               orderUpdates: true,
@@ -132,13 +123,10 @@ export class DefaultNotificationsService implements NotificationsService {
     for (const r of recipients) {
       recipientUserIds.push(r.userId);
 
-      const isAdmin = r.roles.some((role) =>
-        ["admin", "super_admin"].includes(role),
-      );
+      const isAdmin = r.roles.some((role) => ["admin", "super_admin"].includes(role));
       // Admin in-app only except lead.overdue_digest
       const canEmail =
-        (!isAdmin || type === "lead.overdue_digest") &&
-        (!channels || channels.includes("email"));
+        (!isAdmin || type === "lead.overdue_digest") && (!channels || channels.includes("email"));
 
       const [inserted] = await tx
         .insert(notifications)
@@ -148,18 +136,16 @@ export class DefaultNotificationsService implements NotificationsService {
           title: rendered.title,
           body: rendered.body,
           link: rendered.link,
-          payload: payload as any,
+          payload,
           channelState: { inapp: "sent" },
         })
         .returning();
 
+      if (!inserted) throw new AppError(ErrorCode.INTERNAL, "Failed to insert notification");
       notificationIds.push(inserted.id);
 
       if (canEmail && rendered.emailTemplate) {
-        if (
-          type === "product.updated" &&
-          r.preferences?.email.productUpdates === false
-        ) {
+        if (type === "product.updated" && r.preferences?.email.productUpdates === false) {
           // opted out
           continue;
         }
@@ -169,13 +155,14 @@ export class DefaultNotificationsService implements NotificationsService {
           .values({
             toEmail: r.email,
             template: rendered.emailTemplate,
-            payload: payload as any,
+            payload,
             priority: rendered.emailPriority ?? 5,
             status: "queued",
             attempts: 0,
           })
           .returning();
 
+        if (!outboxRow) throw new AppError(ErrorCode.INTERNAL, "Failed to enqueue email");
         emailOutboxIds.push(outboxRow.id);
       }
     }
@@ -192,7 +179,7 @@ export class DefaultNotificationsService implements NotificationsService {
     input: ListNotificationsInput,
   ): Promise<ListNotificationsResult> {
     if (!ctx.userId) {
-      throw new AppError("UNAUTHORIZED", "Authentication required");
+      throw new AppError(ErrorCode.UNAUTHENTICATED, "Authentication required");
     }
 
     const conditions = [eq(notifications.userId, ctx.userId)];
@@ -213,17 +200,12 @@ export class DefaultNotificationsService implements NotificationsService {
     const unreadCountResult = await this.db
       .select({ count: sql<number>`count(*)::int` })
       .from(notifications)
-      .where(
-        and(
-          eq(notifications.userId, ctx.userId),
-          isNull(notifications.readAt),
-        ),
-      );
+      .where(and(eq(notifications.userId, ctx.userId), isNull(notifications.readAt)));
 
     return {
       items: items.map(this.toItem),
       unreadCount: unreadCountResult[0]?.count ?? 0,
-      nextCursor: hasNext ? items[items.length - 1].id : null,
+      nextCursor: hasNext ? (items.at(-1)?.id ?? null) : null,
     };
   }
 
@@ -232,30 +214,20 @@ export class DefaultNotificationsService implements NotificationsService {
     input: PollNotificationsInput,
   ): Promise<PollNotificationsResult> {
     if (!ctx.userId) {
-      throw new AppError("UNAUTHORIZED", "Authentication required");
+      throw new AppError(ErrorCode.UNAUTHENTICATED, "Authentication required");
     }
 
     const sinceDate = new Date(input.since);
     const rows = await this.db
       .select()
       .from(notifications)
-      .where(
-        and(
-          eq(notifications.userId, ctx.userId),
-          gt(notifications.createdAt, sinceDate),
-        ),
-      )
+      .where(and(eq(notifications.userId, ctx.userId), gt(notifications.createdAt, sinceDate)))
       .orderBy(desc(notifications.createdAt));
 
     const unreadCountResult = await this.db
       .select({ count: sql<number>`count(*)::int` })
       .from(notifications)
-      .where(
-        and(
-          eq(notifications.userId, ctx.userId),
-          isNull(notifications.readAt),
-        ),
-      );
+      .where(and(eq(notifications.userId, ctx.userId), isNull(notifications.readAt)));
 
     return {
       items: rows.map(this.toItem),
@@ -264,33 +236,22 @@ export class DefaultNotificationsService implements NotificationsService {
     };
   }
 
-  async markRead(
-    ctx: RequestContext,
-    input: MarkReadInput,
-  ): Promise<MarkReadResult> {
+  async markRead(ctx: RequestContext, input: MarkReadInput): Promise<MarkReadResult> {
     if (!ctx.userId) {
-      throw new AppError("UNAUTHORIZED", "Authentication required");
+      throw new AppError(ErrorCode.UNAUTHENTICATED, "Authentication required");
     }
 
     await this.db
       .update(notifications)
       .set({ readAt: new Date() })
       .where(
-        and(
-          eq(notifications.userId, ctx.userId),
-          inArray(notifications.id, input.notificationIds),
-        ),
+        and(eq(notifications.userId, ctx.userId), inArray(notifications.id, input.notificationIds)),
       );
 
     const unreadCountResult = await this.db
       .select({ count: sql<number>`count(*)::int` })
       .from(notifications)
-      .where(
-        and(
-          eq(notifications.userId, ctx.userId),
-          isNull(notifications.readAt),
-        ),
-      );
+      .where(and(eq(notifications.userId, ctx.userId), isNull(notifications.readAt)));
 
     return {
       unreadCount: unreadCountResult[0]?.count ?? 0,
@@ -299,29 +260,22 @@ export class DefaultNotificationsService implements NotificationsService {
 
   async markAllRead(ctx: RequestContext): Promise<MarkReadResult> {
     if (!ctx.userId) {
-      throw new AppError("UNAUTHORIZED", "Authentication required");
+      throw new AppError(ErrorCode.UNAUTHENTICATED, "Authentication required");
     }
 
     await this.db
       .update(notifications)
       .set({ readAt: new Date() })
-      .where(
-        and(
-          eq(notifications.userId, ctx.userId),
-          isNull(notifications.readAt),
-        ),
-      );
+      .where(and(eq(notifications.userId, ctx.userId), isNull(notifications.readAt)));
 
     return {
       unreadCount: 0,
     };
   }
 
-  async getNotificationPreferences(
-    ctx: RequestContext,
-  ): Promise<NotificationPreferences> {
+  async getNotificationPreferences(ctx: RequestContext): Promise<NotificationPreferences> {
     if (!ctx.userId) {
-      throw new AppError("UNAUTHORIZED", "Authentication required");
+      throw new AppError(ErrorCode.UNAUTHENTICATED, "Authentication required");
     }
 
     const rows = await this.db
@@ -330,7 +284,7 @@ export class DefaultNotificationsService implements NotificationsService {
       .where(eq(customerProfiles.userId, ctx.userId))
       .limit(1);
 
-    const prefs = rows[0]?.notificationPrefs as any;
+    const prefs = rows[0]?.notificationPrefs;
     return {
       email: {
         orderUpdates: true,
@@ -344,7 +298,7 @@ export class DefaultNotificationsService implements NotificationsService {
     input: UpdateNotificationPreferencesInput,
   ): Promise<NotificationPreferences> {
     if (!ctx.userId) {
-      throw new AppError("UNAUTHORIZED", "Authentication required");
+      throw new AppError(ErrorCode.UNAUTHENTICATED, "Authentication required");
     }
 
     await this.db
@@ -393,7 +347,7 @@ export class DefaultNotificationsService implements NotificationsService {
 
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
 
-export function createNotificationsService(db?: any): NotificationsService {
+export function createNotificationsService(db?: Db): NotificationsService {
   return new DefaultNotificationsService(db);
 }
 
@@ -405,8 +359,8 @@ export function createNotImplementedNotificationsService(): NotificationsService
     listNotifications: "async",
     pollNotifications: "async",
     markRead: "async",
-    updatePreferences: "async",
-    getPreferences: "async",
+    markAllRead: "async",
+    getNotificationPreferences: "async",
+    updateNotificationPreferences: "async",
   });
 }
-

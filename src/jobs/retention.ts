@@ -2,7 +2,7 @@
  * Retention and privacy sweep cron jobs (docs/06 §3.3 daily endpoint, PHASE-05 P5.7).
  */
 import { and, eq, isNotNull, isNull, lte } from "drizzle-orm";
-import { db, withTx } from "@/lib/db";
+import { withTx } from "@/lib/db";
 import { sessions, users, verifications } from "../../drizzle/schema/auth";
 
 export const retentionPurgeTokensJob = {

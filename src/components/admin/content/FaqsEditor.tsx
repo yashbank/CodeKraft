@@ -121,7 +121,9 @@ export function FaqsEditor({ faqs: initial, products }: { faqs: FaqItem[]; produ
         </Tabs>
       </div>
       <DataToolbar searchId="faq-search" searchPlaceholder="Search questions…" />
-      {list.length === 0 ? <p className="text-body-sm text-fg-muted">No FAQs in this scope</p> : null}
+      {list.length === 0 ? (
+        <p className="text-body-sm text-fg-muted">No FAQs in this scope</p>
+      ) : null}
       <ol className="space-y-2" aria-label="FAQs">
         {list.map((item, i) => (
           <SortableRow
@@ -129,7 +131,15 @@ export function FaqsEditor({ faqs: initial, products }: { faqs: FaqItem[]; produ
             index={i}
             total={list.length}
             label={item.question}
-            onMove={(from, to) => persistOrder(moveItem(list.map((x) => x.id), from, to))}
+            onMove={(from, to) =>
+              persistOrder(
+                moveItem(
+                  list.map((x) => x.id),
+                  from,
+                  to,
+                ),
+              )
+            }
           >
             <div className="flex items-start gap-3">
               <div className="min-w-0 flex-1">
@@ -151,7 +161,9 @@ export function FaqsEditor({ faqs: initial, products }: { faqs: FaqItem[]; produ
                   checked={item.published}
                   disabled={scope === "product"}
                   onCheckedChange={async (v) => {
-                    setFaqs((all) => all.map((x) => (x.id === item.id ? { ...x, published: v } : x)));
+                    setFaqs((all) =>
+                      all.map((x) => (x.id === item.id ? { ...x, published: v } : x)),
+                    );
                     const result = await saveFaq({
                       id: item.id,
                       question: item.question,
@@ -162,7 +174,9 @@ export function FaqsEditor({ faqs: initial, products }: { faqs: FaqItem[]; produ
                     });
                     if (!result.ok) {
                       toast.error(result.error.message);
-                      setFaqs((all) => all.map((x) => (x.id === item.id ? { ...x, published: !v } : x)));
+                      setFaqs((all) =>
+                        all.map((x) => (x.id === item.id ? { ...x, published: !v } : x)),
+                      );
                     } else {
                       router.refresh();
                     }
@@ -172,7 +186,11 @@ export function FaqsEditor({ faqs: initial, products }: { faqs: FaqItem[]; produ
                 <RowActions
                   label={`Actions for ${item.question}`}
                   actions={[
-                    { label: "Edit", onSelect: () => openEdit(item), disabled: scope === "product" },
+                    {
+                      label: "Edit",
+                      onSelect: () => openEdit(item),
+                      disabled: scope === "product",
+                    },
                     {
                       label: "Delete",
                       destructive: true,
@@ -203,7 +221,13 @@ export function FaqsEditor({ faqs: initial, products }: { faqs: FaqItem[]; produ
             }}
           >
             <Field id="faq-q" label="Question" required hint="300 chars">
-              <Input id="faq-q" name="question" maxLength={300} defaultValue={f?.question} required />
+              <Input
+                id="faq-q"
+                name="question"
+                maxLength={300}
+                defaultValue={f?.question}
+                required
+              />
             </Field>
             <div className="space-y-1.5">
               <Label htmlFor="faq-a" required>
@@ -225,7 +249,11 @@ export function FaqsEditor({ faqs: initial, products }: { faqs: FaqItem[]; produ
             </div>
             <fieldset className="space-y-2">
               <legend className="text-body-sm font-semibold">Scope</legend>
-              <RadioGroup value={faqScope} onValueChange={(v) => setFaqScope(v as FaqItem["scope"])} className="flex flex-wrap gap-6">
+              <RadioGroup
+                value={faqScope}
+                onValueChange={(v) => setFaqScope(v as FaqItem["scope"])}
+                className="flex flex-wrap gap-6"
+              >
                 {(["site", "chatbot"] as const).map((s) => (
                   <div key={s} className="flex items-center gap-2">
                     <RadioGroupItem id={`faq-scope-${s}`} value={s} />

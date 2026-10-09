@@ -91,7 +91,14 @@ export function mapSiteSettingsToSettingsData(settings: SiteSettings): SettingsD
       domain: env.NEXT_PUBLIC_SITE_URL.replace(/^https?:\/\//, ""),
       legalName: seller?.name ?? "",
       address: seller
-        ? [seller.address.line1, seller.address.line2, seller.address.city, seller.address.state, seller.address.postalCode, seller.address.country]
+        ? [
+            seller.address.line1,
+            seller.address.line2,
+            seller.address.city,
+            seller.address.state,
+            seller.address.postalCode,
+            seller.address.country,
+          ]
             .filter(Boolean)
             .join(", ")
         : "",

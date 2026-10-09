@@ -57,10 +57,7 @@ describe("orderExpiryJob integration (docs/06 §3.3, master plan §3)", () => {
 
     // Backdate expiresAt to 1 day ago
     const oneDayAgo = new Date(Date.now() - 86_400_000);
-    await db
-      .update(orders)
-      .set({ expiresAt: oneDayAgo })
-      .where(eq(orders.id, createRes.orderId));
+    await db.update(orders).set({ expiresAt: oneDayAgo }).where(eq(orders.id, createRes.orderId));
 
     const result = await orderExpiryJob.run();
     expect(result.expiredCount).toBe(1);

@@ -34,7 +34,7 @@ import { Banner } from "./Banner";
 import { PaymentMethodChoice } from "./CheckoutScreen";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { formatDate, formatDateTime, timeUntil } from "./format";
-import { PaymentInstructionsPanel } from "./PaymentInstructionsPanel";
+import { PaymentInstructionsCard } from "./PaymentInstructionsCard";
 import type { OrderView, PaymentProvider } from "./types";
 
 const METHOD_LABEL = { manual_upi: "UPI", manual_bank: "Bank transfer" } as const;
@@ -302,7 +302,7 @@ export function OrderStatusScreen({
       panel = (
         <>
           <div className="rounded-lg border border-border bg-surface p-4">
-            <PaymentInstructionsPanel
+            <PaymentInstructionsCard
               instructions={o.instructionsFor}
               methods={o.enabledMethods}
               method={method}
@@ -345,7 +345,7 @@ export function OrderStatusScreen({
             <PaymentMethodChoice methods={o.enabledMethods} value={method} onChange={setMethod} />
           </div>
           <div className="rounded-lg border border-border bg-surface p-4">
-            <PaymentInstructionsPanel
+            <PaymentInstructionsCard
               instructions={o.instructionsFor}
               methods={[method]}
               method={method}

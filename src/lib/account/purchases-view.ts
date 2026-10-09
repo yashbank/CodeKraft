@@ -135,7 +135,13 @@ export function mapEntitlementDetail(e: EntitlementView): EntitlementDetail {
     changelog: e.versions.flatMap((v) =>
       v.changelog === null
         ? []
-        : [{ version: v.version, date: v.releasedAt, notes: v.changelog.split("\n").filter(Boolean) }],
+        : [
+            {
+              version: v.version,
+              date: v.releasedAt,
+              notes: v.changelog.split("\n").filter(Boolean),
+            },
+          ],
     ),
     // See file header: `full` intentionally mirrors `masked` -- the real key needs the dedicated
     // `revealLicenseKey` action, not this read-only query.

@@ -18,7 +18,12 @@ export default function NotFound() {
             It may have moved, or the link might be out of date.
           </p>
           <form action="/products" className="flex gap-2">
-            <Input name="q" type="search" placeholder="Search products" aria-label="Search products" />
+            <Input
+              name="q"
+              type="search"
+              placeholder="Search products"
+              aria-label="Search products"
+            />
             <Button type="submit" variant="secondary">
               Search
             </Button>

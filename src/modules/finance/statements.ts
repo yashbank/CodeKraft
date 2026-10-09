@@ -3,7 +3,9 @@
  */
 import { and, asc, eq, gte, lt, lte, sql } from "drizzle-orm";
 import type { DbOrTx } from "@/lib/db";
-import { db } from "@/lib/db";
+import { db, withTx } from "@/lib/db";
+import { toDecimalString } from "@/lib/money";
+import { toMinor } from "./minor";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { assertPermission, can } from "@/lib/authz/assert";
 import type { RequestContext } from "@/lib/authz/context";
@@ -12,11 +14,7 @@ import { getDocumentsBucketName, getStorageDriver } from "@/lib/storage";
 import { buildPdfBuffer } from "@/modules/invoices/pdf";
 import { ledgerEntries } from "../../../drizzle/schema/finance";
 import { partners } from "../../../drizzle/schema/users-ext";
-import {
-  exportStatementInput,
-  type ExportStatementInput,
-  type StatementExport,
-} from "./types";
+import { exportStatementInput, type ExportStatementInput, type StatementExport } from "./types";
 
 export async function exportStatement(
   ctx: RequestContext,
@@ -32,11 +30,14 @@ export async function exportStatement(
     const [callerPartner] = await database
       .select({ id: partners.id })
       .from(partners)
-      .where(eq(partners.userId, ctx.userId!))
+      .where(eq(partners.userId, ctx.userId))
       .limit(1);
 
     if (!callerPartner || callerPartner.id !== input.partnerId) {
-      throw new AppError(ErrorCode.FORBIDDEN, "Cannot export another partner's statement (API-FIN-10)");
+      throw new AppError(
+        ErrorCode.FORBIDDEN,
+        "Cannot export another partner's statement (API-FIN-10)",
+      );
     }
   }
 
@@ -57,19 +58,14 @@ export async function exportStatement(
   // 1. Opening balance: sum of all partner entries before fromDate
   const [openingRes] = await database
     .select({
-      sumMinor: sql<string>`COALESCE(SUM(amount_minor), 0)`,
       sumInrMinor: sql<string>`COALESCE(SUM(amount_inr_minor), 0)`,
     })
     .from(ledgerEntries)
     .where(
-      and(
-        eq(ledgerEntries.partnerId, input.partnerId),
-        lt(ledgerEntries.createdAt, fromDate),
-      ),
+      and(eq(ledgerEntries.partnerId, input.partnerId), lt(ledgerEntries.createdAt, fromDate)),
     );
 
-  const openingBalanceMinor = Number(openingRes?.sumMinor ?? 0);
-  const openingBalanceInrMinor = Number(openingRes?.sumInrMinor ?? 0);
+  const openingBalanceInrMinor = toMinor(openingRes?.sumInrMinor);
 
   // 2. Entries in period
   const entries = await database
@@ -84,11 +80,9 @@ export async function exportStatement(
     )
     .orderBy(asc(ledgerEntries.seq));
 
-  const periodSumMinor = entries.reduce((acc, e) => acc + e.amountMinor, 0);
   const periodSumInrMinor = entries.reduce((acc, e) => acc + e.amountInrMinor, 0);
 
   // 3. Closing balance
-  const closingBalanceMinor = openingBalanceMinor + periodSumMinor;
   const closingBalanceInrMinor = openingBalanceInrMinor + periodSumInrMinor;
 
   const storage = getStorageDriver();
@@ -103,13 +97,13 @@ export async function exportStatement(
     const textLines = [
       `Partner: ${partner.displayName} (${partner.id})`,
       `Period: ${input.dateFrom} to ${input.dateTo}`,
-      `Opening Balance: INR ${(openingBalanceInrMinor / 100).toFixed(2)}`,
-      `Closing Balance: INR ${(closingBalanceInrMinor / 100).toFixed(2)}`,
+      `Opening Balance: INR ${toDecimalString(openingBalanceInrMinor)}`,
+      `Closing Balance: INR ${toDecimalString(closingBalanceInrMinor)}`,
       `Total Entries in Period: ${entries.length}`,
       "----------------------------------------",
       ...entries.map(
         (e) =>
-          `Seq #${e.seq} | ${e.createdAt.toISOString().slice(0, 10)} | ${e.entryType} | ${e.memo ?? ""} | ${e.currency} ${(e.amountMinor / 100).toFixed(2)}`,
+          `Seq #${e.seq} | ${e.createdAt.toISOString().slice(0, 10)} | ${e.entryType} | ${e.memo ?? ""} | ${e.currency} ${toDecimalString(e.amountMinor)}`,
       ),
     ];
 
@@ -132,20 +126,30 @@ export async function exportStatement(
     const csvLines = [
       ["Partner Statement", partner.displayName],
       ["Period", `${input.dateFrom} to ${input.dateTo}`],
-      ["Opening Balance (INR)", (openingBalanceInrMinor / 100).toFixed(2)],
-      ["Closing Balance (INR)", (closingBalanceInrMinor / 100).toFixed(2)],
+      ["Opening Balance (INR)", toDecimalString(openingBalanceInrMinor)],
+      ["Closing Balance (INR)", toDecimalString(closingBalanceInrMinor)],
       [],
-      ["Date", "Seq", "Type", "Party", "Description", "Amount", "Currency", "FX Rate", "Amount INR"],
+      [
+        "Date",
+        "Seq",
+        "Type",
+        "Party",
+        "Description",
+        "Amount",
+        "Currency",
+        "FX Rate",
+        "Amount INR",
+      ],
       ...entries.map((e) => [
         escapeCsv(e.createdAt.toISOString().slice(0, 10)),
         escapeCsv(e.seq),
         escapeCsv(e.entryType),
         escapeCsv(e.partyType),
         escapeCsv(e.memo ?? ""),
-        escapeCsv((e.amountMinor / 100).toFixed(2)),
+        escapeCsv(toDecimalString(e.amountMinor)),
         escapeCsv(e.currency),
         escapeCsv(e.fxRateToInr),
-        escapeCsv((e.amountInrMinor / 100).toFixed(2)),
+        escapeCsv(toDecimalString(e.amountInrMinor)),
       ]),
     ];
 
@@ -158,21 +162,23 @@ export async function exportStatement(
   const expiresAt = new Date(Date.now() + TTL_SECONDS * 1000).toISOString();
 
   // Audit log
-  await auditService.log(
-    ctx,
-    "API-FIN-10 statement.exported",
-    { type: "partner", id: partner.id },
-    null,
-    {
-      partnerId: partner.id,
-      dateFrom: input.dateFrom,
-      dateTo: input.dateTo,
-      format: input.format,
-      openingBalanceInrMinor,
-      closingBalanceInrMinor,
-      entryCount: entries.length,
-    },
-    database,
+  await withTx((tx) =>
+    auditService.log(
+      ctx,
+      "API-FIN-10 statement.exported",
+      { type: "partner", id: partner.id },
+      null,
+      {
+        partnerId: partner.id,
+        dateFrom: input.dateFrom,
+        dateTo: input.dateTo,
+        format: input.format,
+        openingBalanceInrMinor,
+        closingBalanceInrMinor,
+        entryCount: entries.length,
+      },
+      tx,
+    ),
   );
 
   return {

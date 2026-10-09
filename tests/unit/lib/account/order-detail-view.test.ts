@@ -131,7 +131,9 @@ describe("mapOrderDetailToOrderView (SCR-ACC-11)", () => {
   });
 
   it("reports 'No tax' when taxRateBps is zero, regardless of taxMinor", () => {
-    const detail = baseDetail({ order: baseOrderRow({ taxRateBps: 0, taxSnapshot: null, taxMinor: 0, totalMinor: 100_000 }) });
+    const detail = baseDetail({
+      order: baseOrderRow({ taxRateBps: 0, taxSnapshot: null, taxMinor: 0, totalMinor: 100_000 }),
+    });
     const view = mapOrderDetailToOrderView(detail);
     expect(view.lines[0]?.taxLabel).toBe("No tax");
     expect(view.tax).toBeNull();
@@ -276,11 +278,14 @@ describe("mapOrderDetailToOrderView (SCR-ACC-11)", () => {
     ["partially_refunded" as const, true],
     ["pending_payment" as const, false],
     ["cancelled" as const, false],
-  ])("refundable is true only for paid/fulfilled/partially_refunded (status=%s)", (status, expected) => {
-    expect(mapOrderDetailToOrderView(baseDetail({ order: baseOrderRow({ status }) })).refundable).toBe(
-      expected,
-    );
-  });
+  ])(
+    "refundable is true only for paid/fulfilled/partially_refunded (status=%s)",
+    (status, expected) => {
+      expect(
+        mapOrderDetailToOrderView(baseDetail({ order: baseOrderRow({ status }) })).refundable,
+      ).toBe(expected);
+    },
+  );
 
   it("maps entitlementId from the first linked entitlement, and invoiceNumber from invoice", () => {
     const detail = baseDetail({
@@ -302,7 +307,8 @@ describe("mapOrderDetailToOrderView (SCR-ACC-11)", () => {
 
   it("strips HTML tags from instructionsHtml into postPurchaseInstructions paragraphs", () => {
     const detail = baseDetail({
-      instructionsHtml: "<p>Check your email for a welcome message.</p><p>Access unlocks within an hour.</p>",
+      instructionsHtml:
+        "<p>Check your email for a welcome message.</p><p>Access unlocks within an hour.</p>",
     });
     expect(mapOrderDetailToOrderView(detail).postPurchaseInstructions).toEqual([
       "Check your email for a welcome message.",

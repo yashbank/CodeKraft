@@ -235,3 +235,8 @@ export function computeManualConfirmAmounts(
     customerCreditMinor: diff < 0 ? -diff : 0,
   };
 }
+
+/** `payments.instructions` jsonb holds the provider-shaped intent; the schema's `$type` is a legacy shape, so narrow here. */
+export function storedInstructions(value: unknown): PaymentInstructions | null {
+  return (value ?? null) as PaymentInstructions | null;
+}

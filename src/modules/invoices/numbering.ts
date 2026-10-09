@@ -35,10 +35,7 @@ export function computeFy(date: Date = new Date()): string {
  */
 export async function nextInvoiceNumber(fy: string, tx: TxCtx): Promise<SequenceAllocation> {
   // Ensure the sequence row exists
-  await tx
-    .insert(invoiceSequences)
-    .values({ fy, lastSeq: 0 })
-    .onConflictDoNothing();
+  await tx.insert(invoiceSequences).values({ fy, lastSeq: 0 }).onConflictDoNothing();
 
   const [row] = await tx
     .select({ lastSeq: invoiceSequences.lastSeq })
@@ -48,10 +45,7 @@ export async function nextInvoiceNumber(fy: string, tx: TxCtx): Promise<Sequence
 
   const nextSeq = (row?.lastSeq ?? 0) + 1;
 
-  await tx
-    .update(invoiceSequences)
-    .set({ lastSeq: nextSeq })
-    .where(eq(invoiceSequences.fy, fy));
+  await tx.update(invoiceSequences).set({ lastSeq: nextSeq }).where(eq(invoiceSequences.fy, fy));
 
   const seqStr = String(nextSeq).padStart(4, "0");
   const number = `CK/${fy}/${seqStr}`;
@@ -64,10 +58,7 @@ export async function nextInvoiceNumber(fy: string, tx: TxCtx): Promise<Sequence
  * Format: `CK/CN/<fy>/<seq 4+ digits>` (e.g. `CK/CN/2026-27/0001`).
  */
 export async function nextCreditNoteNumber(fy: string, tx: TxCtx): Promise<SequenceAllocation> {
-  await tx
-    .insert(creditNoteSequences)
-    .values({ fy, lastSeq: 0 })
-    .onConflictDoNothing();
+  await tx.insert(creditNoteSequences).values({ fy, lastSeq: 0 }).onConflictDoNothing();
 
   const [row] = await tx
     .select({ lastSeq: creditNoteSequences.lastSeq })

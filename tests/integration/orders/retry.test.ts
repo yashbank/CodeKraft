@@ -10,7 +10,7 @@ import { createProduct } from "../../factories/catalog";
 import { createOffering } from "../../factories/offerings";
 import { createOwnership } from "../../factories/ownership";
 import { buildContext } from "@/lib/authz/context";
-import { AppError, ErrorCode } from "@/lib/errors";
+import { ErrorCode } from "@/lib/errors";
 
 describe("retryPayment integration (API-COM-04, docs/06 §2.3)", () => {
   beforeAll(async () => {
