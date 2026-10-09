@@ -83,13 +83,17 @@ export function createLogger(opts: CreateLoggerOptions = {}): Logger {
   };
   if (opts.destination !== undefined) return pino(options, opts.destination);
   if (pretty) {
-    return pino({
-      ...options,
-      transport: {
-        target: "pino-pretty",
-        options: { colorize: true, translateTime: "SYS:HH:MM:ss.l", ignore: "pid,hostname,env" },
-      },
-    });
+    try {
+      return pino({
+        ...options,
+        transport: {
+          target: "pino-pretty",
+          options: { colorize: true, translateTime: "SYS:HH:MM:ss.l", ignore: "pid,hostname,env" },
+        },
+      });
+    } catch {
+      // Next dev can't resolve the worker transport; plain JSON beats a logger that throws.
+    }
   }
   return pino(options);
 }

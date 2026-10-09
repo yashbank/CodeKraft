@@ -22,6 +22,13 @@
       "when": 1790424175960,
       "tag": "0002_free_ultimo",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791557665059,
+      "tag": "0003_append_only_pdf_exemption",
+      "breakpoints": true
     }
   ]
 }

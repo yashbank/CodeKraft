@@ -15,11 +15,7 @@ import { approvalRequests } from "../../../drizzle/schema/approvals";
 import { userRoles } from "../../../drizzle/schema/auth";
 import { emailOutbox, notifications } from "../../../drizzle/schema/notifications";
 import type { PaymentsService } from "./contracts";
-import type {
-  PaymentInstructions,
-  PaymentMethodKey,
-  ProviderRegistry,
-} from "./provider";
+import type { PaymentInstructions, PaymentMethodKey, ProviderRegistry } from "./provider";
 import { providerRegistry } from "./providers/registry";
 import {
   type ApplyRefundResult,
@@ -216,11 +212,7 @@ export class DefaultPaymentsService implements PaymentsService {
         );
       }
 
-      const [order] = await tx
-        .select()
-        .from(orders)
-        .where(eq(orders.id, payment.orderId))
-        .limit(1);
+      const [order] = await tx.select().from(orders).where(eq(orders.id, payment.orderId)).limit(1);
 
       if (!order) {
         throw new AppError(ErrorCode.NOT_FOUND, "Order not found");
@@ -309,6 +301,11 @@ export class DefaultPaymentsService implements PaymentsService {
         tx,
       );
 
+      // Grant entitlements (API-PAY-03 chain: invoice → grantForOrder). Dynamic import: entitlements →
+      // subscriptions → payments would otherwise form an import cycle.
+      const { entitlementsService } = await import("@/modules/entitlements/service");
+      const granted = await entitlementsService.grantForOrder(order.id, tx);
+
       // Custom quote mark paid hook
       if (order.customQuoteId) {
         await quotesService.markPaid(order.customQuoteId, tx);
@@ -356,7 +353,7 @@ export class DefaultPaymentsService implements PaymentsService {
         order: updatedOrder,
         invoiceNo: invoiceRes.invoiceNo,
         invoiceId: invoiceRes.invoiceId,
-        entitlementIds: [],
+        entitlementIds: granted.map((g) => g.entitlementId),
         ledgerEntryCount: financeRes.entryCount,
         shortfallMinor: result.bankShortfallMinor,
         customerCreditMinor: result.customerCreditMinor,
@@ -388,10 +385,7 @@ export class DefaultPaymentsService implements PaymentsService {
       }
 
       if (payment.status === "confirmed") {
-        throw new AppError(
-          ErrorCode.STATE_INVALID,
-          "Cannot fail an already confirmed payment",
-        );
+        throw new AppError(ErrorCode.STATE_INVALID, "Cannot fail an already confirmed payment");
       }
 
       const now = new Date();
@@ -404,11 +398,7 @@ export class DefaultPaymentsService implements PaymentsService {
         .where(eq(payments.id, payment.id))
         .returning();
 
-      let [order] = await tx
-        .select()
-        .from(orders)
-        .where(eq(orders.id, payment.orderId))
-        .limit(1);
+      let [order] = await tx.select().from(orders).where(eq(orders.id, payment.orderId)).limit(1);
 
       if (!order) {
         throw new AppError(ErrorCode.NOT_FOUND, "Order not found");
@@ -548,11 +538,7 @@ export class DefaultPaymentsService implements PaymentsService {
     method: PaymentMethodKey,
     tx: TxCtx,
   ): Promise<{ paymentId: string; instructions: PaymentInstructions }> {
-    const [order] = await tx
-      .select()
-      .from(orders)
-      .where(eq(orders.id, orderId))
-      .limit(1);
+    const [order] = await tx.select().from(orders).where(eq(orders.id, orderId)).limit(1);
 
     if (!order) {
       throw new AppError(ErrorCode.NOT_FOUND, "Order not found");

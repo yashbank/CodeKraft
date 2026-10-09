@@ -48,6 +48,7 @@ import { RowActions } from "../RowActions";
 import { StatTile } from "../StatTile";
 import type { CustomerDetailData } from "../types";
 import {
+  markCustomerEmailVerified,
   reinstateCustomer,
   sendMagicLink,
   sendResetLink,
@@ -128,6 +129,19 @@ export function CustomerDetail({
       return;
     }
     toast.success(`One-time login link sent to ${result.data.sentTo} · expires in 15 min`);
+  }
+
+  async function handleMarkVerified() {
+    const result = await markCustomerEmailVerified({
+      userId: c.id,
+      reason: "Manual verification by admin",
+    });
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(`${c.name} marked as verified`);
+    router.refresh();
   }
 
   async function confirmStatusChange() {
@@ -246,6 +260,16 @@ export function CustomerDetail({
             >
               Send one-time login link
             </Button>
+            {!c.verified && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={deleted}
+                onClick={() => void handleMarkVerified()}
+              >
+                Mark email verified
+              </Button>
+            )}
             <Button
               variant={c.status === "suspended" ? "secondary" : "destructive"}
               size="sm"
@@ -593,8 +617,8 @@ export function CustomerDetail({
           <DialogHeader>
             <DialogTitle>Grant access to {c.name}</DialogTitle>
             <DialogDescription>
-              Not available yet: manual entitlement grants need the entitlements admin module,
-              which is out of this phase's scope. This form is shown read-only for reference.
+              Not available yet: manual entitlement grants need the entitlements admin module, which
+              is out of this phase's scope. This form is shown read-only for reference.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 sm:grid-cols-2">

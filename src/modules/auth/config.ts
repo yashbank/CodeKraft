@@ -13,6 +13,7 @@ import { getFlag } from "@/lib/feature-flags";
 import * as schema from "../../../drizzle/schema/auth";
 import { hashPassword, verifyPassword } from "./hash";
 import { afterHook, beforeHook, type AuthHost } from "./hooks";
+import { getLogger } from "@/lib/logger";
 import { sendAuthMail } from "./mailer";
 
 export const SESSION_IDLE_SECONDS: Record<AuthHost, number> = { site: 60 * 60, admin: 30 * 60 };
@@ -70,7 +71,9 @@ export function createAuth(host: AuthHost, opts: { phoneOtp?: boolean } = {}) {
       env.NEXT_PUBLIC_ADMIN_URL,
       "https://*.vercel.app",
       ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
-      ...(process.env.VERCEL_PROJECT_PRODUCTION_URL ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`] : []),
+      ...(process.env.VERCEL_PROJECT_PRODUCTION_URL
+        ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`]
+        : []),
       ...(process.env.VERCEL_BRANCH_URL ? [`https://${process.env.VERCEL_BRANCH_URL}`] : []),
     ].filter((url): url is string => Boolean(url)),
     database: drizzleAdapter(getDb(), { provider: "pg", schema, usePlural: true }),
@@ -91,7 +94,9 @@ export function createAuth(host: AuthHost, opts: { phoneOtp?: boolean } = {}) {
       autoSignInAfterVerification: true,
       expiresIn: 24 * 60 * 60,
       sendVerificationEmail: async ({ user, url, token }) =>
-        sendAuthMail({ kind: "verify_email", to: user.email, url, token }),
+        sendAuthMail({ kind: "verify_email", to: user.email, url, token }).catch((err: unknown) =>
+          getLogger().error({ err, to: user.email }, "verification email failed"),
+        ),
     },
     socialProviders:
       env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET

@@ -27,6 +27,7 @@ import type {
   ListCustomersInput,
   UpdateCustomerNotesInput,
   customerStatusChangeSchema,
+  markEmailVerifiedSchema,
   getCustomerSchema,
   sendAuthLinkSchema,
 } from "./contracts";
@@ -139,7 +140,7 @@ export async function listCustomers(
         spentInrMinor: Number(orderStats?.spentInrMinor ?? 0),
         entitlements: Number(entitlementStats?.count ?? 0),
       },
-      lastOrderAt: orderStats?.lastOrderAt ? orderStats.lastOrderAt.toISOString() : null,
+      lastOrderAt: orderStats?.lastOrderAt ? new Date(orderStats.lastOrderAt).toISOString() : null,
     });
   }
 
@@ -238,7 +239,7 @@ export async function getCustomer(
       spentInrMinor: Number(orderStats?.spentInrMinor ?? 0),
       entitlements: Number(entitlementStats?.count ?? 0),
     },
-    lastOrderAt: orderStats?.lastOrderAt ? orderStats.lastOrderAt.toISOString() : null,
+    lastOrderAt: orderStats?.lastOrderAt ? new Date(orderStats.lastOrderAt).toISOString() : null,
     internalNotes: row.profile?.internalNotes ?? null,
     timeline,
   };
@@ -365,6 +366,63 @@ export async function suspendCustomer(
       { type: "user", id: input.userId },
       { status: u.status },
       { status: "suspended", reason: input.reason },
+      tx,
+    );
+
+    return { user: toUserView(updated) };
+  }, getOuterTx(database));
+}
+
+export async function markCustomerEmailVerified(
+  ctx: RequestContext,
+  input: z.infer<typeof markEmailVerifiedSchema>,
+  database: DbOrTx,
+): Promise<{ user: UserView }> {
+  assertPermission(ctx, "customers.reset_link");
+
+  const { withTx } = await import("@/lib/db");
+  return await withTx(async (tx) => {
+    const [u] = await tx.select().from(users).where(eq(users.id, input.userId)).limit(1);
+
+    if (!u) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Customer not found");
+    }
+
+    if (u.status === "deleted") {
+      throw new AppError(ErrorCode.STATE_INVALID, "Cannot verify a deleted account");
+    }
+
+    const roles = await tx
+      .select({ roleKey: userRoles.roleKey })
+      .from(userRoles)
+      .where(eq(userRoles.userId, input.userId));
+
+    const adminRoles = new Set(["super_admin", "admin", "staff"]);
+    if (roles.some((r) => adminRoles.has(r.roleKey))) {
+      throw new AppError(
+        ErrorCode.FORBIDDEN,
+        "Email cannot be marked verified for administrative accounts",
+      );
+    }
+
+    if (u.emailVerified) return { user: toUserView(u) };
+
+    const [updated] = await tx
+      .update(users)
+      .set({ emailVerified: true, updatedAt: new Date() })
+      .where(eq(users.id, input.userId))
+      .returning();
+
+    if (!updated) {
+      throw new AppError(ErrorCode.INTERNAL, "Failed to update user");
+    }
+
+    await auditService.log(
+      ctx,
+      "API-ADM-09 customer.mark_email_verified",
+      { type: "user", id: input.userId },
+      { emailVerified: false },
+      { emailVerified: true, reason: input.reason },
       tx,
     );
 

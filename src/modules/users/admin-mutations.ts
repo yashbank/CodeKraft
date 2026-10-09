@@ -14,6 +14,7 @@ import type { Context } from "@/lib/authz/context";
 import {
   changeAdminRoleAction,
   inviteAdminAction,
+  markCustomerEmailVerifiedAction,
   reinstateCustomerAction,
   removeAdminAction,
   sendMagicLinkAction,
@@ -51,6 +52,10 @@ export async function suspendCustomer(raw: unknown) {
 
 export async function reinstateCustomer(raw: unknown) {
   return withCtx(reinstateCustomerAction, raw);
+}
+
+export async function markCustomerEmailVerified(raw: unknown) {
+  return withCtx(markCustomerEmailVerifiedAction, raw);
 }
 
 export async function sendResetLink(raw: unknown) {

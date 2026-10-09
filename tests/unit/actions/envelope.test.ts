@@ -14,6 +14,7 @@ import {
 import { type Context, anonymousContext, buildContext } from "@/lib/authz/context";
 import { type Role } from "@/lib/authz/permissions";
 import { AppError, ErrorCode } from "@/lib/errors";
+import { getLogger } from "@/lib/logger";
 
 const as = (roles: Role[]): Context =>
   buildContext({ user: { id: "u1" }, session: { id: "s" }, roles, requestId: "req-1" });
@@ -162,7 +163,13 @@ describe("defineAction", () => {
         throw new Error("connection to db://user:secret@host failed");
       },
     });
+    const logSpy = vi.spyOn(getLogger(), "error").mockImplementation(() => undefined);
     const result = await boom({}, admin);
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ requestId: "req-1" }),
+      "action failed",
+    );
+    logSpy.mockRestore();
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.code).toBe(ErrorCode.INTERNAL);

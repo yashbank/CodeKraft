@@ -134,6 +134,12 @@ export const customerStatusChangeSchema = z.strictObject({
   reason: text(500),
 });
 
+/** API-ADM-09 `markCustomerEmailVerified` (support fallback while email delivery is limited). */
+export const markEmailVerifiedSchema = z.strictObject({
+  userId: uuidSchema,
+  reason: text(500),
+});
+
 /** API-ADM-09 `sendResetLink` / `sendMagicLink`. */
 export const sendAuthLinkSchema = z.strictObject({
   userId: uuidSchema,
@@ -158,7 +164,6 @@ export const removeAdminSchema = z.strictObject({ userId: uuidSchema });
 /** Admin users list read (no numbered API row; companion to API-ADM-11). */
 export const listAdminUsersSchema = z.strictObject({});
 export type ListAdminUsersInput = z.infer<typeof listAdminUsersSchema>;
-
 
 /** `admin.user_change` payload validated before apply. */
 export const adminUserChangePayloadSchema = z.discriminatedUnion("op", [
@@ -278,6 +283,12 @@ export interface UsersService {
     input: z.infer<typeof customerStatusChangeSchema>,
     tx?: DbOrTx,
   ): Promise<{ user: UserView }>;
+  /** API-ADM-09 — audited manual email verification; idempotent. */
+  markCustomerEmailVerified(
+    ctx: RequestContext,
+    input: z.infer<typeof markEmailVerifiedSchema>,
+    tx?: DbOrTx,
+  ): Promise<{ user: UserView }>;
   /** API-ADM-08 */
   reinstateCustomer(
     ctx: RequestContext,
@@ -317,7 +328,11 @@ export interface UsersService {
   /** API-ADM-11 apply handler for `admin.user_change`: `user_roles`, `partners`, invitation email. */
   applyAdminUserChange(payload: AdminUserChangePayload, tx: TxCtx): Promise<void>;
   /** Admin users list read (no numbered API row). */
-  listAdminUsers(ctx: RequestContext, input: ListAdminUsersInput, tx?: DbOrTx): Promise<ListResult<AdminUserRow>>;
+  listAdminUsers(
+    ctx: RequestContext,
+    input: ListAdminUsersInput,
+    tx?: DbOrTx,
+  ): Promise<ListResult<AdminUserRow>>;
   /** API-ADM-12 (query). */
   listPartners(
     ctx: RequestContext,

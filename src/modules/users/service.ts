@@ -51,6 +51,7 @@ import {
   changeEmailRequestSchema,
   changePasswordSchema,
   customerStatusChangeSchema,
+  markEmailVerifiedSchema,
   disableTotpSchema,
   enableTotpSchema,
   getCustomerSchema,
@@ -65,6 +66,7 @@ import type { z } from "zod";
 import {
   getCustomer,
   listCustomers,
+  markCustomerEmailVerified,
   reinstateCustomer,
   sendAuthLink,
   suspendCustomer,
@@ -102,6 +104,7 @@ export function createNotImplementedUsersService(): UsersService {
     getCustomer: "async",
     updateCustomerNotes: "async",
     suspendCustomer: "async",
+    markCustomerEmailVerified: "async",
     reinstateCustomer: "async",
     sendResetLink: "async",
     sendMagicLink: "async",
@@ -646,6 +649,15 @@ export class DefaultUsersService implements UsersService {
   ): Promise<{ user: UserView }> {
     const db = await this.getDatabase(tx);
     return await suspendCustomer(ctx, input, db);
+  }
+
+  async markCustomerEmailVerified(
+    ctx: RequestContext,
+    input: z.infer<typeof markEmailVerifiedSchema>,
+    tx?: DbOrTx,
+  ): Promise<{ user: UserView }> {
+    const db = await this.getDatabase(tx);
+    return await markCustomerEmailVerified(ctx, input, db);
   }
 
   async reinstateCustomer(

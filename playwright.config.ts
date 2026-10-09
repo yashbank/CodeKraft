@@ -22,7 +22,11 @@ const desktopChrome = devices["Desktop Chrome"];
 const mobileChrome = devices["Pixel 7"];
 
 /** Specs that only make sense on the public host (dev kitchen sink, site sign-in); admin projects skip them. */
-const SITE_ONLY_SPECS = [/dev-ui\.spec\.ts$/, /foundation\/login-logout\.spec\.ts$/];
+const SITE_ONLY_SPECS = [
+  /dev-ui\.spec\.ts$/,
+  /foundation\/login-logout\.spec\.ts$/,
+  /commerce\/purchase-path\.spec\.ts$/,
+];
 
 export default defineConfig({
   testDir: "tests/e2e",

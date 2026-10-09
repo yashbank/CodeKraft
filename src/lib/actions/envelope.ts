@@ -15,6 +15,7 @@ import {
   toActionResult,
 } from "@/lib/errors";
 import { newId } from "@/lib/ids";
+import { getLogger } from "@/lib/logger";
 import { assertAnyPermission, assertPermission } from "@/lib/authz/assert";
 import { type Context, type RequestContext, requireContext } from "@/lib/authz/context";
 import type { Permission } from "@/lib/authz/permissions";
@@ -99,6 +100,7 @@ export interface PublicActionSpec<S extends z.ZodType, T> extends BaseActionSpec
 
 function unexpected(err: unknown, action: string, ctx: Context): ActionResult<never> {
   let incidentId = newId();
+  getLogger().error({ err, action, requestId: ctx.requestId, incidentId }, "action failed");
   if (reporter !== undefined) {
     try {
       const eventId = reporter(err, {

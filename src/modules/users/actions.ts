@@ -10,6 +10,7 @@ import {
   changeEmailRequestSchema,
   changePasswordSchema,
   customerStatusChangeSchema,
+  markEmailVerifiedSchema,
   deleteAccountSchema,
   disableTotpSchema,
   enableTotpSchema,
@@ -121,6 +122,13 @@ export const sendMagicLinkAction = defineAction({
   input: sendAuthLinkSchema,
   permission: "customers.reset_link",
   handler: (input, ctx) => usersService.sendMagicLink(ctx, input),
+});
+
+export const markCustomerEmailVerifiedAction = defineAction({
+  name: "API-ADM-09 customer.mark_email_verified",
+  input: markEmailVerifiedSchema,
+  permission: "customers.reset_link",
+  handler: (input, ctx) => usersService.markCustomerEmailVerified(ctx, input),
 });
 
 export const inviteAdminAction = defineAction({

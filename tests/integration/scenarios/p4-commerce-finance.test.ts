@@ -104,7 +104,8 @@ describe("Phase 4 Commerce & Finance Scenarios (S-02..S-22, SA-08..SA-24)", () =
 
     // Order is paid, invoice issued
     const [ord] = await db.select().from(orders).where(eq(orders.id, orderRes.orderId));
-    expect(ord?.status).toBe("paid");
+    // grantForOrder fulfils a download-only order as soon as its entitlements are active
+    expect(ord?.status).toBe("fulfilled");
 
     const [inv] = await db.select().from(invoices).where(eq(invoices.orderId, orderRes.orderId));
     expect(inv?.invoiceNo).toMatch(/^CK\/\d{4}-\d{2}\/\d{4}$/);
@@ -202,7 +203,10 @@ describe("Phase 4 Commerce & Finance Scenarios (S-02..S-22, SA-08..SA-24)", () =
     expect(pmtAfter?.amountRefundedMinor).toBe(30000);
 
     // Credit note issued (CK/CN/<fy>/<seq>)
-    const [cn] = await db.select().from(creditNotes).where(eq(creditNotes.refundId, refundProp.refundId));
+    const [cn] = await db
+      .select()
+      .from(creditNotes)
+      .where(eq(creditNotes.refundId, refundProp.refundId));
     expect(cn?.creditNo).toMatch(/^CK\/CN\/\d{4}-\d{2}\/\d{4}$/);
 
     // Ledger nets to 0 for the order (FI-04, FI-05)
@@ -414,7 +418,9 @@ describe("Phase 4 Commerce & Finance Scenarios (S-02..S-22, SA-08..SA-24)", () =
     const p1Entries1 = await db
       .select()
       .from(ledgerEntries)
-      .where(sql`${ledgerEntries.orderId} = ${order1.id} AND ${ledgerEntries.partnerId} = ${partner1.id}`);
+      .where(
+        sql`${ledgerEntries.orderId} = ${order1.id} AND ${ledgerEntries.partnerId} = ${partner1.id}`,
+      );
     expect(p1Entries1[0]?.amountMinor).toBe(60000);
 
     // Propose v2 ownership: 70% partner1, 30% partner2
@@ -464,7 +470,9 @@ describe("Phase 4 Commerce & Finance Scenarios (S-02..S-22, SA-08..SA-24)", () =
     const p1Entries2 = await db
       .select()
       .from(ledgerEntries)
-      .where(sql`${ledgerEntries.orderId} = ${order2.id} AND ${ledgerEntries.partnerId} = ${partner1.id}`);
+      .where(
+        sql`${ledgerEntries.orderId} = ${order2.id} AND ${ledgerEntries.partnerId} = ${partner1.id}`,
+      );
     expect(p1Entries2[0]?.amountMinor).toBe(70000);
   });
 
@@ -545,7 +553,9 @@ describe("Phase 4 Commerce & Finance Scenarios (S-02..S-22, SA-08..SA-24)", () =
     const p1Entries = await db
       .select()
       .from(ledgerEntries)
-      .where(sql`${ledgerEntries.orderId} = ${projectOrder.orderId} AND ${ledgerEntries.partnerId} = ${partner1.id}`);
+      .where(
+        sql`${ledgerEntries.orderId} = ${projectOrder.orderId} AND ${ledgerEntries.partnerId} = ${partner1.id}`,
+      );
     expect(p1Entries[0]?.amountMinor).toBe(100000);
   });
 

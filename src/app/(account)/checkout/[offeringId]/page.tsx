@@ -80,6 +80,7 @@ export default async function CheckoutPage({ params }: PageProps) {
         offering={offering}
         customerEmail={session.user.email}
         billing={billing}
+        state={session.user.emailVerified ? undefined : "unverified"}
         links={{
           dashboard: "/account/purchases",
           verify: "/auth/verify",

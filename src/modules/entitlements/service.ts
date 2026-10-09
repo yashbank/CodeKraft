@@ -21,11 +21,7 @@ import { media } from "../../../drizzle/schema/media";
 import { products } from "../../../drizzle/schema/catalog";
 import { offerings } from "../../../drizzle/schema/offerings";
 import { users } from "../../../drizzle/schema/auth";
-import type {
-  EntitlementsService,
-  GrantedEntitlement,
-  SystemRevokeReason,
-} from "./contracts";
+import type { EntitlementsService, GrantedEntitlement, SystemRevokeReason } from "./contracts";
 import { defaultDeliveryHandlerRegistry } from "@/modules/delivery/handlers";
 import { deliveryService } from "@/modules/delivery/service";
 import { subscriptionsService, advancePeriod } from "@/modules/subscriptions/service";
@@ -70,11 +66,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
   ) {}
 
   async grantForOrder(orderId: string, tx: TxCtx): Promise<GrantedEntitlement[]> {
-    const [order] = await tx
-      .select()
-      .from(orders)
-      .where(eq(orders.id, orderId))
-      .for("update");
+    const [order] = await tx.select().from(orders).where(eq(orders.id, orderId)).for("update");
 
     if (!order) {
       throw new AppError(ErrorCode.NOT_FOUND, "Order not found");
@@ -91,10 +83,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
       return [];
     }
 
-    const items = await tx
-      .select()
-      .from(orderItems)
-      .where(eq(orderItems.orderId, order.id));
+    const items = await tx.select().from(orderItems).where(eq(orderItems.orderId, order.id));
 
     const granted: GrantedEntitlement[] = [];
 
@@ -118,22 +107,13 @@ export class DefaultEntitlementsService implements EntitlementsService {
         continue;
       }
 
-      const [offering] = await tx
-        .select()
-        .from(offerings)
-        .where(eq(offerings.id, item.offeringId));
+      const [offering] = await tx.select().from(offerings).where(eq(offerings.id, item.offeringId));
 
       if (!offering) continue;
 
-      const [product] = await tx
-        .select()
-        .from(products)
-        .where(eq(products.id, offering.productId));
+      const [product] = await tx.select().from(products).where(eq(products.id, offering.productId));
 
-      const [user] = await tx
-        .select()
-        .from(users)
-        .where(eq(users.id, order.userId!));
+      const [user] = await tx.select().from(users).where(eq(users.id, order.userId!));
 
       const startsAt = order.paidAt ?? new Date();
       let endsAt: Date | null = null;
@@ -256,22 +236,17 @@ export class DefaultEntitlementsService implements EntitlementsService {
         }
       }
 
-      const [product] = await tx
-        .select()
-        .from(products)
-        .where(eq(products.id, offering.productId));
+      const [product] = await tx.select().from(products).where(eq(products.id, offering.productId));
 
-      const [user] = await tx
-        .select()
-        .from(users)
-        .where(eq(users.id, input.userId));
+      const [user] = await tx.select().from(users).where(eq(users.id, input.userId));
 
       if (!user) {
         throw new AppError(ErrorCode.NOT_FOUND, "User not found");
       }
 
       const startsAt = new Date();
-      const accessMonths = input.accessMonths !== undefined ? input.accessMonths : offering.accessMonths;
+      const accessMonths =
+        input.accessMonths !== undefined ? input.accessMonths : offering.accessMonths;
       const endsAt = calculateAccessEndsAt(startsAt, accessMonths);
 
       const handler = this.registry.get(offering.deliveryType);
@@ -382,12 +357,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
       manualGrant: ent.orderItemId === null,
     };
 
-    const outcome = await handler.onRevoked(
-      handlerCtx,
-      ent,
-      { mode: "hard", reason },
-      tx,
-    );
+    const outcome = await handler.onRevoked(handlerCtx, ent, { mode: "hard", reason }, tx);
 
     const now = new Date();
     const [updated] = await tx
@@ -441,11 +411,11 @@ export class DefaultEntitlementsService implements EntitlementsService {
     const db = await getDb();
 
     const conditions = [eq(entitlements.userId, ctx.userId!)];
-    if (input.filters.status) {
-      conditions.push(eq(entitlements.status, input.filters.status));
+    if (input.filters?.status) {
+      conditions.push(eq(entitlements.status, input.filters?.status));
     }
-    if (input.filters.deliveryType) {
-      conditions.push(eq(entitlements.deliveryType, input.filters.deliveryType));
+    if (input.filters?.deliveryType) {
+      conditions.push(eq(entitlements.deliveryType, input.filters?.deliveryType));
     }
 
     const rows = await db
@@ -465,7 +435,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
 
     return {
       items: views,
-      nextCursor: hasNext ? currentRows[currentRows.length - 1]?.id ?? null : null,
+      nextCursor: hasNext ? (currentRows[currentRows.length - 1]?.id ?? null) : null,
     };
   }
 
@@ -507,12 +477,20 @@ export class DefaultEntitlementsService implements EntitlementsService {
         throw new AppError(ErrorCode.NOT_FOUND, "Entitlement not found");
       }
 
-      if (ctx.userId && ent.userId !== ctx.userId && !ctx.roles.includes("super_admin") && !ctx.roles.includes("admin")) {
+      if (
+        ctx.userId &&
+        ent.userId !== ctx.userId &&
+        !ctx.roles.includes("super_admin") &&
+        !ctx.roles.includes("admin")
+      ) {
         throw new AppError(ErrorCode.NOT_FOUND, "Entitlement not found");
       }
 
       if (ent.status !== "active") {
-        throw new AppError(ErrorCode.STATE_INVALID, `Cannot download when entitlement is '${ent.status}'`);
+        throw new AppError(
+          ErrorCode.STATE_INVALID,
+          `Cannot download when entitlement is '${ent.status}'`,
+        );
       }
 
       if (!isWithinAccessWindow(ent.accessStartsAt, ent.accessEndsAt)) {
@@ -524,10 +502,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
         .select()
         .from(releaseFiles)
         .where(
-          and(
-            eq(releaseFiles.productId, ent.productId),
-            eq(releaseFiles.mediaId, input.mediaId),
-          ),
+          and(eq(releaseFiles.productId, ent.productId), eq(releaseFiles.mediaId, input.mediaId)),
         );
 
       if (!rf) {
@@ -625,7 +600,12 @@ export class DefaultEntitlementsService implements EntitlementsService {
         throw new AppError(ErrorCode.NOT_FOUND, "Entitlement not found");
       }
 
-      if (ctx.userId && ent.userId !== ctx.userId && !ctx.roles.includes("super_admin") && !ctx.roles.includes("admin")) {
+      if (
+        ctx.userId &&
+        ent.userId !== ctx.userId &&
+        !ctx.roles.includes("super_admin") &&
+        !ctx.roles.includes("admin")
+      ) {
         throw new AppError(ErrorCode.NOT_FOUND, "Entitlement not found");
       }
 
@@ -664,20 +644,20 @@ export class DefaultEntitlementsService implements EntitlementsService {
     const db = await getDb();
 
     const conditions = [];
-    if (input.filters.status && input.filters.status.length > 0) {
-      conditions.push(inArray(entitlements.status, input.filters.status));
+    if (input.filters?.status && input.filters?.status.length > 0) {
+      conditions.push(inArray(entitlements.status, input.filters?.status));
     }
-    if (input.filters.deliveryType) {
-      conditions.push(eq(entitlements.deliveryType, input.filters.deliveryType));
+    if (input.filters?.deliveryType) {
+      conditions.push(eq(entitlements.deliveryType, input.filters?.deliveryType));
     }
-    if (input.filters.productId) {
-      conditions.push(eq(entitlements.productId, input.filters.productId));
+    if (input.filters?.productId) {
+      conditions.push(eq(entitlements.productId, input.filters?.productId));
     }
-    if (input.filters.userId) {
-      conditions.push(eq(entitlements.userId, input.filters.userId));
+    if (input.filters?.userId) {
+      conditions.push(eq(entitlements.userId, input.filters?.userId));
     }
-    if (input.filters.provisioningState) {
-      conditions.push(eq(entitlements.provisioningState, input.filters.provisioningState));
+    if (input.filters?.provisioningState) {
+      conditions.push(eq(entitlements.provisioningState, input.filters?.provisioningState));
     }
 
     const rows = await db
@@ -697,7 +677,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
 
     return {
       items,
-      nextCursor: hasNext ? currentRows[currentRows.length - 1]?.id ?? null : null,
+      nextCursor: hasNext ? (currentRows[currentRows.length - 1]?.id ?? null) : null,
     };
   }
 
@@ -958,7 +938,12 @@ export class DefaultEntitlementsService implements EntitlementsService {
 
     return {
       entitlementId: ent.id,
-      product: { id: prod!.id, name: prod!.name, slug: prod!.slug, published: prod!.status === "published" },
+      product: {
+        id: prod!.id,
+        name: prod!.name,
+        slug: prod!.slug,
+        published: prod!.status === "published",
+      },
       offering: { id: offering!.id, name: offering!.name },
       deliveryType: ent.deliveryType,
       status: ent.status,

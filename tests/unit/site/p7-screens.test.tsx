@@ -61,18 +61,14 @@ describe("Phase 7: Public Site & Customer UI", () => {
         testimonials={TESTIMONIALS}
         logos={CLIENT_LOGOS}
         blogTeasers={BLOG_POSTS}
-      />
+      />,
     );
 
     expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
   });
 
   it("renders ServicesPage and enforces BR-01 (no prices on services page)", () => {
-    const { container } = render(
-      <ServicesPage
-        services={SERVICES}
-      />
-    );
+    const { container } = render(<ServicesPage services={SERVICES} />);
 
     expect(screen.getByRole("heading", { name: "What we build", level: 1 })).toBeInTheDocument();
     // BR-01: No prices anywhere on services
@@ -81,13 +77,7 @@ describe("Phase 7: Public Site & Customer UI", () => {
   });
 
   it("renders ProductsListPage with catalog filter and items", () => {
-    render(
-      <ProductsListPage
-        products={PRODUCTS}
-        categories={CATEGORY_TREE}
-        pageSize={12}
-      />
-    );
+    render(<ProductsListPage products={PRODUCTS} categories={CATEGORY_TREE} pageSize={12} />);
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/Products/);
     expect(screen.getAllByText("FitDesk Pro").length).toBeGreaterThan(0);
@@ -98,7 +88,7 @@ describe("Phase 7: Public Site & Customer UI", () => {
       <ContactPage
         serviceOptions={SERVICE_OPTIONS}
         trustLines={["Fixed-scope proposals", "NDA on request"]}
-      />
+      />,
     );
 
     expect(screen.getByRole("heading", { name: "Start a project", level: 1 })).toBeInTheDocument();
@@ -107,21 +97,14 @@ describe("Phase 7: Public Site & Customer UI", () => {
   });
 
   it("renders LegalPage with privacy policy sections", () => {
-    render(
-      <LegalPage
-        page={LEGAL_PRIVACY}
-        nav={LEGAL_NAV}
-      />
-    );
+    render(<LegalPage page={LEGAL_PRIVACY} nav={LEGAL_NAV} />);
 
     expect(screen.getByRole("heading", { name: "Privacy policy", level: 1 })).toBeInTheDocument();
     expect(screen.getAllByText("1. What we collect").length).toBeGreaterThan(0);
   });
 
   it("renders LoginScreen with split brand panel and form", () => {
-    render(
-      <LoginScreen />
-    );
+    render(<LoginScreen />);
 
     expect(screen.getByRole("heading", { name: "Sign in", level: 1 })).toBeInTheDocument();
     expect(screen.getByLabelText(/Email/i)).toBeInTheDocument();
@@ -129,11 +112,11 @@ describe("Phase 7: Public Site & Customer UI", () => {
   });
 
   it("renders RegisterScreen with policy hints and create account CTA", () => {
-    render(
-      <RegisterScreen />
-    );
+    render(<RegisterScreen />);
 
-    expect(screen.getByRole("heading", { name: "Create your account", level: 1 })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Create your account", level: 1 }),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText(/Full name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^Email/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Create account/i })).toBeInTheDocument();
@@ -159,7 +142,7 @@ describe("Phase 7: Public Site & Customer UI", () => {
           wishlist: "/account/wishlist",
           chat: "/account/chat",
         }}
-      />
+      />,
     );
 
     expect(screen.getByRole("heading", { name: /Hi, Pravin/i, level: 1 })).toBeInTheDocument();
@@ -175,10 +158,12 @@ describe("Phase 7: Public Site & Customer UI", () => {
           entitlement: "/account/purchases",
           order: "/account/orders",
         }}
-      />
+      />,
     );
 
-    expect(screen.getByRole("heading", { name: /Purchases & access/i, level: 1 })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /Purchases & access/i, level: 1 }),
+    ).toBeInTheDocument();
   });
 
   it("renders InvoicesScreen with financial years and invoice records", () => {
@@ -190,10 +175,12 @@ describe("Phase 7: Public Site & Customer UI", () => {
         links={{
           order: "/account/orders",
         }}
-      />
+      />,
     );
 
-    expect(screen.getByRole("heading", { name: /Invoices & payments/i, level: 1 })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /Invoices & payments/i, level: 1 }),
+    ).toBeInTheDocument();
   });
 
   it("renders QueriesScreen with query thread summaries", () => {
@@ -207,7 +194,7 @@ describe("Phase 7: Public Site & Customer UI", () => {
           chat: "/account/chat",
           transcript: "/account/chat",
         }}
-      />
+      />,
     );
 
     expect(screen.getByRole("heading", { name: /Queries/i, level: 1 })).toBeInTheDocument();
@@ -221,7 +208,7 @@ describe("Phase 7: Public Site & Customer UI", () => {
         links={{
           settings: "/account/settings",
         }}
-      />
+      />,
     );
 
     expect(screen.getByRole("heading", { name: /Notifications/i, level: 1 })).toBeInTheDocument();
@@ -234,7 +221,7 @@ describe("Phase 7: Public Site & Customer UI", () => {
         session={session}
         authEvents={authEvents}
         now={new Date().toISOString()}
-      />
+      />,
     );
 
     expect(screen.getByRole("heading", { name: /Settings/i, level: 1 })).toBeInTheDocument();
@@ -252,10 +239,25 @@ describe("Phase 7: Public Site & Customer UI", () => {
           dashboard: "/account/purchases",
           verify: "/auth/verify",
         }}
-      />
+      />,
     );
 
     expect(screen.getAllByText(checkoutOffering.productName).length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: /Place order/i })).toBeInTheDocument();
+  });
+
+  it("shows the verify banner and no Place order button when unverified", () => {
+    render(
+      <CheckoutScreen
+        offeringId="off_preview"
+        offering={checkoutOffering}
+        customerEmail="pravin@iauro.com"
+        billing={customer.billing}
+        state="unverified"
+        links={{ dashboard: "/account/purchases", verify: "/auth/verify" }}
+      />,
+    );
+    expect(screen.getByText("Verify your email to continue")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Place order/i })).toBeNull();
   });
 });

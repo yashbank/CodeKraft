@@ -63,10 +63,7 @@ describe("confirmPayment happy path integration (API-PAY-03)", () => {
       reference: "UTR-BANK-112233",
     });
 
-    const [savedOrder] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, orderRes.orderId));
+    const [savedOrder] = await db.select().from(orders).where(eq(orders.id, orderRes.orderId));
 
     const confirmRes = await paymentsService.confirmPayment(adminCtx, {
       paymentId: orderRes.payment.paymentId,
@@ -80,6 +77,7 @@ describe("confirmPayment happy path integration (API-PAY-03)", () => {
     expect(confirmRes.shortfallMinor).toBe(0);
     expect(confirmRes.customerCreditMinor).toBe(0);
     expect(confirmRes.ledgerEntryCount).toBeGreaterThan(0);
+    expect(confirmRes.entitlementIds.length).toBeGreaterThan(0);
 
     // Verify user offering purchase recorded
     const [purchase] = await db
@@ -97,9 +95,7 @@ describe("confirmPayment happy path integration (API-PAY-03)", () => {
     expect(entries.length).toBeGreaterThan(0);
 
     // Verify allocations
-    const allocs = await db
-      .select()
-      .from(allocations);
+    const allocs = await db.select().from(allocations);
     expect(allocs.length).toBeGreaterThan(0);
   });
 });

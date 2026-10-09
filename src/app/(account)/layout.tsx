@@ -1,3 +1,4 @@
+import { Toaster } from "@/components/ui/sonner";
 import { redirect } from "next/navigation";
 
 import { getSession } from "@/modules/auth/service";
@@ -8,5 +9,10 @@ export const dynamic = "force-dynamic";
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session) redirect("/auth/login?next=/account");
-  return <div data-app="account">{children}</div>;
+  return (
+    <div data-app="account">
+      {children}
+      <Toaster />
+    </div>
+  );
 }
