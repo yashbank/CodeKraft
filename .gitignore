@@ -17,3 +17,4 @@ tsconfig.tsbuildinfo
 .vercel
 .env*
 .scratch-e2e/
+.claude/settings.local.json
