@@ -66,3 +66,12 @@ Resume point. Newest entries at the bottom.
 - Partner-a and partner-b invites still Awaiting approval, not applied.
 - BLOCKED on founder: confirm e2e-dbg/73dbcaaa status in DB, or approve their removal. DB access not attempted.
 - Products and splits: not started (depend on partner records).
+
+## Resume 2026-10-09 (new session, Phase 0)
+- Discovery: unit 745/745, integration 279/280 (stale migration count), tsc 208 baseline, eslint 574 baseline. CI lint and typecheck jobs are red, so CI is not a gate.
+- Root cause, offerings never shown: `getProductAdmin` and `getProductBySlug` in `src/modules/catalog/service.ts` returned `offerings: []` since 9d94f49. Fixed via `offeringsService.listForProduct` (admin includes inactive). Regression test `tests/integration/catalog/admin-offerings-visible.test.ts`.
+- Founder decision: company-owned 100 % ownership allowed (`companyCutBps: 10000`, no lines). Schema, service and ProductEditor updated; test `tests/integration/ownership/company-owned-100.test.ts`.
+- Pre-existing bug fixed: readiness summed partner lines + company cut, so any mixed split could never publish. Now lines alone must sum to 10000 when present. Assertion added to `propose-approve-apply.test.ts`.
+- Push gate added: `pnpm gate` (`scripts/gate.sh`) with baselines in `scripts/gate-baseline-*.txt`; local pre-push hook on this machine runs it for pushes to main.
+- Removed 16 committed empty `_tmp_21_*` files. Migration test now counts `drizzle/migrations/*.sql`.
+- Founder decisions pending: Resend domain + `EMAIL_TRANSPORT`/`ALLOW_LOG_EMAIL` in Vercel; admin passwords in `2026-10-06-overnight-progress.md` to be rotated after password reset ships.

@@ -453,11 +453,16 @@ export function ProductEditor({
   }
 
   async function submitOwnershipProposal(effectiveFrom: string) {
-    if (split.lines.reduce((s, l) => s + l.bps, 0) !== 10000) return;
+    const companyOwned = split.lines.length === 0 && split.companyCutBps === 10000;
+    if (!companyOwned && split.lines.reduce((s, l) => s + l.bps, 0) !== 10000) return;
+    await proposeSplit(split, effectiveFrom);
+  }
+
+  async function proposeSplit(next: SplitValue, effectiveFrom: string) {
     const result = await proposeOwnershipSplit({
       productId,
-      companyCutBps: split.companyCutBps,
-      lines: split.lines
+      companyCutBps: next.companyCutBps,
+      lines: next.lines
         .filter((l) => l.partnerId)
         .map((l) => ({ partnerId: l.partnerId, shareBps: l.bps })),
       effectiveFrom: effectiveFrom ? new Date(effectiveFrom).toISOString() : undefined,
@@ -534,7 +539,9 @@ export function ProductEditor({
       position: existing?.position ?? product.offerings.length,
       isDefault,
       purchaseModel: offeringPurchaseModel,
-      ...(offeringPurchaseModel === "subscription" ? { billingInterval: offeringBillingInterval } : {}),
+      ...(offeringPurchaseModel === "subscription"
+        ? { billingInterval: offeringBillingInterval }
+        : {}),
       ...(existing?.trialDays !== undefined ? { trialDays: existing.trialDays } : {}),
       ...(existing?.licenseType ? { licenseType: existing.licenseType } : {}),
       deliveryType: offeringDeliveryType,
@@ -590,7 +597,9 @@ export function ProductEditor({
       toast.error(result.error.message);
       return;
     }
-    toast.success(result.data.result === "deleted" ? "Offering deleted" : "Offering deactivated (has orders)");
+    toast.success(
+      result.data.result === "deleted" ? "Offering deleted" : "Offering deactivated (has orders)",
+    );
     router.refresh();
   }
 
@@ -603,9 +612,7 @@ export function ProductEditor({
     const data = new FormData(e.currentTarget);
     const provisioning = String(data.get("provisioning") ?? "manual") as "manual" | "automated";
     const updatePolicy = String(data.get("updatePolicy") ?? "all_free") as
-      | "all_free"
-      | "during_access"
-      | "major_paid";
+      "all_free" | "during_access" | "major_paid";
     const downloadCapRaw = String(data.get("downloadCap") ?? "").trim();
     const accessMonthsRaw = String(data.get("accessMonths") ?? "").trim();
     const instructionsRaw = String(data.get("instructions") ?? "").trim();
@@ -743,7 +750,14 @@ export function ProductEditor({
   function addFaq() {
     setFaqs((l) => [
       ...l,
-      { id: `new-${Date.now()}`, question: "", answer: "", scope: "product", published: true, isNew: true },
+      {
+        id: `new-${Date.now()}`,
+        question: "",
+        answer: "",
+        scope: "product",
+        published: true,
+        isNew: true,
+      },
     ]);
   }
   function updateFaq(id: string, patch: Partial<FaqItem>) {
@@ -910,7 +924,12 @@ export function ProductEditor({
           </span>
         ) : null}
         <span className="ml-auto flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled title="Signed preview links aren't wired yet">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled
+            title="Signed preview links aren't wired yet"
+          >
             <ExternalLinkIcon aria-hidden /> Preview
           </Button>
           {!isNew ? (
@@ -1162,8 +1181,18 @@ export function ProductEditor({
                 rows={6}
               />
               <div className="grid gap-4 sm:grid-cols-2">
-                <ListEditor id="p-list-Features" label="Features" items={features} onChange={setFeatures} />
-                <ListEditor id="p-list-Benefits" label="Benefits" items={benefits} onChange={setBenefits} />
+                <ListEditor
+                  id="p-list-Features"
+                  label="Features"
+                  items={features}
+                  onChange={setFeatures}
+                />
+                <ListEditor
+                  id="p-list-Benefits"
+                  label="Benefits"
+                  items={benefits}
+                  onChange={setBenefits}
+                />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field
@@ -1223,7 +1252,12 @@ export function ProductEditor({
                     : "Shown as “Try the demo” on the product page (D-805)."
                 }
               >
-                <Input id="p-demo" name="liveDemoUrl" type="url" defaultValue={product.liveDemoUrl} />
+                <Input
+                  id="p-demo"
+                  name="liveDemoUrl"
+                  type="url"
+                  defaultValue={product.liveDemoUrl}
+                />
               </Field>
               {flags.has("is_unlisted") ? (
                 <Banner tone="warning">
@@ -1302,10 +1336,7 @@ export function ProductEditor({
                   key={m.id}
                   className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-surface p-3"
                 >
-                  <GripVerticalIcon
-                    aria-hidden
-                    className="size-4 shrink-0 text-fg-subtle"
-                  />
+                  <GripVerticalIcon aria-hidden className="size-4 shrink-0 text-fg-subtle" />
                   <span
                     aria-hidden
                     className="grid size-12 place-items-center rounded-sm bg-elevated text-caption text-fg-subtle"
@@ -1359,8 +1390,8 @@ export function ProductEditor({
             <div className="flex items-center justify-between">
               <p className="text-body-sm text-fg-muted">
                 “Offering”, never “plan” or “tier”. Prices are stored in minor units per enabled
-                currency. New offerings default to manual UPI/bank payment and manual
-                provisioning — edit delivery config and extra currencies later.
+                currency. New offerings default to manual UPI/bank payment and manual provisioning —
+                edit delivery config and extra currencies later.
               </p>
               <Button size="sm" onClick={() => openOfferingDialog(null)}>
                 <PlusIcon aria-hidden /> Add offering
@@ -1376,10 +1407,12 @@ export function ProductEditor({
               <DialogContent>
                 <form onSubmit={handleSaveOffering}>
                   <DialogHeader>
-                    <DialogTitle>{editingOffering ? `Edit ${editingOffering.name}` : "Add offering"}</DialogTitle>
+                    <DialogTitle>
+                      {editingOffering ? `Edit ${editingOffering.name}` : "Add offering"}
+                    </DialogTitle>
                     <DialogDescription>
-                      Base price is in INR — saving replaces only the INR row (other currencies,
-                      if any, are kept). Refine delivery config from the Delivery config tab.
+                      Base price is in INR — saving replaces only the INR row (other currencies, if
+                      any, are kept). Refine delivery config from the Delivery config tab.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
@@ -1559,8 +1592,8 @@ export function ProductEditor({
 
           <TabsContent value="delivery" className="space-y-4">
             <Banner tone="neutral">
-              Delivery type and purchase model are set from the Offerings tab — this tab only
-              covers how access, updates and instructions work after purchase.
+              Delivery type and purchase model are set from the Offerings tab — this tab only covers
+              how access, updates and instructions work after purchase.
             </Banner>
             <Accordion type="multiple" defaultValue={[product.offerings[0]?.id ?? ""]}>
               {product.offerings.map((o) => (
@@ -1576,16 +1609,21 @@ export function ProductEditor({
                     </span>
                   </AccordionTrigger>
                   <AccordionContent>
-                    <form
-                      className="space-y-4"
-                      onSubmit={(e) => void saveDeliveryConfig(o, e)}
-                    >
+                    <form className="space-y-4" onSubmit={(e) => void saveDeliveryConfig(o, e)}>
                       <div className="grid gap-4 sm:grid-cols-2">
                         <Field id={`dl-type-${o.id}`} label="Delivery type">
-                          <Input id={`dl-type-${o.id}`} readOnly value={DELIVERY_TYPE_LABEL[o.deliveryType]} />
+                          <Input
+                            id={`dl-type-${o.id}`}
+                            readOnly
+                            value={DELIVERY_TYPE_LABEL[o.deliveryType]}
+                          />
                         </Field>
                         <Field id={`dl-model-${o.id}`} label="Purchase model">
-                          <Input id={`dl-model-${o.id}`} readOnly value={PURCHASE_MODEL_LABEL[o.purchaseModel]} />
+                          <Input
+                            id={`dl-model-${o.id}`}
+                            readOnly
+                            value={PURCHASE_MODEL_LABEL[o.purchaseModel]}
+                          />
                         </Field>
                         <Field id={`dl-prov-${o.id}`} label="Provisioning">
                           <Select name="provisioning" defaultValue={o.deliveryConfig.provisioning}>
@@ -1631,7 +1669,12 @@ export function ProductEditor({
                           />
                         </Field>
                         {o.deliveryType === "download" ? (
-                          <Field id={`dl-cap-${o.id}`} label="Download cap" optional hint="Max downloads per entitlement.">
+                          <Field
+                            id={`dl-cap-${o.id}`}
+                            label="Download cap"
+                            optional
+                            hint="Max downloads per entitlement."
+                          >
                             <Input
                               id={`dl-cap-${o.id}`}
                               name="downloadCap"
@@ -1675,7 +1718,12 @@ export function ProductEditor({
                           </Label>
                         </div>
                       ) : null}
-                      <Field id={`dl-instructions-${o.id}`} label="Instructions" optional hint="Shown to the customer after purchase.">
+                      <Field
+                        id={`dl-instructions-${o.id}`}
+                        label="Instructions"
+                        optional
+                        hint="Shown to the customer after purchase."
+                      >
                         <Textarea
                           id={`dl-instructions-${o.id}`}
                           name="instructions"
@@ -1759,13 +1807,7 @@ export function ProductEditor({
                 </TableBody>
               </Table>
             </div>
-            {product.partners.length === 0 ? (
-              <p className="text-caption text-fg-muted">
-                No partners to propose a split with — this admin account can't list partners
-                (needs finance or user-management access), or none exist yet.
-              </p>
-            ) : null}
-            {proposing ? (
+            {proposing && product.partners.length > 0 ? (
               <ProposeSplitForm
                 split={split}
                 onChange={setSplit}
@@ -1777,10 +1819,16 @@ export function ProductEditor({
             ) : (
               <Button
                 variant="secondary"
-                onClick={() => setProposing(true)}
-                disabled={Boolean(pendingOwnership) || product.partners.length === 0}
+                onClick={() =>
+                  product.partners.length === 0
+                    ? void proposeSplit({ companyCutBps: 10000, lines: [] }, "")
+                    : setProposing(true)
+                }
+                disabled={Boolean(pendingOwnership)}
               >
-                Propose new split
+                {product.partners.length === 0
+                  ? "Propose company-owned (100%)"
+                  : "Propose new split"}
               </Button>
             )}
           </TabsContent>
@@ -1788,7 +1836,12 @@ export function ProductEditor({
           <TabsContent value="seo" className="space-y-5">
             <form onSubmit={saveSeo} className="space-y-5">
               <Field id="seo-title" label="SEO title" hint={`${product.seo.title.length}/60`}>
-                <Input id="seo-title" name="seoTitle" defaultValue={product.seo.title} maxLength={60} />
+                <Input
+                  id="seo-title"
+                  name="seoTitle"
+                  defaultValue={product.seo.title}
+                  maxLength={60}
+                />
               </Field>
               <Field
                 id="seo-desc"
@@ -1805,7 +1858,12 @@ export function ProductEditor({
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field id="seo-canonical" label="Canonical URL" optional>
-                  <Input id="seo-canonical" name="canonicalUrl" type="url" defaultValue={product.seo.canonical} />
+                  <Input
+                    id="seo-canonical"
+                    name="canonicalUrl"
+                    type="url"
+                    defaultValue={product.seo.canonical}
+                  />
                 </Field>
                 <Field id="seo-og" label="OG image override" optional>
                   <Select name="ogImageMediaId" defaultValue="none">
@@ -1901,8 +1959,8 @@ export function ProductEditor({
           <TabsContent value="testimonials" className="space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-body-sm text-fg-muted">
-                Curated by admins — there are no public reviews (D-312). Reordering isn't wired
-                in this pass (no reorder action for testimonials).
+                Curated by admins — there are no public reviews (D-312). Reordering isn't wired in
+                this pass (no reorder action for testimonials).
               </p>
               <Button size="sm" onClick={addTestimonial}>
                 <PlusIcon aria-hidden /> Add testimonial
@@ -1910,10 +1968,7 @@ export function ProductEditor({
             </div>
             <ul className="space-y-3">
               {testimonials.map((t, i) => (
-                <li
-                  key={t.id}
-                  className="space-y-2 rounded-md border border-border bg-surface p-3"
-                >
+                <li key={t.id} className="space-y-2 rounded-md border border-border bg-surface p-3">
                   <div className="grid gap-2 sm:grid-cols-3">
                     <Field id={`tm-author-${t.id}`} label="Author" required>
                       <Input
@@ -2003,7 +2058,12 @@ export function ProductEditor({
                     />
                   </Field>
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" disabled={i === 0} onClick={() => moveFaq(i, -1)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={i === 0}
+                      onClick={() => moveFaq(i, -1)}
+                    >
                       Move up
                     </Button>
                     <Button
@@ -2028,7 +2088,9 @@ export function ProductEditor({
                   </div>
                 </li>
               ))}
-              {faqs.length === 0 ? <li className="text-body-sm text-fg-muted">No FAQs yet.</li> : null}
+              {faqs.length === 0 ? (
+                <li className="text-body-sm text-fg-muted">No FAQs yet.</li>
+              ) : null}
             </ul>
           </TabsContent>
 
@@ -2075,12 +2137,24 @@ export function ProductEditor({
                 void submitForApproval(publishAt);
               }}
             >
-              <Field id="pub-at" label="Publish at" optional hint="Leave empty to publish on approval (D-307).">
+              <Field
+                id="pub-at"
+                label="Publish at"
+                optional
+                hint="Leave empty to publish on approval (D-307)."
+              >
                 <Input id="pub-at" name="publishAt" type="datetime-local" />
               </Field>
               <ApprovalGateNotice approvers={approvers} what="Publishing" />
               <div className="flex gap-2">
-                <Button type="submit" disabled={product.status === "published" || product.status === "pending_approval" || product.status === "archived"}>
+                <Button
+                  type="submit"
+                  disabled={
+                    product.status === "published" ||
+                    product.status === "pending_approval" ||
+                    product.status === "archived"
+                  }
+                >
                   Submit for approval
                 </Button>
                 {product.status === "published" ? (
@@ -2194,9 +2268,7 @@ function ListEditor({
             <Input
               aria-label={`${label} ${i + 1}`}
               value={item}
-              onChange={(e) =>
-                onChange(items.map((v, j) => (j === i ? e.target.value : v)))
-              }
+              onChange={(e) => onChange(items.map((v, j) => (j === i ? e.target.value : v)))}
               className="h-8"
             />
             <Button
@@ -2267,7 +2339,12 @@ function ProposeSplitForm({
     >
       <h2 className="text-h4">Propose new split</h2>
       <SplitEditor idPrefix="own" value={split} onChange={onChange} partners={partners} />
-      <Field id="own-effective" label="Effective date" optional hint="Leave empty for as soon as approved.">
+      <Field
+        id="own-effective"
+        label="Effective date"
+        optional
+        hint="Leave empty for as soon as approved."
+      >
         <Input
           id="own-effective"
           type="date"
@@ -2277,7 +2354,13 @@ function ProposeSplitForm({
       </Field>
       <ApprovalGateNotice approvers={approvers} what="Changing ownership" />
       <div className="flex gap-2">
-        <Button type="submit" disabled={total !== 10000 || submitting}>
+        <Button
+          type="submit"
+          disabled={
+            !(total === 10000 || (split.lines.length === 0 && split.companyCutBps === 10000)) ||
+            submitting
+          }
+        >
           Request approval
         </Button>
         <Button type="button" variant="ghost" onClick={onCancel}>

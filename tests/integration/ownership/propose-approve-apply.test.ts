@@ -113,5 +113,11 @@ describe("ownership dual approval lifecycle: propose -> approve -> apply (PHASE-
     expect(v2Lines).toHaveLength(2);
     const partnerAShare = v2Lines.find((l) => l.partnerId === partnerA.id);
     expect(partnerAShare?.shareBps).toBe(6000);
+
+    // Readiness: a mixed split (company cut + partner lines summing to 10000) must pass the
+    // ownership check; submit still fails on the offering/image checks.
+    const submit = catalogService.submitForApproval(requesterCtx, { productId: product.productId });
+    await expect(submit).rejects.toThrow(/readiness/i);
+    await submit.catch((e: Error) => expect(e.message).not.toMatch(/ownership/i));
   });
 });

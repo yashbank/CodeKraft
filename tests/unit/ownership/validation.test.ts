@@ -52,13 +52,12 @@ describe("ownership schema and helper validation (API-CAT-16, BR-06/07, P3.8)", 
     }
   });
 
-  it("rejects empty lines array or > 20 lines", () => {
-    const emptyLines = {
-      productId: validProductId,
-      companyCutBps: 10000,
-      lines: [],
-    };
-    expect(proposeOwnershipSchema.safeParse(emptyLines).success).toBe(false);
+  it("accepts empty lines only when company-owned 100 %; rejects > 20 lines", () => {
+    const emptyLines = { productId: validProductId, companyCutBps: 10000, lines: [] };
+    expect(proposeOwnershipSchema.safeParse(emptyLines).success).toBe(true);
+    expect(proposeOwnershipSchema.safeParse({ ...emptyLines, companyCutBps: 9000 }).success).toBe(
+      false,
+    );
 
     const tooManyLines = {
       productId: validProductId,

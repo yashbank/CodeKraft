@@ -11,6 +11,7 @@ import type { Context, RequestContext } from "@/lib/authz/context";
 import type { ListResult } from "@/modules/_shared/zod";
 import { auditService } from "@/modules/audit/service";
 import { approvalsService } from "@/modules/approvals/service";
+import { offeringsService } from "@/modules/offerings/service";
 import { revalidateTagSafe, revalidateTagsSafe } from "@/lib/revalidate";
 import { triggerReindexSafe } from "@/modules/search/indexer";
 import type { Currency } from "@/lib/money";
@@ -759,7 +760,9 @@ export class DefaultCatalogService implements CatalogService {
           .select()
           .from(productOwnershipLines)
           .where(eq(productOwnershipLines.ownershipId, own.id));
-        const sumBps = lines.reduce((acc, l) => acc + l.shareBps, 0) + own.companyCutBps;
+        // Partner lines alone sum to 10000 (DB trigger); a company-owned version has no lines.
+        const sumBps =
+          lines.length === 0 ? own.companyCutBps : lines.reduce((acc, l) => acc + l.shareBps, 0);
         if (sumBps === 10000) {
           hasValidOwnership = true;
           break;
@@ -1235,7 +1238,7 @@ export class DefaultCatalogService implements CatalogService {
     return {
       product: p,
       tags: tagRows,
-      offerings: [],
+      offerings: await offeringsService.listForProduct(p.id, "INR", dbClient, true),
       media: mediaRows.map((r) => ({
         id: r.pm.id,
         kind: r.pm.kind,
@@ -1558,7 +1561,7 @@ export class DefaultCatalogService implements CatalogService {
         height: r.m?.height ?? null,
         blurHash: r.m?.blurHash ?? null,
       })),
-      offerings: [],
+      offerings: await offeringsService.listForProduct(p.id, input.displayCurrency, dbClient),
       faqs: faqRows.map((f) => ({
         id: f.id,
         question: f.question,

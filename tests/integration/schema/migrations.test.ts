@@ -5,7 +5,7 @@
  * the app role is P2.11 (tests/integration/triggers). Fixtures are raw SQL with explicit uuids.
  */
 import { beforeAll, describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { getTestDb, truncateAll } from "../../setup/db";
 import { migrateTestDb } from "../../setup/migrate";
 
@@ -189,7 +189,10 @@ describe("migrations", () => {
     const rows = await sql<{ n: string }[]>`
       select count(*)::text as n from drizzle.__drizzle_migrations
     `;
-    expect(Number(rows[0]?.n)).toBe(2);
+    const migrationFiles = readdirSync("drizzle/migrations").filter((f) =>
+      f.endsWith(".sql"),
+    ).length;
+    expect(Number(rows[0]?.n)).toBe(migrationFiles);
   });
 
   it("create every docs/05 table", async () => {

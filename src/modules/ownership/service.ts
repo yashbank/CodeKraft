@@ -70,7 +70,7 @@ export class DefaultOwnershipService implements OwnershipService {
       }
 
       // 2. Validate total bps sum == 10000 (BR-06, BR-07, sumsToTotal)
-      if (!sumsToTotal(input.lines)) {
+      if (input.lines.length > 0 && !sumsToTotal(input.lines)) {
         const linesSum = input.lines.reduce((acc, l) => acc + l.shareBps, 0);
         throw new AppError(
           ErrorCode.VALIDATION,
@@ -145,13 +145,15 @@ export class DefaultOwnershipService implements OwnershipService {
       }
 
       // 7. Insert lines
-      await actionTx.insert(productOwnershipLines).values(
-        input.lines.map((l) => ({
-          ownershipId: newOwnership.id,
-          partnerId: l.partnerId,
-          shareBps: l.shareBps,
-        })),
-      );
+      if (input.lines.length > 0) {
+        await actionTx.insert(productOwnershipLines).values(
+          input.lines.map((l) => ({
+            ownershipId: newOwnership.id,
+            partnerId: l.partnerId,
+            shareBps: l.shareBps,
+          })),
+        );
+      }
 
       // 8. Create approval request
       const req = await approvalsService.request(

@@ -32,18 +32,23 @@ export const ownershipLineSchema = z.strictObject({
 });
 
 /** API-CAT-16 `proposeOwnership` — effective-dated version proposal (n+1, `pending`). */
-export const proposeOwnershipSchema = z.strictObject({
-  productId: uuidSchema,
-  companyCutBps: bpsSchema,
-  lines: z
-    .array(ownershipLineSchema)
-    .min(1)
-    .max(20)
-    .refine((lines) => new Set(lines.map((l) => l.partnerId)).size === lines.length, {
-      message: "each partner may appear once",
-    }),
-  effectiveFrom: isoDateTimeSchema.optional(),
-});
+export const proposeOwnershipSchema = z
+  .strictObject({
+    productId: uuidSchema,
+    companyCutBps: bpsSchema,
+    lines: z
+      .array(ownershipLineSchema)
+      .max(20)
+      .refine((lines) => new Set(lines.map((l) => l.partnerId)).size === lines.length, {
+        message: "each partner may appear once",
+      }),
+    effectiveFrom: isoDateTimeSchema.optional(),
+  })
+  // Company-owned: no partner lines is valid only when the company holds 100 %.
+  .refine((v) => v.lines.length > 0 || v.companyCutBps === OWNERSHIP_TOTAL_BPS, {
+    message: "a proposal without partner lines must be 100 % company-owned",
+    path: ["lines"],
+  });
 export type ProposeOwnershipInput = z.infer<typeof proposeOwnershipSchema>;
 export interface ProposeOwnershipResult {
   ownershipId: string;

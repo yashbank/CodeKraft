@@ -27,7 +27,8 @@
     "db:reset": "tsx scripts/db-reset.ts",
     "db:anonymise": "tsx scripts/db-anonymise.ts",
     "db:studio": "drizzle-kit studio",
-    "size": "tsx scripts/size-check.ts && size-limit"
+    "size": "tsx scripts/size-check.ts && size-limit",
+    "gate": "bash scripts/gate.sh"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1139.0",

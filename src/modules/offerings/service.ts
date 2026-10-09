@@ -429,13 +429,18 @@ export class DefaultOfferingsService implements OfferingsService {
     productId: string,
     displayCurrency: Currency,
     tx?: DbOrTx,
+    includeInactive = false,
   ): Promise<OfferingView[]> {
     const dbClient = await this.getDatabase(tx);
 
     const rows = await dbClient
       .select()
       .from(offerings)
-      .where(and(eq(offerings.productId, productId), eq(offerings.status, "active")))
+      .where(
+        includeInactive
+          ? eq(offerings.productId, productId)
+          : and(eq(offerings.productId, productId), eq(offerings.status, "active")),
+      )
       .orderBy(offerings.position);
 
     const views: OfferingView[] = [];
