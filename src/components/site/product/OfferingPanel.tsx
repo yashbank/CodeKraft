@@ -4,6 +4,7 @@ import { ExternalLinkIcon, HeartIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
+import { useSession } from "@/modules/auth/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupCard } from "@/components/ui/radio-group";
@@ -47,8 +48,11 @@ export function OfferingPanel({
   serviceOptions,
   ownedOfferingIds = [],
   wishlisted,
-  signedIn = false,
+  signedIn: signedInProp = false,
 }: OfferingPanelProps) {
+  // The product page is cached/anonymous, so the session is read in the browser.
+  const { data: session } = useSession();
+  const signedIn = signedInProp || Boolean(session);
   const offerings = product.offerings;
   const [selectedId, setSelectedId] = useState(offerings[0]?.id ?? "");
   const [sheet, setSheet] = useState<null | "quote" | "customise">(null);

@@ -7,6 +7,10 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/",
 }));
 
+const sessionMock = vi.hoisted(() => ({ data: null as unknown }));
+vi.mock("@/modules/auth/client", () => ({ useSession: () => sessionMock }));
+
+import { OfferingPanel } from "@/components/site/product/OfferingPanel";
 import { LandingPage } from "@/components/site/landing/LandingPage";
 import { ServicesPage } from "@/components/site/ServicesPage";
 import { ProductsListPage } from "@/components/site/ProductsListPage";
@@ -31,6 +35,7 @@ import {
   LEGAL_NAV,
   LEGAL_PRIVACY,
   PRODUCTS,
+  PRODUCT_DETAIL,
   SERVICES,
   SERVICE_OPTIONS,
   TESTIMONIALS,
@@ -50,6 +55,30 @@ import {
 } from "@/app/dev/screens/_fixtures/account";
 
 describe("Phase 7: Public Site & Customer UI", () => {
+  it("product buy CTA follows the client session", () => {
+    const offering = PRODUCT_DETAIL.offerings.find((o) => o.purchaseModel === "subscription")!;
+    const panel = (
+      <OfferingPanel
+        product={{ ...PRODUCT_DETAIL, offerings: [offering] }}
+        serviceOptions={SERVICE_OPTIONS}
+      />
+    );
+    sessionMock.data = null;
+    const { unmount } = render(panel);
+    expect(screen.getAllByRole("link", { name: /subscribe/i })[0]).toHaveAttribute(
+      "href",
+      expect.stringContaining("/auth/login"),
+    );
+    unmount();
+    sessionMock.data = { user: { id: "u" } };
+    render(panel);
+    expect(screen.getAllByRole("link", { name: /subscribe/i })[0]).toHaveAttribute(
+      "href",
+      `/checkout/${offering.id}`,
+    );
+    sessionMock.data = null;
+  });
+
   it("renders LandingPage with hero headline and value props", () => {
     render(
       <LandingPage

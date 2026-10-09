@@ -16,6 +16,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+import { useSession } from "@/modules/auth/client";
+
 import { InquirySheet } from "./InquirySheet";
 import { SITE_NAV } from "./nav";
 import { ThemeToggle } from "./ThemeToggle";
@@ -45,6 +47,8 @@ export function SiteHeader({
   currentPath,
 }: SiteHeaderProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const [authHref, authLabel] = session ? ["/account", "My account"] : ["/auth/login", "Sign in"];
   const active = currentPath ?? pathname;
   const [scrolled, setScrolled] = useState(!transparentAtTop);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -116,7 +120,7 @@ export function SiteHeader({
           <div className="ml-auto flex items-center gap-2">
             <ThemeToggle enabled={themeToggleEnabled} />
             <Button asChild variant="ghost" size="sm" className="hidden lg:inline-flex">
-              <Link href="/auth/login">Sign in</Link>
+              <Link href={authHref}>{authLabel}</Link>
             </Button>
             <Button
               type="button"
@@ -178,8 +182,8 @@ export function SiteHeader({
                 <div className="mt-auto flex flex-col gap-2 border-t border-border p-4">
                   <ThemeToggle enabled={themeToggleEnabled} />
                   <Button asChild variant="secondary" size="lg" className="w-full">
-                    <Link href="/auth/login" onClick={() => setDrawerOpen(false)}>
-                      Sign in
+                    <Link href={authHref} onClick={() => setDrawerOpen(false)}>
+                      {authLabel}
                     </Link>
                   </Button>
                   <Button
