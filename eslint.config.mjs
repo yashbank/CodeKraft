@@ -14,6 +14,7 @@ export default tseslint.config(
       ".pg/**",
       "coverage/**",
       "playwright-report/**",
+      ".scratch-e2e/**",
       "drizzle/migrations/**",
       "next-env.d.ts",
     ],
