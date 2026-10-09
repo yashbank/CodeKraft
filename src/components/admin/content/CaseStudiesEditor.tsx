@@ -53,6 +53,12 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
   const [tech, setTech] = React.useState<string[]>(editing?.tech ?? []);
   const [techDraft, setTechDraft] = React.useState("");
   const [saving, setSaving] = React.useState(false);
+  const [cover, setCover] = React.useState<{ mediaId?: string; url?: string }>({
+    mediaId: editing?.coverMediaId,
+    url: editing?.coverUrl,
+  });
+  const [uploading, setUploading] = React.useState(false);
+  const coverInputRef = React.useRef<HTMLInputElement>(null);
   const formRef = React.useRef<HTMLFormElement>(null);
   const rows = caseStudies.filter((c) => (status ? c.status === status : true));
 
@@ -60,6 +66,24 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
     setEditing(c);
     setTech(c?.tech ?? []);
     setTechDraft("");
+    setCover({ mediaId: c?.coverMediaId, url: c?.coverUrl });
+  }
+
+  async function handleCoverChosen(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    try {
+      const { uploadMediaFile } = await import("@/lib/admin/media-upload");
+      const up = await uploadMediaFile(file, "content_media");
+      setCover({ mediaId: up.mediaId, url: up.url ?? URL.createObjectURL(file) });
+      toast.success("Cover uploaded — save the case study to apply it");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function handleSave() {
@@ -82,6 +106,7 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
       resultsJson: fromPlainText(String(data.get("results") ?? "")),
       resultHighlight: resultHighlight || undefined,
       techStack: tech,
+      coverMediaId: cover.mediaId,
       seoTitle: String(data.get("seoTitle") ?? "").trim() || undefined,
       seoDescription: String(data.get("seoDescription") ?? "").trim() || undefined,
     });
@@ -105,7 +130,11 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
       toast.error(result.error.message);
       return;
     }
-    toast.success(editing.status === "published" ? "Unpublished" : `Published — live at /projects/${editing.slug}`);
+    toast.success(
+      editing.status === "published"
+        ? "Unpublished"
+        : `Published — live at /projects/${editing.slug}`,
+    );
     router.refresh();
   }
 
@@ -142,7 +171,11 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
       <FilterChips
         label="Status"
         chips={[
-          { value: "draft", label: "Draft", count: caseStudies.filter((c) => c.status === "draft").length },
+          {
+            value: "draft",
+            label: "Draft",
+            count: caseStudies.filter((c) => c.status === "draft").length,
+          },
           {
             value: "published",
             label: "Published",
@@ -218,7 +251,12 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
                     label={`Actions for ${c.title}`}
                     actions={[
                       { label: "Edit", onSelect: () => openEdit(c) },
-                      { label: "Delete", destructive: true, separatorBefore: true, onSelect: () => handleDelete(c) },
+                      {
+                        label: "Delete",
+                        destructive: true,
+                        separatorBefore: true,
+                        onSelect: () => handleDelete(c),
+                      },
                     ]}
                   />
                 </TableCell>
@@ -234,7 +272,9 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
       >
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-h3">{editing?.title ?? "New case study"}</h2>
-          {editing ? <StatusBadge kind="product_blogs.status" value={editing.status} size="sm" /> : null}
+          {editing ? (
+            <StatusBadge kind="product_blogs.status" value={editing.status} size="sm" />
+          ) : null}
         </div>
         <Banner tone="neutral">
           Publish requires all three story sections. Cover image upload is coming in a follow-up
@@ -256,10 +296,21 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
             <TabsContent value="story" className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field id="cs-title" label="Title" required>
-                  <Input id="cs-title" name="title" defaultValue={editing?.title} required aria-required />
+                  <Input
+                    id="cs-title"
+                    name="title"
+                    defaultValue={editing?.title}
+                    required
+                    aria-required
+                  />
                 </Field>
                 <Field id="cs-slug" label="Slug" hint="Leave blank to generate from the title.">
-                  <Input id="cs-slug" name="slug" defaultValue={editing?.slug} className="font-mono" />
+                  <Input
+                    id="cs-slug"
+                    name="slug"
+                    defaultValue={editing?.slug}
+                    className="font-mono"
+                  />
                 </Field>
                 <Field id="cs-client" label="Client name" hint='Blank → "Confidential client".'>
                   <Input
@@ -269,9 +320,19 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
                   />
                 </Field>
                 <Field id="cs-industry" label="Industry" required>
-                  <Input id="cs-industry" name="industry" defaultValue={editing?.industry} required aria-required />
+                  <Input
+                    id="cs-industry"
+                    name="industry"
+                    defaultValue={editing?.industry}
+                    required
+                    aria-required
+                  />
                 </Field>
-                <Field id="cs-highlight" label="Result highlight" hint="Short headline stat, e.g. +40% conversion. 60 chars.">
+                <Field
+                  id="cs-highlight"
+                  label="Result highlight"
+                  hint="Short headline stat, e.g. +40% conversion. 60 chars."
+                >
                   <Input id="cs-highlight" name="resultHighlight" maxLength={60} defaultValue="" />
                 </Field>
                 <Field id="cs-tech" label="Tech stack" className="sm:col-span-2">
@@ -308,14 +369,47 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
               <RichTextField id="cs-results" name="results" label="Results" required rows={3} />
             </TabsContent>
             <TabsContent value="media" className="space-y-4">
-              <div className="rounded-lg border-2 border-dashed border-border-strong p-6 text-center">
-                <UploadIcon aria-hidden className="mx-auto size-6 text-fg-subtle" />
-                <p className="mt-1 text-body-sm">Cover image & gallery upload — coming soon</p>
+              <input
+                ref={coverInputRef}
+                type="file"
+                className="sr-only"
+                accept="image/*"
+                aria-label="Cover image file"
+                onChange={handleCoverChosen}
+              />
+              <div className="flex items-center gap-3">
+                {cover.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- admin preview of a user-uploaded R2 URL
+                  <img
+                    src={cover.url}
+                    alt=""
+                    className="h-20 w-32 rounded-md border border-border object-cover"
+                  />
+                ) : (
+                  <div className="grid h-20 w-32 place-items-center rounded-md border border-dashed border-border-strong text-caption text-fg-subtle">
+                    No cover
+                  </div>
+                )}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  loading={uploading}
+                  onClick={() => coverInputRef.current?.click()}
+                >
+                  <UploadIcon aria-hidden /> {cover.url ? "Replace cover" : "Upload cover"}
+                </Button>
               </div>
+              <p className="text-caption text-fg-muted">Gallery upload is not available yet.</p>
             </TabsContent>
             <TabsContent value="seo" className="space-y-4">
               <Field id="cs-seo-title" label="SEO title" hint="≤ 70 chars">
-                <Input id="cs-seo-title" name="seoTitle" maxLength={70} defaultValue={editing?.title} />
+                <Input
+                  id="cs-seo-title"
+                  name="seoTitle"
+                  maxLength={70}
+                  defaultValue={editing?.title}
+                />
               </Field>
               <Field id="cs-seo-desc" label="Meta description" hint="≤ 160 chars">
                 <Textarea id="cs-seo-desc" name="seoDescription" maxLength={160} rows={2} />
@@ -323,7 +417,9 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
               <div className="rounded-md border border-border bg-canvas p-3">
                 <p className="text-caption text-fg-muted">OG preview</p>
                 <p className="text-body font-semibold">{editing?.title ?? "Title"}</p>
-                <p className="text-caption text-fg-muted">codekraft.dev/projects/{editing?.slug ?? "slug"}</p>
+                <p className="text-caption text-fg-muted">
+                  codekraft.dev/projects/{editing?.slug ?? "slug"}
+                </p>
               </div>
             </TabsContent>
           </Tabs>

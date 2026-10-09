@@ -251,6 +251,8 @@ export interface ApprovalItem {
   id: string;
   type: ApprovalType;
   subject: string;
+  /** Full subject id, shown in the detail pane. */
+  subjectId?: string;
   subjectHref?: string;
   requestedBy: AdminUserRef;
   requestedAt: string;
@@ -817,11 +819,14 @@ export interface CaseStudyRow {
   status: "draft" | "published";
   publishedAt?: string;
   updatedAt: string;
+  coverMediaId?: string;
+  coverUrl?: string;
 }
 
 export interface ClientLogo {
   id: string;
   name: string;
+  logoUrl?: string;
   url?: string;
   published: boolean;
   lowContrastOnDark?: boolean;

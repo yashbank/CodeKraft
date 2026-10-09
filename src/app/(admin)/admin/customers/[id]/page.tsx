@@ -4,6 +4,8 @@ import { mapCustomerDetail } from "@/lib/admin/customers-view";
 import { mapOrderAdminRowToOrderRow } from "@/lib/admin/orders-view";
 import { getCustomerQuery } from "@/modules/users/queries";
 import { listOrdersAdminQuery } from "@/modules/orders/queries";
+import { catalogService } from "@/modules/catalog/service";
+import { offeringsService } from "@/modules/offerings/service";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -33,6 +35,27 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
 
   const orders = ordersResult.ok ? ordersResult.data.items : [];
   const data = mapCustomerDetail(customerResult.data, orders, mapOrderAdminRowToOrderRow, now);
+
+  // Same published-product offering listing as /admin/orders/new.
+  try {
+    const products = await catalogService.listProductsAdmin(ctx, { limit: 100 });
+    const lists = await Promise.all(
+      products.items
+        .filter((p) => p.status === "published" && p.offeringCount > 0)
+        .map((p) => offeringsService.listForProduct(p.id, "INR")),
+    );
+    data.offeringOptions = lists
+      .flat()
+      .filter((o) => o.status === "active" && o.price !== null)
+      .map((o) => ({
+        id: o.id,
+        label: o.name,
+        price: (o.price as NonNullable<typeof o.price>).base,
+        oneTime: o.purchaseModel === "one_time",
+      }));
+  } catch {
+    // leave empty: the grant dialog just has nothing to pick
+  }
 
   return (
     <CustomerDetail

@@ -80,5 +80,9 @@ describe("approvals lifecycle integration tests (PHASE-03 P3.2, MASTER_SPEC §4.
     expect(appliedReq?.status).toBe("applied");
     expect(appliedReq?.applied_at).toBeDefined();
     expect(appliedReq?.error).toBeNull();
+    const notes = await sql<{ type: string }[]>`
+      select type from notifications where user_id = ${requester.id} and type = 'approval.approved'
+    `;
+    expect(notes).toHaveLength(1);
   });
 });

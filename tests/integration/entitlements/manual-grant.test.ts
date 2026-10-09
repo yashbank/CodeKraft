@@ -11,6 +11,7 @@ import { createAdmin, createUser } from "../../factories/users";
 import { createProduct } from "../../factories/catalog";
 import { createOffering } from "../../factories/offerings";
 import { buildContext } from "@/lib/authz/context";
+import { grantEntitlementManualAction } from "@/modules/entitlements/actions";
 import { AppError } from "@/lib/errors";
 
 describe("Entitlements Manual Grant (API-DEL-11, D-1108, MASTER_SPEC §7)", () => {
@@ -71,5 +72,28 @@ describe("Entitlements Manual Grant (API-DEL-11, D-1108, MASTER_SPEC §7)", () =
         reason: "Duplicate attempt",
       }),
     ).rejects.toThrow(AppError);
+  });
+
+  it("action enforces entitlements.admin: staff FORBIDDEN, super_admin ok", async () => {
+    await truncateAll();
+    const admin = await createAdmin();
+    const staff = await createUser({ emailVerified: true });
+    const product = await createProduct({ createdBy: admin.id });
+    const offering = await createOffering({
+      productId: product.id,
+      deliveryType: "download",
+      price: { amountMinor: 25000, currency: "INR" },
+    });
+    const buyer = await createUser({ emailVerified: true });
+    const input = { userId: buyer.id, offeringId: offering.id, reason: "Comp" };
+    const ctxOf = (id: string, role: "staff" | "super_admin") =>
+      buildContext({ user: { id }, session: { id: `s-${id}` }, roles: [role] });
+
+    const denied = await grantEntitlementManualAction(input, ctxOf(staff.id, "staff"));
+    expect(denied.ok).toBe(false);
+    if (!denied.ok) expect(denied.error.code).toBe("FORBIDDEN");
+
+    const ok = await grantEntitlementManualAction(input, ctxOf(admin.id, "super_admin"));
+    expect(ok.ok).toBe(true);
   });
 });

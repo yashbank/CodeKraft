@@ -143,6 +143,15 @@ export interface ChatService {
   /** API-CHAT-13 `reindexKnowledge` — rebuilds `knowledge_chunks` (also run by cron and on publish). */
   reindexKnowledge(ctx: RequestContext, input: ReindexKnowledgeInput): Promise<ReindexResult>;
 
+  /** Admin: delete one conversation + its messages (same deletes as the age purge, no audit row). */
+  purgeConversation(
+    ctx: RequestContext,
+    input: { conversationId: string },
+  ): Promise<{ purged: boolean }>;
+
+  /** Admin dry run: answer with the active prompt via the LLM provider; persists nothing. */
+  dryRun(ctx: RequestContext, input: { message: string }): Promise<{ answer: string }>;
+
   /** Cron `daily/knowledge.reindex`. */
   runKnowledgeReindexJob(job: JobContext): Promise<JobOutcome<KnowledgeReindexDetail>>;
 

@@ -54,6 +54,20 @@ export const reindexKnowledgeAction = defineAction({
   handler: (input, ctx) => chatService.reindexKnowledge(ctx, input),
 });
 
+export const purgeConversationAction = defineAction({
+  name: "API-CHAT admin.conversation.purge",
+  input: endConversationSchema,
+  permission: "chat.prompts.write",
+  handler: (input, ctx) => chatService.purgeConversation(ctx, input),
+});
+
+export const dryRunAction = defineAction({
+  name: "API-CHAT admin.dryRun",
+  input: z.object({ message: z.string().trim().min(1).max(2000) }).strict(),
+  permission: "chat.prompts.write",
+  handler: (input, ctx) => chatService.dryRun(ctx, input),
+});
+
 // ---------------------------------------------------------------------------------------------
 // Customer-facing actions (`chat.use`) — the admin-only actions above predate P7.
 // ---------------------------------------------------------------------------------------------

@@ -68,6 +68,10 @@ describe("approvals reject path integration tests (PHASE-03 P3.2, API-ADM-03)", 
       select status from approval_requests where id = ${approvalRequestId}
     `;
     expect(row?.status).toBe("rejected");
+    const notes = await sql<{ type: string }[]>`
+      select type from notifications where user_id = ${requester.id} and type = 'approval.rejected'
+    `;
+    expect(notes).toHaveLength(1);
 
     // A later approve on the rejected request is refused
     await expect(

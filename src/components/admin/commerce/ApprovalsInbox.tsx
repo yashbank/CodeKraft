@@ -317,6 +317,7 @@ function ApprovalDetail({
             a.subject
           )}
         </h2>
+        {a.subjectId ? <p className="font-mono text-caption text-fg-muted">{a.subjectId}</p> : null}
         <p className="text-body-sm text-fg-muted">
           Requested by {a.requestedBy.name} ·{" "}
           <time dateTime={a.requestedAt}>{formatDateTime(a.requestedAt)}</time> (
@@ -372,11 +373,7 @@ function ApprovalDetail({
         <Banner
           tone={status === "rejected" ? "danger" : "success"}
           title={
-            status === "rejected"
-              ? "Rejected"
-              : a.appliedAt
-                ? "Approved and applied"
-                : "Approved"
+            status === "rejected" ? "Rejected" : a.appliedAt ? "Approved and applied" : "Approved"
           }
         >
           {a.decision ? (

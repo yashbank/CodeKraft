@@ -97,7 +97,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
     render(
       <AdminShellWrapper user={PRIYA}>
         <div data-testid="admin-content">Admin Content Area</div>
-      </AdminShellWrapper>
+      </AdminShellWrapper>,
     );
 
     expect(screen.getByTestId("admin-content")).toBeDefined();
@@ -112,7 +112,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         isSuperAdmin={true}
         greeting="Welcome back, Priya"
         dateLabel="FY 2026–27 · Today"
-      />
+      />,
     );
 
     expect(screen.getAllByText(/Dashboard/i).length).toBeGreaterThan(0);
@@ -120,23 +120,12 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
   });
 
   it("P8.2: renders ApprovalsInbox and NotificationsInbox", () => {
-    render(
-      <ApprovalsInbox
-        approvals={APPROVALS}
-        currentUser={PRIYA}
-        now={NOW}
-      />
-    );
+    render(<ApprovalsInbox approvals={APPROVALS} currentUser={PRIYA} now={NOW} />);
     expect(screen.getAllByText(/Approvals/i).length).toBeGreaterThan(0);
 
     cleanup();
 
-    render(
-      <NotificationsInbox
-        notifications={NOTIFICATIONS}
-        now={NOW}
-      />
-    );
+    render(<NotificationsInbox notifications={NOTIFICATIONS} now={NOW} />);
     expect(screen.getAllByText(/Payment reference submitted/i).length).toBeGreaterThan(0);
   });
 
@@ -151,7 +140,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         approvalsHref="/admin/approvals"
         approvers={["Priya Nair", "Arjun Patel"]}
         showCategories={false}
-      />
+      />,
     );
     expect(screen.getAllByText(/Products/i).length).toBeGreaterThan(0);
 
@@ -166,7 +155,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         approvalsHref="/admin/approvals"
         currencies={["INR", "USD"]}
         gstinConfigured={true}
-      />
+      />,
     );
     expect(screen.getByText(/Basics/i)).toBeDefined();
   });
@@ -177,7 +166,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         coupons={COUPONS}
         products={PRODUCTS.map((p) => ({ id: p.id, name: p.name }))}
         ordersHref="/admin/orders"
-      />
+      />,
     );
     expect(screen.getAllByText(/Coupons/i).length).toBeGreaterThan(0);
   });
@@ -192,7 +181,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         customerHref="/admin/customers"
         approvalsHref="/admin/approvals"
         notificationsHref="/admin/notifications"
-      />
+      />,
     );
     expect(screen.getAllByText(/Orders/i).length).toBeGreaterThan(0);
 
@@ -207,7 +196,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         ledgerHref="/admin/finance/ledger"
         approvalsHref="/admin/approvals"
         queriesHref="/admin/queries"
-      />
+      />,
     );
     expect(screen.getAllByText(/CK-ORD-000012/i).length).toBeGreaterThan(0);
   });
@@ -219,7 +208,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         customers={CUSTOMER_OPTIONS}
         orderHref="/admin/orders"
         customerHref="/admin/customers"
-      />
+      />,
     );
     expect(screen.getAllByText(/Quotes/i).length).toBeGreaterThan(0);
   });
@@ -232,7 +221,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         detailHref="/admin/customers"
         quotesHref="/admin/quotes"
         newOrderHref="/admin/orders/new"
-      />
+      />,
     );
     expect(screen.getAllByText(/Customers/i).length).toBeGreaterThan(0);
 
@@ -247,7 +236,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         quotesHref="/admin/quotes"
         newOrderHref="/admin/orders/new"
         auditHref="/admin/audit"
-      />
+      />,
     );
     expect(screen.getAllByText(/ravi@example\.com/i).length).toBeGreaterThan(0);
   });
@@ -263,7 +252,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         customerHref="/admin/customers"
         queriesHref="/admin/queries"
         initialView="entitlements"
-      />
+      />,
     );
     expect(screen.getAllByText(/Entitlements/i).length).toBeGreaterThan(0);
   });
@@ -277,7 +266,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         now={NOW}
         detailHref="/admin/leads"
         newOrderHref="/admin/orders/new"
-      />
+      />,
     );
     expect(screen.getAllByText(/Leads/i).length).toBeGreaterThan(0);
 
@@ -292,7 +281,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         chatbotHref="/admin/chatbot"
         customerHref="/admin/customers"
         productHref="/admin/products"
-      />
+      />,
     );
     expect(screen.getAllByText(/Kavya R\./i).length).toBeGreaterThan(0);
   });
@@ -309,7 +298,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         leadsHref="/admin/leads"
         customerHref="/admin/customers"
         chatbotHref="/admin/chatbot"
-      />
+      />,
     );
     expect(screen.getAllByText(/Queries/i).length).toBeGreaterThan(0);
 
@@ -321,9 +310,12 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         settingsHref="/admin/settings"
         queriesHref="/admin/queries"
         leadsHref="/admin/leads"
-      />
+      />,
     );
     expect(screen.getAllByText(/Chatbot/i).length).toBeGreaterThan(0);
+    for (const name of [/Purge now/i]) {
+      expect(screen.getByRole("button", { name })).not.toBeDisabled();
+    }
   });
 
   it("P8.11: renders Finance suite screens", () => {
@@ -336,7 +328,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         adjustmentsHref="/admin/finance/adjustments"
         approvalsHref="/admin/approvals"
         isSuperAdmin={true}
-      />
+      />,
     );
     expect(screen.getAllByText(/Ledger/i).length).toBeGreaterThan(0);
     cleanup();
@@ -349,7 +341,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         ledgerHref="/admin/finance/ledger"
         productHref="/admin/products"
         isSuperAdmin={true}
-      />
+      />,
     );
     expect(screen.getAllByText(/Allocations/i).length).toBeGreaterThan(0);
     cleanup();
@@ -364,7 +356,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         statementsHref="/admin/finance/reports"
         ledgerHref="/admin/finance/ledger"
         approvalsHref="/admin/approvals"
-      />
+      />,
     );
     expect(screen.getAllByText(/Partners & payouts/i).length).toBeGreaterThan(0);
     cleanup();
@@ -376,7 +368,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         ledgerHref="/admin/finance/ledger"
         adjustmentsHref="/admin/finance/adjustments"
         productHref="/admin/products"
-      />
+      />,
     );
     expect(screen.getAllByText(/Expenses/i).length).toBeGreaterThan(0);
     cleanup();
@@ -388,7 +380,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         approvers={["Priya Nair", "Arjun Patel"]}
         ledgerHref="/admin/finance/ledger"
         approvalsHref="/admin/approvals"
-      />
+      />,
     );
     expect(screen.getAllByText(/Adjustments/i).length).toBeGreaterThan(0);
     cleanup();
@@ -404,7 +396,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         statement={STATEMENT_PREVIEW}
         statementHistory={STATEMENT_HISTORY}
         isSuperAdmin={true}
-      />
+      />,
     );
     expect(screen.getAllByText(/Reports/i).length).toBeGreaterThan(0);
   });
@@ -417,7 +409,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         publishedProducts={PRODUCTS.map((p) => ({ id: p.name, name: p.name }))}
         featuredIds={["FitDesk Pro", "TradeFlow"]}
         canPublish={true}
-      />
+      />,
     );
     expect(screen.getAllByText(/Landing/i).length).toBeGreaterThan(0);
     cleanup();
@@ -435,26 +427,16 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         testimonials={SITE_TESTIMONIALS}
         logos={LOGOS}
         products={PRODUCTS.map((p) => p.name)}
-      />
+      />,
     );
     expect(screen.getAllByText(/Testimonials & logos/i).length).toBeGreaterThan(0);
     cleanup();
 
-    render(
-      <FaqsEditor
-        faqs={FAQS}
-        products={PRODUCTS.map((p) => p.name)}
-      />
-    );
+    render(<FaqsEditor faqs={FAQS} products={PRODUCTS.map((p) => p.name)} />);
     expect(screen.getAllByText(/FAQs/i).length).toBeGreaterThan(0);
     cleanup();
 
-    render(
-      <LegalEditor
-        pages={LEGAL_PAGES}
-        isSuperAdmin={true}
-      />
-    );
+    render(<LegalEditor pages={LEGAL_PAGES} isSuperAdmin={true} />);
     expect(screen.getAllByText(/Legal/i).length).toBeGreaterThan(0);
   });
 
@@ -466,7 +448,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         environment="development"
         chatbotHref="/admin/chatbot"
         auditHref="/admin/audit"
-      />
+      />,
     );
     expect(screen.getAllByText(/General \/ seller/i).length).toBeGreaterThan(0);
     cleanup();
@@ -476,7 +458,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         rows={AUDIT_ROWS}
         admins={ADMINS.map((a) => a.name)}
         approvalsHref="/admin/approvals"
-      />
+      />,
     );
     expect(screen.getAllByText(/Audit log/i).length).toBeGreaterThan(0);
     cleanup();
@@ -489,7 +471,7 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
         approvalsHref="/admin/approvals"
         productHref="/admin/products"
         auditHref="/admin/audit"
-      />
+      />,
     );
     expect(screen.getAllByText(/Admin users/i).length).toBeGreaterThan(0);
   });

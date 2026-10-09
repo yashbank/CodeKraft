@@ -16,6 +16,11 @@
  *    route for (`product.*` -> `/admin/products/:id`, `refund.issue` / `project_order.split` ->
  *    `/admin/orders/:id`); the rest render as plain text rather than a guessed link.
  */
+import { inArray } from "drizzle-orm";
+import { products } from "../../../drizzle/schema/catalog";
+import { productOwnerships } from "../../../drizzle/schema/ownership";
+import { users } from "../../../drizzle/schema/auth";
+import type { DbOrTx } from "@/lib/db";
 import type { ApprovalView } from "@/modules/approvals/types";
 import type { AdminDirectoryEntry } from "@/modules/approvals/approver-set";
 import type { AdminUserRef, ApprovalItem, DiffRow } from "@/components/admin/types";
@@ -55,6 +60,67 @@ function buildDiff(a: ApprovalView): DiffRow[] {
   return rows;
 }
 
+/**
+ * Human subject labels keyed by approval id; one batched query per subject type (never per row).
+ * Rows with no match are absent so the mapper falls back to "<type> <shortId>".
+ */
+export async function resolveSubjectLabels(
+  database: DbOrTx,
+  approvals: readonly ApprovalView[],
+): Promise<Map<string, string>> {
+  const ids = (type: string) => [
+    ...new Set(approvals.filter((a) => a.subject.type === type).map((a) => a.subject.id)),
+  ];
+  const ownershipIds = ids("product_ownership");
+  const ownershipProduct = new Map<string, string>();
+  if (ownershipIds.length > 0) {
+    const rows = await database
+      .select({ id: productOwnerships.id, productId: productOwnerships.productId })
+      .from(productOwnerships)
+      .where(inArray(productOwnerships.id, ownershipIds));
+    for (const r of rows) ownershipProduct.set(r.id, r.productId);
+  }
+  // Ownership subject ids may be an ownership row id or the product id itself; accept both.
+  const productIds = [
+    ...new Set([...ids("product"), ...ownershipIds, ...ownershipProduct.values()]),
+  ];
+  const productName = new Map<string, string>();
+  if (productIds.length > 0) {
+    const rows = await database
+      .select({ id: products.id, name: products.name })
+      .from(products)
+      .where(inArray(products.id, productIds));
+    for (const r of rows) productName.set(r.id, r.name);
+  }
+  const userIds = ids("user");
+  const userEmail = new Map<string, string>();
+  if (userIds.length > 0) {
+    const rows = await database
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(inArray(users.id, userIds));
+    for (const r of rows) userEmail.set(r.id, r.email);
+  }
+
+  const labels = new Map<string, string>();
+  for (const a of approvals) {
+    const { type, id } = a.subject;
+    let label: string | undefined;
+    if (type === "product") {
+      label = productName.get(id);
+    } else if (type === "product_ownership") {
+      const name = productName.get(ownershipProduct.get(id) ?? id);
+      label = name ? `Ownership split: ${name}` : undefined;
+    } else if (type === "user") {
+      const p = a.payload as unknown as Record<string, unknown>;
+      const email = userEmail.get(id) ?? (typeof p.email === "string" ? p.email : undefined);
+      label = email ? `Admin ${p.kind === "invite" ? "invite" : "change"}: ${email}` : undefined;
+    }
+    if (label) labels.set(a.id, label);
+  }
+  return labels;
+}
+
 const SUBJECT_HREF_BASE: Partial<Record<ApprovalView["type"], string>> = {
   "product.publish": "/admin/products",
   "product.archive": "/admin/products",
@@ -67,6 +133,7 @@ export function mapApprovalToItem(
   a: ApprovalView,
   admins: ReadonlyMap<string, AdminDirectoryEntry>,
   now: string,
+  labels: ReadonlyMap<string, string> = new Map(),
 ): ApprovalItem {
   const base = SUBJECT_HREF_BASE[a.type];
   const latestDecision = a.decisions.at(-1);
@@ -75,7 +142,8 @@ export function mapApprovalToItem(
   return {
     id: a.id,
     type: a.type,
-    subject: `${a.subject.type} ${shortId(a.subject.id)}`,
+    subject: labels.get(a.id) ?? `${a.subject.type} ${shortId(a.subject.id)}`,
+    subjectId: a.subject.id,
     subjectHref: base ? `${base}/${a.subject.id}` : undefined,
     requestedBy: adminRef(a.requestedBy, admins),
     requestedAt: createdAt,

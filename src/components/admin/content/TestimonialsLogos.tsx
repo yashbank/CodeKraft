@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { PlusIcon, TriangleAlertIcon, UploadIcon } from "lucide-react";
+import { PlusIcon, UploadIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -29,7 +29,6 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/components/ui/_utils";
 import { Banner } from "../Banner";
 import { initials } from "../format";
 import { Field } from "../RichTextField";
@@ -44,6 +43,7 @@ import {
 } from "@/modules/content/admin-mutations";
 
 type LogoRow = ClientLogo & { mediaId?: string };
+type LogoUpload = { mediaId: string; url?: string };
 
 /** SCR-ADM-26 — site/product testimonials grid and the client-logo grid, each with an editor sheet. */
 export function TestimonialsLogos({
@@ -68,6 +68,9 @@ export function TestimonialsLogos({
   const [tPublished, setTPublished] = React.useState(false);
   const [lPublished, setLPublished] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
+  const [lUpload, setLUpload] = React.useState<LogoUpload | null>(null);
+  const [uploading, setUploading] = React.useState(false);
+  const logoInputRef = React.useRef<HTMLInputElement>(null);
   const items = testimonials.filter((t) => t.context === context);
   const t = tEdit && tEdit !== "new" ? tEdit : null;
   const l = lEdit && lEdit !== "new" ? lEdit : null;
@@ -84,6 +87,7 @@ export function TestimonialsLogos({
 
   function openLEdit(logo: LogoRow | "new") {
     setLEdit(logo);
+    setLUpload(null);
     setLPublished(logo === "new" ? true : logo.published);
   }
 
@@ -124,19 +128,36 @@ export function TestimonialsLogos({
     router.refresh();
   }
 
+  async function handleLogoChosen(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    try {
+      const { uploadMediaFile } = await import("@/lib/admin/media-upload");
+      const up = await uploadMediaFile(file, "content_media");
+      setLUpload({ mediaId: up.mediaId, url: up.url ?? URL.createObjectURL(file) });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function handleSaveLogo() {
     const form = lFormRef.current;
     if (!form) return;
-    if (!l?.mediaId) {
-      toast.error("Logo image upload isn't wired up yet — coming in a follow-up update.");
+    const mediaId = lUpload?.mediaId ?? l?.mediaId;
+    if (!mediaId) {
+      toast.error("Upload a logo image first.");
       return;
     }
     const data = new FormData(form);
     setSaving(true);
     const result = await saveClientLogo({
-      id: l.id,
+      id: l?.id,
       name: String(data.get("name") ?? "").trim(),
-      mediaId: l.mediaId,
+      mediaId,
       url: String(data.get("url") ?? "").trim() || undefined,
       position: logos.length,
       published: lPublished,
@@ -213,9 +234,15 @@ export function TestimonialsLogos({
               Product testimonials are edited in the product editor; listed here for overview.
             </Banner>
           ) : null}
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 tv:grid-cols-4" aria-label="Testimonials">
+          <ul
+            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 tv:grid-cols-4"
+            aria-label="Testimonials"
+          >
             {items.map((item) => (
-              <li key={item.id} className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4">
+              <li
+                key={item.id}
+                className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4"
+              >
                 <p className="line-clamp-3 text-body">&ldquo;{item.quote}&rdquo;</p>
                 <div className="flex items-center gap-2">
                   <Avatar size="sm">
@@ -242,7 +269,9 @@ export function TestimonialsLogos({
                       size="sm"
                       checked={item.published}
                       onCheckedChange={async (v) => {
-                        setTestimonials((l2) => l2.map((x) => (x.id === item.id ? { ...x, published: v } : x)));
+                        setTestimonials((l2) =>
+                          l2.map((x) => (x.id === item.id ? { ...x, published: v } : x)),
+                        );
                         const result = await saveTestimonial({
                           id: item.id,
                           quote: item.quote,
@@ -255,7 +284,9 @@ export function TestimonialsLogos({
                         });
                         if (!result.ok) {
                           toast.error(result.error.message);
-                          setTestimonials((l2) => l2.map((x) => (x.id === item.id ? { ...x, published: !v } : x)));
+                          setTestimonials((l2) =>
+                            l2.map((x) => (x.id === item.id ? { ...x, published: !v } : x)),
+                          );
                         } else {
                           router.refresh();
                         }
@@ -266,29 +297,37 @@ export function TestimonialsLogos({
                       label={`Actions for testimonial by ${item.author}`}
                       actions={[
                         { label: "Edit", onSelect: () => openTEdit(item) },
-                        { label: "Delete", destructive: true, onSelect: () => handleDeleteTestimonial(item) },
+                        {
+                          label: "Delete",
+                          destructive: true,
+                          onSelect: () => handleDeleteTestimonial(item),
+                        },
                       ]}
                     />
                   </span>
                 </div>
               </li>
             ))}
-            {items.length === 0 ? <li className="text-body-sm text-fg-muted">No testimonials yet</li> : null}
+            {items.length === 0 ? (
+              <li className="text-body-sm text-fg-muted">No testimonials yet</li>
+            ) : null}
           </ul>
         </TabsContent>
         <TabsContent value="logos" className="space-y-4">
-          <Banner tone="neutral">
-            Logo image upload is coming in a follow-up update — existing logos can be edited and
-            toggled below, but adding a brand-new one needs an image first.
-          </Banner>
           <div className="flex justify-end">
             <Button size="sm" onClick={() => openLEdit("new")}>
               <PlusIcon aria-hidden /> Add logo
             </Button>
           </div>
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 tv:grid-cols-4" aria-label="Client logos">
+          <ul
+            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 tv:grid-cols-4"
+            aria-label="Client logos"
+          >
             {logos.map((logo) => (
-              <li key={logo.id} className="space-y-2 rounded-lg border border-border bg-surface p-3">
+              <li
+                key={logo.id}
+                className="space-y-2 rounded-lg border border-border bg-surface p-3"
+              >
                 <div className="grid grid-cols-2 gap-2">
                   <div
                     className="grid h-16 place-items-center rounded-sm bg-inverse text-inverse-fg text-caption"
@@ -306,7 +345,9 @@ export function TestimonialsLogos({
                 <div className="flex items-center justify-between gap-2 text-body-sm">
                   <span className="min-w-0">
                     <span className="block truncate font-medium">{logo.name}</span>
-                    {logo.url ? <span className="block truncate text-caption text-fg-muted">{logo.url}</span> : null}
+                    {logo.url ? (
+                      <span className="block truncate text-caption text-fg-muted">{logo.url}</span>
+                    ) : null}
                   </span>
                   <span className="flex items-center gap-1">
                     <Switch
@@ -320,14 +361,21 @@ export function TestimonialsLogos({
                       label={`Actions for ${logo.name}`}
                       actions={[
                         { label: "Edit", onSelect: () => openLEdit(logo) },
-                        { label: "Delete", destructive: true, separatorBefore: true, onSelect: () => handleDeleteLogo(logo) },
+                        {
+                          label: "Delete",
+                          destructive: true,
+                          separatorBefore: true,
+                          onSelect: () => handleDeleteLogo(logo),
+                        },
                       ]}
                     />
                   </span>
                 </div>
               </li>
             ))}
-            {logos.length === 0 ? <li className="text-body-sm text-fg-muted">No client logos yet</li> : null}
+            {logos.length === 0 ? (
+              <li className="text-body-sm text-fg-muted">No client logos yet</li>
+            ) : null}
           </ul>
         </TabsContent>
       </Tabs>
@@ -340,7 +388,14 @@ export function TestimonialsLogos({
           </SheetHeader>
           <form ref={tFormRef} className="space-y-4 px-4" onSubmit={(e) => e.preventDefault()}>
             <Field id="tm-quote" label="Quote" required hint="1000 chars">
-              <Textarea id="tm-quote" name="quote" rows={4} maxLength={1000} defaultValue={t?.quote} required />
+              <Textarea
+                id="tm-quote"
+                name="quote"
+                rows={4}
+                maxLength={1000}
+                defaultValue={t?.quote}
+                required
+              />
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field id="tm-author" label="Author name" required>
@@ -355,7 +410,11 @@ export function TestimonialsLogos({
             </div>
             <fieldset className="space-y-2">
               <legend className="text-body-sm font-semibold">Context</legend>
-              <RadioGroup value={tContext} onValueChange={(v) => setTContext(v as "site" | "product")} className="flex gap-6">
+              <RadioGroup
+                value={tContext}
+                onValueChange={(v) => setTContext(v as "site" | "product")}
+                className="flex gap-6"
+              >
                 <div className="flex items-center gap-2">
                   <RadioGroupItem id="tm-ctx-site" value="site" />
                   <Label htmlFor="tm-ctx-site">Site</Label>
@@ -367,7 +426,12 @@ export function TestimonialsLogos({
               </RadioGroup>
             </fieldset>
             {tContext === "product" ? (
-              <Field id="tm-product" label="Product" optional hint="Product-scoped testimonials aren't linked here yet — edit them from the product editor.">
+              <Field
+                id="tm-product"
+                label="Product"
+                optional
+                hint="Product-scoped testimonials aren't linked here yet — edit them from the product editor."
+              >
                 <Select value={tProduct} onValueChange={setTProduct} disabled>
                   <SelectTrigger id="tm-product">
                     <SelectValue placeholder="Choose product" />
@@ -402,20 +466,44 @@ export function TestimonialsLogos({
         <SheetContent className="overflow-y-auto lg:w-[520px]">
           <SheetHeader>
             <SheetTitle>{l ? `Edit ${l.name}` : "New logo"}</SheetTitle>
-            <SheetDescription>SVG or PNG, transparent recommended; alt text = name.</SheetDescription>
+            <SheetDescription>
+              SVG or PNG, transparent recommended; alt text = name.
+            </SheetDescription>
           </SheetHeader>
           <form ref={lFormRef} className="space-y-4 px-4" onSubmit={(e) => e.preventDefault()}>
             <Field id="lg-name" label="Name" required>
               <Input id="lg-name" name="name" defaultValue={l?.name} required />
             </Field>
-            <div
-              className={cn(
-                "rounded-lg border-2 border-dashed p-6 text-center text-body-sm text-fg-muted",
-                l?.mediaId ? "border-border" : "border-warning text-warning",
+            <input
+              ref={logoInputRef}
+              type="file"
+              className="sr-only"
+              accept="image/*"
+              aria-label="Logo image file"
+              onChange={handleLogoChosen}
+            />
+            <div className="flex items-center gap-3">
+              {(lUpload?.url ?? l?.logoUrl) ? (
+                // eslint-disable-next-line @next/next/no-img-element -- admin preview of a user-uploaded R2 URL
+                <img
+                  src={lUpload?.url ?? l?.logoUrl}
+                  alt=""
+                  className="h-16 w-28 rounded-md border border-border bg-surface object-contain p-1"
+                />
+              ) : (
+                <div className="grid h-16 w-28 place-items-center rounded-md border border-dashed border-warning text-caption text-warning">
+                  Required
+                </div>
               )}
-            >
-              <UploadIcon aria-hidden className="mx-auto mb-1 size-6" />
-              {l?.mediaId ? "Logo image on file" : "Logo image upload coming soon — required to save"}
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                loading={uploading}
+                onClick={() => logoInputRef.current?.click()}
+              >
+                <UploadIcon aria-hidden /> {lUpload || l?.mediaId ? "Replace logo" : "Upload logo"}
+              </Button>
             </div>
             <Field id="lg-url" label="Link URL" optional>
               <Input id="lg-url" name="url" type="url" defaultValue={l?.url} />
@@ -429,7 +517,7 @@ export function TestimonialsLogos({
             <Button variant="ghost" onClick={() => setLEdit(null)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveLogo} disabled={saving || !l?.mediaId}>
+            <Button onClick={handleSaveLogo} disabled={saving || !(lUpload?.mediaId ?? l?.mediaId)}>
               {saving ? "Saving…" : "Save"}
             </Button>
           </SheetFooter>

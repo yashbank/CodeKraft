@@ -36,7 +36,11 @@ export default async function QuotePage({ params }: PageProps) {
   ]);
 
   if (!quoteResult.ok) {
-    if (quoteResult.error.code === ErrorCode.NOT_FOUND) {
+    // Malformed tokens fail the token schema (VALIDATION): same 404 as an unknown token.
+    if (
+      quoteResult.error.code === ErrorCode.NOT_FOUND ||
+      quoteResult.error.code === ErrorCode.VALIDATION
+    ) {
       notFound();
     }
     throw new Error(quoteResult.error.message);

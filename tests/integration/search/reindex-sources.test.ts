@@ -117,3 +117,18 @@ describe("Knowledge Reindex Across All Sources (PHASE-03 P3.13, docs/04 §9, API
     }
   });
 });
+
+describe("reindex action (admin ChatbotMonitor control)", () => {
+  it("returns chunk counts through the defineAction", async () => {
+    await truncateAll();
+    const admin = await createAdmin();
+    const ctx = buildContext({
+      user: { id: admin.id },
+      session: { id: "s-act" },
+      roles: ["admin"],
+    });
+    const { reindexKnowledgeAction } = await import("@/modules/search/actions");
+    const res = await reindexKnowledgeAction({}, ctx);
+    expect(res.ok && typeof res.data.chunks).toBe("number");
+  });
+});

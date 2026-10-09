@@ -53,3 +53,13 @@ export async function getTranscript(raw: unknown) {
   const { getTranscriptQuery } = await import("./queries");
   return withCtx(getTranscriptQuery, raw);
 }
+
+export async function purgeConversation(raw: unknown) {
+  const { purgeConversationAction } = await import("./actions");
+  return withCtx(purgeConversationAction, raw);
+}
+
+export async function dryRun(raw: unknown) {
+  const { dryRunAction } = await import("./actions");
+  return withCtx(dryRunAction, raw);
+}

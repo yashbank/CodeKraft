@@ -71,11 +71,7 @@ export class DefaultChatService implements ChatService {
       throw new AppError(ErrorCode.UNAUTHENTICATED, "Authentication required to use AI chat");
     }
 
-    const userRow = await this.db
-      .select()
-      .from(users)
-      .where(eq(users.id, ctx.userId))
-      .limit(1);
+    const userRow = await this.db.select().from(users).where(eq(users.id, ctx.userId)).limit(1);
 
     if (!userRow[0] || !userRow[0].emailVerified) {
       throw new AppError(ErrorCode.EMAIL_UNVERIFIED, "Please verify your email before using chat");
@@ -131,10 +127,7 @@ export class DefaultChatService implements ChatService {
     };
   }
 
-  async menuIntent(
-    ctx: RequestContext,
-    input: MenuIntentInput,
-  ): Promise<MenuIntentResult> {
+  async menuIntent(ctx: RequestContext, input: MenuIntentInput): Promise<MenuIntentResult> {
     return await resolveMenuIntent(ctx, input);
   }
 
@@ -217,16 +210,12 @@ export class DefaultChatService implements ChatService {
     let stopReason: any = "end_turn";
 
     try {
-      const stream = provider.stream(
-        systemPrompt,
-        [{ role: "user", content: input.content }],
-        {
-          model: conv[0].model,
-          maxTokens: 600,
-          timeoutMs: 20000,
-          tools,
-        },
-      );
+      const stream = provider.stream(systemPrompt, [{ role: "user", content: input.content }], {
+        model: conv[0].model,
+        maxTokens: 600,
+        timeoutMs: 20000,
+        tools,
+      });
 
       for await (const chunk of stream) {
         if (chunk.type === "text") {
@@ -306,9 +295,7 @@ export class DefaultChatService implements ChatService {
     const conv = await this.db
       .select()
       .from(conversations)
-      .where(
-        and(eq(conversations.id, input.conversationId), eq(conversations.userId, ctx.userId)),
-      )
+      .where(and(eq(conversations.id, input.conversationId), eq(conversations.userId, ctx.userId)))
       .limit(1);
 
     if (conv.length === 0) {
@@ -360,9 +347,7 @@ export class DefaultChatService implements ChatService {
     const conv = await this.db
       .select()
       .from(conversations)
-      .where(
-        and(eq(conversations.id, input.conversationId), eq(conversations.userId, ctx.userId)),
-      )
+      .where(and(eq(conversations.id, input.conversationId), eq(conversations.userId, ctx.userId)))
       .limit(1);
 
     if (conv.length === 0) {
@@ -394,41 +379,41 @@ export class DefaultChatService implements ChatService {
     return { leadId: leadRes.leadId };
   }
 
-  async endConversation(
-    ctx: RequestContext,
-    input: EndConversationInput,
-  ): Promise<void> {
+  async endConversation(ctx: RequestContext, input: EndConversationInput): Promise<void> {
     await this.db
       .update(conversations)
       .set({ endedAt: new Date() })
-      .where(
-        and(
-          eq(conversations.id, input.conversationId),
-          eq(conversations.userId, ctx.userId),
-        ),
-      );
+      .where(and(eq(conversations.id, input.conversationId), eq(conversations.userId, ctx.userId)));
   }
 
   /** Real per-conversation message count / latest preview / token total (fixes a P2.8 stub that hardcoded `1` / "Chat session"). */
   private async statsForConversations(
     ids: string[],
-  ): Promise<Map<string, { messageCount: number; lastMessagePreview: string | null; totalTokens: number }>> {
+  ): Promise<
+    Map<string, { messageCount: number; lastMessagePreview: string | null; totalTokens: number }>
+  > {
     if (ids.length === 0) return new Map();
     const rows = await this.db
       .select({
         conversationId: chatMessages.conversationId,
         messageCount: sql<number>`count(*)::int`,
-        lastMessagePreview: sql<string | null>`(array_agg(${chatMessages.content} order by ${chatMessages.createdAt} desc))[1]`,
+        lastMessagePreview: sql<
+          string | null
+        >`(array_agg(${chatMessages.content} order by ${chatMessages.createdAt} desc))[1]`,
         totalTokens: sql<number>`coalesce(sum(${chatMessages.tokensIn} + ${chatMessages.tokensOut}), 0)::int`,
       })
       .from(chatMessages)
       .where(inArray(chatMessages.conversationId, ids))
       .groupBy(chatMessages.conversationId);
     return new Map(
-      rows.map((r: { conversationId: string; messageCount: number; lastMessagePreview: string | null; totalTokens: number }) => [
-        r.conversationId,
-        r,
-      ]),
+      rows.map(
+        (r: {
+          conversationId: string;
+          messageCount: number;
+          lastMessagePreview: string | null;
+          totalTokens: number;
+        }) => [r.conversationId, r],
+      ),
     );
   }
 
@@ -487,22 +472,32 @@ export class DefaultChatService implements ChatService {
     const hasNext = rows.length > (input.limit ?? 25);
     const selected = hasNext ? rows.slice(0, input.limit ?? 25) : rows;
     const stats = await this.statsForConversations(
-      selected.map((r: { conversation: Conversation; customerEmail: string | null }) => r.conversation.id),
+      selected.map(
+        (r: { conversation: Conversation; customerEmail: string | null }) => r.conversation.id,
+      ),
     );
 
-    const items = selected.map(({ conversation: c, customerEmail }: { conversation: Conversation; customerEmail: string | null }) => ({
-      conversationId: c.id,
-      userId: c.userId,
-      customerEmail: customerEmail ?? null,
-      startedAt: c.startedAt.toISOString(),
-      endedAt: c.endedAt ? c.endedAt.toISOString() : null,
-      escalatedQueryId: c.escalatedQueryId,
-      messageCount: stats.get(c.id)?.messageCount ?? 0,
-      lastMessagePreview: stats.get(c.id)?.lastMessagePreview ?? null,
-      model: c.model,
-      promptVersionId: c.promptVersionId,
-      totalTokens: stats.get(c.id)?.totalTokens ?? 0,
-    }));
+    const items = selected.map(
+      ({
+        conversation: c,
+        customerEmail,
+      }: {
+        conversation: Conversation;
+        customerEmail: string | null;
+      }) => ({
+        conversationId: c.id,
+        userId: c.userId,
+        customerEmail: customerEmail ?? null,
+        startedAt: c.startedAt.toISOString(),
+        endedAt: c.endedAt ? c.endedAt.toISOString() : null,
+        escalatedQueryId: c.escalatedQueryId,
+        messageCount: stats.get(c.id)?.messageCount ?? 0,
+        lastMessagePreview: stats.get(c.id)?.lastMessagePreview ?? null,
+        model: c.model,
+        promptVersionId: c.promptVersionId,
+        totalTokens: stats.get(c.id)?.totalTokens ?? 0,
+      }),
+    );
 
     return {
       items,
@@ -511,10 +506,7 @@ export class DefaultChatService implements ChatService {
     };
   }
 
-  async getTranscript(
-    ctx: RequestContext,
-    input: GetTranscriptInput,
-  ): Promise<Transcript> {
+  async getTranscript(ctx: RequestContext, input: GetTranscriptInput): Promise<Transcript> {
     const conv = await this.db
       .select()
       .from(conversations)
@@ -566,10 +558,7 @@ export class DefaultChatService implements ChatService {
     ctx: RequestContext,
     input: ListPromptVersionsInput,
   ): Promise<PromptVersionsResult> {
-    const rows = await this.db
-      .select()
-      .from(promptVersions)
-      .orderBy(desc(promptVersions.version));
+    const rows = await this.db.select().from(promptVersions).orderBy(desc(promptVersions.version));
 
     return {
       items: rows.map((p) => ({
@@ -696,9 +685,35 @@ export class DefaultChatService implements ChatService {
     return { chunks: rows.length };
   }
 
-  async runRetentionPurgeJob(
-    job: JobContext,
-  ): Promise<JobOutcome<RetentionPurgeDetail>> {
+  async purgeConversation(
+    _ctx: RequestContext,
+    input: { conversationId: string },
+  ): Promise<{ purged: boolean }> {
+    const id = input.conversationId;
+    await this.db.delete(chatMessages).where(eq(chatMessages.conversationId, id));
+    const gone = await this.db
+      .delete(conversations)
+      .where(eq(conversations.id, id))
+      .returning({ id: conversations.id });
+    return { purged: gone.length > 0 };
+  }
+
+  async dryRun(_ctx: RequestContext, input: { message: string }): Promise<{ answer: string }> {
+    const { systemPrompt } = await buildChatPrompt();
+    // Lazy import: the provider factory pulls the Anthropic SDK; FakeProvider is used without a key.
+    const { getLLMProvider } = await import("./providers");
+    let answer = "";
+    for await (const ev of getLLMProvider().stream(
+      systemPrompt,
+      [{ role: "user", content: input.message }],
+      { model: process.env.AI_MODEL || "", maxTokens: 600, timeoutMs: 20000 },
+    )) {
+      if (ev.type === "text") answer += ev.text;
+    }
+    return { answer };
+  }
+
+  async runRetentionPurgeJob(job: JobContext): Promise<JobOutcome<RetentionPurgeDetail>> {
     const todayStr = job.now.toISOString().slice(0, 10);
 
     const expired = await this.db
@@ -724,9 +739,7 @@ export class DefaultChatService implements ChatService {
     };
   }
 
-  async runKnowledgeReindexJob(
-    job: JobContext,
-  ): Promise<JobOutcome<KnowledgeReindexDetail>> {
+  async runKnowledgeReindexJob(job: JobContext): Promise<JobOutcome<KnowledgeReindexDetail>> {
     return {
       status: "ok",
       detail: {

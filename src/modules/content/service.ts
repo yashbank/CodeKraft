@@ -1365,9 +1365,15 @@ export class DefaultContentService implements ContentService {
   async listCaseStudiesAdmin(ctx: RequestContext, tx?: DbOrTx) {
     void ctx;
     const client = await this.getDatabase(tx);
-    const rows = await client.select().from(caseStudies).orderBy(desc(caseStudies.updatedAt));
-    return rows.map((c: (typeof rows)[number]) => ({
+    const joined = await client
+      .select({ c: caseStudies, m: media })
+      .from(caseStudies)
+      .leftJoin(media, eq(caseStudies.coverMediaId, media.id))
+      .orderBy(desc(caseStudies.updatedAt));
+    return joined.map(({ c, m }: (typeof joined)[number]) => ({
       id: c.id,
+      coverMediaId: c.coverMediaId ?? undefined,
+      coverUrl: (m && resolveMediaUrl(m)) ?? undefined,
       title: c.title,
       slug: c.slug,
       client: c.clientName ?? "",
@@ -1404,9 +1410,14 @@ export class DefaultContentService implements ContentService {
   async listClientLogosAdmin(ctx: RequestContext, tx?: DbOrTx) {
     void ctx;
     const client = await this.getDatabase(tx);
-    const rows = await client.select().from(clientLogos).orderBy(asc(clientLogos.position));
-    return rows.map((l: (typeof rows)[number]) => ({
+    const joined = await client
+      .select({ l: clientLogos, m: media })
+      .from(clientLogos)
+      .innerJoin(media, eq(clientLogos.mediaId, media.id))
+      .orderBy(asc(clientLogos.position));
+    return joined.map(({ l, m }: (typeof joined)[number]) => ({
       id: l.id,
+      logoUrl: resolveMediaUrl(m) ?? undefined,
       name: l.name,
       url: l.url ?? undefined,
       published: l.published,
@@ -1470,8 +1481,12 @@ export class DefaultContentService implements ContentService {
         published: c.published,
         poster,
         posterMediaId: c.media?.posterMediaId ?? undefined,
-        ctaPrimary: c.cta?.primary ? { label: c.cta.primary.label, target: c.cta.primary.href } : undefined,
-        ctaSecondary: c.cta?.secondary ? { label: c.cta.secondary.label, target: c.cta.secondary.href } : undefined,
+        ctaPrimary: c.cta?.primary
+          ? { label: c.cta.primary.label, target: c.cta.primary.href }
+          : undefined,
+        ctaSecondary: c.cta?.secondary
+          ? { label: c.cta.secondary.label, target: c.cta.secondary.href }
+          : undefined,
       });
     }
     return out;

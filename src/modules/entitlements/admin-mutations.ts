@@ -31,6 +31,11 @@ async function withCtx<T>(
   }
 }
 
+export async function grantEntitlementManual(raw: unknown) {
+  const { grantEntitlementManualAction } = await import("./actions");
+  return withCtx(grantEntitlementManualAction, raw);
+}
+
 export async function revokeEntitlement(raw: unknown) {
   const { revokeEntitlementAction } = await import("./actions");
   return withCtx(revokeEntitlementAction, raw);

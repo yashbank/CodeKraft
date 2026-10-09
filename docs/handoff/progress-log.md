@@ -96,3 +96,11 @@ Resume point. Newest entries at the bottom.
 - Vercel: pasted token rejected by the CLI ("not valid"); need an account token scoped to the team.
 - Foundation e2e green again (3 runs): stale login-logout spec updated; customer "Sign out" menu item had no handler (fixed, `AccountShell.tsx`); LoginForm submit disabled until hydrated; privacy link underlined for axe `link-in-text-block`; axe fixture waits for animations.
 - Found, not fixed: account overview shows "We couldn't load your dashboard" (UNAUTHENTICATED AppError) for a fresh unverified customer. Phase 4 sweep.
+
+## Phase 4 (2026-10-10) sweep and debt
+- Requester now gets an in-app `approval.approved` / `approval.rejected` notification (same tx, `src/modules/approvals/service.ts` notifyRequester). No email yet.
+- Approvals inbox shows names: `src/lib/admin/approvals-view.ts` resolveSubjectLabels (3 batched queries: product, ownership→product, user). Full id kept in the detail header for ops scripts. Test `inbox-labels.test.ts`.
+- Customer overview "couldn't load your dashboard": wishlist query on `/account` lacked the required `displayCurrency`. Fixed; test `tests/integration/account/overview-queries.test.ts`.
+- Scout (local, 66 page loads, 52 clean). Fixed: `/quote/<bad token>` 500 → 404 (`token-lookup.test.ts`); allocations duplicate React keys (partner name columns deduped); manual entitlement grant on customer detail wired to the existing `grantEntitlementManualAction` (`entitlements.admin`); chatbot purge-one-conversation, rebuild index and dry-run wired (`chat.prompts.write`); case-study cover image and client logo uploads via the shared `uploadMediaFile` helper (gallery still out).
+- Not bugs: "[PLACEHOLDER]" titles are seed content on local only. Deferred to Phase 5 decision: project orders (client invoice) in `/admin/orders/new` (`ManualOrderForm.tsx` ~L701) need a finance-approved split flow; case-study gallery upload.
+- Debt noted: published-offering options query now exists inline in both `/admin/orders/new` and `/admin/customers/[id]` pages; extract in the debt lane.

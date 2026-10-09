@@ -42,8 +42,11 @@ import { Banner } from "../Banner";
 import {
   activatePromptVersion,
   createPromptVersion,
+  dryRun,
   getTranscript,
+  purgeConversation,
 } from "@/modules/chat/admin-mutations";
+import { reindexContent } from "@/modules/search/admin-mutations";
 import { BarChart } from "../charts/BarChart";
 import { Gauge } from "../charts/Gauge";
 import { formatDateTime, plainNumber } from "../format";
@@ -88,6 +91,10 @@ export function ChatbotMonitor({
   const [activateOpen, setActivateOpen] = React.useState(false);
   const [activateSubmitting, setActivateSubmitting] = React.useState(false);
   const [savingVersion, setSavingVersion] = React.useState(false);
+  const [busy, setBusy] = React.useState<"purge" | "reindex" | "dryrun" | null>(null);
+  const [purgeOpen, setPurgeOpen] = React.useState(false);
+  const [testMsg, setTestMsg] = React.useState("");
+  const [testAnswer, setTestAnswer] = React.useState("");
   const promptBodyRef = React.useRef<HTMLTextAreaElement>(null);
   const prompt = data.prompts.find((p) => p.version === selectedPrompt) ?? activePrompt;
   const u = data.usage;
@@ -129,6 +136,33 @@ export function ChatbotMonitor({
     toast.success(`${prompt.version} activated`);
     setActivateOpen(false);
     router.refresh();
+  }
+
+  async function handlePurge() {
+    setBusy("purge");
+    const result = await purgeConversation({ conversationId: selectedConv });
+    setBusy(null);
+    setPurgeOpen(false);
+    if (!result.ok) return void toast.error(result.error.message);
+    toast.success("Conversation purged");
+    router.refresh();
+  }
+
+  async function handleReindex() {
+    setBusy("reindex");
+    const result = await reindexContent({});
+    setBusy(null);
+    if (!result.ok) return void toast.error(result.error.message);
+    toast.success(`Knowledge index rebuilt: ${result.data.chunks} chunks`);
+    router.refresh();
+  }
+
+  async function handleDryRun() {
+    setBusy("dryrun");
+    const result = await dryRun({ message: testMsg });
+    setBusy(null);
+    if (!result.ok) return void toast.error(result.error.message);
+    setTestAnswer(result.data.answer);
   }
 
   async function handleSaveAsNewVersion() {
@@ -272,8 +306,7 @@ export function ChatbotMonitor({
                     size="sm"
                     variant="ghost"
                     className="text-danger"
-                    disabled
-                    title="Not available yet — no single-conversation purge action exists in this phase"
+                    onClick={() => setPurgeOpen(true)}
                   >
                     Purge now
                   </Button>
@@ -483,36 +516,42 @@ export function ChatbotMonitor({
                   size="sm"
                   variant="secondary"
                   className="mt-2"
-                  disabled
-                  title="Not available yet — the content re-indexing pipeline isn't implemented in this phase"
+                  disabled={busy === "reindex"}
+                  onClick={handleReindex}
                 >
                   <RefreshCwIcon aria-hidden /> Rebuild knowledge index
                 </Button>
-                <p className="mt-1 text-caption text-fg-muted">
-                  Rebuilding isn&apos;t wired yet — re-indexing published content is out of this
-                  phase&apos;s scope.
-                </p>
               </div>
               <div className="rounded-lg border border-border bg-surface p-4">
                 <h2 className="mb-2 text-h4">Try a message</h2>
                 <p className="mb-2 text-caption text-fg-muted">
-                  Dry run against {prompt?.version}; counts toward the platform cap and is flagged
-                  as test.
+                  Dry run against the active prompt; nothing is saved and it doesn&apos;t count
+                  toward caps.
                 </p>
                 <Label htmlFor="pt-msg" className="sr-only">
                   Test message
                 </Label>
                 <div className="flex gap-2">
-                  <Input id="pt-msg" placeholder="Can I get a refund?" />
+                  <Input
+                    id="pt-msg"
+                    placeholder="Can I get a refund?"
+                    value={testMsg}
+                    onChange={(e) => setTestMsg(e.target.value)}
+                  />
                   <Button
                     size="md"
                     variant="secondary"
-                    disabled
-                    title="Not available yet — a dry-run endpoint isn't implemented in this phase"
+                    disabled={busy === "dryrun" || !testMsg.trim()}
+                    onClick={handleDryRun}
                   >
                     Run
                   </Button>
                 </div>
+                {testAnswer ? (
+                  <p className="mt-2 whitespace-pre-wrap text-body-sm" aria-live="polite">
+                    {testAnswer}
+                  </p>
+                ) : null}
               </div>
             </div>
             <div className="space-y-4 rounded-lg border border-border bg-surface p-4">
@@ -603,6 +642,24 @@ export function ChatbotMonitor({
             </DialogClose>
             <Button onClick={handleActivate} disabled={activateSubmitting}>
               Activate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={purgeOpen} onOpenChange={setPurgeOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Purge this conversation?</DialogTitle>
+            <DialogDescription>
+              Permanently deletes the conversation and all its messages. This can&apos;t be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="ghost">Cancel</Button>
+            </DialogClose>
+            <Button variant="danger" onClick={handlePurge} disabled={busy === "purge"}>
+              Purge
             </Button>
           </DialogFooter>
         </DialogContent>

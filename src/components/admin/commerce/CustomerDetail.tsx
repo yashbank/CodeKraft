@@ -47,6 +47,7 @@ import { Field } from "../RichTextField";
 import { RowActions } from "../RowActions";
 import { StatTile } from "../StatTile";
 import type { CustomerDetailData } from "../types";
+import { grantEntitlementManual } from "@/modules/entitlements/admin-mutations";
 import {
   markCustomerEmailVerified,
   reinstateCustomer,
@@ -86,12 +87,34 @@ export function CustomerDetail({
   const [newTag, setNewTag] = React.useState("");
   const [grantOpen, setGrantOpen] = React.useState(false);
   const [reason, setReason] = React.useState("");
+  const [grantOffering, setGrantOffering] = React.useState(data.offeringOptions[0]?.id ?? "");
+  const [grantMonths, setGrantMonths] = React.useState("lifetime");
+  const [grantSubmitting, setGrantSubmitting] = React.useState(false);
   const [notesSaved, setNotesSaved] = React.useState("Saved");
   const [statusDialogOpen, setStatusDialogOpen] = React.useState(false);
   const [statusReason, setStatusReason] = React.useState("");
   const [statusSubmitting, setStatusSubmitting] = React.useState(false);
   const deleted = c.status === "deleted";
   const suspending = c.status !== "suspended";
+
+  async function submitGrant() {
+    setGrantSubmitting(true);
+    const result = await grantEntitlementManual({
+      userId: c.id,
+      offeringId: grantOffering,
+      accessMonths: grantMonths === "lifetime" ? null : Number(grantMonths),
+      reason: reason.trim(),
+    });
+    setGrantSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(`Access granted to ${c.name}`);
+    setGrantOpen(false);
+    setReason("");
+    router.refresh();
+  }
 
   async function persistTags(next: string[]) {
     const result = await updateCustomerNotes({ userId: c.id, tags: next });
@@ -617,13 +640,12 @@ export function CustomerDetail({
           <DialogHeader>
             <DialogTitle>Grant access to {c.name}</DialogTitle>
             <DialogDescription>
-              Not available yet: manual entitlement grants need the entitlements admin module, which
-              is out of this phase's scope. This form is shown read-only for reference.
+              Grants access without an order. Logged to the audit log.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="grant-offering" label="Offering" required className="sm:col-span-2">
-              <Select defaultValue={data.offeringOptions[0]?.id}>
+              <Select value={grantOffering} onValueChange={setGrantOffering}>
                 <SelectTrigger id="grant-offering">
                   <SelectValue />
                 </SelectTrigger>
@@ -637,7 +659,7 @@ export function CustomerDetail({
               </Select>
             </Field>
             <Field id="grant-access" label="Access" required>
-              <Select defaultValue="lifetime">
+              <Select value={grantMonths} onValueChange={setGrantMonths}>
                 <SelectTrigger id="grant-access">
                   <SelectValue />
                 </SelectTrigger>
@@ -647,9 +669,6 @@ export function CustomerDetail({
                   <SelectItem value="3">3 months</SelectItem>
                 </SelectContent>
               </Select>
-            </Field>
-            <Field id="grant-order" label="Link to existing order" optional>
-              <Input id="grant-order" placeholder="CK-ORD-…" className="font-mono" />
             </Field>
             <Field
               id="grant-reason"
@@ -677,7 +696,10 @@ export function CustomerDetail({
             <DialogClose asChild>
               <Button variant="ghost">Cancel</Button>
             </DialogClose>
-            <Button disabled title="Not wired yet -- see the phase report">
+            <Button
+              onClick={() => void submitGrant()}
+              disabled={grantSubmitting || reason.trim() === "" || grantOffering === ""}
+            >
               Grant access
             </Button>
           </DialogFooter>

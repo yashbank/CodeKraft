@@ -15,6 +15,7 @@ import {
   approvalRequests,
   type ApprovalType,
 } from "../../../drizzle/schema/approvals";
+import { notifications } from "../../../drizzle/schema/notifications";
 import type { DbOrTx, TxCtx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { assertPermission } from "@/lib/authz/assert";
@@ -84,6 +85,25 @@ function payloadSummaryFor(type: ApprovalType, payload: Record<string, unknown>)
     default:
       return `${type} approval request`;
   }
+}
+
+async function notifyRequester(
+  tx: DbOrTx,
+  r: { id: string; type: string; subjectType: string; subjectId: string; requestedBy: string },
+  outcome: "approved" | "rejected",
+) {
+  await tx.insert(notifications).values({
+    userId: r.requestedBy,
+    type: `approval.${outcome}`,
+    title: outcome === "approved" ? "Approval applied" : "Approval rejected",
+    body: `Your ${r.type} request for ${r.subjectType} ${r.subjectId.slice(0, 8)} was ${outcome === "approved" ? "applied" : "rejected"}`,
+    link: "/admin/approvals",
+    payload: {
+      approvalRequestId: r.id,
+      kind: r.type,
+      status: outcome === "approved" ? "applied" : "rejected",
+    },
+  });
 }
 
 export class DefaultApprovalsService implements ApprovalsService {
@@ -263,6 +283,7 @@ export class DefaultApprovalsService implements ApprovalsService {
         .update(approvalRequests)
         .set({ status: "rejected" })
         .where(eq(approvalRequests.id, requestId));
+      await notifyRequester(tx, request, "rejected");
 
       // Execute reject handler if registered
       const rejectHandler = this.getRejectHandler(request.type);
@@ -427,6 +448,7 @@ export class DefaultApprovalsService implements ApprovalsService {
           error: null,
         })
         .where(eq(approvalRequests.id, requestId));
+      await notifyRequester(tx, request, "approved");
 
       return { status: "applied", applied: true };
     } catch (err: unknown) {

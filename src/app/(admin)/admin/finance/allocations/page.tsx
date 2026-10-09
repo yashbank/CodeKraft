@@ -55,7 +55,7 @@ export default async function AdminAllocationsPage() {
   return (
     <AllocationsScreen
       rows={rows}
-      partners={[...partnerNames.values()]}
+      partners={[...new Set(partnerNames.values())]} // display names are not unique; they key the columns
       orderHref="/admin/orders"
       ledgerHref="/admin/finance/ledger"
       productHref="/admin/products"
