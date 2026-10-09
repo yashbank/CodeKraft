@@ -72,6 +72,7 @@ export interface MediaItem {
   kind: MediaKind;
   alt: string;
   caption?: string;
+  url?: string;
 }
 
 export interface FaqItem {

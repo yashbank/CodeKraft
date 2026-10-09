@@ -9,13 +9,14 @@
  * - Idempotent decision replay
  * - Audit logging on all transitions
  */
-import { and, desc, eq, ne, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import {
   approvalDecisions,
   approvalRequests,
   type ApprovalType,
 } from "../../../drizzle/schema/approvals";
-import { notifications } from "../../../drizzle/schema/notifications";
+import { users } from "../../../drizzle/schema/auth";
+import { emailOutbox, notifications } from "../../../drizzle/schema/notifications";
 import type { DbOrTx, TxCtx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { assertPermission } from "@/lib/authz/assert";
@@ -89,7 +90,14 @@ function payloadSummaryFor(type: ApprovalType, payload: Record<string, unknown>)
 
 async function notifyRequester(
   tx: DbOrTx,
-  r: { id: string; type: string; subjectType: string; subjectId: string; requestedBy: string },
+  r: {
+    id: string;
+    type: string;
+    subjectType: string;
+    subjectId: string;
+    requestedBy: string;
+    payload: unknown;
+  },
   outcome: "approved" | "rejected",
 ) {
   await tx.insert(notifications).values({
@@ -104,6 +112,27 @@ async function notifyRequester(
       status: outcome === "approved" ? "applied" : "rejected",
     },
   });
+  const [u] = await tx
+    .select({ email: users.email, name: users.name })
+    .from(users)
+    .where(eq(users.id, r.requestedBy));
+  if (u) {
+    await tx.insert(emailOutbox).values({
+      toEmail: u.email,
+      template: "approval-decided",
+      payload: {
+        kind: r.type,
+        summary: payloadSummaryFor(
+          r.type as ApprovalType,
+          (r.payload ?? {}) as Record<string, unknown>,
+        ),
+        requesterName: u.name,
+        outcome: outcome === "approved" ? "applied" : "rejected",
+        url: "/admin/approvals",
+      },
+      priority: 5,
+    });
+  }
 }
 
 export class DefaultApprovalsService implements ApprovalsService {
@@ -194,6 +223,31 @@ export class DefaultApprovalsService implements ApprovalsService {
       { type, subject, requestedBy: requesterId },
       tx,
     );
+
+    const approverIds = await computeApproverSet(requesterId, tx);
+    if (approverIds.length > 0) {
+      const [requester] = await tx
+        .select({ name: users.name })
+        .from(users)
+        .where(eq(users.id, requesterId));
+      const approvers = await tx
+        .select({ email: users.email })
+        .from(users)
+        .where(inArray(users.id, approverIds));
+      await tx.insert(emailOutbox).values(
+        approvers.map((a) => ({
+          toEmail: a.email,
+          template: "approval-needed",
+          payload: {
+            kind: type,
+            summary: payloadSummaryFor(type, payload as Record<string, unknown>),
+            requesterName: requester?.name ?? "",
+            url: "/admin/approvals",
+          },
+          priority: 5,
+        })),
+      );
+    }
 
     return { approvalRequestId: inserted.id };
   }

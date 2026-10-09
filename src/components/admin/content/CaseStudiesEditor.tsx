@@ -58,6 +58,11 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
     url: editing?.coverUrl,
   });
   const [uploading, setUploading] = React.useState(false);
+  const [gallery, setGallery] = React.useState<NonNullable<CaseStudyRow["gallery"]>>(
+    editing?.gallery ?? [],
+  );
+  const [galleryUploading, setGalleryUploading] = React.useState(false);
+  const galleryInputRef = React.useRef<HTMLInputElement>(null);
   const coverInputRef = React.useRef<HTMLInputElement>(null);
   const formRef = React.useRef<HTMLFormElement>(null);
   const rows = caseStudies.filter((c) => (status ? c.status === status : true));
@@ -67,6 +72,47 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
     setTech(c?.tech ?? []);
     setTechDraft("");
     setCover({ mediaId: c?.coverMediaId, url: c?.coverUrl });
+    setGallery(c?.gallery ?? []);
+  }
+
+  async function handleGalleryChosen(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    if (gallery.length + files.length > 24) {
+      toast.error("A gallery holds at most 24 images");
+      return;
+    }
+    setGalleryUploading(true);
+    try {
+      const { uploadMediaFile } = await import("@/lib/admin/media-upload");
+      for (const f of files) {
+        const up = await uploadMediaFile(f, "content_media");
+        const item = {
+          mediaId: up.mediaId,
+          url: up.url ?? URL.createObjectURL(f),
+          alt: f.name.replace(/\.[^.]+$/, "").slice(0, 125),
+        };
+        setGallery((l) => [...l, item]);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setGalleryUploading(false);
+    }
+  }
+
+  function moveGallery(index: number, dir: -1 | 1) {
+    setGallery((l) => {
+      const t = index + dir;
+      const a = l[index];
+      const b = l[t];
+      if (!a || !b) return l;
+      const next = [...l];
+      next[index] = b;
+      next[t] = a;
+      return next;
+    });
   }
 
   async function handleCoverChosen(e: React.ChangeEvent<HTMLInputElement>) {
@@ -93,6 +139,10 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
     const title = String(data.get("title") ?? "").trim();
     const slug = String(data.get("slug") ?? "").trim() || slugify(title);
     const resultHighlight = String(data.get("resultHighlight") ?? "").trim();
+    if (gallery.some((g) => !g.alt.trim())) {
+      toast.error("Every gallery image needs alt text");
+      return;
+    }
 
     setSaving(true);
     const result = await saveCaseStudy({
@@ -107,6 +157,7 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
       resultHighlight: resultHighlight || undefined,
       techStack: tech,
       coverMediaId: cover.mediaId,
+      gallery: gallery.map(({ mediaId, alt }) => ({ mediaId, alt })),
       seoTitle: String(data.get("seoTitle") ?? "").trim() || undefined,
       seoDescription: String(data.get("seoDescription") ?? "").trim() || undefined,
     });
@@ -293,7 +344,11 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
               <TabsTrigger value="media">Media</TabsTrigger>
               <TabsTrigger value="seo">SEO</TabsTrigger>
             </TabsList>
-            <TabsContent value="story" className="space-y-4">
+            <TabsContent
+              value="story"
+              forceMount
+              className="space-y-4 data-[state=inactive]:hidden"
+            >
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field id="cs-title" label="Title" required>
                   <Input
@@ -333,7 +388,12 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
                   label="Result highlight"
                   hint="Short headline stat, e.g. +40% conversion. 60 chars."
                 >
-                  <Input id="cs-highlight" name="resultHighlight" maxLength={60} defaultValue="" />
+                  <Input
+                    id="cs-highlight"
+                    name="resultHighlight"
+                    maxLength={60}
+                    defaultValue={editing?.resultHighlight}
+                  />
                 </Field>
                 <Field id="cs-tech" label="Tech stack" className="sm:col-span-2">
                   <div className="flex min-h-10 flex-wrap items-center gap-1.5 rounded-md border border-border-strong bg-surface px-2 py-1">
@@ -364,11 +424,36 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
                   </div>
                 </Field>
               </div>
-              <RichTextField id="cs-problem" name="problem" label="Problem" required rows={3} />
-              <RichTextField id="cs-solution" name="solution" label="Solution" required rows={3} />
-              <RichTextField id="cs-results" name="results" label="Results" required rows={3} />
+              <RichTextField
+                id="cs-problem"
+                name="problem"
+                defaultValue={editing?.problem}
+                label="Problem"
+                required
+                rows={3}
+              />
+              <RichTextField
+                id="cs-solution"
+                name="solution"
+                defaultValue={editing?.solution}
+                label="Solution"
+                required
+                rows={3}
+              />
+              <RichTextField
+                id="cs-results"
+                name="results"
+                defaultValue={editing?.results}
+                label="Results"
+                required
+                rows={3}
+              />
             </TabsContent>
-            <TabsContent value="media" className="space-y-4">
+            <TabsContent
+              value="media"
+              forceMount
+              className="space-y-4 data-[state=inactive]:hidden"
+            >
               <input
                 ref={coverInputRef}
                 type="file"
@@ -400,19 +485,96 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
                   <UploadIcon aria-hidden /> {cover.url ? "Replace cover" : "Upload cover"}
                 </Button>
               </div>
-              <p className="text-caption text-fg-muted">Gallery upload is not available yet.</p>
+              <input
+                ref={galleryInputRef}
+                type="file"
+                multiple
+                className="sr-only"
+                accept="image/*"
+                aria-label="Gallery image files"
+                onChange={handleGalleryChosen}
+              />
+              <ul className="space-y-2">
+                {gallery.map((g, i) => (
+                  <li key={g.mediaId} className="flex items-center gap-2">
+                    {g.url ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- admin preview of a user-uploaded R2 URL
+                      <img
+                        src={g.url}
+                        alt=""
+                        className="h-12 w-16 rounded-sm border border-border object-cover"
+                      />
+                    ) : null}
+                    <Input
+                      aria-label={`Alt text for image ${i + 1}`}
+                      value={g.alt}
+                      maxLength={125}
+                      required
+                      onChange={(e) =>
+                        setGallery((l) =>
+                          l.map((x, j) => (j === i ? { ...x, alt: e.target.value } : x)),
+                        )
+                      }
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Move image ${i + 1} up`}
+                      disabled={i === 0}
+                      onClick={() => moveGallery(i, -1)}
+                    >
+                      ▲
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Move image ${i + 1} down`}
+                      disabled={i === gallery.length - 1}
+                      onClick={() => moveGallery(i, 1)}
+                    >
+                      ▼
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setGallery((l) => l.filter((_, j) => j !== i))}
+                    >
+                      Remove
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                loading={galleryUploading}
+                disabled={gallery.length >= 24}
+                onClick={() => galleryInputRef.current?.click()}
+              >
+                <UploadIcon aria-hidden /> Add gallery images
+              </Button>
             </TabsContent>
-            <TabsContent value="seo" className="space-y-4">
+            <TabsContent value="seo" forceMount className="space-y-4 data-[state=inactive]:hidden">
               <Field id="cs-seo-title" label="SEO title" hint="≤ 70 chars">
                 <Input
                   id="cs-seo-title"
                   name="seoTitle"
                   maxLength={70}
-                  defaultValue={editing?.title}
+                  defaultValue={editing?.seoTitle || editing?.title}
                 />
               </Field>
               <Field id="cs-seo-desc" label="Meta description" hint="≤ 160 chars">
-                <Textarea id="cs-seo-desc" name="seoDescription" maxLength={160} rows={2} />
+                <Textarea
+                  id="cs-seo-desc"
+                  name="seoDescription"
+                  maxLength={160}
+                  rows={2}
+                  defaultValue={editing?.seoDescription}
+                />
               </Field>
               <div className="rounded-md border border-border bg-canvas p-3">
                 <p className="text-caption text-fg-muted">OG preview</p>

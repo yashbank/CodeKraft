@@ -121,7 +121,7 @@ export function ManualOrderForm({
   const splitsValid =
     type === "product" ||
     lines.every(
-      (l) => l.split.companyCutBps + l.split.lines.reduce((s, x) => s + x.bps, 0) === 10000,
+      (l) => l.split.lines.length > 0 && l.split.lines.reduce((s, x) => s + x.bps, 0) === 10000,
     );
   const owned = productLines.some((l) => offerings.find((o) => o.id === l.offeringId)?.owned);
 
@@ -138,12 +138,16 @@ export function ManualOrderForm({
     const totals = new Map<string, number>();
     for (const l of lines) {
       const lineTotal = l.qty * safeMinor(l.unit);
-      const weights = [l.split.companyCutBps, ...l.split.lines.map((x) => x.bps)];
-      if (weights.reduce((s, w) => s + w, 0) === 0 || lineTotal <= 0) continue;
-      const parts = allocateLargestRemainder(lineTotal, weights);
-      totals.set("Company", (totals.get("Company") ?? 0) + (parts[0] ?? 0));
+      if (lineTotal <= 0 || l.split.lines.every((x) => x.bps === 0)) continue;
+      // Mirrors finance/allocation.ts: company cut first (half-up), partners share the remainder.
+      const company = Math.round((lineTotal * l.split.companyCutBps) / 10000);
+      const parts = allocateLargestRemainder(
+        lineTotal - company,
+        l.split.lines.map((x) => x.bps),
+      );
+      totals.set("Company", (totals.get("Company") ?? 0) + company);
       l.split.lines.forEach((x, i) =>
-        totals.set(x.partnerName, (totals.get(x.partnerName) ?? 0) + (parts[i + 1] ?? 0)),
+        totals.set(x.partnerName, (totals.get(x.partnerName) ?? 0) + (parts[i] ?? 0)),
       );
     }
     return [...totals.entries()].map(([party, minor]) => ({ party, minor }));
@@ -155,22 +159,42 @@ export function ManualOrderForm({
   const selectedCustomer = customers.find((c) => c.id === customerId);
   const validProductLines = productLines.filter((l) => l.offeringId);
 
-  /**
-   * Only "product" orders submit for real right now. "Project" orders need a partner revenue
-   * split that's independently approval-gated (`zSplitSnapshot` in `modules/orders/types.ts`
-   * requires `lines` — the partner shares — to sum to 10 000 bps on their own; this form's
-   * `splitsValid` check above folds `companyCutBps` into that sum, which is a different
-   * invariant than the one the backend actually enforces). Wiring that correctly needs the
-   * finance split logic double-checked against real ledger behavior, not guessed here — so
-   * rather than submit a split that silently gets rejected (or worse, accepted with the wrong
-   * numbers), "project" stays an honest "not available from this screen yet" instead of lying
-   * with a fake success toast the way this form used to for every order type.
-   */
   async function handleCreate() {
     if (type === "project") {
-      toast.error(
-        "Project orders need a finance-approved revenue split and can't be created from this screen yet — ask a super admin to create it directly.",
-      );
+      setSubmitting(true);
+      try {
+        const result = await createManualOrder({
+          type: "project",
+          customer: {
+            clientName: clientName.trim(),
+            clientEmail: clientEmail.trim(),
+            clientCompany: clientCompany.trim() || undefined,
+          },
+          currency: "INR",
+          items: lines.map((l) => ({
+            description: l.description.trim(),
+            unitMinor: safeMinor(l.unit),
+            quantity: l.qty,
+            splitSnapshot: {
+              companyCutBps: l.split.companyCutBps,
+              lines: l.split.lines.map((x) => ({ partnerId: x.partnerId, shareBps: x.bps })),
+            },
+          })),
+          taxEnabled: applyTax,
+          billing: { name: clientName.trim(), email: clientEmail.trim(), country: "IN" },
+          notes: notes.trim() || undefined,
+        });
+        if (!result.ok) {
+          toast.error(result.error.message);
+          return;
+        }
+        toast.success("Project order sent for approval");
+        router.push(`/admin/orders/${result.data.orderId}`);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to create order");
+      } finally {
+        setSubmitting(false);
+      }
       return;
     }
     if (!customerId) {
@@ -452,37 +476,6 @@ export function ManualOrderForm({
                       </summary>
                       <div className="mt-3 space-y-3">
                         <div className="flex flex-wrap items-end gap-2">
-                          <Field id={`mo-copy-${l.id}`} label="Copy from product">
-                            <Select
-                              onValueChange={() =>
-                                setLine(l.id, {
-                                  split: {
-                                    companyCutBps: 2000,
-                                    lines: [
-                                      {
-                                        partnerId: partners[0]?.id ?? "",
-                                        partnerName: partners[0]?.name ?? "",
-                                        bps: 5000,
-                                      },
-                                      {
-                                        partnerId: partners[1]?.id ?? "",
-                                        partnerName: partners[1]?.name ?? "",
-                                        bps: 3000,
-                                      },
-                                    ],
-                                  },
-                                })
-                              }
-                            >
-                              <SelectTrigger id={`mo-copy-${l.id}`} size="sm" className="w-56">
-                                <SelectValue placeholder="Active ownership of…" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="prod-1">FitDesk Pro (v2)</SelectItem>
-                                <SelectItem value="prod-2">TradeFlow (v2)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </Field>
                           <Button
                             type="button"
                             variant="ghost"
@@ -700,14 +693,7 @@ export function ManualOrderForm({
               </section>
             ) : null}
             {type === "project" ? (
-              <>
-                <ApprovalGateNotice approvers={approvers} what="Creating a project order" />
-                <Banner tone="warning">
-                  Not available from this screen yet — project orders need a finance-approved
-                  partner split. Ask a super admin to create it directly, or switch to "Product
-                  order" above.
-                </Banner>
-              </>
+              <ApprovalGateNotice approvers={approvers} what="Creating a project order" />
             ) : null}
             {type === "project" && !splitsValid ? (
               <Banner tone="danger">Every project line needs a split that sums to 100 %.</Banner>
@@ -716,8 +702,12 @@ export function ManualOrderForm({
               <Button
                 disabled={
                   submitting ||
-                  type === "project" ||
                   total <= 0 ||
+                  (type === "project" &&
+                    (!clientName.trim() ||
+                      !clientEmail.trim() ||
+                      !splitsValid ||
+                      lines.some((l) => !l.description.trim() || safeMinor(l.unit) <= 0))) ||
                   (type === "product" && (!customerId || validProductLines.length === 0))
                 }
                 loading={submitting}

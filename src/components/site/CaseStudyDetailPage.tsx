@@ -155,7 +155,16 @@ export function CaseStudyDetailPage({
                           className="block w-full rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                           aria-label={`Open image: ${g.alt}`}
                         >
-                          <MediaPlaceholder alt="" kind="gallery" tone={i + 2} ratio="3/2" />
+                          {g.url ? (
+                            // eslint-disable-next-line @next/next/no-img-element -- user-uploaded R2 URL
+                            <img
+                              src={g.url}
+                              alt=""
+                              className="aspect-[3/2] w-full rounded-lg object-cover"
+                            />
+                          ) : (
+                            <MediaPlaceholder alt="" kind="gallery" tone={i + 2} ratio="3/2" />
+                          )}
                         </button>
                       </DialogTrigger>
                       <DialogContent size="lg" className="p-4">
@@ -163,7 +172,12 @@ export function CaseStudyDetailPage({
                         <DialogDescription className="sr-only">
                           {g.caption ?? g.alt}
                         </DialogDescription>
-                        <MediaPlaceholder alt={g.alt} kind="gallery" tone={i + 2} ratio="3/2" />
+                        {g.url ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- user-uploaded R2 URL
+                          <img src={g.url} alt={g.alt} className="w-full rounded-lg" />
+                        ) : (
+                          <MediaPlaceholder alt={g.alt} kind="gallery" tone={i + 2} ratio="3/2" />
+                        )}
                         {g.caption ? (
                           <p className="text-body-sm text-fg-muted">{g.caption}</p>
                         ) : null}

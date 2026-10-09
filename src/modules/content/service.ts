@@ -1370,8 +1370,26 @@ export class DefaultContentService implements ContentService {
       .from(caseStudies)
       .leftJoin(media, eq(caseStudies.coverMediaId, media.id))
       .orderBy(desc(caseStudies.updatedAt));
+    const galleryIds = [
+      ...new Set(joined.flatMap(({ c }) => (c.gallery ?? []).map((g) => g.mediaId))),
+    ];
+    const galleryMedia = galleryIds.length
+      ? await client.select().from(media).where(inArray(media.id, galleryIds))
+      : [];
+    const urlById = new Map(galleryMedia.map((gm) => [gm.id, resolveMediaUrl(gm) ?? undefined]));
     return joined.map(({ c, m }: (typeof joined)[number]) => ({
       id: c.id,
+      resultHighlight: c.resultHighlight ?? "",
+      seoTitle: c.seoTitle ?? "",
+      seoDescription: c.seoDescription ?? "",
+      problem: toPlainText(c.problemJson as unknown as RichTextDoc),
+      solution: toPlainText(c.solutionJson as unknown as RichTextDoc),
+      results: toPlainText(c.resultsJson as unknown as RichTextDoc),
+      gallery: (c.gallery ?? []).map((g) => ({
+        mediaId: g.mediaId,
+        alt: g.alt,
+        url: urlById.get(g.mediaId),
+      })),
       coverMediaId: c.coverMediaId ?? undefined,
       coverUrl: (m && resolveMediaUrl(m)) ?? undefined,
       title: c.title,

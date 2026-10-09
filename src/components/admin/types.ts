@@ -821,6 +821,13 @@ export interface CaseStudyRow {
   updatedAt: string;
   coverMediaId?: string;
   coverUrl?: string;
+  gallery?: { mediaId: string; alt: string; url?: string }[];
+  resultHighlight?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  problem?: string;
+  solution?: string;
+  results?: string;
 }
 
 export interface ClientLogo {

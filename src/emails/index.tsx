@@ -10,6 +10,7 @@ export interface RenderTemplateOptions {
 
 export interface EmailTemplateDefinition {
   name: string;
+  subject: (data: Record<string, unknown>) => string;
   render: (
     data: Record<string, unknown>,
     siteUrl: string,
@@ -23,6 +24,7 @@ function makeTemplate(
 ): EmailTemplateDefinition {
   return {
     name,
+    subject: subjectFn,
     async render(data: Record<string, unknown>, siteUrl: string) {
       const subject = subjectFn(data);
       const element = (
@@ -181,6 +183,43 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplateDefinition> = {
     () => (
       <Text style={emailStyles.p}>
         Your refund has been approved and a credit note has been issued.
+      </Text>
+    ),
+  ),
+  "approval-needed": makeTemplate(
+    "approval-needed",
+    (d) => `Approval needed: ${d.summary ?? ""}`,
+    (d) => (
+      <>
+        <Text style={emailStyles.p}>
+          {String(d.requesterName ?? "An admin")} requested approval: {String(d.summary ?? "")}
+        </Text>
+        <Link href={(d.url as string) ?? "/admin/approvals"} style={emailStyles.button}>
+          Review Request
+        </Link>
+      </>
+    ),
+  ),
+  "approval-decided": makeTemplate(
+    "approval-decided",
+    (d) => `Approval ${d.outcome ?? "decided"}: ${d.summary ?? ""}`,
+    (d) => (
+      <>
+        <Text style={emailStyles.p}>
+          Your request ({String(d.summary ?? "")}) was {String(d.outcome ?? "decided")}.
+        </Text>
+        <Link href={(d.url as string) ?? "/admin/approvals"} style={emailStyles.button}>
+          View Approvals
+        </Link>
+      </>
+    ),
+  ),
+  "payment-confirmed": makeTemplate(
+    "payment-confirmed",
+    (d) => `Payment confirmed for order ${d.orderNo ?? ""}`,
+    (d) => (
+      <Text style={emailStyles.p}>
+        Your payment for order {String(d.orderNo ?? "")} is confirmed.
       </Text>
     ),
   ),

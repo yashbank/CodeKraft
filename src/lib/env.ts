@@ -98,6 +98,9 @@ export const envSchema = z
     EMAIL_TRANSPORT: z.enum(EMAIL_TRANSPORTS).default("log"),
     // AI
     ANTHROPIC_API_KEY: optionalString,
+    AI_PROVIDER: z.enum(["anthropic", "openai", "fake"]).optional(),
+    OPENAI_API_KEY: optionalString,
+    OPENAI_MODEL: optionalString,
     // Forms
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: optionalString,
     TURNSTILE_SECRET: optionalString,

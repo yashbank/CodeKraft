@@ -43,6 +43,7 @@ export default async function ProjectDetailRoute(props: { params: Promise<{ slug
     id: g.mediaId,
     kind: "gallery",
     alt: g.alt,
+    url: g.url || undefined,
     ...(g.caption ? { caption: g.caption } : {}),
   }));
 

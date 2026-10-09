@@ -13,7 +13,10 @@ export type EmailTemplate =
   | "query-closed"
   | "subscription-reminder"
   | "refund-issued"
-  | "admin-overdue-digest";
+  | "admin-overdue-digest"
+  | "approval-needed"
+  | "approval-decided"
+  | "payment-confirmed";
 
 export interface EmailMessage {
   to: string;

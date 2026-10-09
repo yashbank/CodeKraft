@@ -1,5 +1,6 @@
 import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
+import { EMAIL_TEMPLATES } from "@/emails";
 import { sendEmail } from "@/lib/email/transport";
 import type { EmailTemplate } from "@/lib/email/types";
 import { emailOutbox } from "../../drizzle/schema/notifications";
@@ -59,7 +60,10 @@ export const emailOutboxRetryJob = {
           if (process.env.EMAIL_TRANSPORT === "resend") {
             await sendEmail({
               to: row.toEmail,
-              subject: `Notification: ${row.template}`,
+              subject:
+                EMAIL_TEMPLATES[row.template]?.subject(
+                  (row.payload as Record<string, unknown>) ?? {},
+                ) ?? `Notification: ${row.template}`,
               template: row.template as EmailTemplate,
               data: (row.payload as Record<string, unknown>) ?? {},
               priority: row.priority,
