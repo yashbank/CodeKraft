@@ -1,0 +1,27 @@
+name: scheduler
+
+# docs/12 §4: Vercel Hobby allows only daily crons, so GitHub fires the two consolidated cron
+# endpoints. Secrets: CRON_SECRET (same value as the Vercel env), SITE_URL (e.g. https://codekraft-dusky.vercel.app).
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+    - cron: "30 21 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: scheduler
+  cancel-in-progress: false
+
+jobs:
+  frequent:
+    if: github.event.schedule == '*/15 * * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl --fail-with-body -sS -m 55 -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/frequent"
+  daily:
+    if: github.event.schedule == '30 21 * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl --fail-with-body -sS -m 55 -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/daily"

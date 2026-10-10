@@ -16,6 +16,9 @@ const isCI = Boolean(process.env.CI);
 const PORT = Number(process.env.PORT ?? 3000);
 const SITE_URL = process.env.E2E_SITE_URL ?? `http://localhost:${PORT}`;
 const ADMIN_URL = process.env.E2E_ADMIN_URL ?? `http://admin.localhost:${PORT}`;
+// Local storage stub (tests/setup/storage-stub.mjs) unless a real STORAGE_ENDPOINT is given.
+const STUB_PORT = 9100;
+const STUB_URL = `http://127.0.0.1:${STUB_PORT}`;
 const full = process.env.E2E_FULL === "1";
 
 const desktopChrome = devices["Desktop Chrome"];
@@ -68,17 +71,31 @@ export default defineConfig({
         ]
       : []),
   ],
-  webServer: {
-    command: isCI ? "pnpm build && pnpm start" : "pnpm dev",
-    url: SITE_URL,
-    reuseExistingServer: !isCI,
-    timeout: isCI ? 300_000 : 120_000,
-    stdout: "ignore",
-    stderr: "pipe",
-    env: { PORT: String(PORT) },
-    // pnpm's native launcher runs the script in its own process group, so Playwright's default
-    // SIGKILL on the wrapper orphans `next dev` and the run hangs on the open stderr pipe.
-    // SIGTERM first lets pnpm forward the signal down to next; SIGKILL follows after 5 s.
-    gracefulShutdown: { signal: "SIGTERM", timeout: 5_000 },
-  },
+  webServer: [
+    {
+      command: "node tests/setup/storage-stub.mjs",
+      url: STUB_URL,
+      reuseExistingServer: !isCI,
+      env: { STORAGE_STUB_PORT: String(STUB_PORT) },
+    },
+    {
+      command: isCI ? "pnpm build && pnpm start" : "pnpm dev",
+      url: SITE_URL,
+      reuseExistingServer: !isCI,
+      timeout: isCI ? 300_000 : 120_000,
+      stdout: "ignore",
+      stderr: "pipe",
+      env: {
+        PORT: String(PORT),
+        EMAIL_TRANSPORT: "log",
+        STORAGE_ENDPOINT: process.env.STORAGE_ENDPOINT ?? STUB_URL,
+        R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID ?? "x",
+        R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY ?? "x",
+      },
+      // pnpm's native launcher runs the script in its own process group, so Playwright's default
+      // SIGKILL on the wrapper orphans `next dev` and the run hangs on the open stderr pipe.
+      // SIGTERM first lets pnpm forward the signal down to next; SIGKILL follows after 5 s.
+      gracefulShutdown: { signal: "SIGTERM", timeout: 5_000 },
+    },
+  ],
 });

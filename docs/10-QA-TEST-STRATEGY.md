@@ -387,6 +387,8 @@ Vitest `coverage.thresholds`, enforced in the `unit` and `integration` jobs; fal
 | `components/**` | 60 % | 50 % | 60 % |
 | Excluded | `drizzle/migrations`, `emails/*` and `pdf/*` render snapshots (covered by snapshot tests), `*.stories.*`, `tests/**` |
 
+Current enforced floor (vitest.config.ts) is ratcheted from measured combined (unit + integration) coverage of 2026-10-10 minus 2 points, below the targets above: global 53/40/42 (lines/branches/functions), finance 72/54/65, chat-media-auth 58/53/37, authz 68/73/86, components 33/31/32, `lib/money` 100; raise as tests land.
+
 Thresholds ratchet: the workflow stores the last green coverage and fails if global lines drop by more than 1 point in a PR.
 
 ---

@@ -62,9 +62,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version-file: .nvmrc, cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      - run: pnpm vitest run --project unit --coverage
-      - uses: actions/upload-artifact@v4
-        with: { name: coverage-unit, path: coverage, retention-days: 7 }
+      - run: pnpm vitest run --project unit
 
   integration:
     needs: setup
@@ -88,7 +86,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: psql "$DATABASE_URL" -c "CREATE EXTENSION IF NOT EXISTS citext; CREATE EXTENSION IF NOT EXISTS pgcrypto;"
       - run: '[ -d drizzle/migrations ] && pnpm db:migrate || echo "no migrations yet (P2)"'
-      - run: pnpm vitest run --project integration
+      # both projects: coverage thresholds are evaluated on combined coverage
+      - run: pnpm vitest run --coverage
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: coverage-combined, path: coverage, retention-days: 7 }
 
   build:
     needs: [lint, typecheck]

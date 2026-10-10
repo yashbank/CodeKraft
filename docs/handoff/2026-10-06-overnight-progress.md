@@ -7,8 +7,8 @@ items in this list.
 
 ## Context
 - Live site: https://codekraft-dusky.vercel.app (customer/site), https://codekraft-admin.vercel.app (admin)
-- Admin creds: yashbank2002@gmail.com / CodeKraft-Admin-12406c! (super_admin)
-  sanketshrikant42@gmail.com / CodeKraft-Admin2-6804b4! (super_admin)
+- Admin creds: yashbank2002@gmail.com (super_admin) — password in the founder password manager / `.env.production.local` (ADMIN1_PASSWORD); never commit it
+  sanketshrikant42@gmail.com (super_admin) — ADMIN2_PASSWORD in `.env.production.local`
 - No browser tool available this session — verify via tsc/eslint/`pnpm build`/curl/vercel logs only.
   User will do the real click-through test in the morning.
 - Git safety: `git add -- <exact files>` only, never `-A`/`.`. Push to main directly (no PR flow established in this project).

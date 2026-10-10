@@ -1,4 +1,14 @@
 {
   "framework": "nextjs",
-  "regions": ["sin1"]
+  "regions": ["sin1"],
+  "crons": [
+    {
+      "path": "/api/cron/frequent",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/daily",
+      "schedule": "30 21 * * *"
+    }
+  ]
 }
