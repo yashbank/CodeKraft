@@ -46,7 +46,8 @@ export function OrderRow({ order: o, href }: { order: OrderSummaryView; href: st
           <StatusBadge kind="orders.status" value={o.status} size="sm" />
         </div>
         <p className="text-body-sm text-fg-muted">
-          {o.productName} · {o.offeringName}
+          {o.productName}
+          {o.offeringName ? ` · ${o.offeringName}` : ""}
         </p>
         <p className="text-caption text-fg-subtle">Placed {formatDate(o.placedAt)}</p>
       </div>

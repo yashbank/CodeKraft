@@ -174,7 +174,7 @@ export function mapOrderSummaryView(o: OrderSummary): OrderSummaryView {
     placedAt: o.createdAt,
     status: o.status,
     productName: o.itemsSummary,
-    offeringName: o.itemsSummary,
+    offeringName: "",
     total: o.total,
   };
 }

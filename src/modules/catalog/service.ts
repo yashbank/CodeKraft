@@ -1708,6 +1708,29 @@ export class DefaultCatalogService implements CatalogService {
         .innerJoin(tags, eq(productTags.tagId, tags.id))
         .where(eq(productTags.productId, p.id));
 
+      const offeringRows = await dbClient
+        .select({
+          purchaseModel: offerings.purchaseModel,
+          deliveryType: offerings.deliveryType,
+          amountMinor: offeringPrices.amountMinor,
+          currency: offeringPrices.currency,
+        })
+        .from(offerings)
+        .leftJoin(offeringPrices, eq(offerings.id, offeringPrices.offeringId))
+        .where(and(eq(offerings.productId, p.id), eq(offerings.status, "active")));
+
+      const models = [...new Set(offeringRows.map((o) => o.purchaseModel))];
+      const deliveries = [...new Set(offeringRows.map((o) => o.deliveryType))];
+
+      const priced = offeringRows.filter(
+        (o): o is typeof o & { amountMinor: number; currency: string } =>
+          o.amountMinor != null && o.currency != null,
+      );
+      const displayPrices = priced.filter((o) => o.currency === input.displayCurrency);
+      const pool = displayPrices.length > 0 ? displayPrices : priced;
+      const minRow =
+        pool.length > 0 ? pool.reduce((a, b) => (a.amountMinor <= b.amountMinor ? a : b)) : null;
+
       cards.push({
         slug: p.slug,
         name: p.name,
@@ -1715,9 +1738,11 @@ export class DefaultCatalogService implements CatalogService {
         coverImage: null,
         category: cat ? { id: cat.id, slug: cat.slug, name: cat.name } : null,
         tags: tagRows,
-        fromPrice: null,
-        purchaseModels: ["one_time"],
-        deliveryTypes: ["download"],
+        fromPrice: minRow
+          ? { amountMinor: minRow.amountMinor, currency: minRow.currency as Currency }
+          : null,
+        purchaseModels: models.length > 0 ? models : ["one_time"],
+        deliveryTypes: deliveries.length > 0 ? deliveries : ["download"],
         isFeatured: true,
         isComingSoon: p.isComingSoon,
         currentVersion: p.currentVersion,
@@ -1766,6 +1791,29 @@ export class DefaultCatalogService implements CatalogService {
         .innerJoin(tags, eq(productTags.tagId, tags.id))
         .where(eq(productTags.productId, p.id));
 
+      const offeringRows = await dbClient
+        .select({
+          purchaseModel: offerings.purchaseModel,
+          deliveryType: offerings.deliveryType,
+          amountMinor: offeringPrices.amountMinor,
+          currency: offeringPrices.currency,
+        })
+        .from(offerings)
+        .leftJoin(offeringPrices, eq(offerings.id, offeringPrices.offeringId))
+        .where(and(eq(offerings.productId, p.id), eq(offerings.status, "active")));
+
+      const models = [...new Set(offeringRows.map((o) => o.purchaseModel))];
+      const deliveries = [...new Set(offeringRows.map((o) => o.deliveryType))];
+
+      const priced = offeringRows.filter(
+        (o): o is typeof o & { amountMinor: number; currency: string } =>
+          o.amountMinor != null && o.currency != null,
+      );
+      const displayPrices = priced.filter((o) => o.currency === input.displayCurrency);
+      const pool = displayPrices.length > 0 ? displayPrices : priced;
+      const minRow =
+        pool.length > 0 ? pool.reduce((a, b) => (a.amountMinor <= b.amountMinor ? a : b)) : null;
+
       cards.push({
         slug: p.slug,
         name: p.name,
@@ -1773,9 +1821,11 @@ export class DefaultCatalogService implements CatalogService {
         coverImage: null,
         category: cat ? { id: cat.id, slug: cat.slug, name: cat.name } : null,
         tags: tagRows,
-        fromPrice: null,
-        purchaseModels: ["one_time"],
-        deliveryTypes: ["download"],
+        fromPrice: minRow
+          ? { amountMinor: minRow.amountMinor, currency: minRow.currency as Currency }
+          : null,
+        purchaseModels: models.length > 0 ? models : ["one_time"],
+        deliveryTypes: deliveries.length > 0 ? deliveries : ["download"],
         isFeatured: p.isFeatured,
         isComingSoon: p.isComingSoon,
         currentVersion: p.currentVersion,
