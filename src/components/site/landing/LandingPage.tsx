@@ -118,9 +118,9 @@ export function LandingPage({
           </>
         ) : (
           <div className="rounded-lg border border-dashed border-border px-6 py-12 text-center">
-            <p className="text-h4">Products coming soon</p>
+            <p className="text-h4">Explore our products</p>
             <p className="mt-2 text-body-sm text-fg-muted">
-              Meanwhile, tell us what you need built.
+              Browse our catalog or tell us what you need built.
             </p>
             <Button asChild className="mt-6">
               <Link href="/contact">Start a project</Link>

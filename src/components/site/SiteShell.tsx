@@ -15,7 +15,7 @@ export function SiteShell({
   return (
     <div data-app="site" className="flex min-h-screen flex-col bg-canvas text-fg">
       <SiteHeader {...header} themeToggleEnabled={themeToggleEnabled} />
-      <main id="main" className="flex-1">
+      <main id="main" className="flex-1 overflow-x-hidden">
         {children}
       </main>
       <SiteFooter themeToggleEnabled={themeToggleEnabled} />

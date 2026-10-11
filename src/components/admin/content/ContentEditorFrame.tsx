@@ -55,6 +55,13 @@ export function ContentEditorFrame({
   hideSaveBar?: boolean;
 }) {
   const [dirty, setDirty] = React.useState(false);
+  const mountedRef = React.useRef(false);
+  React.useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      mountedRef.current = true;
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
   return (
     <>
       <PageHeader
@@ -120,7 +127,9 @@ export function ContentEditorFrame({
         ) : null}
         <div
           className={cn("min-w-0", wide ? "max-w-[960px]" : "max-w-[880px]")}
-          onChangeCapture={() => setDirty(true)}
+          onChangeCapture={() => {
+            if (mountedRef.current) setDirty(true);
+          }}
         >
           {children}
         </div>

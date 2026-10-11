@@ -111,11 +111,12 @@ export function LandingEditor({
           label: String(data.get("cta1") ?? "").trim() || "Start a project",
           href: normalizeTarget(String(data.get("cta1-target") ?? "inquiry")),
         },
-        ...(String(data.get("cta2") ?? "").trim()
+        ...(String(data.get("cta2") ?? "").trim() &&
+        String(data.get("cta2-target") ?? "none") !== "none"
           ? {
               secondary: {
                 label: String(data.get("cta2") ?? "").trim(),
-                href: normalizeTarget(String(data.get("cta2-target") ?? "/products")),
+                href: normalizeTarget(String(data.get("cta2-target") ?? "none")),
               },
             }
           : {}),
@@ -246,10 +247,10 @@ export function LandingEditor({
           </Field>
           <Field id="ch-cta1-target" label="Primary CTA target">
             <Select name="cta1-target" defaultValue={chapter.ctaPrimary?.target ?? "inquiry"}>
-              <SelectTrigger id="ch-cta1-target">
+              <SelectTrigger id="ch-cta1-target" className="w-full">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper">
                 {TARGETS.map((t) => (
                   <SelectItem key={t} value={t}>
                     {t === "inquiry" ? "Project inquiry sheet" : t}
@@ -262,11 +263,12 @@ export function LandingEditor({
             <Input id="ch-cta2" name="cta2" defaultValue={chapter.ctaSecondary?.label ?? ""} />
           </Field>
           <Field id="ch-cta2-target" label="Secondary CTA target" optional>
-            <Select name="cta2-target" defaultValue={chapter.ctaSecondary?.target ?? "/products"}>
-              <SelectTrigger id="ch-cta2-target">
+            <Select name="cta2-target" defaultValue={chapter.ctaSecondary?.target ?? "none"}>
+              <SelectTrigger id="ch-cta2-target" className="w-full">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper">
+                <SelectItem value="none">None (no link)</SelectItem>
                 {TARGETS.map((t) => (
                   <SelectItem key={t} value={t}>
                     {t === "inquiry" ? "Project inquiry sheet" : t}
@@ -371,6 +373,7 @@ export function LandingEditor({
 }
 
 function normalizeTarget(v: string): string {
+  if (v === "none") return "";
   if (v === "inquiry") return "/contact#inquiry";
   if (v === "URL…") return "/";
   return v;
