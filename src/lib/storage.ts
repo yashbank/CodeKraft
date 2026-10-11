@@ -33,6 +33,10 @@ export interface StorageDriver {
   ): Promise<{ contentLength: number; contentType: string; eTag?: string }>;
   getObjectRange(bucket: string, key: string, start: number, end: number): Promise<Buffer>;
   deleteObject(bucket: string, key: string): Promise<void>;
+  getObject(
+    bucket: string,
+    key: string,
+  ): Promise<{ body: Buffer; contentType: string; contentLength: number }>;
   deleteObjects(bucket: string, keys: readonly string[]): Promise<void>;
   putObject(
     bucket: string,
@@ -95,6 +99,19 @@ export class MemoryStorageDriver implements StorageDriver {
       throw new Error(`Object not found in storage: ${bucket}/${key}`);
     }
     return item.body.subarray(start, end + 1);
+  }
+
+  async getObject(
+    bucket: string,
+    key: string,
+  ): Promise<{ body: Buffer; contentType: string; contentLength: number }> {
+    const entry = this.store.get(this.storageKey(bucket, key));
+    if (!entry) throw new Error(`Object not found: ${bucket}/${key}`);
+    return {
+      body: entry.body,
+      contentType: entry.contentType,
+      contentLength: entry.body.length,
+    };
   }
 
   async deleteObject(bucket: string, key: string): Promise<void> {
@@ -214,6 +231,21 @@ export class S3StorageDriver implements StorageDriver {
     };
   }
 
+  async getObject(
+    bucket: string,
+    key: string,
+  ): Promise<{ body: Buffer; contentType: string; contentLength: number }> {
+    const command = new GetObjectCommand({ Bucket: bucket, Key: key });
+    const res = await this.client.send(command);
+    if (!res.Body) throw new Error(`Empty body for ${bucket}/${key}`);
+    const byteArray = await res.Body.transformToByteArray();
+    return {
+      body: Buffer.from(byteArray),
+      contentType: res.ContentType ?? "application/octet-stream",
+      contentLength: res.ContentLength ?? byteArray.length,
+    };
+  }
+
   async getObjectRange(bucket: string, key: string, start: number, end: number): Promise<Buffer> {
     const command = new GetObjectCommand({
       Bucket: bucket,
@@ -300,11 +332,24 @@ export function getDocumentsBucketName(): string {
   return process.env.R2_BUCKET_DOCUMENTS ?? "codekraft-documents";
 }
 
+function isPrivateStorageEndpoint(url: string): boolean {
+  return /\.r2\.cloudflarestorage\.com|\.s3\.amazonaws\.com/.test(url);
+}
+
+let warnedPrivateEndpoint = false;
+
 export function getPublicMediaBaseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_MEDIA_BASE_URL ??
-    (process.env.NEXT_PUBLIC_SITE_URL
-      ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/files/public`
-      : "https://media.codekraft.dev")
-  );
+  const explicit = process.env.NEXT_PUBLIC_MEDIA_BASE_URL;
+  if (explicit && !isPrivateStorageEndpoint(explicit)) {
+    return explicit;
+  }
+  if (explicit && isPrivateStorageEndpoint(explicit) && !warnedPrivateEndpoint) {
+    warnedPrivateEndpoint = true;
+    console.warn(
+      `[storage] NEXT_PUBLIC_MEDIA_BASE_URL looks like a private S3/R2 endpoint — falling back to /api/files/public proxy`,
+    );
+  }
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (siteUrl) return `${siteUrl}/api/files/public`;
+  return "/api/files/public";
 }

@@ -149,6 +149,7 @@ export interface MediaItem {
   fileName: string;
   alt?: string;
   sizeKb: number;
+  url?: string;
 }
 
 export interface ProductVersionRow {

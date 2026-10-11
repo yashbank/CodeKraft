@@ -13,6 +13,7 @@ import { auditService } from "@/modules/audit/service";
 import { approvalsService } from "@/modules/approvals/service";
 import { offeringsService } from "@/modules/offerings/service";
 import { revalidateTagSafe, revalidateTagsSafe } from "@/lib/revalidate";
+import { getPublicMediaBaseUrl } from "@/lib/storage";
 import { triggerReindexSafe } from "@/modules/search/indexer";
 import type { Currency } from "@/lib/money";
 import {
@@ -1243,7 +1244,13 @@ export class DefaultCatalogService implements CatalogService {
         id: r.pm.id,
         kind: r.pm.kind,
         mediaId: r.pm.mediaId,
-        url: r.pm.embedUrl ?? `/api/files/public/${r.pm.mediaId}`,
+        url:
+          r.pm.embedUrl ??
+          (r.m && r.m.visibility === "public"
+            ? `${getPublicMediaBaseUrl().replace(/\/+$/, "")}/${r.m.objectKey}`
+            : r.m
+              ? `/api/files/private/${r.m.id}`
+              : ""),
         embedUrl: r.pm.embedUrl,
         title: r.pm.title,
         alt: r.pm.alt,
@@ -1551,7 +1558,13 @@ export class DefaultCatalogService implements CatalogService {
         id: r.pm.id,
         kind: r.pm.kind,
         mediaId: r.pm.mediaId,
-        url: r.pm.embedUrl ?? (r.m ? `/api/files/public/${r.m.id}` : ""),
+        url:
+          r.pm.embedUrl ??
+          (r.m && r.m.visibility === "public"
+            ? `${getPublicMediaBaseUrl().replace(/\/+$/, "")}/${r.m.objectKey}`
+            : r.m
+              ? `/api/files/private/${r.m.id}`
+              : ""),
         embedUrl: r.pm.embedUrl,
         title: r.pm.title,
         alt: r.pm.alt,

@@ -79,6 +79,7 @@ async function loadProduct(slug: string): Promise<ProductDetail | null> {
     kind: m.kind as MediaItem["kind"],
     alt: m.alt,
     caption: m.title ?? undefined,
+    url: m.url || undefined,
   }));
 
   const faqs: FaqItem[] = p.faqs.map((f) => ({

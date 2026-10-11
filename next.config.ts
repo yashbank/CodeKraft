@@ -6,12 +6,20 @@ const adminHost = process.env.ADMIN_HOST ?? "admin.localhost:3000";
 const mediaBase = process.env.NEXT_PUBLIC_MEDIA_BASE_URL;
 
 const remotePatterns: NonNullable<NextConfig["images"]>["remotePatterns"] = [];
-if (mediaBase) {
+if (mediaBase && !/\.r2\.cloudflarestorage\.com|\.s3\.amazonaws\.com/.test(mediaBase)) {
   const u = new URL(mediaBase);
   remotePatterns.push({
     protocol: u.protocol.replace(":", "") as "http" | "https",
     hostname: u.hostname,
     pathname: "/**",
+  });
+}
+{
+  const siteHost = new URL(siteUrl).hostname;
+  remotePatterns.push({
+    protocol: new URL(siteUrl).protocol.replace(":", "") as "http" | "https",
+    hostname: siteHost,
+    pathname: "/api/files/public/**",
   });
 }
 

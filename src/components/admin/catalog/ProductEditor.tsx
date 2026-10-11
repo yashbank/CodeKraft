@@ -1329,9 +1329,21 @@ export function ProductEditor({
                   <GripVerticalIcon aria-hidden className="size-4 shrink-0 text-fg-subtle" />
                   <span
                     aria-hidden
-                    className="grid size-12 place-items-center rounded-sm bg-elevated text-caption text-fg-subtle"
+                    className="grid size-12 place-items-center rounded-sm bg-elevated text-caption text-fg-subtle overflow-hidden"
                   >
-                    {m.kind === "video_embed" ? "▶" : m.kind === "presentation" ? "PDF" : "IMG"}
+                    {m.kind === "video_embed" ? (
+                      "▶"
+                    ) : m.kind === "presentation" ? (
+                      "PDF"
+                    ) : m.url ? (
+                      <img
+                        src={m.url}
+                        alt={m.alt ?? ""}
+                        className="size-12 rounded-sm object-cover"
+                      />
+                    ) : (
+                      "IMG"
+                    )}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-mono text-body-sm">{m.fileName}</span>

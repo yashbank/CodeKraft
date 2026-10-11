@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import Image from "next/image";
 import { useState } from "react";
 
 import { cn } from "@/components/ui/_utils";
@@ -23,15 +24,30 @@ export function MediaGallery({ media, className }: { media: MediaItem[]; classNa
   return (
     <div className={cn("space-y-3", className)}>
       <div className="relative">
-        <MediaPlaceholder
-          key={active.id}
-          alt={active.alt}
-          kind={active.kind}
-          tone={index}
-          ratio="16/10"
-          label={active.caption ?? (active.kind === "video_embed" ? "Play video" : undefined)}
-          className="ck-crossfade animate-in fade-in rounded-xl"
-        />
+        {active.url ? (
+          <div
+            className="relative overflow-hidden rounded-xl ck-crossfade animate-in fade-in"
+            style={{ aspectRatio: "16/10" }}
+          >
+            <Image
+              src={active.url}
+              alt={active.alt}
+              fill
+              className="object-cover"
+              sizes="(min-width:1024px) 60vw, 100vw"
+            />
+          </div>
+        ) : (
+          <MediaPlaceholder
+            key={active.id}
+            alt={active.alt}
+            kind={active.kind}
+            tone={index}
+            ratio="16/10"
+            label={active.caption ?? (active.kind === "video_embed" ? "Play video" : undefined)}
+            className="ck-crossfade animate-in fade-in rounded-xl"
+          />
+        )}
         {media.length > 1 ? (
           <>
             <button
@@ -76,13 +92,19 @@ export function MediaGallery({ media, className }: { media: MediaItem[]; classNa
                   i === index ? "border-accent" : "border-transparent hover:border-border-strong",
                 )}
               >
-                <MediaPlaceholder
-                  alt=""
-                  kind={m.kind}
-                  tone={i}
-                  ratio="16/10"
-                  className="rounded-none border-0"
-                />
+                {m.url ? (
+                  <div className="relative" style={{ aspectRatio: "16/10" }}>
+                    <Image src={m.url} alt="" fill className="object-cover" sizes="96px" />
+                  </div>
+                ) : (
+                  <MediaPlaceholder
+                    alt=""
+                    kind={m.kind}
+                    tone={i}
+                    ratio="16/10"
+                    className="rounded-none border-0"
+                  />
+                )}
               </button>
             </li>
           ))}
