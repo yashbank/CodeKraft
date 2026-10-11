@@ -198,13 +198,23 @@ export function ChatbotMonitor({
               <Label htmlFor="cv-from" className="text-caption text-fg-muted">
                 From
               </Label>
-              <Input id="cv-from" type="date" defaultValue="2026-09-18" className="h-8 w-40" />
+              <Input
+                id="cv-from"
+                type="date"
+                defaultValue={new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10)}
+                className="h-8 w-40"
+              />
             </div>
             <div className="space-y-1">
               <Label htmlFor="cv-to" className="text-caption text-fg-muted">
                 To
               </Label>
-              <Input id="cv-to" type="date" defaultValue="2026-09-25" className="h-8 w-40" />
+              <Input
+                id="cv-to"
+                type="date"
+                defaultValue={new Date().toISOString().slice(0, 10)}
+                className="h-8 w-40"
+              />
             </div>
             <div className="space-y-1">
               <Label htmlFor="cv-outcome" className="text-caption text-fg-muted">
@@ -230,7 +240,7 @@ export function ChatbotMonitor({
               <Input id="cv-search" type="search" className="h-8 max-w-xs" />
             </div>
           </div>
-          <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <div className="rounded-lg border border-border bg-surface">
               <Table>
                 <TableCaption className="sr-only">Conversations</TableCaption>

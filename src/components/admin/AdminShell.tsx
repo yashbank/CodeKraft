@@ -413,12 +413,12 @@ export function AdminShell({
           <Button
             variant="outline"
             size="sm"
-            className="hidden w-64 justify-start gap-2 text-fg-muted md:inline-flex"
+            className="hidden max-w-80 shrink justify-start gap-2 text-fg-muted md:inline-flex"
             onClick={() => setPaletteOpen(true)}
             aria-keyshortcuts="Meta+K Control+K"
           >
             <SearchIcon aria-hidden />
-            <span className="flex-1 text-left">Search products, orders, customers…</span>
+            <span className="flex-1 truncate text-left">Search products, orders, customers…</span>
             <kbd className="rounded-xs border border-border px-1.5 font-mono text-caption text-fg-subtle">
               ⌘K
             </kbd>

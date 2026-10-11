@@ -174,7 +174,7 @@ export function QuotesScreen({ quotes, customers, orderHref, customerHref }: Quo
         {rows.length === 0 ? (
           <EmptyState icon={FileTextIcon} title="No quotes yet" />
         ) : (
-          <div className="rounded-lg border border-border bg-surface">
+          <div className="overflow-hidden rounded-lg border border-border bg-surface">
             <Table>
               <TableCaption className="sr-only">Custom quotes</TableCaption>
               <TableHeader>
@@ -294,7 +294,7 @@ export function QuotesScreen({ quotes, customers, orderHref, customerHref }: Quo
                 key={selected?.id ?? "new"}
                 disabled={selected !== null}
               >
-                <SelectTrigger id="q-customer">
+                <SelectTrigger id="q-customer" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -317,7 +317,7 @@ export function QuotesScreen({ quotes, customers, orderHref, customerHref }: Quo
                 key={`o-${selected?.id ?? "new"}`}
                 disabled
               >
-                <SelectTrigger id="q-offering">
+                <SelectTrigger id="q-offering" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
