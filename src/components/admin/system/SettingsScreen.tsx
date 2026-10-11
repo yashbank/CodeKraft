@@ -169,7 +169,7 @@ export function SettingsScreen({
               </div>
               <fieldset className="space-y-2">
                 <legend className="text-body-sm font-semibold">
-                  Query snippets (5 canned replies)
+                  Query snippets ({s.general.snippets.length} canned replies)
                 </legend>
                 {s.general.snippets.map((sn, i) => (
                   <div key={i}>

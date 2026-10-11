@@ -105,7 +105,11 @@ export function mapSiteSettingsToSettingsData(settings: SiteSettings): SettingsD
       phones: seller?.contactPhones.join(", ") ?? "",
       email: seller?.email ?? "",
       replyTime: "",
-      snippets: [],
+      snippets: [
+        "Thanks for reaching out — we're looking into this and will follow up shortly.",
+        "This has been resolved on our end. Let us know if anything still looks off.",
+        "Could you share your order number so we can look into this?",
+      ],
     },
     currencies: {
       base: settings.baseCurrency,

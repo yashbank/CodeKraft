@@ -297,7 +297,9 @@ export function QueriesInbox({
                       ? `${q.customer.name} · ${q.customer.email}`
                       : `Visitor · ${q.visitorEmail}`}
                   </span>
-                  <span className="block truncate text-caption text-fg-subtle">{q.snippet}</span>
+                  {q.snippet ? (
+                    <span className="block truncate text-caption text-fg-subtle">{q.snippet}</span>
+                  ) : null}
                   <span className="mt-1 flex items-center gap-2 text-caption text-fg-muted">
                     <StatusBadge kind="queries.source" value={q.source} size="sm" hideIcon />
                     {timeAgo(q.updatedAt, now)}
