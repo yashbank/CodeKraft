@@ -317,24 +317,36 @@ export function OrderStatusScreen({
       break;
     case "submitted":
       panel = (
-        <div className="space-y-4 rounded-lg border border-border bg-surface p-5">
-          <div className="flex items-start gap-3">
-            <CircleCheckIcon aria-hidden className="mt-0.5 size-6 shrink-0 text-success" />
-            <div className="space-y-1">
-              <p className="text-body font-semibold text-fg">
-                Reference received: <span className="font-mono">{o.payment?.reference}</span>
-              </p>
-              <p className="text-body-sm text-fg-muted">
-                We&apos;re confirming your payment — usually within 1 working day. You&apos;ll get
-                an email.
-              </p>
+        <>
+          <div className="space-y-4 rounded-lg border border-border bg-surface p-5">
+            <div className="flex items-start gap-3">
+              <CircleCheckIcon aria-hidden className="mt-0.5 size-6 shrink-0 text-success" />
+              <div className="space-y-1">
+                <p className="text-body font-semibold text-fg">
+                  Reference received: <span className="font-mono">{o.payment?.reference}</span>
+                </p>
+                <p className="text-body-sm text-fg-muted">
+                  We&apos;re confirming your payment — usually within 1 working day. You&apos;ll get
+                  an email.
+                </p>
+              </div>
             </div>
+            <Banner tone="info">We confirm payments manually within one business day.</Banner>
+            <Button variant="secondary" size="sm">
+              Edit reference
+            </Button>
           </div>
-          <Banner tone="info">We confirm payments manually within one business day.</Banner>
-          <Button variant="secondary" size="sm">
-            Edit reference
-          </Button>
-        </div>
+          <div className="rounded-lg border border-border bg-surface p-4">
+            <PaymentInstructionsCard
+              instructions={o.instructionsFor}
+              methods={o.enabledMethods}
+              method={method}
+              onMethodChange={setMethod}
+              amount={o.total}
+              orderNumber={o.number}
+            />
+          </div>
+        </>
       );
       break;
     case "failed_attempt":

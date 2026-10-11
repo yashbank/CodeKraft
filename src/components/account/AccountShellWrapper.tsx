@@ -24,7 +24,8 @@ export function AccountShellWrapper({
   const [currency, setCurrency] = React.useState<Currency>("INR");
 
   let active: AccountNavKey = "overview";
-  if (pathname.startsWith("/account/purchases")) active = "purchases";
+  if (pathname.startsWith("/account/purchases") || pathname.startsWith("/account/orders"))
+    active = "purchases";
   else if (pathname.startsWith("/account/invoices")) active = "invoices";
   else if (pathname.startsWith("/account/queries")) active = "queries";
   else if (pathname.startsWith("/account/chat")) active = "chat";
