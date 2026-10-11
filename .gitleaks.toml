@@ -1,0 +1,12 @@
+# gitleaks config for CI (gitleaks-action picks this up automatically).
+# The three paths hold deliberately fake keys used as test fixtures (redaction, contract and
+# license-key tests); they are not credentials.
+[extend]
+useDefault = true
+
+[allowlist]
+paths = [
+  '''tests/unit/audit/redact\.test\.ts''',
+  '''tests/unit/modules/contracts-c\.test\.ts''',
+  '''tests/integration/entitlements/license-keys\.test\.ts''',
+]
