@@ -382,7 +382,7 @@ export function ManualOrderForm({
                         </SelectContent>
                       </Select>
                     </Field>
-                    <Field id={`mo-qty-${l.id}`} label="Qty">
+                    <Field id={`mo-qty-${l.id}`} label="Qty" className="space-y-2">
                       <Input
                         id={`mo-qty-${l.id}`}
                         readOnly
@@ -397,6 +397,7 @@ export function ManualOrderForm({
                       aria-label={`Remove line ${i + 1}`}
                       onClick={() => setProductLines((ls) => ls.filter((x) => x.id !== l.id))}
                       disabled={productLines.length === 1}
+                      title="At least one line item is required"
                     >
                       <Trash2Icon aria-hidden className="size-4" />
                     </Button>
@@ -436,7 +437,7 @@ export function ManualOrderForm({
                           onChange={(e) => setLine(l.id, { description: e.target.value })}
                         />
                       </Field>
-                      <Field id={`mo-lqty-${l.id}`} label="Qty">
+                      <Field id={`mo-lqty-${l.id}`} label="Qty" className="space-y-2">
                         <Input
                           id={`mo-lqty-${l.id}`}
                           inputMode="numeric"
@@ -463,6 +464,7 @@ export function ManualOrderForm({
                         aria-label={`Remove line ${i + 1}`}
                         onClick={() => setLines((ls) => ls.filter((x) => x.id !== l.id))}
                         disabled={lines.length === 1}
+                        title="At least one line item is required"
                       >
                         <Trash2Icon aria-hidden className="size-4" />
                       </Button>

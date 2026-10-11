@@ -171,7 +171,9 @@ export function PartnersPayouts({
                     <AvatarFallback>{initials(p.name)}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
-                    <h2 className="truncate text-h4">{p.name}</h2>
+                    <h2 className="truncate text-h4" title={p.name}>
+                      {p.name}
+                    </h2>
                     <p className="text-caption text-fg-muted">
                       {p.role}
                       {p.active ? "" : " · inactive"}
@@ -384,8 +386,10 @@ export function PartnersPayouts({
                       <MoneyCell value={p.amount} />
                     </TableCell>
                     <TableCell className="font-mono text-caption">{p.reference}</TableCell>
-                    <TableCell className="max-w-48 truncate text-fg-muted">
-                      {p.note ?? "—"}
+                    <TableCell className="max-w-48 text-fg-muted">
+                      <span className="block truncate" title={p.note ?? undefined}>
+                        {p.note ?? "—"}
+                      </span>
                       {p.rejectionReason ? (
                         <span className="block text-danger">{p.rejectionReason}</span>
                       ) : null}

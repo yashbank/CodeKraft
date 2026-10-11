@@ -327,10 +327,7 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
             <StatusBadge kind="product_blogs.status" value={editing.status} size="sm" />
           ) : null}
         </div>
-        <Banner tone="neutral">
-          Publish requires all three story sections. Cover image upload is coming in a follow-up
-          update — case studies publish fine without one for now.
-        </Banner>
+        <Banner tone="neutral">Publish requires all three story sections.</Banner>
         <form
           ref={formRef}
           onSubmit={(e) => {
@@ -409,7 +406,7 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
                     ))}
                     <Input
                       id="cs-tech"
-                      placeholder="Add, press Enter"
+                      placeholder="Add tag"
                       className="h-7 w-32 border-0 px-1"
                       value={techDraft}
                       onChange={(e) => setTechDraft(e.target.value)}

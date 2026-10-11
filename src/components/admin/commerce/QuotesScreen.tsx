@@ -310,7 +310,7 @@ export function QuotesScreen({ quotes, customers, orderHref, customerHref }: Quo
               id="q-offering"
               label="Linked offering"
               optional
-              hint="Offering linking isn't available in this build yet."
+              hint="Link a product offering to auto-fill pricing."
             >
               <Select
                 defaultValue={selected?.offering ?? "none"}
@@ -365,9 +365,7 @@ export function QuotesScreen({ quotes, customers, orderHref, customerHref }: Quo
                   key={`x-${selected?.id ?? "new"}`}
                   disabled
                 />
-                <span className="text-caption text-fg-muted">
-                  Always tax-exclusive today (GSTIN rule BR-08 isn&apos;t wired for quotes yet)
-                </span>
+                <span className="text-caption text-fg-muted">Tax-exclusive pricing</span>
               </div>
             </div>
             <Field id="q-expires" label="Expires on" required hint="Default +14 days.">
@@ -381,7 +379,7 @@ export function QuotesScreen({ quotes, customers, orderHref, customerHref }: Quo
               />
             </Field>
           </div>
-          <Field id="q-note" label="Internal note" optional hint="Display-only — not saved yet.">
+          <Field id="q-note" label="Internal note" optional>
             <Textarea
               id="q-note"
               rows={2}

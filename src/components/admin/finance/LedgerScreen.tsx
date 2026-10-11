@@ -255,7 +255,11 @@ export function LedgerScreen({
                       <TableCell>
                         <MoneyCell value={{ amountMinor: e.amountInr, currency: "INR" }} signed />
                       </TableCell>
-                      <TableCell className="max-w-56 truncate text-fg-muted">{e.memo}</TableCell>
+                      <TableCell className="max-w-56 text-fg-muted">
+                        <span className="block truncate" title={e.memo ?? undefined}>
+                          {e.memo}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         {e.ref ? (
                           <button

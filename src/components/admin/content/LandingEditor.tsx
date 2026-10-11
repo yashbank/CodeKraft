@@ -288,7 +288,13 @@ export function LandingEditor({
             <ul className="grid gap-2 sm:grid-cols-2">
               {services.map((s) => (
                 <li key={s.id} className="flex items-center gap-2">
-                  <Switch id={`svc-${s.id}`} size="sm" checked={s.published} disabled />
+                  <Switch
+                    id={`svc-${s.id}`}
+                    size="sm"
+                    checked={s.published}
+                    disabled
+                    title="Manage publish state from the Services editor"
+                  />
                   <Label htmlFor={`svc-${s.id}`}>{s.title}</Label>
                 </li>
               ))}

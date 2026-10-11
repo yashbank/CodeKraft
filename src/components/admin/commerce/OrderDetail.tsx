@@ -349,7 +349,7 @@ export function OrderDetail({
                   <TableHead className="text-right">Discount</TableHead>
                   <TableHead className="text-right">Tax</TableHead>
                   <TableHead className="text-right">Total</TableHead>
-                  <TableHead>Ownership</TableHead>
+                  <TableHead className="whitespace-nowrap">Ownership</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -645,6 +645,7 @@ export function OrderDetail({
               className="mt-3"
               onClick={() => setRefundOpen(true)}
               disabled={!paid}
+              title="Available once the order is paid"
             >
               Propose refund
             </Button>
