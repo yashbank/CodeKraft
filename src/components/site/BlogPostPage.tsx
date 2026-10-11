@@ -23,7 +23,7 @@ import type { BlogPost, ProductSummary, ServiceOption } from "./types";
 
 export interface BlogPostPageProps {
   post: BlogPost;
-  product: ProductSummary;
+  product?: ProductSummary;
   serviceOptions: ServiceOption[];
   prev?: PrevNextItem;
   next?: PrevNextItem;
@@ -56,7 +56,9 @@ export function BlogPostPage({
   wishlisted,
 }: BlogPostPageProps) {
   const { html, toc } = withHeadingIds(post.bodyHtml);
-  const productCard = <ProductCardCompact product={product} wishlisted={wishlisted} />;
+  const productCard = product ? (
+    <ProductCardCompact product={product} wishlisted={wishlisted} />
+  ) : null;
   return (
     <article>
       <Container className="pt-6 lg:pt-8">
@@ -112,7 +114,11 @@ export function BlogPostPage({
       </Container>
 
       <CtaBand
-        title={`Want ${product.name} adapted to your workflow?`}
+        title={
+          product
+            ? `Want ${product.name} adapted to your workflow?`
+            : "Want something built for your workflow?"
+        }
         body="Tell us what you'd change and we'll scope it."
         actions={
           <InquiryTrigger
@@ -120,8 +126,10 @@ export function BlogPostPage({
             sheet={{
               serviceOptions,
               source: "product_cta",
-              title: `Customisation for ${product.name}`,
-              defaults: { message: `Customisation for ${product.name}: ` },
+              title: product ? `Customisation for ${product.name}` : "Custom project inquiry",
+              defaults: {
+                message: product ? `Customisation for ${product.name}: ` : "",
+              },
             }}
           >
             Request customisation

@@ -36,8 +36,8 @@ export default async function BlogPostRoute({ params }: PageProps) {
   }
 
   const post = BLOG_POSTS[postIndex];
-  const product = PRODUCTS.find((p) => p.slug === post?.product.slug) ?? PRODUCTS[0];
-  if (!post || !product) notFound();
+  if (!post) notFound();
+  const product = PRODUCTS.find((p) => p.slug === post.product.slug);
 
   const prevPost = postIndex > 0 ? BLOG_POSTS[postIndex - 1] : undefined;
   const nextPost = postIndex < BLOG_POSTS.length - 1 ? BLOG_POSTS[postIndex + 1] : undefined;

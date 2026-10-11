@@ -184,7 +184,7 @@ export function renderNotification(
       return {
         title: `New Support Query: ${p.subject ?? "Support Request"}`,
         body: `${p.guestEmail ?? p.userName ?? "User"}: ${p.preview ?? "New query opened"}`,
-        link: p.queryId ? `/admin/queries/${p.queryId}` : "/admin/queries",
+        link: "/admin/queries",
         emailTemplate: null,
         emailPriority: 5,
       };
@@ -193,7 +193,7 @@ export function renderNotification(
       return {
         title: `Support Reply: ${p.subject ?? "Your Query"}`,
         body: "A support team member has replied to your query.",
-        link: p.queryId ? `/account/queries/${p.queryId}` : "/account/queries",
+        link: "/account/queries",
         emailTemplate: "query-reply",
         emailPriority: 5,
       };
@@ -202,7 +202,7 @@ export function renderNotification(
       return {
         title: `Customer Reply: ${p.subject ?? "Query"}`,
         body: `${p.customerName ?? "Customer"} has replied to query thread #${p.queryId ?? ""}.`,
-        link: p.queryId ? `/admin/queries/${p.queryId}` : "/admin/queries",
+        link: "/admin/queries",
         emailTemplate: null,
         emailPriority: 5,
       };
