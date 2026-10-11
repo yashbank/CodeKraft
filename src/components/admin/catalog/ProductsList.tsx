@@ -454,7 +454,7 @@ export function ProductsList({
                         ) : null}
                       </TableCell>
                       <TableCell className="font-mono">{p.version}</TableCell>
-                      <TableCell className="text-fg-muted">
+                      <TableCell className="whitespace-nowrap text-fg-muted">
                         <time dateTime={p.updatedAt} title={p.updatedAt}>
                           {timeAgo(p.updatedAt, now)}
                         </time>{" "}

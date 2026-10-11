@@ -108,7 +108,7 @@ export function PurchasesScreen({
           </Button>
         </div>
       ) : null}
-      <Tabs defaultValue="active">
+      <Tabs defaultValue={active.length === 0 && orders.length > 0 ? "orders" : "active"}>
         <TabsList variant="line" className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="active">Active</TabsTrigger>
           <TabsTrigger value="orders">Pending &amp; past orders</TabsTrigger>
