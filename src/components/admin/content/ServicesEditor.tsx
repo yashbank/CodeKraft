@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, icons } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -147,9 +147,17 @@ export function ServicesEditor({ services: initial }: { services: ServiceRow[] }
             <div className="flex items-center gap-3">
               <span
                 aria-hidden
-                className="grid size-9 place-items-center rounded-sm bg-elevated font-mono text-caption text-fg-muted"
+                className="grid size-9 place-items-center rounded-sm bg-elevated text-fg-muted"
               >
-                {s.icon}
+                {(() => {
+                  const key = s.icon.charAt(0).toUpperCase() + s.icon.slice(1);
+                  const Icon = icons[key as keyof typeof icons];
+                  return Icon ? (
+                    <Icon className="size-5" />
+                  ) : (
+                    <span className="font-mono text-caption">{s.icon}</span>
+                  );
+                })()}
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-body-sm font-semibold">
