@@ -486,7 +486,7 @@ export function AdminShell({
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href={href("/login")}>
+                <Link href="/auth/login">
                   <LogOutIcon aria-hidden /> Sign out
                 </Link>
               </DropdownMenuItem>

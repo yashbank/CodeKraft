@@ -531,15 +531,6 @@ export function QueriesInbox({
                 ))}
               </PopoverContent>
             </Popover>
-            <div
-              className="flex items-center gap-2"
-              title="Internal notes are not supported by the backend yet"
-            >
-              <Switch id="q-internal" size="sm" checked={false} disabled />
-              <Label htmlFor="q-internal" className="text-fg-subtle">
-                Internal note (not available yet)
-              </Label>
-            </div>
           </div>
           <Label htmlFor="q-composer" className="sr-only">
             Reply

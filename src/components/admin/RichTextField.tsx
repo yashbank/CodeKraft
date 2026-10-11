@@ -51,9 +51,6 @@ export function RichTextField({
           className="min-h-0 border-0 focus-visible:outline-0"
         />
       </div>
-      <p className="text-caption text-fg-subtle">
-        Plain text. Formatting controls arrive with the rich editor (P3).
-      </p>
       {hint ? <p className="text-caption text-fg-muted">{hint}</p> : null}
     </div>
   );

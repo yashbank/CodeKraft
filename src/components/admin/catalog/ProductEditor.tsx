@@ -910,7 +910,13 @@ export function ProductEditor({
         ) : null}
         {!isNew ? (
           <span className="text-caption text-fg-muted" aria-live="polite">
-            Saved {product.savedAgoSeconds} s ago
+            Saved{" "}
+            {product.savedAgoSeconds < 60
+              ? `${product.savedAgoSeconds} s`
+              : product.savedAgoSeconds < 3600
+                ? `${Math.round(product.savedAgoSeconds / 60)} min`
+                : `${Math.round(product.savedAgoSeconds / 3600)} h`}{" "}
+            ago
           </span>
         ) : null}
         <span className="ml-auto flex items-center gap-2">

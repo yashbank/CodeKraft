@@ -467,7 +467,14 @@ export function SettingsScreen({
                 <RadioGroupCard value="dark-cinematic">
                   <span className="text-body font-semibold">Dark cinematic</span>
                   <span className="text-caption text-fg-muted">Default theme.</span>
-                  <span aria-hidden className="mt-2 block h-16 rounded-sm bg-inverse" />
+                  <span
+                    aria-hidden
+                    className="mt-2 block h-16 rounded-sm border border-border"
+                    style={{
+                      // eslint-disable-next-line codekraft/no-hardcoded-colors -- theme preview swatch
+                      background: "oklch(0.20 0.02 270)",
+                    }}
+                  />
                 </RadioGroupCard>
                 <RadioGroupCard value="light-editorial" disabled={!s.theme.lightEnabled}>
                   <span className="text-body font-semibold">Light editorial</span>
@@ -476,7 +483,11 @@ export function SettingsScreen({
                   </span>
                   <span
                     aria-hidden
-                    className="mt-2 block h-16 rounded-sm border border-border bg-inverse-fg"
+                    className="mt-2 block h-16 rounded-sm border border-border"
+                    style={{
+                      // eslint-disable-next-line codekraft/no-hardcoded-colors -- theme preview swatch
+                      background: "oklch(0.96 0.01 90)",
+                    }}
                   />
                 </RadioGroupCard>
               </RadioGroup>
