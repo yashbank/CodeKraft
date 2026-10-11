@@ -127,3 +127,7 @@ Resume point. Newest entries at the bottom.
 ## Phase 7 (2026-10-10) launch hardening
 - GitHub CI was red on every push: gitleaks (admin passwords in `2026-10-06-overnight-progress.md`, now stripped; creds live in `.env.production.local`) and unit coverage thresholds evaluated on the unit project alone (29 %). Combined unit+integration coverage measured at 55 % lines; thresholds ratcheted to measured minus 2 (global 53/40/42/51, finance 72/54/65/70, chat-media-auth 58/53/37/56, authz 68/73/86/71, components 33/31/32/31, money 100). docs/10 §12 targets stay the goal. CI `integration` job now runs both projects with coverage; e2e gets a storage stub as a second Playwright webServer.
 - Launch blocker found: no cron was ever scheduled (no `scheduler.yml`, no `crons` in vercel.json), so outbox emails never sent and orders never expired in production. Added `.github/workflows/scheduler.yml` (*/15 and 21:30 UTC, needs repo secrets CRON_SECRET + SITE_URL) and daily Vercel crons as safety net. Prod endpoints verified to 401 without the bearer.
+
+## Scout round (2026-10-11)
+- Two read-only production walks (admin + site/customer): 49 defects → `implementation/BUG-TRACKER.md` (11 clusters, fix order, founder-only items). Handoff prompt for the main Mac: `implementation/NEXT-SESSION-PROMPT.md`.
+- CI: unit/typecheck/integration green on 9668a16; gitleaks was flagging fake keys in three test fixtures → `.gitleaks.toml` allowlist (de74286). Scheduler workflow fails until repo secrets CRON_SECRET + SITE_URL exist.
