@@ -63,8 +63,8 @@ describe("ownership dual approval lifecycle: propose -> approve -> apply (PHASE-
       productId: product.productId,
       companyCutBps: 2000,
       lines: [
-        { partnerId: partnerA.id, shareBps: 6000 },
-        { partnerId: partnerB.id, shareBps: 4000 },
+        { partnerId: partnerA.id, shareBps: 4800 },
+        { partnerId: partnerB.id, shareBps: 3200 },
       ],
     });
 
@@ -112,7 +112,7 @@ describe("ownership dual approval lifecycle: propose -> approve -> apply (PHASE-
       .where(eq(productOwnershipLines.ownershipId, proposeRes.ownershipId));
     expect(v2Lines).toHaveLength(2);
     const partnerAShare = v2Lines.find((l) => l.partnerId === partnerA.id);
-    expect(partnerAShare?.shareBps).toBe(6000);
+    expect(partnerAShare?.shareBps).toBe(4800);
 
     // Readiness: a mixed split (company cut + partner lines summing to 10000) must pass the
     // ownership check; submit still fails on the offering/image checks.

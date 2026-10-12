@@ -40,7 +40,7 @@ describe("mark customer email verified (API-ADM-09 fallback)", () => {
       status: "active",
       companyCutBps: 1000,
       createdBy: admin.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 9000 }],
     });
     const offering = await createOffering({
       productId: product.id,

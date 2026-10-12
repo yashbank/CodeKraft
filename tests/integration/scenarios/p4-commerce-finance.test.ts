@@ -49,7 +49,7 @@ describe("Phase 4 Commerce & Finance Scenarios (S-02..S-22, SA-08..SA-24)", () =
       status: "active",
       companyCutBps: 2000,
       createdBy: admin1.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 8000 }],
     });
 
     const offering = await createOffering({
@@ -132,7 +132,7 @@ describe("Phase 4 Commerce & Finance Scenarios (S-02..S-22, SA-08..SA-24)", () =
       status: "active",
       companyCutBps: 2000,
       createdBy: admin1.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 8000 }],
     });
 
     const offering = await createOffering({
@@ -252,7 +252,7 @@ describe("Phase 4 Commerce & Finance Scenarios (S-02..S-22, SA-08..SA-24)", () =
       status: "active",
       companyCutBps: 2000,
       createdBy: admin.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 8000 }],
     });
     const offering = await createOffering({
       productId: product.id,
@@ -305,7 +305,7 @@ describe("Phase 4 Commerce & Finance Scenarios (S-02..S-22, SA-08..SA-24)", () =
       status: "active",
       companyCutBps: 2000,
       createdBy: admin.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 8000 }],
     });
     const offering = await createOffering({
       productId: product.id,

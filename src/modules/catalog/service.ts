@@ -761,9 +761,8 @@ export class DefaultCatalogService implements CatalogService {
           .select()
           .from(productOwnershipLines)
           .where(eq(productOwnershipLines.ownershipId, own.id));
-        // Partner lines alone sum to 10000 (DB trigger); a company-owned version has no lines.
-        const sumBps =
-          lines.length === 0 ? own.companyCutBps : lines.reduce((acc, l) => acc + l.shareBps, 0);
+        // Flat model: company cut + partner lines must sum to 10000.
+        const sumBps = own.companyCutBps + lines.reduce((acc, l) => acc + l.shareBps, 0);
         if (sumBps === 10000) {
           hasValidOwnership = true;
           break;

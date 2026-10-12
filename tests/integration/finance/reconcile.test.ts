@@ -31,7 +31,7 @@ describe("finance nightly reconciliation service (NFR-DATA-04, FR-OPS-01, master
       status: "active",
       companyCutBps: 2000,
       createdBy: admin.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 8000 }],
     });
 
     const offering = await createOffering({
@@ -79,7 +79,7 @@ describe("finance nightly reconciliation service (NFR-DATA-04, FR-OPS-01, master
       status: "active",
       companyCutBps: 2000,
       createdBy: admin.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 8000 }],
     });
 
     const offering = await createOffering({

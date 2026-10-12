@@ -34,7 +34,7 @@ describe("Invoice PDF to storage integration (D-1502, BR-16)", () => {
       status: "active",
       companyCutBps: 1000,
       createdBy: admin.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 9000 }],
     });
 
     const offering = await createOffering({

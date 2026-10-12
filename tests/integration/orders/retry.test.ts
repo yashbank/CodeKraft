@@ -31,7 +31,7 @@ describe("retryPayment integration (API-COM-04, docs/06 §2.3)", () => {
       status: "active",
       companyCutBps: 1000,
       createdBy: admin.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 9000 }],
     });
 
     const offering = await createOffering({
@@ -87,7 +87,7 @@ describe("retryPayment integration (API-COM-04, docs/06 §2.3)", () => {
       status: "active",
       companyCutBps: 1000,
       createdBy: admin.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 9000 }],
     });
 
     const offering = await createOffering({

@@ -2,13 +2,11 @@ import { describe, expect, it } from "vitest";
 import { computeAllocation, spreadDeduction } from "@/modules/finance/allocation";
 
 describe("allocation math (docs/06 §4.2, BR-06, BR-07, FI-01, FI-02)", () => {
-  it("60/40 with 10 % company cut", () => {
-    // Gross 10,000, no deductions, 10% company cut (1000 bps)
+  it("60/40 with 10 % company cut (flat model)", () => {
+    // Flat model: company 10% (1000 bps) + partner 1 54% (5400 bps) + partner 2 36% (3600 bps) = 100%
+    // Gross 10,000, no deductions
     // distributable = 10,000
-    // company = 1,000
-    // partner pool = 9,000
-    // partner 1 (60% = 6000 bps) -> 5,400
-    // partner 2 (40% = 4000 bps) -> 3,600
+    // allocateLargestRemainder(10000, [1000, 5400, 3600]) = [1000, 5400, 3600]
     const res = computeAllocation({
       currency: "INR",
       grossMinor: 10000,
@@ -18,8 +16,8 @@ describe("allocation math (docs/06 §4.2, BR-06, BR-07, FI-01, FI-02)", () => {
       bankShortfallMinor: 0,
       companyCutBps: 1000,
       lines: [
-        { partnerId: "00000000-0000-4000-8000-000000000001", shareBps: 6000 },
-        { partnerId: "00000000-0000-4000-8000-000000000002", shareBps: 4000 },
+        { partnerId: "00000000-0000-4000-8000-000000000001", shareBps: 5400 },
+        { partnerId: "00000000-0000-4000-8000-000000000002", shareBps: 3600 },
       ],
     });
 

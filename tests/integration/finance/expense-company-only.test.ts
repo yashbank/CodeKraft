@@ -30,7 +30,7 @@ describe("company-only expense reduces company only (FI-13, API-FIN-06, D-514)",
       status: "active",
       companyCutBps: 2000,
       createdBy: admin.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 8000 }],
     });
 
     const offering = await createOffering({

@@ -184,7 +184,7 @@ describe("runSeed({ mode: 'full' })", () => {
         .select({ shareBps: productOwnershipLines.shareBps })
         .from(productOwnershipLines)
         .where(eq(productOwnershipLines.ownershipId, own!.id));
-      expect(lines.map((l) => l.shareBps).sort((a, b) => a - b)).toEqual([4000, 6000]);
+      expect(lines.map((l) => l.shareBps).sort((a, b) => a - b)).toEqual([3600, 5400]);
       expect(counts.product_versions).toBe(5);
       expect(counts.product_faqs).toBe(10);
       expect(counts.product_testimonials).toBe(5);

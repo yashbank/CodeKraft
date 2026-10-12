@@ -29,6 +29,13 @@
       "when": 1791557665059,
       "tag": "0003_append_only_pdf_exemption",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791644400000,
+      "tag": "0004_flat_ownership_sum",
+      "breakpoints": true
     }
   ]
 }

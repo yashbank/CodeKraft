@@ -4,10 +4,10 @@
  * §7 "Split rounding" / "Overpayment" / "Payout > balance" / "Refund reversal scope").
  *
  * This file is under the `no-float-money` lint rule: integer minor units only, rounding through
- * `@/lib/money` (`mulBps`, `allocateLargestRemainder`).
+ * `@/lib/money` (`allocateLargestRemainder`).
  */
 import { z } from "zod";
-import { type Currency, type Money, allocateLargestRemainder, mulBps } from "@/lib/money";
+import { type Currency, type Money, allocateLargestRemainder } from "@/lib/money";
 import type {
   Allocation,
   AllocationLine,
@@ -403,12 +403,12 @@ export const computeAllocationInput = z
   })
   .strict()
   .superRefine((a, ctx) => {
-    const sum = a.lines.reduce((acc, l) => acc + l.shareBps, 0);
+    const sum = a.companyCutBps + a.lines.reduce((acc, l) => acc + l.shareBps, 0);
     if (sum !== 10_000) {
       ctx.addIssue({
         code: "custom",
         path: ["lines"],
-        message: `share_bps must sum to 10000, got ${String(sum)}`,
+        message: `companyCutBps + share_bps must sum to 10000, got ${String(sum)}`,
       });
     }
     const deductions = a.discountMinor + a.taxMinor + a.gatewayFeeMinor + a.bankShortfallMinor;
@@ -426,9 +426,9 @@ export interface AllocationResult {
   currency: Currency;
   /** gross − discount − tax − gatewayFee − bankShortfall */
   distributableMinor: number;
-  /** distributable × companyCutBps / 10000, half-up. */
+  /** Flat share: distributable × companyCutBps / (companyCutBps + Σ partnerBps), largest-remainder. */
   companyMinor: number;
-  /** Largest-remainder shares of (distributable − company); Σ lines + company = distributable. */
+  /** Flat largest-remainder shares; Σ lines + company = distributable. */
   lines: AllocationLine[];
 }
 
@@ -448,15 +448,10 @@ export const computeAllocationReference: ComputeAllocation = (raw) => {
     input.taxMinor -
     input.gatewayFeeMinor -
     input.bankShortfallMinor;
-  const companyMinor = mulBps(
-    { amountMinor: distributableMinor, currency: input.currency },
-    input.companyCutBps,
-  ).amountMinor;
-  const partnerPool = distributableMinor - companyMinor;
-  const parts = allocateLargestRemainder(
-    partnerPool,
-    input.lines.map((l) => l.shareBps),
-  );
+  // Flat model: company cut is just another share in the allocation, not a separate tier.
+  const combinedBps = [input.companyCutBps, ...input.lines.map((l) => l.shareBps)];
+  const parts = allocateLargestRemainder(distributableMinor, combinedBps);
+  const companyMinor = parts[0] as number;
   return {
     currency: input.currency,
     distributableMinor,
@@ -464,7 +459,7 @@ export const computeAllocationReference: ComputeAllocation = (raw) => {
     lines: input.lines.map((l, i) => ({
       partner_id: l.partnerId,
       share_bps: l.shareBps,
-      amount_minor: parts[i] as number,
+      amount_minor: parts[i + 1] as number,
     })),
   };
 };

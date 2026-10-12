@@ -143,7 +143,7 @@ export type BillingInput = z.infer<typeof zBilling>;
 
 export const zSplitLine = z.object({ partnerId: zUuid, shareBps: zBps }).strict();
 
-/** Shares must sum to exactly 10 000 bps and name each partner once (FI-03 for project lines). */
+/** Flat model: companyCutBps + Σ partner shares = 10 000 bps, each partner once (FI-03). */
 export const zSplitSnapshot = z
   .object({
     companyCutBps: zBps,
@@ -151,12 +151,12 @@ export const zSplitSnapshot = z
   })
   .strict()
   .superRefine((snap, ctx) => {
-    const sum = snap.lines.reduce((acc, l) => acc + l.shareBps, 0);
+    const sum = snap.companyCutBps + snap.lines.reduce((acc, l) => acc + l.shareBps, 0);
     if (sum !== 10_000) {
       ctx.addIssue({
         code: "custom",
         path: ["lines"],
-        message: `share_bps must sum to 10000, got ${String(sum)}`,
+        message: `companyCutBps + share_bps must sum to 10000, got ${String(sum)}`,
       });
     }
     const seen = new Set<string>();

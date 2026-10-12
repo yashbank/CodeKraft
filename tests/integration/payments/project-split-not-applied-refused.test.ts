@@ -55,7 +55,7 @@ describe("confirmPayment project order split approval check (BR-05, MASTER_SPEC 
       totalMinor: 50000,
       splitSnapshot: {
         company_cut_bps: 1000,
-        lines: [{ partner_id: partner.id, share_bps: 10000 }],
+        lines: [{ partner_id: partner.id, share_bps: 9000 }],
       },
     });
 

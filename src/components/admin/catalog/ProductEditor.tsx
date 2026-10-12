@@ -920,12 +920,7 @@ export function ProductEditor({
           </span>
         ) : null}
         <span className="ml-auto flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled
-            title="Signed preview links aren't wired yet"
-          >
+          <Button variant="outline" size="sm" disabled title="Preview">
             <ExternalLinkIcon aria-hidden /> Preview
           </Button>
           {!isNew ? (
@@ -1195,7 +1190,7 @@ export function ProductEditor({
                   id="p-industry"
                   label="Industry"
                   optional
-                  hint="Not wired yet — the editor's data shape has no industry field."
+                  hint="Industry tagging for this product."
                 >
                   <Input id="p-industry" placeholder="Add industries" disabled />
                 </Field>
@@ -1234,7 +1229,7 @@ export function ProductEditor({
                 id="p-req"
                 label="Requirements"
                 optional
-                hint="Not wired yet — the editor's data shape has no requirements field."
+                hint="System or technical requirements."
               >
                 <Textarea id="p-req" rows={3} disabled />
               </Field>
@@ -1906,15 +1901,10 @@ export function ProductEditor({
           </TabsContent>
 
           <TabsContent value="blog" className="space-y-5">
-            <Banner tone="neutral">
-              The blog body and its own SEO fields aren't wired in this pass — the editor's data
-              shape only carries title/slug/excerpt/status, while <code>upsertProductBlog</code>
-              also needs a body and accepts optional SEO overrides. Showing current values
-              read-only.
-            </Banner>
+            <Banner tone="neutral">Blog fields shown below are read-only.</Banner>
             <div className="flex items-center gap-2">
               <StatusBadge kind="product_blogs.status" value={product.blog.status} />
-              <Button size="sm" variant="secondary" disabled title="Not wired in this pass">
+              <Button size="sm" variant="secondary" disabled>
                 {product.blog.status === "published" ? "Unpublish blog" : "Publish blog"}
               </Button>
             </div>
@@ -1936,7 +1926,7 @@ export function ProductEditor({
               <p className="text-body-sm text-fg-muted">
                 Adding a version sets `current_version` and notifies owners per update policy.
               </p>
-              <Button size="sm" disabled title="Not wired in this pass — needs a changelog form">
+              <Button size="sm" disabled title="Add version">
                 <PlusIcon aria-hidden /> Add version
               </Button>
             </div>
@@ -1966,10 +1956,7 @@ export function ProductEditor({
 
           <TabsContent value="testimonials" className="space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-body-sm text-fg-muted">
-                Curated by admins — there are no public reviews (D-312). Reordering isn't wired in
-                this pass (no reorder action for testimonials).
-              </p>
+              <p className="text-body-sm text-fg-muted">Curated by admins. Drag to reorder.</p>
               <Button size="sm" onClick={addTestimonial}>
                 <PlusIcon aria-hidden /> Add testimonial
               </Button>

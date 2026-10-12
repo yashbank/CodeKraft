@@ -88,9 +88,17 @@ describe("ownership schema and helper validation (API-CAT-16, BR-06/07, P3.8)", 
     ).toBe(false);
   });
 
-  it("sumsToTotal correctly verifies 10000 bps total", () => {
-    expect(sumsToTotal([{ shareBps: 2000 }, { shareBps: 5000 }, { shareBps: 3000 }])).toBe(true);
+  it("sumsToTotal correctly verifies companyCutBps + lines = 10000 (flat model)", () => {
+    // Flat: 0 company + 2000+5000+3000 = 10000
+    expect(sumsToTotal([{ shareBps: 2000 }, { shareBps: 5000 }, { shareBps: 3000 }], 0)).toBe(true);
 
+    // Flat: 1000 company + 4000+5000 = 10000
+    expect(sumsToTotal([{ shareBps: 4000 }, { shareBps: 5000 }], 1000)).toBe(true);
+
+    // Default companyCutBps = 0, lines sum to 9000 -> false
     expect(sumsToTotal([{ shareBps: 5000 }, { shareBps: 4000 }])).toBe(false);
+
+    // Company 2000 + lines 5000+4000 = 11000 -> false
+    expect(sumsToTotal([{ shareBps: 5000 }, { shareBps: 4000 }], 2000)).toBe(false);
   });
 });

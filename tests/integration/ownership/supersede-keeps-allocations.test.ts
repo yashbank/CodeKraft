@@ -93,8 +93,8 @@ describe("ownership supersede maintains allocation immutability (BR-05, P3.8)", 
       productId: product.productId,
       companyCutBps: 3000,
       lines: [
-        { partnerId: partner1.id, shareBps: 7000 },
-        { partnerId: partner2.id, shareBps: 3000 },
+        { partnerId: partner1.id, shareBps: 4900 },
+        { partnerId: partner2.id, shareBps: 2100 },
       ],
     });
 

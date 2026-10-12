@@ -43,7 +43,7 @@ describe("Project order split rejection cancels order (API-ADM-03, MASTER_SPEC Â
           quantity: 1,
           splitSnapshot: {
             companyCutBps: 2000,
-            lines: [{ partnerId: partner.id, shareBps: 10000 }],
+            lines: [{ partnerId: partner.id, shareBps: 8000 }],
           },
         },
       ],

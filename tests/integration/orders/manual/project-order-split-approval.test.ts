@@ -52,8 +52,8 @@ describe("Project order split approval lifecycle (API-COM-07, API-COM-14, BR-05,
           splitSnapshot: {
             companyCutBps: 1000,
             lines: [
-              { partnerId: partner1.id, shareBps: 6000 },
-              { partnerId: partner2.id, shareBps: 4000 },
+              { partnerId: partner1.id, shareBps: 5400 },
+              { partnerId: partner2.id, shareBps: 3600 },
             ],
           },
         },

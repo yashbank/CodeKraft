@@ -194,8 +194,8 @@ describe("orders schemas", () => {
           splitSnapshot: {
             companyCutBps: 1000,
             lines: [
-              { partnerId: U1, shareBps: 6000 },
-              { partnerId: U2, shareBps: 4000 },
+              { partnerId: U1, shareBps: 5400 },
+              { partnerId: U2, shareBps: 3600 },
             ],
           },
         },
@@ -213,8 +213,8 @@ describe("orders schemas", () => {
         expect(orders.toSplitSnapshot(line.splitSnapshot)).toEqual({
           company_cut_bps: 1000,
           lines: [
-            { partner_id: U1, share_bps: 6000 },
-            { partner_id: U2, share_bps: 4000 },
+            { partner_id: U1, share_bps: 5400 },
+            { partner_id: U2, share_bps: 3600 },
           ],
         });
       }
@@ -747,8 +747,8 @@ describe("finance schemas and enums", () => {
       bankShortfallMinor: 50,
       companyCutBps: 1000,
       lines: [
-        { partnerId: U1, shareBps: 6000 },
-        { partnerId: U2, shareBps: 4000 },
+        { partnerId: U1, shareBps: 5400 },
+        { partnerId: U2, shareBps: 3600 },
       ],
     };
     expect(finance.computeAllocationInput.safeParse(base).success).toBe(true);
@@ -798,53 +798,55 @@ describe("computeAllocationReference (docs/06 §4.2)", () => {
       bankShortfallMinor: 50,
       companyCutBps: 1000,
       lines: [
-        { partnerId: U1, shareBps: 6000 },
-        { partnerId: U2, shareBps: 4000 },
+        { partnerId: U1, shareBps: 5400 },
+        { partnerId: U2, shareBps: 3600 },
       ],
     });
     expect(r.distributableMinor).toBe(73_750);
     expect(r.companyMinor).toBe(7_375);
     expect(r.lines).toEqual([
-      { partner_id: U1, share_bps: 6000, amount_minor: 39_825 },
-      { partner_id: U2, share_bps: 4000, amount_minor: 26_550 },
+      { partner_id: U1, share_bps: 5400, amount_minor: 39_825 },
+      { partner_id: U2, share_bps: 3600, amount_minor: 26_550 },
     ]);
     expect(r.companyMinor + 39_825 + 26_550).toBe(r.distributableMinor);
   });
 
-  const sharesArb = fc
-    .array(fc.integer({ min: 1, max: 10_000 }), { minLength: 1, maxLength: 8 })
-    .map((weights) => allocateLargestRemainder(10_000, weights))
-    .map((shares) =>
-      shares.map((shareBps, i) => ({
-        partnerId: `${String(i + 1).repeat(8)}-0000-4000-8000-000000000000`,
-        shareBps,
-      })),
-    );
-
   const inputArb = fc
-    .record({
-      gross: fc.nat({ max: 1_000_000_000_000 }),
-      d1: fc.nat({ max: 10_000 }),
-      d2: fc.nat({ max: 10_000 }),
-      d3: fc.nat({ max: 10_000 }),
-      d4: fc.nat({ max: 10_000 }),
-      companyCutBps: fc.integer({ min: 0, max: 10_000 }),
-      lines: sharesArb,
-    })
-    .map(({ gross, d1, d2, d3, d4, companyCutBps, lines }) => {
-      // Deductions as bps shares of gross so they never exceed it.
-      const [discountMinor, taxMinor, gatewayFeeMinor, bankShortfallMinor] =
-        allocateLargestRemainder(gross, [d1, d2, d3, d4, 40_000]);
-      return {
-        currency: "INR" as const,
-        grossMinor: gross,
-        discountMinor: discountMinor!,
-        taxMinor: taxMinor!,
-        gatewayFeeMinor: gatewayFeeMinor!,
-        bankShortfallMinor: bankShortfallMinor!,
-        companyCutBps,
-        lines,
-      };
+    .integer({ min: 0, max: 9999 }) // companyCutBps (at least 1 bps left for a partner)
+    .chain((companyCutBps) => {
+      const partnerPool = 10_000 - companyCutBps;
+      const sharesArb = fc
+        .array(fc.integer({ min: 1, max: 10_000 }), { minLength: 1, maxLength: 8 })
+        .map((weights) => allocateLargestRemainder(partnerPool, weights))
+        .map((shares) =>
+          shares.map((shareBps, i) => ({
+            partnerId: `${String(i + 1).repeat(8)}-0000-4000-8000-000000000000`,
+            shareBps,
+          })),
+        );
+      return fc
+        .record({
+          gross: fc.nat({ max: 1_000_000_000_000 }),
+          d1: fc.nat({ max: 10_000 }),
+          d2: fc.nat({ max: 10_000 }),
+          d3: fc.nat({ max: 10_000 }),
+          d4: fc.nat({ max: 10_000 }),
+          lines: sharesArb,
+        })
+        .map(({ gross, d1, d2, d3, d4, lines }) => {
+          const [discountMinor, taxMinor, gatewayFeeMinor, bankShortfallMinor] =
+            allocateLargestRemainder(gross, [d1, d2, d3, d4, 40_000]);
+          return {
+            currency: "INR" as const,
+            grossMinor: gross,
+            discountMinor: discountMinor!,
+            taxMinor: taxMinor!,
+            gatewayFeeMinor: gatewayFeeMinor!,
+            bankShortfallMinor: bankShortfallMinor!,
+            companyCutBps,
+            lines,
+          };
+        });
     });
 
   it("Σ lines + company = distributable, exactly, for every input", () => {
@@ -875,8 +877,9 @@ describe("computeAllocationReference (docs/06 §4.2)", () => {
         const b = finance.computeAllocationReference(input);
         expect(b).toEqual(a);
         const pool = BigInt(a.distributableMinor - a.companyMinor);
+        const partnerShareTotal = BigInt(a.lines.reduce((s, l) => s + l.share_bps, 0));
         a.lines.forEach((l) => {
-          const ideal = (pool * BigInt(l.share_bps)) / 10_000n;
+          const ideal = (pool * BigInt(l.share_bps)) / partnerShareTotal;
           const diff = BigInt(l.amount_minor) - ideal;
           expect(diff === 0n || diff === 1n).toBe(true);
         });

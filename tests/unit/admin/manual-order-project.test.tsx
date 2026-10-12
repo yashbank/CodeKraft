@@ -30,6 +30,9 @@ function fill(pct: string) {
   fireEvent.change(screen.getByLabelText(/Client email/), { target: { value: "a@acme.com" } });
   fireEvent.change(screen.getByLabelText(/Line 1 description/), { target: { value: "Build" } });
   fireEvent.change(screen.getByLabelText(/Unit amount/), { target: { value: "1000" } });
+  fireEvent.change(screen.getByLabelText("%", { selector: "#mo-split-1-company-pct" }), {
+    target: { value: "0" },
+  });
   fireEvent.click(screen.getByRole("button", { name: /Add partner/i }));
   fireEvent.change(screen.getByLabelText("%", { selector: "#mo-split-1-pct-0" }), {
     target: { value: pct },

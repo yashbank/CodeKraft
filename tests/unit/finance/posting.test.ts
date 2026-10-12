@@ -14,8 +14,8 @@ describe("posting plan builder (docs/06 §4.2, FI-01, FI-02, FI-04, FI-11)", () 
     bankShortfallMinor: 200,
     companyCutBps: 2000,
     lines: [
-      { partnerId: "00000000-0000-4000-8000-000000000001", shareBps: 6000 },
-      { partnerId: "00000000-0000-4000-8000-000000000002", shareBps: 4000 },
+      { partnerId: "00000000-0000-4000-8000-000000000001", shareBps: 4800 },
+      { partnerId: "00000000-0000-4000-8000-000000000002", shareBps: 3200 },
     ],
     ownershipId: "00000000-0000-4000-8000-000000000003",
     fxRateToInr: "1.00000000",
@@ -28,16 +28,12 @@ describe("posting plan builder (docs/06 §4.2, FI-01, FI-02, FI-04, FI-11)", () 
 
     // gross = 10000, discount = 1000, tax = 1620, fee = 0, shortfall = 200
     // distributable = 10000 - 1000 - 1620 - 0 - 200 = 7180
-    // company (20%) = 1436
-    // partner pool = 7180 - 1436 = 5744
-    // p1 (60%): 3446.4 -> 3446
-    // p2 (40%): 2297.6 -> 2298
-    // sum = 3446 + 2298 = 5744
+    // flat shares: [2000, 4800, 3200] → company = 1436, p1 = 3446, p2 = 2298
     expect(plan.allocation.distributableMinor).toBe(7180);
     expect(plan.allocation.companyMinor).toBe(1436);
     expect(plan.allocation.lines).toEqual([
-      { partner_id: "00000000-0000-4000-8000-000000000001", share_bps: 6000, amount_minor: 3446 },
-      { partner_id: "00000000-0000-4000-8000-000000000002", share_bps: 4000, amount_minor: 2298 },
+      { partner_id: "00000000-0000-4000-8000-000000000001", share_bps: 4800, amount_minor: 3446 },
+      { partner_id: "00000000-0000-4000-8000-000000000002", share_bps: 3200, amount_minor: 2298 },
     ]);
 
     // Check entry set
@@ -102,8 +98,7 @@ describe("posting plan builder (docs/06 §4.2, FI-01, FI-02, FI-04, FI-11)", () 
     });
 
     // distributable = 10000
-    // company (20%) = 2000
-    // partner pool = 8000 -> 4800, 3200
+    // flat shares: [2000, 4800, 3200] → company = 2000, p1 = 4800, p2 = 3200
     expect(plan.entries.map((e) => e.entryType)).toEqual([
       "sale",
       "company_cut",
@@ -119,6 +114,10 @@ describe("posting plan builder (docs/06 §4.2, FI-01, FI-02, FI-04, FI-11)", () 
     const plan = buildItemPostingPlan({
       ...baseInput,
       companyCutBps: 0,
+      lines: [
+        { partnerId: "00000000-0000-4000-8000-000000000001", shareBps: 6000 },
+        { partnerId: "00000000-0000-4000-8000-000000000002", shareBps: 4000 },
+      ],
       discountMinor: 0,
       bankShortfallMinor: 0,
       taxMinor: 0,

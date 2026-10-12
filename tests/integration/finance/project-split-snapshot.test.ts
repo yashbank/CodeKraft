@@ -42,7 +42,7 @@ describe("project split snapshot (docs/06 §4.2, MASTER_SPEC §7)", () => {
       ownershipId: null,
       splitSnapshot: {
         company_cut_bps: 2000,
-        lines: [{ partner_id: partner.id, share_bps: 10000 }],
+        lines: [{ partner_id: partner.id, share_bps: 8000 }],
       },
     });
 
@@ -104,7 +104,7 @@ describe("project split snapshot (docs/06 §4.2, MASTER_SPEC §7)", () => {
       ownershipId: null,
       splitSnapshot: {
         company_cut_bps: 1000,
-        lines: [{ partner_id: partner.id, share_bps: 10000 }],
+        lines: [{ partner_id: partner.id, share_bps: 9000 }],
       },
     });
 
@@ -169,8 +169,8 @@ describe("project split snapshot (docs/06 §4.2, MASTER_SPEC §7)", () => {
       splitSnapshot: {
         company_cut_bps: 1000,
         lines: [
-          { partner_id: partnerA.id, share_bps: 7000 },
-          { partner_id: partnerB.id, share_bps: 3000 },
+          { partner_id: partnerA.id, share_bps: 6300 },
+          { partner_id: partnerB.id, share_bps: 2700 },
         ],
       },
     });
@@ -201,8 +201,8 @@ describe("project split snapshot (docs/06 §4.2, MASTER_SPEC §7)", () => {
     expect(allocRow?.distributableMinor).toBe(200000);
     expect(allocRow?.companyMinor).toBe(20000);
     expect(allocRow?.lines).toEqual([
-      { partner_id: partnerA.id, share_bps: 7000, amount_minor: 126000 },
-      { partner_id: partnerB.id, share_bps: 3000, amount_minor: 54000 },
+      { partner_id: partnerA.id, share_bps: 6300, amount_minor: 126000 },
+      { partner_id: partnerB.id, share_bps: 2700, amount_minor: 54000 },
     ]);
 
     // Assert ledger entries

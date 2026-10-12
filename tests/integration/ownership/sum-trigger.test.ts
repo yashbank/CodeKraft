@@ -45,11 +45,11 @@ describe("ownership DB trigger: sum must equal 10000 bps (BR-06, P3.8)", () => {
           })
           .returning();
 
-        // Insert line with only 8000 bps (total 8000 != 10000)
+        // Insert line with 7000 bps (company 2000 + 7000 = 9000 != 10000)
         await tx.insert(productOwnershipLines).values({
           ownershipId: ownership!.id,
           partnerId: partner.id,
-          shareBps: 8000,
+          shareBps: 7000,
         });
 
         // Trigger immediate constraint check in transaction

@@ -43,7 +43,7 @@ describe("ownership rejection: reject deletes pending version (API-ADM-03, P3.8)
     const proposeRes = await ownershipService.proposeOwnership(requesterCtx, {
       productId: product.productId,
       companyCutBps: 1000,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 9000 }],
     });
 
     // Verify pending exists

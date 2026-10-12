@@ -69,12 +69,12 @@ export class DefaultOwnershipService implements OwnershipService {
         );
       }
 
-      // 2. Validate total bps sum == 10000 (BR-06, BR-07, sumsToTotal)
-      if (input.lines.length > 0 && !sumsToTotal(input.lines)) {
+      // 2. Validate total bps sum == 10000 (BR-06, BR-07, flat model: company + partners)
+      if (input.lines.length > 0 && !sumsToTotal(input.lines, input.companyCutBps)) {
         const linesSum = input.lines.reduce((acc, l) => acc + l.shareBps, 0);
         throw new AppError(
           ErrorCode.VALIDATION,
-          `Ownership partner shares must sum to exactly 10,000 bps (got ${linesSum})`,
+          `Company cut + partner shares must sum to exactly 10,000 bps (got ${input.companyCutBps + linesSum})`,
         );
       }
 

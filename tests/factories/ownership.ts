@@ -44,7 +44,10 @@ export async function createOwnership(
 ): Promise<OwnershipWithLines> {
   const status = opts.status ?? "active";
   const createdBy = opts.createdBy ?? (await createAdmin({}, db)).id;
-  const lines = opts.lines ?? [{ partnerId: (await createPartner({}, db)).id, shareBps: 10_000 }];
+  const companyCutBps = opts.companyCutBps ?? 0;
+  const lines = opts.lines ?? [
+    { partnerId: (await createPartner({}, db)).id, shareBps: 10_000 - companyCutBps },
+  ];
   if (lines.length === 0) throw new RangeError("createOwnership: at least one line is required");
 
   let version = opts.version;
@@ -64,7 +67,7 @@ export async function createOwnership(
       .values({
         productId: opts.productId,
         version,
-        companyCutBps: opts.companyCutBps ?? 0,
+        companyCutBps,
         status,
         effectiveFrom:
           opts.effectiveFrom === undefined

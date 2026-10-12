@@ -68,9 +68,9 @@ export const listOwnershipVersionsSchema = listParams(
   z.strictObject({ productId: uuidSchema, status: ownershipStatusSchema.optional() }),
 );
 
-/** Pure helper contract: Σ lines === 10000 (service-level check mirroring the trigger). */
-export function sumsToTotal(lines: readonly { shareBps: number }[]): boolean {
-  return lines.reduce((acc, l) => acc + l.shareBps, 0) === OWNERSHIP_TOTAL_BPS;
+/** Pure helper contract: companyCutBps + Σ lines === 10000 (flat model, mirroring the trigger). */
+export function sumsToTotal(lines: readonly { shareBps: number }[], companyCutBps = 0): boolean {
+  return companyCutBps + lines.reduce((acc, l) => acc + l.shareBps, 0) === OWNERSHIP_TOTAL_BPS;
 }
 
 export interface OwnershipService {

@@ -31,7 +31,7 @@ describe("VIEW partner_balances vs recomputed ledger (FR-FIN-06, API-FIN-03, FI-
       status: "active",
       companyCutBps: 2000,
       createdBy: admin.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 8000 }],
     });
 
     const offering = await createOffering({

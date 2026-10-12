@@ -31,7 +31,7 @@ describe("reports match ledger recomputations (API-FIN-09, FR-FIN-10..14, master
       status: "active",
       companyCutBps: 2000,
       createdBy: admin.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 8000 }],
     });
 
     const offering = await createOffering({

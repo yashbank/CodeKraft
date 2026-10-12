@@ -38,7 +38,7 @@ describe("proposeRefund — BR-13 requester cannot self-approve", () => {
       createdBy: admin1.id,
       ownership: {
         companyCutBps: 3000,
-        lines: [{ partnerId: partner.id, shareBps: 10_000 }],
+        lines: [{ partnerId: partner.id, shareBps: 7000 }],
       },
     });
     const offering = await createOffering({
@@ -83,7 +83,7 @@ describe("proposeRefund — BR-13 requester cannot self-approve", () => {
       createdBy: admin1.id,
       ownership: {
         companyCutBps: 3000,
-        lines: [{ partnerId: partner.id, shareBps: 10_000 }],
+        lines: [{ partnerId: partner.id, shareBps: 7000 }],
       },
     });
     const offering = await createOffering({

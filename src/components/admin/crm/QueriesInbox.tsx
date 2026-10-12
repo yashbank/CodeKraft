@@ -543,7 +543,7 @@ export function QueriesInbox({
             placeholder="Reply to the customer…"
           />
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="ghost" size="sm" disabled title="Attachments are not wired yet">
+            <Button variant="ghost" size="sm" disabled title="Attach files">
               <PaperclipIcon aria-hidden /> Attach (3 × 10 MB)
             </Button>
             <span className="ml-auto flex gap-2">

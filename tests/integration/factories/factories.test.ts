@@ -131,8 +131,8 @@ describe("catalog factories", () => {
         ownership: {
           companyCutBps: 1000,
           lines: [
-            { partnerId: a.id, shareBps: 7000 },
-            { partnerId: b.id, shareBps: 3000 },
+            { partnerId: a.id, shareBps: 6300 },
+            { partnerId: b.id, shareBps: 2700 },
           ],
         },
       });
@@ -140,7 +140,7 @@ describe("catalog factories", () => {
       expect(product.publishedAt).toBeInstanceOf(Date);
       expect(product.ownership?.status).toBe("active");
       expect(product.ownership?.companyCutBps).toBe(1000);
-      expect(product.ownership?.lines.map((l) => l.shareBps).sort()).toEqual([3000, 7000]);
+      expect(product.ownership?.lines.map((l) => l.shareBps).sort()).toEqual([2700, 6300]);
       const [stored] = await f.db
         .select()
         .from(productOwnerships)
@@ -384,7 +384,7 @@ describe("seedExampleCatalog", () => {
       "ecommerce-website",
     ]);
     for (const p of EXAMPLE_CATALOG.products) {
-      expect(ownershipLinesTotal(p.ownership)).toBe(10_000);
+      expect(ownershipLinesTotal(p.ownership) + p.ownership.companyCutBps).toBe(10_000);
       expect(p.offerings.length).toBeGreaterThan(0);
       for (const o of p.offerings) expect(o.prices[0]?.currency).toBe("INR");
     }
@@ -416,7 +416,7 @@ describe("seedExampleCatalog", () => {
           .select()
           .from(productOwnershipLines)
           .where(eq(productOwnershipLines.ownershipId, own.id));
-        expect(lines.reduce((s, l) => s + l.shareBps, 0)).toBe(10_000);
+        expect(lines.reduce((s, l) => s + l.shareBps, 0) + own.companyCutBps).toBe(10_000);
         expect(own.approvalRequestId).toBeTruthy();
       }
 
@@ -434,8 +434,8 @@ describe("seedExampleCatalog", () => {
         .from(productOwnershipLines)
         .where(eq(productOwnershipLines.ownershipId, fdOwn!.id));
       const byPartner = new Map(fdLines.map((l) => [l.partnerId, l.shareBps]));
-      expect(byPartner.get(seeded.partners.ceo.id)).toBe(6000);
-      expect(byPartner.get(seeded.partners.cfo.id)).toBe(4000);
+      expect(byPartner.get(seeded.partners.ceo.id)).toBe(5400);
+      expect(byPartner.get(seeded.partners.cfo.id)).toBe(3600);
       const fdOfferings = await f.db
         .select()
         .from(offerings)

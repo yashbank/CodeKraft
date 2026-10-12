@@ -27,7 +27,7 @@ describe("Manual product order with payment (API-COM-07, BR-10, S-12)", () => {
     const product = await createProduct({
       ownership: {
         companyCutBps: 2000,
-        lines: [{ partnerId: partner.id, shareBps: 10000 }],
+        lines: [{ partnerId: partner.id, shareBps: 8000 }],
       },
     });
     const offering = await createOffering({

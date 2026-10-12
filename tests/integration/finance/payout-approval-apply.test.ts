@@ -33,7 +33,7 @@ describe("payout approval and apply lifecycle (API-FIN-04, API-FIN-05, FI-06, BR
       status: "active",
       companyCutBps: 2000,
       createdBy: admin1.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 8000 }],
     });
 
     const offering = await createOffering({

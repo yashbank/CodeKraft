@@ -13,41 +13,50 @@ const numRuns = process.env.CI ? 500 : 100;
 // Arbitraries per docs/10 §5
 const arbCurrency = fc.constantFrom<Currency>(...CURRENCIES);
 
-// Arbitrary for partner splits summing to 10,000 bps
-const arbPartners = fc
-  .integer({ min: 1, max: 4 })
-  .chain((numPartners) =>
-    fc
-      .array(fc.integer({ min: 1, max: 10_000 }), {
-        minLength: numPartners,
-        maxLength: numPartners,
-      })
-      .map((weights) => {
-        const total = weights.reduce((a, b) => a + b, 0);
-        let rem = 10_000;
-        const shares: number[] = [];
-        for (let i = 0; i < weights.length - 1; i++) {
-          const s = Math.max(1, Math.floor((weights[i]! / total) * 10_000));
-          shares.push(s);
-          rem -= s;
-        }
-        shares.push(Math.max(1, rem));
-        // Adjust if sum != 10000
-        const diff = 10_000 - shares.reduce((a, b) => a + b, 0);
-        shares[0] = (shares[0] ?? 0) + diff;
+// Arbitrary for ownership: companyCutBps + Σ partner shareBps = 10,000 (flat model)
+const arbOwnership = fc
+  .integer({ min: 0, max: 5000 }) // company cut 0 - 50%
+  .chain((companyCutBps) => {
+    const partnerPool = 10_000 - companyCutBps;
+    return fc
+      .integer({ min: 1, max: 4 })
+      .chain((numPartners) =>
+        fc
+          .array(fc.integer({ min: 1, max: 10_000 }), {
+            minLength: numPartners,
+            maxLength: numPartners,
+          })
+          .map((weights) => {
+            const total = weights.reduce((a, b) => a + b, 0);
+            let rem = partnerPool;
+            const shares: number[] = [];
+            for (let i = 0; i < weights.length - 1; i++) {
+              const s = Math.max(1, Math.floor((weights[i]! / total) * partnerPool));
+              shares.push(s);
+              rem -= s;
+            }
+            shares.push(Math.max(1, rem));
+            // Adjust if sum != partnerPool
+            const diff = partnerPool - shares.reduce((a, b) => a + b, 0);
+            shares[0] = (shares[0] ?? 0) + diff;
 
-        return shares.map((shareBps, idx) => ({
-          partnerId: `00000000-0000-4000-8000-${String(idx + 1).padStart(12, "0")}`,
-          shareBps,
-        }));
-      }),
-  )
-  .filter(
-    (lines) =>
-      lines.every((l) => l.shareBps > 0) && lines.reduce((a, b) => a + b.shareBps, 0) === 10_000,
-  );
+            return {
+              companyCutBps,
+              lines: shares.map((shareBps, idx) => ({
+                partnerId: `00000000-0000-4000-8000-${String(idx + 1).padStart(12, "0")}`,
+                shareBps,
+              })),
+            };
+          }),
+      )
+      .filter(
+        (o) =>
+          o.lines.every((l) => l.shareBps > 0) &&
+          o.companyCutBps + o.lines.reduce((a, b) => a + b.shareBps, 0) === 10_000,
+      );
+  });
 
-// Order item deduction parameters
+// Order item deduction parameters (no companyCutBps — that comes from arbOwnership)
 const arbItemFinances = fc
   .record({
     unitMinor: fc.integer({ min: 100, max: 1_000_000 }),
@@ -56,7 +65,6 @@ const arbItemFinances = fc
     taxRateBps: fc.constantFrom(0, 1800), // 0% or 18% GST
     shortfallRateBps: fc.integer({ min: 0, max: 500 }), // 0 - 5% shortfall
     gatewayFeeBps: fc.integer({ min: 0, max: 300 }), // 0 - 3% gateway fee
-    companyCutBps: fc.integer({ min: 0, max: 5000 }), // 0 - 50% company cut
     currency: arbCurrency,
     fxRateToInr: fc.constantFrom(
       "1.00000000",
@@ -80,7 +88,6 @@ const arbItemFinances = fc
       taxMinor,
       shortfallMinor,
       gatewayFeeMinor,
-      companyCutBps: p.companyCutBps,
       currency: p.currency,
       fxRateToInr: p.currency === "INR" ? "1.00000000" : p.fxRateToInr,
       unitMinor: p.unitMinor,
@@ -94,7 +101,7 @@ const arbItemFinances = fc
 describe("finance invariants (docs/10 §5 property tests)", () => {
   it("FI-01: Distributable = gross − discount − tax − gateway fee − bank shortfall", () => {
     fc.assert(
-      fc.property(arbItemFinances, arbPartners, (item, lines) => {
+      fc.property(arbItemFinances, arbOwnership, (item, ownership) => {
         const alloc = computeAllocation({
           currency: item.currency,
           grossMinor: item.grossMinor,
@@ -102,8 +109,8 @@ describe("finance invariants (docs/10 §5 property tests)", () => {
           taxMinor: item.taxMinor,
           gatewayFeeMinor: item.gatewayFeeMinor,
           bankShortfallMinor: item.shortfallMinor,
-          companyCutBps: item.companyCutBps,
-          lines,
+          companyCutBps: ownership.companyCutBps,
+          lines: ownership.lines,
         });
 
         const expectedDistributable =
@@ -121,7 +128,7 @@ describe("finance invariants (docs/10 §5 property tests)", () => {
 
   it("FI-02: Company cut + Σ partner allocation lines = distributable exactly (largest-remainder)", () => {
     fc.assert(
-      fc.property(arbItemFinances, arbPartners, (item, lines) => {
+      fc.property(arbItemFinances, arbOwnership, (item, ownership) => {
         const alloc = computeAllocation({
           currency: item.currency,
           grossMinor: item.grossMinor,
@@ -129,8 +136,8 @@ describe("finance invariants (docs/10 §5 property tests)", () => {
           taxMinor: item.taxMinor,
           gatewayFeeMinor: item.gatewayFeeMinor,
           bankShortfallMinor: item.shortfallMinor,
-          companyCutBps: item.companyCutBps,
-          lines,
+          companyCutBps: ownership.companyCutBps,
+          lines: ownership.lines,
         });
 
         const partnersTotal = alloc.lines.reduce((acc, l) => acc + l.amount_minor, 0);
@@ -142,7 +149,7 @@ describe("finance invariants (docs/10 §5 property tests)", () => {
 
   it("FI-04: Σ ledger entries per order across all party types = 0 (per order, per currency)", () => {
     fc.assert(
-      fc.property(arbItemFinances, arbPartners, (item, lines) => {
+      fc.property(arbItemFinances, arbOwnership, (item, ownership) => {
         const plan = buildItemPostingPlan({
           orderId: "00000000-0000-4000-8000-000000000001",
           orderItemId: "00000000-0000-4000-8000-000000000002",
@@ -153,8 +160,8 @@ describe("finance invariants (docs/10 §5 property tests)", () => {
           taxMinor: item.taxMinor,
           gatewayFeeMinor: item.gatewayFeeMinor,
           bankShortfallMinor: item.shortfallMinor,
-          companyCutBps: item.companyCutBps,
-          lines,
+          companyCutBps: ownership.companyCutBps,
+          lines: ownership.lines,
           ownershipId: "00000000-0000-4000-8000-000000000004",
           fxRateToInr: item.fxRateToInr,
           createdBy: "00000000-0000-4000-8000-000000000005",
@@ -175,7 +182,7 @@ describe("finance invariants (docs/10 §5 property tests)", () => {
 
   it("FI-11: Money never leaves integer minor units; INR equivalent = round(amount × fx_rate)", () => {
     fc.assert(
-      fc.property(arbItemFinances, arbPartners, (item, lines) => {
+      fc.property(arbItemFinances, arbOwnership, (item, ownership) => {
         const plan = buildItemPostingPlan({
           orderId: "00000000-0000-4000-8000-000000000001",
           orderItemId: "00000000-0000-4000-8000-000000000002",
@@ -186,8 +193,8 @@ describe("finance invariants (docs/10 §5 property tests)", () => {
           taxMinor: item.taxMinor,
           gatewayFeeMinor: item.gatewayFeeMinor,
           bankShortfallMinor: item.shortfallMinor,
-          companyCutBps: item.companyCutBps,
-          lines,
+          companyCutBps: ownership.companyCutBps,
+          lines: ownership.lines,
           ownershipId: null,
           fxRateToInr: item.fxRateToInr,
           createdBy: "00000000-0000-4000-8000-000000000005",
@@ -225,9 +232,9 @@ describe("finance invariants (docs/10 §5 property tests)", () => {
     fc.assert(
       fc.property(
         arbItemFinances,
-        arbPartners,
+        arbOwnership,
         fc.integer({ min: 1, max: 10_000 }), // refund fraction in bps
-        (item, lines, refundBps) => {
+        (item, ownership, refundBps) => {
           // 1. Initial allocation and posting
           const alloc = computeAllocation({
             currency: item.currency,
@@ -236,8 +243,8 @@ describe("finance invariants (docs/10 §5 property tests)", () => {
             taxMinor: item.taxMinor,
             gatewayFeeMinor: item.gatewayFeeMinor,
             bankShortfallMinor: item.shortfallMinor,
-            companyCutBps: item.companyCutBps,
-            lines,
+            companyCutBps: ownership.companyCutBps,
+            lines: ownership.lines,
           });
 
           const itemTotalMinor = item.grossMinor - item.discountMinor + item.taxMinor;
@@ -344,10 +351,10 @@ describe("finance invariants (docs/10 §5 property tests)", () => {
     fc.assert(
       fc.property(
         fc.integer({ min: 100, max: 10_000_000 }), // expense amount
-        fc.integer({ min: 0, max: 5000 }), // company cut 0-50%
-        arbPartners,
+        arbOwnership,
         arbCurrency,
-        (expenseAmountMinor, companyCutBps, partnerLines, currency) => {
+        (expenseAmountMinor, ownership, currency) => {
+          const { companyCutBps, lines: partnerLines } = ownership;
           // 1. Shared by split
           const companyCutMinor = mulBps(
             { amountMinor: expenseAmountMinor, currency },
@@ -364,8 +371,9 @@ describe("finance invariants (docs/10 §5 property tests)", () => {
           expect(companyCutMinor + partnerTotal).toBe(expenseAmountMinor);
 
           // Each partner's deduction is within 1 minor unit of ideal share
+          const partnerShareTotal = partnerLines.reduce((a, b) => a + b.shareBps, 0);
           for (let i = 0; i < partnerLines.length; i++) {
-            const ideal = (partnerPoolMinor * (partnerLines[i]?.shareBps ?? 0)) / 10_000;
+            const ideal = (partnerPoolMinor * (partnerLines[i]?.shareBps ?? 0)) / partnerShareTotal;
             const diff = Math.abs((partnerParts[i] ?? 0) - ideal);
             expect(diff).toBeLessThan(1.0);
           }

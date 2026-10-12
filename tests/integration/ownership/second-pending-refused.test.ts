@@ -36,7 +36,7 @@ describe("ownership state guard: second pending proposal refused (API-CAT-16, P3
     await ownershipService.proposeOwnership(adminCtx, {
       productId: product.productId,
       companyCutBps: 2000,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 8000 }],
     });
 
     // 2nd propose must fail with STATE_INVALID
@@ -44,7 +44,7 @@ describe("ownership state guard: second pending proposal refused (API-CAT-16, P3
       ownershipService.proposeOwnership(adminCtx, {
         productId: product.productId,
         companyCutBps: 3000,
-        lines: [{ partnerId: partner.id, shareBps: 10000 }],
+        lines: [{ partnerId: partner.id, shareBps: 7000 }],
       }),
     ).rejects.toThrowError(
       expect.objectContaining({

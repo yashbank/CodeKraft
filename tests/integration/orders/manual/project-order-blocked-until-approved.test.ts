@@ -55,8 +55,8 @@ describe("Project order blocked until approved (BR-05, S-12)", () => {
           splitSnapshot: {
             companyCutBps: 1000,
             lines: [
-              { partnerId: partner1.id, shareBps: 5000 },
-              { partnerId: partner2.id, shareBps: 5000 },
+              { partnerId: partner1.id, shareBps: 4500 },
+              { partnerId: partner2.id, shareBps: 4500 },
             ],
           },
         },
@@ -67,8 +67,8 @@ describe("Project order blocked until approved (BR-05, S-12)", () => {
           splitSnapshot: {
             companyCutBps: 1000,
             lines: [
-              { partnerId: partner1.id, shareBps: 5000 },
-              { partnerId: partner2.id, shareBps: 5000 },
+              { partnerId: partner1.id, shareBps: 4500 },
+              { partnerId: partner2.id, shareBps: 4500 },
             ],
           },
         },
@@ -148,8 +148,8 @@ describe("Project order blocked until approved (BR-05, S-12)", () => {
       // Both partners are present in lines snapshot
       const p1Line = alloc?.lines.find((l) => l.partner_id === partner1.id);
       const p2Line = alloc?.lines.find((l) => l.partner_id === partner2.id);
-      expect(p1Line?.share_bps).toBe(5000);
-      expect(p2Line?.share_bps).toBe(5000);
+      expect(p1Line?.share_bps).toBe(4500);
+      expect(p2Line?.share_bps).toBe(4500);
     }
 
     // 7. Verify invoice in DB

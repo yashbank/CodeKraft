@@ -33,7 +33,7 @@ describe("confirmPayment concurrent lock integration", () => {
       status: "active",
       companyCutBps: 1000,
       createdBy: admin1.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 9000 }],
     });
 
     const offering = await createOffering({

@@ -29,7 +29,7 @@ describe("partner statement exports in PDF and CSV (API-FIN-10, FR-FIN-11, docs/
       status: "active",
       companyCutBps: 2000,
       createdBy: admin.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 8000 }],
     });
 
     const offering = await createOffering({

@@ -27,7 +27,7 @@ describe("shared expense reduces partner balances by their bps (FI-13, API-FIN-0
     const partner2 = await createPartner({ userId: partnerUser2.id });
     const product = await createProduct({ createdBy: admin.id });
 
-    // 10% company cut, partner1 60%, partner2 40%
+    // 10% company cut, partner1 54%, partner2 36% (flat: 1000 + 5400 + 3600 = 10000)
     await createOwnership({
       productId: product.id,
       version: 1,
@@ -35,8 +35,8 @@ describe("shared expense reduces partner balances by their bps (FI-13, API-FIN-0
       companyCutBps: 1000,
       createdBy: admin.id,
       lines: [
-        { partnerId: partner1.id, shareBps: 6000 },
-        { partnerId: partner2.id, shareBps: 4000 },
+        { partnerId: partner1.id, shareBps: 5400 },
+        { partnerId: partner2.id, shareBps: 3600 },
       ],
     });
 
@@ -65,9 +65,8 @@ describe("shared expense reduces partner balances by their bps (FI-13, API-FIN-0
     });
 
     // Check pre-expense balances
-    // Distributable = 100000, company = 10000 (10%), pool = 90000
-    // partner1 = 60% of 90000 = 54000
-    // partner2 = 40% of 90000 = 36000
+    // Distributable = 100000, flat shares [1000, 5400, 3600]
+    // company = 10000, partner1 = 54000, partner2 = 36000
     const adminCtx = buildContext({
       user: { id: admin.id },
       session: { id: "sess-admin" },

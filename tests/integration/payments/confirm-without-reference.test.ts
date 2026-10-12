@@ -31,7 +31,7 @@ describe("confirmPayment without customer reference (API-PAY-03)", () => {
       status: "active",
       companyCutBps: 1000,
       createdBy: admin.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 9000 }],
     });
 
     const offering = await createOffering({

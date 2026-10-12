@@ -41,7 +41,7 @@ describe("Project order product-linked line uses active ownership (API-COM-07, M
       createdBy: admin1.id,
       ownership: {
         companyCutBps: 2500,
-        lines: [{ partnerId: partner.id, shareBps: 10000 }],
+        lines: [{ partnerId: partner.id, shareBps: 7500 }],
       },
     });
 

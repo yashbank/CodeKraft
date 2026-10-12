@@ -405,12 +405,12 @@ export function ChatbotMonitor({
             <StatTile
               label="Estimated cost"
               value="Not tracked"
-              hint="No per-model pricing is configured in this phase"
+              hint="Per-model pricing not configured"
             />
             <StatTile
               label="Fallback rate"
               value="Not tracked"
-              hint="No fallback-hit flag is stored in this phase"
+              hint="Fallback tracking not configured"
             />
             <StatTile label="Escalation rate" value={`${Math.round(u.escalationRate * 100)} %`} />
           </div>

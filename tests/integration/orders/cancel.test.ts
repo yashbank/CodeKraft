@@ -31,7 +31,7 @@ describe("cancelMyOrder integration (API-COM-03, docs/06 §2.3)", () => {
       status: "active",
       companyCutBps: 1000,
       createdBy: admin.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 9000 }],
     });
 
     const offering = await createOffering({
@@ -89,7 +89,7 @@ describe("cancelMyOrder integration (API-COM-03, docs/06 §2.3)", () => {
       status: "active",
       companyCutBps: 1000,
       createdBy: admin.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 9000 }],
     });
 
     const offering = await createOffering({

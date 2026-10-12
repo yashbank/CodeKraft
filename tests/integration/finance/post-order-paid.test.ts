@@ -30,7 +30,7 @@ describe("postOrderPaid integration (docs/06 §4.2, §5.1, master plan §5)", ()
       status: "active",
       companyCutBps: 1000,
       createdBy: admin.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 9000 }],
     });
 
     const offering = await createOffering({
@@ -75,7 +75,7 @@ describe("postOrderPaid integration (docs/06 §4.2, §5.1, master plan §5)", ()
     expect(allocRow!.distributableMinor).toBe(9500);
     expect(allocRow!.companyMinor).toBe(950);
     expect(allocRow!.lines).toEqual([
-      { partner_id: partner.id, share_bps: 10000, amount_minor: 8550 },
+      { partner_id: partner.id, share_bps: 9000, amount_minor: 8550 },
     ]);
     expect(allocRow!.currency).toBe("INR");
 

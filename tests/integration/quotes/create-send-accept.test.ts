@@ -32,7 +32,7 @@ describe("Custom Quotes create-send-accept integration (API-COM-09, API-COM-10)"
       status: "active",
       companyCutBps: 1000,
       createdBy: admin.id,
-      lines: [{ partnerId: partner.id, shareBps: 10000 }],
+      lines: [{ partnerId: partner.id, shareBps: 9000 }],
     });
 
     const offering = await createOffering({

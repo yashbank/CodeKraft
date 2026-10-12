@@ -124,8 +124,8 @@ export const EXAMPLE_CATALOG: ExampleCatalog = {
       ownership: {
         companyCutBps: 1000,
         lines: [
-          { partner: "ceo", shareBps: 6000 },
-          { partner: "cfo", shareBps: 4000 },
+          { partner: "ceo", shareBps: 5400 },
+          { partner: "cfo", shareBps: 3600 },
         ],
       },
       offerings: [
@@ -325,7 +325,7 @@ export const EXAMPLE_CATALOG: ExampleCatalog = {
   ],
 };
 
-/** Sum of a product's ownership lines (should be 10 000 for every example product). */
+/** Sum of a product's partner ownership lines (companyCutBps + this = 10 000). */
 export function ownershipLinesTotal(ownership: ExampleOwnership): number {
   return ownership.lines.reduce((sum, l) => sum + l.shareBps, 0);
 }

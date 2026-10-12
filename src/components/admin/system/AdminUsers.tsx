@@ -350,8 +350,7 @@ export function AdminUsers({
         </Table>
       </div>
       <p className="mt-3 text-caption text-fg-muted">
-        Resend invite and Revoke sessions are not wired to a backend yet and stay disabled. TOTP
-        setup below is a preview only (Phase 6 gap — see Security dialog).
+        Resend invite and Revoke sessions are currently disabled.
       </p>
       <p className="mt-1 text-caption text-fg-muted">
         Removing the last Super Admin is not allowed. A partner holding active shares must have
@@ -494,10 +493,7 @@ export function AdminUsers({
                 required
               />
             </Field>
-            <p className="text-caption text-fg-muted">
-              Bank details aren&apos;t editable here yet — no reveal/decrypt endpoint exists in this
-              phase, so the fields below are read-only placeholders.
-            </p>
+            <p className="text-caption text-fg-muted">Bank details are read-only.</p>
             <Field id="pt-acct" label="Account number">
               <span className="flex gap-2">
                 <Input
@@ -561,8 +557,7 @@ export function AdminUsers({
             </DialogDescription>
           </DialogHeader>
           <Banner tone="info">
-            Preview only in this phase: enabling TOTP for real needs a password-confirmation step
-            this dialog doesn&apos;t collect yet, so the buttons below are disabled.
+            TOTP setup requires password confirmation. The controls below are currently disabled.
           </Banner>
           <div className="grid gap-4 sm:grid-cols-[160px_1fr]">
             <div

@@ -49,10 +49,10 @@ export function SplitEditor({
   idPrefix: string;
   compact?: boolean;
 }) {
-  // Partner shares are a percent of the partner pool (server rule: lines sum to 100 %).
-  // The company cut is separate and does not count toward this total.
+  // Flat model: company cut + all partner shares must sum to 100 % (10 000 bps).
   const total = value.lines.reduce((s, l) => s + l.bps, 0);
-  const ok = total === 10000;
+  const grandTotal = value.companyCutBps + total;
+  const ok = grandTotal === 10000;
   const update = (patch: Partial<SplitValue>) => onChange({ ...value, ...patch });
   const setLine = (i: number, patch: Partial<SplitLine>) =>
     update({ lines: value.lines.map((l, j) => (j === i ? { ...l, ...patch } : l)) });
@@ -146,10 +146,10 @@ export function SplitEditor({
           aria-live="polite"
           className={cn("font-mono text-body-sm tnum", ok ? "text-success" : "text-danger")}
         >
-          Partner shares total {percentFromBps(total)}{" "}
+          Company + partner shares total {percentFromBps(grandTotal)}{" "}
           {ok
             ? "✔"
-            : `— must equal 100.00 % (${total > 10000 ? "over" : "under"} by ${percentFromBps(Math.abs(10000 - total))})`}
+            : `— must equal 100.00 % (${grandTotal > 10000 ? "over" : "under"} by ${percentFromBps(Math.abs(10000 - grandTotal))})`}
         </p>
       </div>
     </div>
