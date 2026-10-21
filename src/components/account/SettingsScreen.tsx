@@ -507,7 +507,12 @@ export function SettingsScreen({
                   </p>
                   <ConfirmDialog
                     trigger={
-                      <Button variant="secondary" size="sm" disabled={signingOutEverywhere}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="max-sm:h-11 max-sm:px-4"
+                        disabled={signingOutEverywhere}
+                      >
                         Sign out other sessions
                       </Button>
                     }
@@ -625,12 +630,15 @@ export function SettingsScreen({
                   A service delivery is in progress — open a query to close it first.
                 </Banner>
               ) : null}
-              <div className="flex items-center gap-2">
-                <Checkbox id="del-ack" />
-                <Label htmlFor="del-ack" className="font-medium">
+              <label htmlFor="del-ack" className="flex min-h-11 items-center gap-2 sm:min-h-0">
+                <Checkbox
+                  id="del-ack"
+                  className="relative max-sm:after:absolute max-sm:after:-inset-2.5 max-sm:after:content-['']"
+                />
+                <span className="font-medium text-body-sm">
                   I understand this can&apos;t be undone
-                </Label>
-              </div>
+                </span>
+              </label>
               <ConfirmDialog
                 trigger={
                   <Button variant="destructive" disabled={deleteBlocked || deletingAccount}>

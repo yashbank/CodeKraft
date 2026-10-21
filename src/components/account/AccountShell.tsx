@@ -274,7 +274,7 @@ export function AccountShell({
                 <button
                   type="button"
                   aria-label={`Account menu for ${user.name}`}
-                  className="ml-1 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  className="ml-1 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring max-sm:p-1.5"
                 >
                   <Avatar>
                     <AvatarFallback>{user.initials}</AvatarFallback>

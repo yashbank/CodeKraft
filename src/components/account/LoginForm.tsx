@@ -51,6 +51,7 @@ export function LoginForm({
   const params = useSearchParams();
   const next = params.get("next") ?? defaultNext;
   const [error, setError] = useState<string | null>(initialError);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [pending, start] = useTransition();
   const busy = pending || forceLoading;
   // Before hydration a click would post natively and drop the typed credentials.
@@ -61,16 +62,21 @@ export function LoginForm({
     <form
       className="space-y-4"
       method="post"
+      noValidate
       aria-busy={busy || undefined}
       onSubmit={(e) => {
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
+        const email = String(fd.get("email") ?? "");
+        const password = String(fd.get("password") ?? "");
+        const nextFieldErrors: { email?: string; password?: string } = {};
+        if (!email.trim()) nextFieldErrors.email = "Enter your email";
+        if (!password) nextFieldErrors.password = "Enter your password";
+        setFieldErrors(nextFieldErrors);
+        if (Object.keys(nextFieldErrors).length > 0) return;
         start(async () => {
           setError(null);
-          const res = await authClient.signIn.email({
-            email: String(fd.get("email") ?? ""),
-            password: String(fd.get("password") ?? ""),
-          });
+          const res = await authClient.signIn.email({ email, password });
           if (res.error) {
             setError(res.error.message ?? "Invalid email or password.");
             return;
@@ -106,7 +112,7 @@ export function LoginForm({
         });
       }}
     >
-      {designed ? (
+      {designed && host !== "admin" ? (
         <>
           <GoogleButton
             disabled={busy}
@@ -120,6 +126,25 @@ export function LoginForm({
             <Separator className="flex-1" />
           </div>
         </>
+      ) : null}
+      {Object.entries(fieldErrors).filter(([, v]) => Boolean(v)).length > 0 ? (
+        <div
+          role="alert"
+          className="rounded-md border-l-4 border-danger bg-danger-soft px-4 py-3 text-body-sm text-danger"
+        >
+          <p className="font-semibold">Please fix the following:</p>
+          <ul className="mt-1 list-disc pl-5">
+            {Object.entries(fieldErrors)
+              .filter(([, v]) => Boolean(v))
+              .map(([k, msg]) => (
+                <li key={k}>
+                  <a href={`#${k}`} className="underline underline-offset-2">
+                    {msg}
+                  </a>
+                </li>
+              ))}
+          </ul>
+        </div>
       ) : null}
       {error ? (
         <p
@@ -138,8 +163,15 @@ export function LoginForm({
           autoComplete="email"
           required
           disabled={busy}
+          aria-invalid={fieldErrors.email ? true : undefined}
+          aria-describedby={fieldErrors.email ? "email-error" : undefined}
           className={designed ? "h-12 lg:h-10" : undefined}
         />
+        {fieldErrors.email ? (
+          <p id="email-error" className="text-caption text-danger">
+            {fieldErrors.email}
+          </p>
+        ) : null}
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">Password</Label>
@@ -150,6 +182,8 @@ export function LoginForm({
             autoComplete="current-password"
             required
             disabled={busy}
+            aria-invalid={fieldErrors.password ? true : undefined}
+            aria-describedby={fieldErrors.password ? "password-error" : undefined}
             className="h-12 lg:h-10"
           />
         ) : (
@@ -160,17 +194,29 @@ export function LoginForm({
             autoComplete="current-password"
             required
             disabled={busy}
+            aria-invalid={fieldErrors.password ? true : undefined}
+            aria-describedby={fieldErrors.password ? "password-error" : undefined}
           />
         )}
+        {fieldErrors.password ? (
+          <p id="password-error" className="text-caption text-danger">
+            {fieldErrors.password}
+          </p>
+        ) : null}
       </div>
       {designed ? (
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Checkbox id="remember" name="remember" disabled={busy} />
-            <Label htmlFor="remember" className="font-medium">
-              Remember this device
-            </Label>
-          </div>
+          {host !== "admin" ? (
+            <label htmlFor="remember" className="flex min-h-11 items-center gap-2 sm:min-h-0">
+              <Checkbox
+                id="remember"
+                name="remember"
+                disabled={busy}
+                className="relative max-sm:after:absolute max-sm:after:-inset-2.5 max-sm:after:content-['']"
+              />
+              <span className="font-medium text-body-sm">Remember this device</span>
+            </label>
+          ) : null}
           <Link href={resetHref} className="text-body-sm text-accent-text hover:underline">
             Forgot password?
           </Link>
@@ -185,7 +231,7 @@ export function LoginForm({
       >
         Sign in
       </Button>
-      {designed ? (
+      {designed && host !== "admin" ? (
         <div className="space-y-2 text-center text-body-sm text-fg-muted">
           {phoneOtpEnabled ? (
             <p>

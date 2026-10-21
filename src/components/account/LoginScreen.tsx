@@ -19,16 +19,17 @@ export const LOGIN_REASON_COPY: Record<LoginReason, { tone: BannerTone; text: st
   verify: { tone: "warning", text: "Verify your email to continue — check your inbox." },
 };
 
-/** SCR-AUTH-01 — customer login inside the auth split layout. */
+/** SCR-AUTH-01 — customer login inside the auth split layout; SCR-ADM-01 admin-branded variant. */
 export function LoginScreen({
   reason,
   tagline,
   ...form
 }: LoginFormProps & { reason?: LoginReason; tagline?: string }) {
   const banner = reason ? LOGIN_REASON_COPY[reason] : null;
+  const isAdmin = form.host === "admin";
   return (
-    <AuthLayout tagline={tagline}>
-      <AuthCard title="Sign in">
+    <AuthLayout tagline={tagline} variant={isAdmin ? "admin" : "customer"}>
+      <AuthCard title={isAdmin ? "Sign in to CodeKraft admin" : "Sign in"}>
         {banner ? <Banner tone={banner.tone}>{banner.text}</Banner> : null}
         <Suspense fallback={null}>
           <LoginForm designed {...form} />
