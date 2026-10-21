@@ -173,7 +173,6 @@ export function ProductFilters({
                 />
               </div>
             </div>
-            <p className="mt-2 text-caption text-fg-subtle">Dual-handle slider lands in P7.</p>
           </AccordionContent>
         </AccordionItem>
 
