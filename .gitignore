@@ -12,6 +12,8 @@ playwright-report
 test-results
 .lighthouseci
 .DS_Store
+scratch
+.playwright-mcp
 next-env.d.ts
 tsconfig.tsbuildinfo
 .vercel
