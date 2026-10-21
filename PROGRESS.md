@@ -1,5 +1,5 @@
-PHASE: 4-audit
-NEXT: wait for 4 parallel audit agents (public+auth, account, admin-A, admin-B) to return findings, then consolidate into BUGS.md and start fix loop (phase 5, highest severity first)
-DONE: resume system + subagents/skills committed; env baseline green (lint/typecheck/test 1065 passed/build all pass); local Postgres (.pg/data) migrated+seeded; dev server up on :3000; found implementation/BUG-TRACKER.md with prior prod scout (49 defects, most already fixed per git history "cluster 9"); 4 audit agents dispatched against local dev to re-verify remaining open rows + catch regressions
-LAST_COMMIT: 6e3c225 style: fix prettier formatting in storage.test.ts
+PHASE: 5-fix-loop
+NEXT: wait for fixer agents (BUG-003 admin query detail route; BUG-004/005/006 minor admin UI) + admin-batch-B audit agent, then verify (typecheck/lint/test/build) and commit each
+DONE: audit phase 4 mostly done - 3 of 4 audit agents reported (public+auth, account [blocked, no seeded orders], admin-A). Confirmed+fixed BUG-001/002 (leaked "lands in P7" roadmap copy on contact form + products filter). Logged BUG-003 (major: admin /queries/[id] route genuinely missing, contra tracker's "fixed" claim), BUG-004/005/006 (minor admin UI). "[PLACEHOLDER]" text sitewide is an intentional seed marker (scripts/seed/content.ts), not a bug - do not re-flag. Local seed has no orders/entitlements/quotes/leads/queries/chat data (scripts/ops/purchase-smoke.mjs failed against local env, abandoned - not worth more budget) so order/quote/lead/query DETAIL screens can't be fully exercised locally; MANUAL.md should note this for a human to smoke-test against a real account.
+LAST_COMMIT: 0825365 fix(BUG-001,BUG-002): remove internal roadmap notes leaked as user-facing copy
 MANUAL: see MANUAL.md
