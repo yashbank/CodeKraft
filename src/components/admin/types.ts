@@ -903,6 +903,17 @@ export interface SettingsData {
     swift?: string;
     instructions: string;
     affectedOfferings: string[];
+    /** V1.1 Razorpay gateway config (D-501) — TEST MODE ONLY; `keySecretMasked`/
+     * `webhookSecretMasked` are already last-4-masked (or `""` when unset) and MUST NEVER be
+     * resubmitted to the server as if they were the real value. */
+    razorpay: {
+      enabled: boolean;
+      mode: "test" | "live";
+      keyId: string;
+      keySecretMasked: string;
+      webhookSecretMasked: string;
+      webhookUrl: string;
+    };
   };
   theme: { defaultTheme: string; lightEnabled: boolean };
   ai: {

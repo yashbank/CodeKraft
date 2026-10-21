@@ -53,8 +53,14 @@ export type GetPaymentInstructionsInput = z.infer<typeof getPaymentInstructionsI
 export const submitPaymentReferenceInput = z
   .object({
     paymentId: zUuid,
-    /** UTR / transaction id. */
-    reference: zTrimmed(6, 64),
+    /**
+     * UTR / transaction id for manual UPI/bank; for gateway methods (Razorpay) this instead
+     * carries the packed `"<order_id>:<payment_id>:<signature>"` Checkout.js reference (see
+     * `RazorpayProvider.confirm`'s docstring, `modules/payments/providers/razorpay.ts`) — up to
+     * ~110 chars in practice (two Razorpay ids + a 64-char hex HMAC), so the max is wider than a
+     * plain UTR needs.
+     */
+    reference: zTrimmed(6, 140),
     paidAt: zIsoTimestamp.optional(),
     note: zTrimmed(0, 500).optional(),
   })

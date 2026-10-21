@@ -34,7 +34,7 @@ import { EmptyState } from "./EmptyState";
 import { formatDate } from "./format";
 import type { InvoiceSummary, PaymentSummary } from "./types";
 
-const PROVIDER = { manual_upi: "UPI", manual_bank: "Bank transfer" } as const;
+const PROVIDER = { manual_upi: "UPI", manual_bank: "Bank transfer", razorpay: "Razorpay" } as const;
 
 function paymentAction(
   p: PaymentSummary,

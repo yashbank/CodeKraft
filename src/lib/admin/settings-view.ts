@@ -42,6 +42,7 @@
  */
 import { getEnv } from "@/lib/env";
 import { getFlagFromEnv, type FlagKey } from "@/lib/feature-flags";
+import { maskRazorpaySettings } from "@/modules/settings/service";
 import type { SiteSettings } from "@/modules/settings/types";
 import type { FeatureFlagRow, SettingsData } from "@/components/admin/types";
 
@@ -135,6 +136,31 @@ export function mapSiteSettingsToSettingsData(settings: SiteSettings): SettingsD
       swift: undefined,
       instructions: "",
       affectedOfferings: [],
+      // Deliberately masked here regardless of the caller's permission level — unlike
+      // `bankDetails.accountNumber` above (full plaintext when the ctx has `settings.write`,
+      // which `getSettingsQuery` always does on this page since only super admins reach it), the
+      // Razorpay secret must NEVER render in full in this screen; only a retyped value is ever
+      // sent back on save (`updateRazorpaySettings`, `admin-mutations.ts`).
+      razorpay: settings.razorpaySettings
+        ? (() => {
+            const masked = maskRazorpaySettings(settings.razorpaySettings);
+            return {
+              enabled: settings.flags.provider_razorpay,
+              mode: masked.mode,
+              keyId: masked.keyId ?? "",
+              keySecretMasked: masked.keySecret ?? "",
+              webhookSecretMasked: masked.webhookSecret ?? "",
+              webhookUrl: `${env.NEXT_PUBLIC_SITE_URL}/api/webhooks/razorpay`,
+            };
+          })()
+        : {
+            enabled: settings.flags.provider_razorpay,
+            mode: "test" as const,
+            keyId: "",
+            keySecretMasked: "",
+            webhookSecretMasked: "",
+            webhookUrl: `${env.NEXT_PUBLIC_SITE_URL}/api/webhooks/razorpay`,
+          },
     },
     theme: {
       defaultTheme: settings.defaultTheme,

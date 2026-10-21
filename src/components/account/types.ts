@@ -14,7 +14,10 @@ export type SubscriptionStatus = StatusValue<"subscriptions.status">;
 export type BillingInterval = StatusValue<"offerings.billing_interval">;
 export type OrderStatus = StatusValue<"orders.status">;
 export type PaymentStatus = StatusValue<"payments.status">;
-export type PaymentProvider = "manual_upi" | "manual_bank";
+/** `razorpay` (V1.1, D-501, TEST MODE ONLY) only ever reaches the client already gated —
+ * `toCheckoutPaymentProviders` (`lib/account/checkout-view.ts`) only includes it when the
+ * `provider_razorpay` flag is on AND `razorpaySettings.keyId`/`keySecret` are configured. */
+export type PaymentProvider = "manual_upi" | "manual_bank" | "razorpay";
 export type QueryStatus = StatusValue<"queries.status">;
 export type QuerySource = StatusValue<"queries.source">;
 export type QuoteStatus = StatusValue<"custom_quotes.status">;

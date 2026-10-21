@@ -3,8 +3,10 @@ import { CheckoutScreen, type CheckoutPageState } from "@/components/account/Che
 import { mapCheckoutPreviewToOffering, mapProfileToBilling } from "@/lib/account/checkout-view";
 import { getSiteRequestContext } from "@/lib/authz/site-request-context";
 import { ErrorCode } from "@/lib/errors";
+import { getFlag } from "@/lib/feature-flags";
 import { getSession } from "@/modules/auth/service";
 import { previewCheckoutAction } from "@/modules/orders/actions";
+import { settingsService } from "@/modules/settings/service";
 import { getMyProfileQuery } from "@/modules/users/queries";
 
 export const dynamic = "force-dynamic";
@@ -29,10 +31,19 @@ export default async function CheckoutPage({ params }: PageProps) {
   }
 
   const ctx = await getSiteRequestContext();
-  const [previewResult, profileResult] = await Promise.all([
+  const [previewResult, profileResult, razorpayFlag, siteSettings] = await Promise.all([
     previewCheckoutAction({ offeringId }, ctx),
     getMyProfileQuery({}, ctx),
+    getFlag("provider_razorpay"),
+    settingsService.load(),
   ]);
+  // V1.1, D-501, TEST MODE ONLY: Razorpay is only ever a selectable checkout option when BOTH
+  // the flag is on AND real keys are configured — never expose keySecret/webhookSecret to the
+  // client, only this boolean (`mapCheckoutPreviewToOffering` -> `toCheckoutPaymentProviders`).
+  const razorpayAvailable =
+    razorpayFlag &&
+    !!siteSettings.razorpaySettings?.keyId &&
+    !!siteSettings.razorpaySettings?.keySecret;
 
   if (!previewResult.ok) {
     if (previewResult.error.code === ErrorCode.NOT_FOUND) {
@@ -68,7 +79,7 @@ export default async function CheckoutPage({ params }: PageProps) {
     );
   }
 
-  const offering = mapCheckoutPreviewToOffering(previewResult.data);
+  const offering = mapCheckoutPreviewToOffering(previewResult.data, razorpayAvailable);
   const billing = profileResult.ok
     ? mapProfileToBilling(profileResult.data.user, profileResult.data.profile)
     : { name: session.user.name ?? "", email: session.user.email, country: "IN" };

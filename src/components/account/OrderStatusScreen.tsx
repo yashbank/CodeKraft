@@ -37,7 +37,11 @@ import { formatDate, formatDateTime, timeUntil } from "./format";
 import { PaymentInstructionsCard } from "./PaymentInstructionsCard";
 import type { OrderView, PaymentProvider } from "./types";
 
-const METHOD_LABEL = { manual_upi: "UPI", manual_bank: "Bank transfer" } as const;
+const METHOD_LABEL = {
+  manual_upi: "UPI",
+  manual_bank: "Bank transfer",
+  razorpay: "Razorpay",
+} as const;
 
 type Stage =
   | "awaiting_reference"
