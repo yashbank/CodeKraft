@@ -10,7 +10,11 @@
  * environment (`src/lib/env.ts` guards against `window`) -- a static import here would drag
  * that into any client component that imports this file's sibling `admin-mutations.ts`.
  */
+import { z } from "zod";
+
 import { defineAction } from "@/lib/actions/envelope";
+import { listActiveAdminUsers, type AdminDirectoryEntry } from "@/modules/approvals/approver-set";
+import { getDb } from "@/lib/db";
 import { listCouponsInput } from "./types";
 
 export const listCouponsQuery = defineAction({
@@ -20,5 +24,21 @@ export const listCouponsQuery = defineAction({
   handler: async (input, ctx) => {
     const { couponsService } = await import("./service");
     return couponsService.listCoupons(ctx, input);
+  },
+});
+
+/**
+ * Admin-class directory for resolving `Coupon.createdBy` (a user id) to a display name on the
+ * coupons list — same pattern as `leads/queries.ts` / `queries/queries.ts`'s
+ * `listAssignableAdminsQuery` (see `approvals/approver-set.ts`), gated by the same permission
+ * coupon management already requires.
+ */
+export const listAssignableAdminsQuery = defineAction({
+  name: "admin.directory.list (coupons)",
+  input: z.strictObject({}),
+  permission: "orders.manual.write",
+  handler: async (_input, ctx): Promise<{ items: AdminDirectoryEntry[] }> => {
+    void ctx;
+    return { items: await listActiveAdminUsers(getDb()) };
   },
 });

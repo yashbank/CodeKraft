@@ -301,6 +301,16 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
       />,
     );
     expect(screen.getAllByText(/Queries/i).length).toBeGreaterThan(0);
+    // BUG-003 regression: `/admin/queries/[id]` reuses this component seeded with the thread for
+    // the requested id, not the first query in the list — QUERY_THREAD.query is QUERIES[1], so
+    // the thread pane and the selected list row must reflect q-2, not q-1.
+    expect(screen.getAllByText(QUERY_THREAD.query.subject).length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("button", {
+        current: true,
+        name: new RegExp(QUERY_THREAD.query.subject),
+      }),
+    ).toBeDefined();
 
     cleanup();
 
