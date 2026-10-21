@@ -30,6 +30,18 @@ export const replyToQueryAction = defineAction({
   handler: (input, ctx) => queriesService.replyToQuery(ctx, input),
 });
 
+/**
+ * API-CHAT-03 `replyToMyQuery` — customer reply on an own thread (`support.self`). Backs the
+ * `QueryThreadScreen` composer (BUG-007); `queriesService.replyToQuery` enforces ownership for the
+ * `isCustomer` branch.
+ */
+export const replyToMyQueryAction = defineAction({
+  name: "API-CHAT-03 replyToMyQuery",
+  input: replyToQuerySchema,
+  permission: "support.self",
+  handler: (input, ctx) => queriesService.replyToQuery(ctx, input),
+});
+
 export const assignQueryAction = defineAction({
   name: "API-CHAT-05 assignQuery",
   input: assignQuerySchema,

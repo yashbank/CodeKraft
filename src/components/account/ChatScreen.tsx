@@ -133,6 +133,7 @@ export function ChatScreen({
   transcripts,
   messagesLeft: initialMessagesLeft,
   capReached: initialCapReached = false,
+  emailUnverified = false,
   streaming: forcedStreaming = false,
   connectionLost = false,
   links,
@@ -147,6 +148,8 @@ export function ChatScreen({
   transcripts: ChatTranscript[];
   messagesLeft: number;
   capReached?: boolean;
+  /** BUG-032: the real blocker is an unverified email, not the daily cap -- takes precedence over `capReached`'s copy. */
+  emailUnverified?: boolean;
   streaming?: boolean;
   connectionLost?: boolean;
   links: { queries: string };
@@ -383,9 +386,11 @@ export function ChatScreen({
       <header className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
         <BotIcon aria-hidden className="size-5 text-accent-text" />
         <h1 className="text-h3 text-fg">Assistant</h1>
-        <Badge tone={messagesLeft === 0 ? "danger" : messagesLeft <= 3 ? "warning" : "neutral"}>
-          {messagesLeft} messages left today
-        </Badge>
+        {emailUnverified ? null : (
+          <Badge tone={messagesLeft === 0 ? "danger" : messagesLeft <= 3 ? "warning" : "neutral"}>
+            {messagesLeft} messages left today
+          </Badge>
+        )}
         <div className="ml-auto flex items-center gap-1">
           <Button variant="ghost" size="sm" onClick={newConversation}>
             <PlusIcon aria-hidden /> New conversation
@@ -425,7 +430,12 @@ export function ChatScreen({
         </div>
       </header>
 
-      {capReached ? (
+      {emailUnverified ? (
+        <Banner tone="warning" className="mt-3">
+          Verify your email address to chat with the assistant — check your inbox for the
+          verification link.
+        </Banner>
+      ) : capReached ? (
         <Banner tone="warning" className="mt-3">
           You&apos;ve reached today&apos;s message limit. Quick actions still work, or talk to a
           human.
@@ -614,9 +624,13 @@ export function ChatScreen({
               maxLength={2000}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              disabled={capReached || streaming}
+              disabled={capReached || emailUnverified || streaming}
               placeholder={
-                capReached ? "Daily limit reached" : "Ask about your orders or our products"
+                emailUnverified
+                  ? "Verify your email to chat"
+                  : capReached
+                    ? "Daily limit reached"
+                    : "Ask about your orders or our products"
               }
               className="min-h-10 resize-none"
             />
@@ -636,7 +650,7 @@ export function ChatScreen({
               type="submit"
               size="icon-md"
               aria-label="Send"
-              disabled={capReached || !draft.trim()}
+              disabled={capReached || emailUnverified || !draft.trim()}
             >
               <SendIcon aria-hidden />
             </Button>

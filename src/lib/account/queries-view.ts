@@ -13,8 +13,9 @@
  *  - `unread` is always `false` -- `QueryRow.unreadForCaller` has no backing read-tracking column
  *    on `queries` (see `modules/queries/service.ts`'s `toQueryRow`), so it's never fabricated true.
  */
+import { toPlainText } from "@/modules/content/render";
 import type { QuerySummary } from "@/components/account/types";
-import type { QueryRow } from "@/modules/queries/types";
+import type { QueryRow, QueryThread } from "@/modules/queries/types";
 
 export function mapQueryRowToSummary(q: QueryRow): QuerySummary {
   return {
@@ -28,5 +29,29 @@ export function mapQueryRowToSummary(q: QueryRow): QuerySummary {
     lastActivityAt: q.lastMessageAt,
     unread: q.unreadForCaller,
     messages: [],
+  };
+}
+
+/** `getMyQuery` -> thread-detail `QuerySummary` (BUG-007) -- real messages, unlike the list mapper. */
+export function mapQueryThreadToSummary(t: QueryThread): QuerySummary {
+  const base = mapQueryRowToSummary(t.query);
+  const lastMessage = t.messages.at(-1);
+  return {
+    ...base,
+    preview: lastMessage ? toPlainText(lastMessage.bodyJson as never) : base.preview,
+    messages: t.messages.map((m) => ({
+      id: m.messageId,
+      author: m.authorKind,
+      authorName: m.authorKind === "admin" ? (m.author?.name ?? undefined) : undefined,
+      body: toPlainText(m.bodyJson as never),
+      at: m.createdAt,
+      attachments:
+        m.attachments.length > 0
+          ? m.attachments.map((a) => ({
+              name: a.name,
+              sizeLabel: `${Math.round(a.sizeBytes / 1024)} KB`,
+            }))
+          : undefined,
+    })),
   };
 }

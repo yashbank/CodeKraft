@@ -32,3 +32,8 @@ export async function createQuery(raw: unknown) {
   const { createQueryAction } = await import("./actions");
   return withCtx(createQueryAction, raw);
 }
+
+export async function replyToMyQuery(raw: unknown) {
+  const { replyToMyQueryAction } = await import("./actions");
+  return withCtx(replyToMyQueryAction, raw);
+}

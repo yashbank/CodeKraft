@@ -1,4 +1,4 @@
-import { type SQL, and, desc, eq, inArray, isNull, lt, notInArray, sql } from "drizzle-orm";
+import { type SQL, and, asc, desc, eq, inArray, isNull, lt, notInArray, sql } from "drizzle-orm";
 import type { Context, RequestContext } from "@/lib/authz/context";
 import { type Db, type DbOrTx, getDb } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
@@ -323,12 +323,18 @@ export class DefaultQueriesService implements QueriesService {
     if (!query) {
       throw new AppError(ErrorCode.NOT_FOUND, "Query not found");
     }
-    if (query.status === "closed") {
-      throw new AppError(ErrorCode.STATE_INVALID, "Cannot reply to a closed query");
-    }
 
     const isAdmin = ctx.roles.some((r) => ["admin", "super_admin"].includes(r));
     const isCustomer = !isAdmin;
+
+    // Customer-facing `replyToMyQuery` (BUG-007) shares this method with the admin reply action;
+    // only the admin action is gated by `queries.reply`, so ownership has to be enforced here.
+    if (isCustomer && query.userId !== ctx.userId) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Query not found");
+    }
+    if (query.status === "closed") {
+      throw new AppError(ErrorCode.STATE_INVALID, "Cannot reply to a closed query");
+    }
 
     let nextStatus = query.status;
 
@@ -572,7 +578,9 @@ export class DefaultQueriesService implements QueriesService {
       .from(queryMessages)
       .leftJoin(users, eq(queryMessages.authorId, users.id))
       .where(eq(queryMessages.queryId, query.id))
-      .orderBy(desc(queryMessages.createdAt));
+      // Chronological (oldest first) — both `QueryThreadScreen` and `QueriesInbox` render this
+      // list top-to-bottom as a conversation with the composer fixed at the bottom.
+      .orderBy(asc(queryMessages.createdAt));
 
     let customer: { id: string | null; name: string | null; email: string } | undefined;
     if (query.userId) {

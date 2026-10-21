@@ -8,3 +8,8 @@
 | BUG-004 | minor | admin /queries | List page has no visible heading at desktop (≥1024px) - the only heading text is inside the mobile "open on a laptop" notice block, which is CSS-hidden at desktop widths | fixed |
 | BUG-005 | minor | admin /leads/board | Not a real route - direct link to /admin/leads/board is captured by /leads/[id] dynamic route and shows "Lead not found" instead of a board view; Board/Table toggle is client-state only | fixed |
 | BUG-006 | minor | admin /coupons | "Created by" column shows a raw id fragment ("Admin 21176875") instead of admin name/email, on all seeded coupons | fixed |
+| BUG-007 | blocker | /account/queries/[id] | Query row links to /account/queries/<uuid> -> HTTP 404 "We couldn't find that page" (desktop and 375). Reply/thread view unreachable for customers. | fixed |
+| BUG-016 | major | /account/settings (Security) | Empty submit and mismatched password-confirm both show no error text and fire no visible API request. | fixed |
+| BUG-030 | minor | /account/settings (Profile, Notifications) | Save/toggle persists correctly on reload but shows no success/error feedback. | verified already fixed, no change needed |
+| BUG-032 | minor | /account/chat | Shows "0 messages left today / reached today's limit" copy when the real blocker is an unverified email. | fixed |
+| BUG-033 | minor | /account/queries/[id] 404 page, product-page footer | Renders logged-out header/footer ("Sign in") while the user is actually logged in. | fixed |
