@@ -70,6 +70,15 @@ export const retentionSchema = z.strictObject({
   recordsYears: z.number().int().min(7).max(30),
 });
 
+/** V1.1 Razorpay gateway config (D-501); `keySecret`/`webhookSecret` encrypted at rest. */
+export const razorpayModeSchema = z.enum(["test", "live"]);
+export const razorpaySettingsSchema = z.strictObject({
+  mode: razorpayModeSchema,
+  keyId: text(200).nullable(),
+  keySecret: text(500).nullable(),
+  webhookSecret: text(500).nullable(),
+});
+
 /** Full typed map, used by the loader to validate the assembled rows. */
 export const siteSettingsSchema = z.strictObject({
   baseCurrency: currencySchema,
@@ -79,6 +88,7 @@ export const siteSettingsSchema = z.strictObject({
   sellerDetails: sellerDetailsSchema.nullable(),
   upiVpa: upiVpaSchema.nullable(),
   bankDetails: bankDetailsSchema.nullable(),
+  razorpaySettings: razorpaySettingsSchema.nullable(),
   enabledPaymentMethods: z.array(paymentMethodSchema).max(5),
   defaultTheme: themeNameSchema,
   aiModel: text(120),
@@ -98,6 +108,7 @@ export const SITE_SETTINGS_DEFAULTS: SiteSettings = Object.freeze({
   sellerDetails: null,
   upiVpa: null,
   bankDetails: null,
+  razorpaySettings: null,
   enabledPaymentMethods: ["manual_upi", "manual_bank"],
   defaultTheme: "dark-cinematic",
   aiModel: "claude-opus-5",

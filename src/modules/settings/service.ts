@@ -29,6 +29,7 @@ import {
 import {
   type BankDetails,
   type PublicSettings,
+  type RazorpaySettings,
   SITE_SETTING_KEYS,
   type SiteSettingField,
   type SiteSettings,
@@ -63,6 +64,54 @@ function maskBankDetails(bank: BankDetails): BankDetails {
     ...bank,
     accountNumber: maskedNumber,
   };
+}
+
+function maskSecretTail(secret: string | null): string | null {
+  if (!secret) return secret;
+  return secret.length > 4 ? "*".repeat(secret.length - 4) + secret.slice(-4) : "****";
+}
+
+/**
+ * Masks `keySecret`/`webhookSecret` to last-4 (mirrors `maskBankDetails`); `keyId` stays plain.
+ * Exported (unlike `maskBankDetails`) so unit tests can exercise masking without a real database.
+ */
+export function maskRazorpaySettings(rp: RazorpaySettings): RazorpaySettings {
+  return {
+    ...rp,
+    keySecret: maskSecretTail(rp.keySecret),
+    webhookSecret: maskSecretTail(rp.webhookSecret),
+  };
+}
+
+/**
+ * `keySecret`/`webhookSecret` use a SEPARATE master key (`SETTINGS_ENCRYPTION_KEY`, not the
+ * `APP_ENCRYPTION_KEY` default `bankDetails` uses) — deliberately not validated at env-parse time
+ * so a deploy with no Razorpay keys configured yet doesn't break; this throws only when a caller
+ * actually tries to encrypt/decrypt a stored secret.
+ */
+export function getSettingsEncryptionKey(): string {
+  const key = process.env.SETTINGS_ENCRYPTION_KEY;
+  if (!key) {
+    throw new AppError(
+      ErrorCode.STATE_INVALID,
+      "SETTINGS_ENCRYPTION_KEY is not configured; cannot read or write Razorpay secrets",
+    );
+  }
+  return key;
+}
+
+export function encryptRazorpaySecret(plain: string): string {
+  return encrypt(plain, getSettingsEncryptionKey());
+}
+
+/** Tampered/malformed ciphertext (or a key rotated out) falls back to `null`, same as `bankDetails`. */
+export function decryptRazorpaySecret(token: string): string | null {
+  const key = getSettingsEncryptionKey();
+  try {
+    return decrypt(token, key);
+  } catch {
+    return null;
+  }
 }
 
 export class DefaultSettingsService implements SettingsService {
@@ -105,6 +154,31 @@ export class DefaultSettingsService implements SettingsService {
             assembled.bankDetails = val as BankDetails;
           } else {
             assembled.bankDetails = null;
+          }
+        } else if (field === "razorpaySettings") {
+          if (val === null || val === undefined) {
+            assembled.razorpaySettings = null;
+          } else if (typeof val === "object") {
+            const v = val as {
+              mode?: "test" | "live";
+              keyId?: string | null;
+              keySecret?: string | null;
+              webhookSecret?: string | null;
+            };
+            assembled.razorpaySettings = {
+              mode: v.mode === "live" ? "live" : "test",
+              keyId: v.keyId ?? null,
+              keySecret:
+                v.keySecret && isEncryptedToken(v.keySecret)
+                  ? decryptRazorpaySecret(v.keySecret)
+                  : (v.keySecret ?? null),
+              webhookSecret:
+                v.webhookSecret && isEncryptedToken(v.webhookSecret)
+                  ? decryptRazorpaySecret(v.webhookSecret)
+                  : (v.webhookSecret ?? null),
+            };
+          } else {
+            assembled.razorpaySettings = null;
           }
         } else if (field === "flags") {
           assembled.flags = {
@@ -150,11 +224,14 @@ export class DefaultSettingsService implements SettingsService {
     assertPermission(ctx, "settings.read");
     const settings = await this.load(tx);
 
-    if (!ctx.permissions.has("settings.write") && settings.bankDetails) {
+    if (!ctx.permissions.has("settings.write")) {
       return {
         settings: {
           ...settings,
-          bankDetails: maskBankDetails(settings.bankDetails),
+          ...(settings.bankDetails ? { bankDetails: maskBankDetails(settings.bankDetails) } : {}),
+          ...(settings.razorpaySettings
+            ? { razorpaySettings: maskRazorpaySettings(settings.razorpaySettings) }
+            : {}),
         },
       };
     }
@@ -280,6 +357,15 @@ export class DefaultSettingsService implements SettingsService {
           let valToStore: unknown = rawVal;
           if (key === "bankDetails" && rawVal !== null && rawVal !== undefined) {
             valToStore = encrypt(JSON.stringify(rawVal));
+          }
+          if (key === "razorpaySettings" && rawVal !== null && rawVal !== undefined) {
+            const rp = rawVal as RazorpaySettings;
+            valToStore = {
+              mode: rp.mode,
+              keyId: rp.keyId,
+              keySecret: rp.keySecret ? encryptRazorpaySecret(rp.keySecret) : null,
+              webhookSecret: rp.webhookSecret ? encryptRazorpaySecret(rp.webhookSecret) : null,
+            };
           }
 
           await activeTx

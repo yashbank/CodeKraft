@@ -4,12 +4,14 @@
 import { AppError, ErrorCode } from "@/lib/errors";
 import type { PaymentMethodKey, PaymentProvider, ProviderRegistry } from "../provider";
 import { manualProvider } from "./manual";
+import { razorpayProvider } from "./razorpay";
 
 export class DefaultProviderRegistry implements ProviderRegistry {
   private readonly providersByMethod = new Map<PaymentMethodKey, PaymentProvider>();
 
   constructor() {
     this.register(manualProvider);
+    this.register(razorpayProvider);
   }
 
   register(provider: PaymentProvider): void {

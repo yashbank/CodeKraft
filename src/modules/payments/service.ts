@@ -8,6 +8,7 @@ import { AppError, ErrorCode } from "@/lib/errors";
 import { assertPermission } from "@/lib/authz/assert";
 import type { RequestContext } from "@/lib/authz/context";
 import { auditService } from "@/modules/audit/service";
+import type { SystemActor } from "@/modules/audit/types";
 import { ordersService } from "@/modules/orders/service";
 import { financeService } from "@/modules/finance/service";
 import { quotesService } from "@/modules/quotes/service";
@@ -38,6 +39,24 @@ import {
 } from "./types";
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
 import { proposeRefund, applyRefund } from "./refunds";
+
+/**
+ * Webhook-driven `confirmPayment`/`failPayment` calls (`/api/webhooks/razorpay`) build a
+ * `RequestContext` with this sentinel `userId` (role `super_admin`, so `payments.confirm` passes
+ * `assertPermission`) — docs/06 §4.3: "Webhook → service.confirm() is the same function admins
+ * call, so idempotency and audit (actor `webhook:<provider>`) are shared." `confirmed_by` and
+ * `audit_logs.actor_id` are real-user uuid FKs, so the sentinel is swapped for `null`/a
+ * `SystemActor` at the three write sites below rather than written literally.
+ */
+export const WEBHOOK_ACTOR_USER_ID = "webhook";
+
+function auditActorFor(
+  ctx: RequestContext,
+  provider: PaymentMethodKey,
+): RequestContext | SystemActor {
+  if (ctx.userId !== WEBHOOK_ACTOR_USER_ID) return ctx;
+  return { kind: "system", name: `webhook:${provider}` };
+}
 
 export class DefaultPaymentsService implements PaymentsService {
   private readonly fallback = createNotImplementedPaymentsService();
@@ -260,7 +279,7 @@ export class DefaultPaymentsService implements PaymentsService {
           bankShortfallMinor: result.bankShortfallMinor,
           customerCreditMinor: result.customerCreditMinor,
           customerReference: parsed.reference || payment.customerReference,
-          confirmedBy: ctx.userId,
+          confirmedBy: ctx.userId === WEBHOOK_ACTOR_USER_ID ? null : ctx.userId,
           confirmedAt: now,
         })
         .where(eq(payments.id, payment.id))
@@ -299,7 +318,7 @@ export class DefaultPaymentsService implements PaymentsService {
       const { invoicesService } = await import("@/modules/invoices/service");
       const invoiceRes = await invoicesService.issueInvoice(
         { orderId: order.id },
-        { userId: ctx.userId },
+        { userId: ctx.userId === WEBHOOK_ACTOR_USER_ID ? null : ctx.userId },
         tx,
       );
 
@@ -342,7 +361,7 @@ export class DefaultPaymentsService implements PaymentsService {
 
       // Audit log
       await auditService.log(
-        ctx,
+        auditActorFor(ctx, payment.provider as PaymentMethodKey),
         "payment.confirmed",
         { type: "payment", id: payment.id },
         payment,
@@ -435,7 +454,7 @@ export class DefaultPaymentsService implements PaymentsService {
       }
 
       await auditService.log(
-        ctx,
+        auditActorFor(ctx, payment.provider as PaymentMethodKey),
         "payment.failed",
         { type: "payment", id: payment.id },
         payment,
