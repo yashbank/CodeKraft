@@ -27,9 +27,32 @@ import type { CustomerProfileView, UserView } from "@/modules/users/types";
  * `manual_upi | manual_bank | razorpay | stripe | paypal` union even though only the two manual
  * values are ever actually in it (release 1, D-501). Filter again here so the narrower
  * `PaymentProvider` the checkout UI understands is a real invariant, not just a cast.
+ *
+ * Used where Razorpay must never appear regardless of flags/config (`order-detail-view.ts`'s
+ * "re-show this already-placed order's payment instructions" -- that screen only ever renders
+ * manual UPI/bank instructions, untouched by the V1.1 Razorpay work). The live checkout mapper
+ * below uses `toCheckoutPaymentProviders` instead, which can also admit `"razorpay"`.
  */
 export function toManualPaymentProviders(methods: readonly string[]): PaymentProvider[] {
   return methods.filter((m): m is PaymentProvider => m === "manual_upi" || m === "manual_bank");
+}
+
+/**
+ * Same idea as `toManualPaymentProviders`, plus the one extra gate for Razorpay (V1.1, D-501,
+ * TEST MODE ONLY): an offering's `offeringPaymentMethods` row can already list `"razorpay"` (the
+ * DB enum always allowed it), but it must only actually become a selectable checkout option when
+ * BOTH the `provider_razorpay` feature flag is on AND `razorpaySettings.keyId`/`keySecret` are
+ * configured. The caller (the checkout page, a server component) computes that boolean and
+ * passes it in; this function never reaches into settings/flags itself, keeping it a pure mapper.
+ */
+export function toCheckoutPaymentProviders(
+  methods: readonly string[],
+  razorpayAvailable: boolean,
+): PaymentProvider[] {
+  return methods.filter(
+    (m): m is PaymentProvider =>
+      m === "manual_upi" || m === "manual_bank" || (m === "razorpay" && razorpayAvailable),
+  );
 }
 
 const PURCHASE_MODEL_LINE: Record<string, string> = {
@@ -38,7 +61,10 @@ const PURCHASE_MODEL_LINE: Record<string, string> = {
   custom_quote: "Custom quote",
 };
 
-export function mapCheckoutPreviewToOffering(preview: CheckoutPreview): CheckoutOffering {
+export function mapCheckoutPreviewToOffering(
+  preview: CheckoutPreview,
+  razorpayAvailable = false,
+): CheckoutOffering {
   return {
     productName: preview.product.title,
     offeringName: preview.offering.title,
@@ -50,7 +76,7 @@ export function mapCheckoutPreviewToOffering(preview: CheckoutPreview): Checkout
       ? `GST (${(preview.taxRateBps / 100).toFixed(0)}%)`
       : "Tax",
     tax: preview.product.taxEnabled ? preview.tax : null,
-    enabledMethods: toManualPaymentProviders(preview.enabledMethods),
+    enabledMethods: toCheckoutPaymentProviders(preview.enabledMethods, razorpayAvailable),
     displayCurrency: preview.displayTotal.currency,
     productHref: `/products/${preview.product.slug}`,
   };

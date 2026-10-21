@@ -3020,6 +3020,14 @@ export const SETTINGS: SettingsData = {
     swift: "ICICINBBXXX",
     instructions: "Use the order number as the transfer remark.",
     affectedOfferings: ["FitDesk Pro · Starter", "FitDesk Pro · Team", "TradeFlow · Single site"],
+    razorpay: {
+      enabled: false,
+      mode: "test",
+      keyId: "rzp_test_1234567890",
+      keySecretMasked: "****************1234",
+      webhookSecretMasked: "",
+      webhookUrl: "https://codekraft.example/api/webhooks/razorpay",
+    },
   },
   theme: { defaultTheme: "dark-cinematic", lightEnabled: false },
   ai: {

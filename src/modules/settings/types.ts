@@ -46,6 +46,19 @@ export interface RetentionSettings {
   recordsYears: number;
 }
 
+/**
+ * Razorpay gateway config (docs/06 §4.3, V1.1, D-501). `keySecret`/`webhookSecret` are encrypted
+ * at rest with `SETTINGS_ENCRYPTION_KEY` (a separate master key from `APP_ENCRYPTION_KEY`, see
+ * `service.ts`) and masked to last-4 for any reader without `settings.write`. `keyId` is NOT
+ * secret — Razorpay Checkout.js needs it client-side — so it is stored and returned plain.
+ */
+export interface RazorpaySettings {
+  mode: "test" | "live";
+  keyId: string | null;
+  keySecret: string | null;
+  webhookSecret: string | null;
+}
+
 /** Typed `site_settings` map (API-ADM-10 patch shape). */
 export interface SiteSettings {
   baseCurrency: Currency;
@@ -55,6 +68,7 @@ export interface SiteSettings {
   sellerDetails: SellerDetails | null;
   upiVpa: string | null;
   bankDetails: BankDetails | null;
+  razorpaySettings: RazorpaySettings | null;
   enabledPaymentMethods: PaymentMethodValue[];
   defaultTheme: ThemeName;
   aiModel: string;
@@ -76,6 +90,7 @@ export const SITE_SETTING_KEYS: Readonly<Record<SiteSettingField, string>> = Obj
   sellerDetails: "seller_details",
   upiVpa: "upi_vpa",
   bankDetails: "bank_details",
+  razorpaySettings: "razorpay_settings",
   enabledPaymentMethods: "enabled_payment_methods",
   defaultTheme: "default_theme",
   aiModel: "ai_model",

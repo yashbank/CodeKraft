@@ -142,7 +142,10 @@ export function LeadsScreen({
 }: LeadsScreenProps) {
   const [leads, setLeads] = React.useState(initial);
   const router = useRouter();
-  const [view, setView] = React.useState(initialView);
+  // The Table/Board toggle is a real navigation between `/admin/leads` and
+  // `/admin/leads/board` (BUG-005) — the view comes from which route rendered this
+  // component, not client-only state, so a direct link to either URL works.
+  const view = initialView;
   const [overdueOnly, setOverdueOnly] = React.useState(false);
   const [selected, setSelected] = React.useState<ReadonlySet<string>>(new Set());
   const [lostOpen, setLostOpen] = React.useState<LeadRow | null>(null);
@@ -223,7 +226,7 @@ export function LeadsScreen({
                   key={v}
                   type="button"
                   aria-pressed={view === v}
-                  onClick={() => setView(v)}
+                  onClick={() => router.push(v === "board" ? `${detailHref}/board` : detailHref)}
                   className={cn(
                     "inline-flex h-8 items-center gap-1.5 rounded-sm px-3 text-body-sm font-medium",
                     view === v ? "bg-elevated text-fg shadow-1" : "text-fg-muted hover:text-fg",

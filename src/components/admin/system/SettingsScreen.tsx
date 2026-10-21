@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { LockIcon, RefreshCwIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -39,12 +40,210 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
 import { CURRENCIES } from "@/lib/money";
+import { updateRazorpaySettings } from "@/modules/settings/admin-mutations";
+import { testRazorpayConnection } from "@/modules/settings/razorpay-test-connection";
 import { Banner } from "../Banner";
 import { Gauge } from "../charts/Gauge";
 import { formatDateTime, plainNumber } from "../format";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
 import type { SettingsData } from "../types";
+
+/**
+ * Razorpay config card (V1.1, D-501, TEST MODE ONLY) inside the "Payment methods" section. Unlike
+ * the rest of this screen (every other section's "Save changes" is still a `toast`-only mock, see
+ * `lib/admin/settings-view.ts`'s doc comment), this card is fully wired: `updateRazorpaySettings`
+ * (`modules/settings/admin-mutations.ts`) is a real Server Action, gated by the same
+ * `settings.write` permission as every other settings write and CSRF-protected by Next's
+ * built-in Server Action origin check. The enable switch patches the real `provider_razorpay`
+ * feature flag through that same action — no separate flag-toggle mechanism.
+ */
+function RazorpaySection({
+  razorpay,
+  ro,
+}: {
+  razorpay: SettingsData["payments"]["razorpay"];
+  ro: boolean;
+}) {
+  const router = useRouter();
+  const [enabled, setEnabled] = React.useState(razorpay.enabled);
+  const [mode, setMode] = React.useState<"test" | "live">(razorpay.mode);
+  const [keyId, setKeyId] = React.useState(razorpay.keyId);
+  // Only ever a NEW value the admin typed — never the masked placeholder. Empty means "keep the
+  // currently persisted secret", resolved server-side in `updateRazorpaySettings`.
+  const [keySecret, setKeySecret] = React.useState("");
+  const [webhookSecret, setWebhookSecret] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  const [testing, setTesting] = React.useState(false);
+  const [testResult, setTestResult] = React.useState<{ ok: boolean; message: string } | null>(null);
+
+  async function handleSave() {
+    setSaving(true);
+    setTestResult(null);
+    const res = await updateRazorpaySettings({
+      mode,
+      keyId: keyId.trim() || null,
+      ...(keySecret.trim() ? { keySecret: keySecret.trim() } : {}),
+      ...(webhookSecret.trim() ? { webhookSecret: webhookSecret.trim() } : {}),
+      enabled,
+    });
+    setSaving(false);
+    if (!res.ok) {
+      toast.error(res.error.message);
+      return;
+    }
+    toast.success("Razorpay settings saved", { description: "View in audit log" });
+    setKeySecret("");
+    setWebhookSecret("");
+    router.refresh();
+  }
+
+  async function handleTestConnection() {
+    setTesting(true);
+    setTestResult(null);
+    const res = await testRazorpayConnection();
+    setTesting(false);
+    if (res.ok) {
+      setTestResult({ ok: true, message: "Connected — Razorpay accepted a test order." });
+      toast.success("Razorpay connection OK");
+    } else {
+      setTestResult({ ok: false, message: res.error.message });
+      toast.error(res.error.message);
+    }
+  }
+
+  return (
+    <section
+      aria-labelledby="pm-razorpay"
+      className="space-y-3 rounded-lg border border-border bg-surface p-4"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Switch
+            id="st-razorpay"
+            checked={enabled}
+            disabled={ro}
+            onCheckedChange={(v) => setEnabled(v)}
+          />
+          <Label htmlFor="st-razorpay" id="pm-razorpay">
+            Razorpay enabled{" "}
+            <span className="text-caption font-normal text-fg-muted">(test mode only)</span>
+          </Label>
+        </div>
+        <Badge tone={enabled ? "success" : "ghost"} dot>
+          {enabled ? "Enabled" : "Disabled"}
+        </Badge>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field id="rzp-key-id" label="Key ID">
+          <Input
+            id="rzp-key-id"
+            value={keyId}
+            onChange={(e) => setKeyId(e.target.value)}
+            className="font-mono"
+            disabled={ro}
+            placeholder="rzp_test_…"
+          />
+        </Field>
+        <Field id="rzp-mode" label="Mode">
+          <Select value={mode} onValueChange={(v) => setMode(v as "test" | "live")} disabled={ro}>
+            <SelectTrigger id="rzp-mode">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="test">Test</SelectItem>
+              <SelectItem value="live">Live</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field
+          id="rzp-key-secret"
+          label="Key secret"
+          hint={
+            razorpay.keySecretMasked
+              ? `Currently set (ends ${razorpay.keySecretMasked.slice(-4)}). Leave blank to keep it.`
+              : "Not set yet."
+          }
+        >
+          <Input
+            id="rzp-key-secret"
+            type="password"
+            autoComplete="off"
+            value={keySecret}
+            onChange={(e) => setKeySecret(e.target.value)}
+            placeholder={razorpay.keySecretMasked || "Not set"}
+            disabled={ro}
+          />
+        </Field>
+        <Field
+          id="rzp-webhook-secret"
+          label="Webhook secret"
+          hint={
+            razorpay.webhookSecretMasked
+              ? `Currently set (ends ${razorpay.webhookSecretMasked.slice(-4)}). Leave blank to keep it.`
+              : "Not set yet."
+          }
+        >
+          <Input
+            id="rzp-webhook-secret"
+            type="password"
+            autoComplete="off"
+            value={webhookSecret}
+            onChange={(e) => setWebhookSecret(e.target.value)}
+            placeholder={razorpay.webhookSecretMasked || "Not set"}
+            disabled={ro}
+          />
+        </Field>
+      </div>
+      <Field
+        id="rzp-webhook-url"
+        label="Webhook URL"
+        hint="Paste this into the Razorpay dashboard's webhook settings."
+      >
+        <div className="flex gap-2">
+          <Input id="rzp-webhook-url" readOnly value={razorpay.webhookUrl} className="font-mono" />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              navigator.clipboard
+                .writeText(razorpay.webhookUrl)
+                .then(() => toast.success("Copied", { description: "Webhook URL" }))
+                .catch(() => toast.error("Couldn't copy — select the text and copy it manually."));
+            }}
+          >
+            Copy
+          </Button>
+        </div>
+      </Field>
+      {testResult ? (
+        <Banner tone={testResult.ok ? "success" : "danger"}>{testResult.message}</Banner>
+      ) : null}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          loading={testing}
+          disabled={ro}
+          onClick={() => void handleTestConnection()}
+        >
+          Test connection
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          loading={saving}
+          disabled={ro}
+          onClick={() => void handleSave()}
+        >
+          Save Razorpay settings
+        </Button>
+      </div>
+    </section>
+  );
+}
 
 const SECTIONS = [
   ["general", "General / seller"],
@@ -434,8 +633,9 @@ export function SettingsScreen({
                   </Field>
                 </div>
               </section>
-              <div className="grid gap-3 sm:grid-cols-3">
-                {["Razorpay", "Stripe", "PayPal"].map((g) => (
+              <RazorpaySection razorpay={s.payments.razorpay} ro={ro} />
+              <div className="grid gap-3 sm:grid-cols-2">
+                {["Stripe", "PayPal"].map((g) => (
                   <div
                     key={g}
                     className="rounded-lg border border-dashed border-border p-4 opacity-70"

@@ -4,6 +4,7 @@ import {
   BuildingIcon,
   CheckIcon,
   ChevronDownIcon,
+  CreditCardIcon,
   LandmarkIcon,
   QrCodeIcon,
   XIcon,
@@ -53,6 +54,13 @@ const METHODS: Record<PaymentProvider, { label: string; hint: string; Icon: type
     label: "Bank transfer",
     hint: "NEFT / IMPS / RTGS — up to 1 working day",
     Icon: LandmarkIcon,
+  },
+  // V1.1, D-501, TEST MODE ONLY — only ever offered when the checkout page's server-side gate
+  // (`razorpayAvailable`, flag + configured keys) included it in `offering.enabledMethods`.
+  razorpay: {
+    label: "Card / UPI (Razorpay)",
+    hint: "Pay instantly via Razorpay Checkout — test mode",
+    Icon: CreditCardIcon,
   },
 };
 

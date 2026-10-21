@@ -6,7 +6,7 @@
 export const REDACTED_PLACEHOLDER = "[redacted]";
 
 const SENSITIVE_KEY_PATTERN =
-  /^(?:license_key_enc|payout_bank_details_enc|password|token|secret|api_key|apiKey|bank_details_enc|access_token|refresh_token|private_key)$/i;
+  /^(?:license_key_enc|payout_bank_details_enc|password|token|secret|api_key|apiKey|bank_details_enc|access_token|refresh_token|private_key|keySecret|key_secret|webhookSecret|webhook_secret)$/i;
 
 function isPlainObject(val: unknown): val is Record<string, unknown> {
   return typeof val === "object" && val !== null && !Array.isArray(val);

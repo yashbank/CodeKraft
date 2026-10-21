@@ -22,10 +22,7 @@ describe("getPublicMediaBaseUrl", () => {
   });
 
   it("falls back to proxy when env is an S3 endpoint", () => {
-    vi.stubEnv(
-      "NEXT_PUBLIC_MEDIA_BASE_URL",
-      "https://bucket.s3.amazonaws.com",
-    );
+    vi.stubEnv("NEXT_PUBLIC_MEDIA_BASE_URL", "https://bucket.s3.amazonaws.com");
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://codekraft.dev");
     expect(getPublicMediaBaseUrl()).toBe("https://codekraft.dev/api/files/public");
   });

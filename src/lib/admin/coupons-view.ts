@@ -8,18 +8,24 @@
  *    `coupons` table only stores `active` (boolean) plus `starts_at`/`ends_at`/`max_redemptions`/
  *    `redemptions_count`. It is derived here in the same precedence `validateForOrder` uses:
  *    inactive > scheduled (not started) > expired > exhausted > active.
- *  - `createdBy` is a user id in the schema, not a name; there is no batched user-name lookup in
- *    scope here (parallels `orders-view.ts`'s partner-name fallback), so it falls back to a short
- *    id (`Admin 3f2a1c9e`).
+ *  - `createdBy` is a user id in the schema, resolved against the admin directory
+ *    (`listActiveAdminUsers`, same lookup `leads-view.ts`/`queries-view.ts` use for
+ *    assignee/actor names) with a short-id fallback (`Admin 3f2a1c9e`) when the creating user
+ *    is no longer an active admin.
  *  - `products` (names) requires resolving `productIds` (uuids) against the catalog; the caller
  *    passes a `productNameById` map built from `listProductsAdmin` for this.
  */
+import type { AdminDirectoryEntry } from "@/modules/approvals/approver-set";
 import type { Currency } from "@/lib/money";
 import type { Coupon } from "@/modules/coupons/types";
 import type { CouponRow } from "@/components/admin/types";
 
 function shortId(id: string): string {
   return id.slice(0, 8);
+}
+
+export function buildAdminNameMap(admins: AdminDirectoryEntry[]): Map<string, AdminDirectoryEntry> {
+  return new Map(admins.map((a) => [a.id, a]));
 }
 
 export function couponState(coupon: Coupon, now: Date): CouponRow["state"] {
@@ -36,6 +42,7 @@ export function mapCouponToRow(
   coupon: Coupon,
   productNameById: ReadonlyMap<string, string>,
   now: string,
+  admins: ReadonlyMap<string, AdminDirectoryEntry> = new Map(),
 ): CouponRow {
   const products = (coupon.productIds ?? []).map(
     (id) => productNameById.get(id) ?? `Product ${shortId(id)}`,
@@ -57,6 +64,8 @@ export function mapCouponToRow(
     products,
     firstPurchaseOnly: coupon.firstPurchaseOnly,
     state: couponState(coupon, new Date(now)),
-    createdBy: coupon.createdBy ? `Admin ${shortId(coupon.createdBy)}` : "System",
+    createdBy: coupon.createdBy
+      ? (admins.get(coupon.createdBy)?.name ?? `Admin ${shortId(coupon.createdBy)}`)
+      : "System",
   };
 }

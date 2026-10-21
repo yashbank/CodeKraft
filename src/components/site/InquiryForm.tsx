@@ -353,7 +353,7 @@ export function InquiryForm({
         className="flex items-center gap-3 rounded-md border border-dashed border-border-strong bg-canvas px-4 py-3 text-body-sm text-fg-muted"
       >
         <ShieldCheckIcon aria-hidden className="size-5 shrink-0 text-fg-subtle" />
-        <span>Turnstile challenge (invisible) — widget lands in P7</span>
+        <span>Protected against automated spam</span>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

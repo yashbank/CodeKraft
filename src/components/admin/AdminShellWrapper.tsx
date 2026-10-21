@@ -54,6 +54,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/entitlements": "Entitlements",
   "/delivery-tasks": "Delivery Tasks",
   "/leads": "Leads",
+  "/leads/board": "Leads",
   "/queries": "Queries",
   "/chatbot": "Chatbot Monitor",
   "/finance/ledger": "Ledger",
