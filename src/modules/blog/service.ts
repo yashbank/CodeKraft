@@ -548,6 +548,7 @@ export class DefaultBlogService implements BlogService {
     }
 
     const productCard: ProductCard = {
+      id: row.product.id,
       slug: row.product.slug,
       name: row.product.name,
       shortDescription: row.product.shortDescription,

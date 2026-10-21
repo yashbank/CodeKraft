@@ -2,8 +2,11 @@
 
 import { LayoutGridIcon, ListIcon, SearchIcon, SlidersHorizontalIcon, XIcon } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 
+import { toggleWishlist } from "@/modules/catalog/site-mutations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,9 +47,39 @@ import {
   type CategoryNode,
   type ProductFilterState,
 } from "./ProductFilters";
-import type { ProductSummary } from "./types";
+import type { DeliveryType, ProductSummary, PurchaseModel } from "./types";
 
 export type ProductSort = "newest" | "price_asc" | "price_desc" | "popular" | "featured";
+
+/** URL query params this screen reads/writes, so filters are shareable and survive back/forward. */
+function filtersFromParams(params: URLSearchParams): ProductFilterState {
+  const list = (key: string) => params.get(key)?.split(",").filter(Boolean) ?? [];
+  const priceMin = params.get("priceMin");
+  const priceMax = params.get("priceMax");
+  return {
+    categories: list("category"),
+    models: list("model") as PurchaseModel[],
+    deliveries: list("delivery") as DeliveryType[],
+    tech: list("tech"),
+    industries: list("industry"),
+    audiences: list("audience"),
+    priceMin: priceMin ? Number(priceMin) : undefined,
+    priceMax: priceMax ? Number(priceMax) : undefined,
+  };
+}
+
+type ParamPatch = Record<string, string | string[] | number | undefined>;
+
+function withParams(current: URLSearchParams, patch: ParamPatch): URLSearchParams {
+  const next = new URLSearchParams(current);
+  for (const [key, value] of Object.entries(patch)) {
+    const isEmpty =
+      value === undefined || value === "" || (Array.isArray(value) && value.length === 0);
+    if (isEmpty) next.delete(key);
+    else next.set(key, Array.isArray(value) ? value.join(",") : String(value));
+  }
+  return next;
+}
 
 const SORT_LABEL: Readonly<Record<ProductSort, string>> = {
   newest: "Newest",
@@ -69,6 +102,10 @@ export interface ProductsListPageProps {
   /** Preview hooks so states can be deep-linked. */
   initialQuery?: string;
   initialFilters?: Partial<ProductFilterState>;
+  /** Signed-in customer: shows the wishlist heart as a real toggle instead of a login link. */
+  signedIn?: boolean;
+  /** This customer's currently wishlisted product ids. */
+  wishlistedIds?: string[];
 }
 
 function matches(p: ProductSummary, q: string, f: ProductFilterState): boolean {
@@ -130,17 +167,75 @@ export function ProductsListPage({
   searchUnavailable = false,
   initialQuery = "",
   initialFilters,
+  signedIn = false,
+  wishlistedIds = [],
 }: ProductsListPageProps) {
-  const [query, setQuery] = useState(initialQuery);
-  const [filters, setFilters] = useState<ProductFilterState>({
-    ...EMPTY_FILTERS,
-    ...initialFilters,
-  });
+  const [wishlisted, setWishlisted] = useState<Set<string>>(() => new Set(wishlistedIds));
+
+  async function toggleWishlistFor(productId: string) {
+    const isOn = wishlisted.has(productId);
+    setWishlisted((prev) => {
+      const next = new Set(prev);
+      if (isOn) next.delete(productId);
+      else next.add(productId);
+      return next;
+    });
+    const result = await toggleWishlist({ productId, on: !isOn });
+    if (!result.ok) {
+      setWishlisted((prev) => {
+        const next = new Set(prev);
+        if (isOn) next.add(productId);
+        else next.delete(productId);
+        return next;
+      });
+      toast.error(result.error.message);
+    }
+  }
+
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const setParams = useCallback(
+    (patch: ParamPatch, opts?: { push?: boolean }) => {
+      const next = withParams(searchParams, patch);
+      const qs = next.toString();
+      const url = qs ? `${pathname}?${qs}` : pathname;
+      if (opts?.push) router.push(url, { scroll: false });
+      else router.replace(url, { scroll: false });
+    },
+    [searchParams, pathname, router],
+  );
+
+  const query = searchParams.get("q") ?? initialQuery;
+  const sort = (searchParams.get("sort") as ProductSort | null) ?? "newest";
+  const view = (searchParams.get("view") as "grid" | "list" | null) ?? "grid";
+  const page = Number(searchParams.get("page") ?? "1") || 1;
+  const filters = useMemo(() => {
+    const filterKeys = [
+      "category",
+      "model",
+      "delivery",
+      "tech",
+      "industry",
+      "audience",
+      "priceMin",
+      "priceMax",
+    ];
+    const hasUrlFilters = filterKeys.some((k) => searchParams.has(k));
+    return hasUrlFilters
+      ? filtersFromParams(searchParams)
+      : { ...EMPTY_FILTERS, ...initialFilters };
+  }, [searchParams, initialFilters]);
   const [draft, setDraft] = useState<ProductFilterState>(filters);
-  const [sort, setSort] = useState<ProductSort>("newest");
-  const [view, setView] = useState<"grid" | "list">("grid");
-  const [page, setPage] = useState(1);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const updateQuery = (v: string) => setParams({ q: v || undefined, page: undefined });
+  const goToPage = (n: number) => setParams({ page: n === 1 ? undefined : n }, { push: true });
+  const changeSort = (v: ProductSort) =>
+    setParams({ sort: v === "newest" ? undefined : v, page: undefined }, { push: true });
+  const changeView = (v: "grid" | "list") =>
+    setParams({ view: v === "grid" ? undefined : v }, { push: true });
 
   const facets = useMemo(
     () => ({
@@ -168,9 +263,21 @@ export function ProductsListPage({
   const activeCount = countActiveFilters(filters);
 
   const applyFilters = (next: ProductFilterState) => {
-    setFilters(next);
     setDraft(next);
-    setPage(1);
+    setParams(
+      {
+        category: next.categories,
+        model: next.models,
+        delivery: next.deliveries,
+        tech: next.tech,
+        industry: next.industries,
+        audience: next.audiences,
+        priceMin: next.priceMin,
+        priceMax: next.priceMax,
+        page: undefined,
+      },
+      { push: true },
+    );
   };
 
   const chips: { key: string; label: string; remove: () => void }[] = [
@@ -238,7 +345,6 @@ export function ProductsListPage({
           role="search"
           onSubmit={(e) => {
             e.preventDefault();
-            setPage(1);
           }}
           className="relative"
         >
@@ -255,8 +361,7 @@ export function ProductsListPage({
             placeholder="Search products"
             value={query}
             onChange={(e) => {
-              setQuery(e.target.value);
-              setPage(1);
+              updateQuery(e.target.value);
             }}
             className="pr-10 pl-9"
           />
@@ -264,7 +369,7 @@ export function ProductsListPage({
             <button
               type="button"
               aria-label="Clear search"
-              onClick={() => setQuery("")}
+              onClick={() => updateQuery("")}
               className="absolute top-1/2 right-2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-sm text-fg-muted hover:bg-accent-soft hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               <XIcon aria-hidden className="size-4" />
@@ -341,13 +446,7 @@ export function ProductsListPage({
               <Label htmlFor="product-sort" className="sr-only">
                 Sort by
               </Label>
-              <Select
-                value={sort}
-                onValueChange={(v) => {
-                  setSort(v as ProductSort);
-                  setPage(1);
-                }}
-              >
+              <Select value={sort} onValueChange={(v) => changeSort(v as ProductSort)}>
                 <SelectTrigger id="product-sort" className="w-48">
                   <SelectValue />
                 </SelectTrigger>
@@ -367,14 +466,14 @@ export function ProductsListPage({
                 <ViewButton
                   active={view === "grid"}
                   label="Grid view"
-                  onClick={() => setView("grid")}
+                  onClick={() => changeView("grid")}
                 >
                   <LayoutGridIcon aria-hidden className="size-4" />
                 </ViewButton>
                 <ViewButton
                   active={view === "list"}
                   label="List view"
-                  onClick={() => setView("list")}
+                  onClick={() => changeView("list")}
                 >
                   <ListIcon aria-hidden className="size-4" />
                 </ViewButton>
@@ -431,8 +530,22 @@ export function ProductsListPage({
                       type="button"
                       variant="secondary"
                       onClick={() => {
-                        setQuery("");
-                        applyFilters(EMPTY_FILTERS);
+                        setDraft(EMPTY_FILTERS);
+                        setParams(
+                          {
+                            q: undefined,
+                            category: undefined,
+                            model: undefined,
+                            delivery: undefined,
+                            tech: undefined,
+                            industry: undefined,
+                            audience: undefined,
+                            priceMin: undefined,
+                            priceMax: undefined,
+                            page: undefined,
+                          },
+                          { push: true },
+                        );
                       }}
                     >
                       Clear filters
@@ -451,6 +564,11 @@ export function ProductsListPage({
                       product={p}
                       layout={view === "list" ? "row" : "grid"}
                       className="h-full"
+                      wishlisted={wishlisted.has(p.id)}
+                      onWishlistToggle={signedIn ? () => toggleWishlistFor(p.id) : undefined}
+                      wishlistHref={
+                        signedIn ? undefined : `/auth/login?next=${encodeURIComponent("/products")}`
+                      }
                     />
                   </li>
                 ))}
@@ -470,7 +588,7 @@ export function ProductsListPage({
                         className={cn(current === 1 && "pointer-events-none opacity-50")}
                         onClick={(e) => {
                           e.preventDefault();
-                          setPage(Math.max(1, current - 1));
+                          goToPage(Math.max(1, current - 1));
                         }}
                       />
                     </PaginationItem>
@@ -481,7 +599,7 @@ export function ProductsListPage({
                           isActive={current === i + 1}
                           onClick={(e) => {
                             e.preventDefault();
-                            setPage(i + 1);
+                            goToPage(i + 1);
                           }}
                         >
                           {i + 1}
@@ -495,7 +613,7 @@ export function ProductsListPage({
                         className={cn(current === pages && "pointer-events-none opacity-50")}
                         onClick={(e) => {
                           e.preventDefault();
-                          setPage(Math.min(pages, current + 1));
+                          goToPage(Math.min(pages, current + 1));
                         }}
                       />
                     </PaginationItem>

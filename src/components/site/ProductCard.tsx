@@ -15,8 +15,12 @@ export interface ProductCardProps {
   product: ProductSummary;
   /** `row` = list view on /products (description clamp-2 + tech chips). */
   layout?: "grid" | "row";
-  /** Customer-only wishlist heart state; undefined hides the heart (visitor). */
+  /** Wishlist heart state; undefined hides the heart entirely. */
   wishlisted?: boolean;
+  /** Signed-in customers toggle the wishlist directly; omit to show a login link instead. */
+  onWishlistToggle?: () => void;
+  /** Logged-out visitors: heart becomes a link to login (with a way back) instead of a button. */
+  wishlistHref?: string;
   /** Entitled customers see an "Owned" tick. */
   owned?: boolean;
   className?: string;
@@ -24,13 +28,15 @@ export interface ProductCardProps {
 
 /**
  * Product card — docs/08 §6.3. Single link wraps the card; "Coming soon" replaces the price with
- * "Notify me"; never shows partner/ownership (BR-02). The wishlist heart is a real button that
- * P7 wires to `toggleWishlist` (API-CAT-35); here it is presentational with `aria-pressed`.
+ * "Notify me"; never shows partner/ownership (BR-02). The wishlist heart calls `onWishlistToggle`
+ * when signed in, or links to login via `wishlistHref` when not.
  */
 export function ProductCard({
   product,
   layout = "grid",
   wishlisted,
+  onWishlistToggle,
+  wishlistHref,
   owned,
   className,
 }: ProductCardProps) {
@@ -62,17 +68,32 @@ export function ProductCard({
         <div className="flex items-start justify-between gap-3">
           <p className="text-overline tracking-wider text-fg-muted uppercase">{p.category.name}</p>
           {wishlisted !== undefined ? (
-            <button
-              type="button"
-              aria-pressed={wishlisted}
-              aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
-              className="relative z-10 -mt-1.5 -mr-1.5 inline-flex size-8 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-accent-soft hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              <HeartIcon
-                aria-hidden
-                className={cn("size-4", wishlisted && "fill-accent text-accent")}
-              />
-            </button>
+            onWishlistToggle ? (
+              <button
+                type="button"
+                aria-pressed={wishlisted}
+                aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onWishlistToggle();
+                }}
+                className="relative z-10 -mt-1.5 -mr-1.5 inline-flex size-8 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-accent-soft hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                <HeartIcon
+                  aria-hidden
+                  className={cn("size-4", wishlisted && "fill-accent text-accent")}
+                />
+              </button>
+            ) : (
+              <Link
+                href={wishlistHref ?? "/auth/login"}
+                aria-label="Sign in to add to wishlist"
+                onClick={(e) => e.stopPropagation()}
+                className="relative z-10 -mt-1.5 -mr-1.5 inline-flex size-8 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-accent-soft hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                <HeartIcon aria-hidden className="size-4" />
+              </Link>
+            )
           ) : null}
         </div>
         <h3 className="text-h4">

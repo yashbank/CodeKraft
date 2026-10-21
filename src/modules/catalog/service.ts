@@ -1731,6 +1731,7 @@ export class DefaultCatalogService implements CatalogService {
         pool.length > 0 ? pool.reduce((a, b) => (a.amountMinor <= b.amountMinor ? a : b)) : null;
 
       cards.push({
+        id: p.id,
         slug: p.slug,
         name: p.name,
         shortDescription: p.shortDescription,
@@ -1814,6 +1815,7 @@ export class DefaultCatalogService implements CatalogService {
         pool.length > 0 ? pool.reduce((a, b) => (a.amountMinor <= b.amountMinor ? a : b)) : null;
 
       cards.push({
+        id: p.id,
         slug: p.slug,
         name: p.name,
         shortDescription: p.shortDescription,
@@ -1901,6 +1903,7 @@ export class DefaultCatalogService implements CatalogService {
     const items = hasMore ? rows.slice(0, limit) : rows;
 
     const cards: WishlistProductCard[] = items.map((r) => ({
+      id: r.product.id,
       productId: r.product.id,
       addedAt: r.wishlistedAt.toISOString(),
       slug: r.product.slug,
