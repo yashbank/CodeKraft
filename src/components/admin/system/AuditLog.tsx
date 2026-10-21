@@ -38,9 +38,32 @@ import { cn } from "@/components/ui/_utils";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
 import { formatDateTime, initials } from "../format";
-import { exportAuditLogs } from "@/modules/audit/admin-mutations";
+import { exportAuditLogs, listAuditLogs } from "@/modules/audit/admin-mutations";
+import { mapAuditRow } from "@/lib/admin/audit-view";
 import { PageHeader } from "../PageHeader";
 import type { AuditRow } from "../types";
+
+const ANY = "all";
+
+interface AuditFilters {
+  from: string;
+  to: string;
+  actorId: string;
+  action: string;
+  subjectType: string;
+  subjectId: string;
+}
+
+const EMPTY_FILTERS: AuditFilters = {
+  from: "",
+  to: "",
+  actorId: ANY,
+  action: ANY,
+  subjectType: ANY,
+  subjectId: "",
+};
+
+const PAGE_SIZE = 25;
 
 const ACTION_GROUPS = [
   "auth.*",
@@ -57,18 +80,86 @@ const ACTION_GROUPS = [
 
 /** SCR-ADM-30 — append-only audit log: dense filterable table with sticky Time/Actor, row expand and a before/after drawer with +/− markers. */
 export function AuditLog({
-  rows,
+  rows: initialRows,
+  nextCursor: initialNextCursor,
+  total: initialTotal,
   admins,
   approvalsHref,
 }: {
   rows: AuditRow[];
-  admins: string[];
+  nextCursor: string | null;
+  total: number;
+  admins: { id: string; name: string }[];
   approvalsHref: string;
 }) {
   const [expanded, setExpanded] = React.useState<string | null>(null);
   const [drawer, setDrawer] = React.useState<AuditRow | null>(null);
   const [live, setLive] = React.useState(false);
   const [exporting, setExporting] = React.useState(false);
+  const [rows, setRows] = React.useState(initialRows);
+  const [nextCursor, setNextCursor] = React.useState(initialNextCursor);
+  const [total, setTotal] = React.useState(initialTotal);
+  const [filters, setFilters] = React.useState<AuditFilters>(EMPTY_FILTERS);
+  const [search, setSearch] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+  const [loadingMore, setLoadingMore] = React.useState(false);
+
+  function toApiFilters(f: AuditFilters) {
+    return {
+      actorId: f.actorId === ANY ? undefined : f.actorId,
+      action: f.action === ANY ? undefined : f.action,
+      subjectType: f.subjectType === ANY ? undefined : f.subjectType,
+      subjectId: f.subjectId.trim() || undefined,
+      dateFrom: f.from || undefined,
+      dateTo: f.to || undefined,
+    };
+  }
+
+  const runQuery = React.useCallback(async (f: AuditFilters, q: string, cursor?: string) => {
+    if (cursor) setLoadingMore(true);
+    else setLoading(true);
+    const result = await listAuditLogs({
+      limit: PAGE_SIZE,
+      cursor,
+      q: q.trim() || undefined,
+      filters: toApiFilters(f),
+    });
+    if (cursor) setLoadingMore(false);
+    else setLoading(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    const mapped = result.data.items.map(mapAuditRow);
+    setRows((prev) => (cursor ? [...prev, ...mapped] : mapped));
+    setNextCursor(result.data.nextCursor);
+    setTotal(result.data.total ?? mapped.length);
+  }, []);
+
+  function updateFilters(next: Partial<AuditFilters>) {
+    const merged = { ...filters, ...next };
+    setFilters(merged);
+    void runQuery(merged, search);
+  }
+
+  const searchDebounce = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    searchDebounce.current = setTimeout(() => void runQuery(filters, value), 350);
+  }
+
+  const subjectIdDebounce = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  function handleSubjectIdChange(value: string) {
+    const merged = { ...filters, subjectId: value };
+    setFilters(merged);
+    if (subjectIdDebounce.current) clearTimeout(subjectIdDebounce.current);
+    subjectIdDebounce.current = setTimeout(() => void runQuery(merged, search), 350);
+  }
+
+  function handleLoadMore() {
+    if (nextCursor) void runQuery(filters, search, nextCursor);
+  }
 
   async function handleExport() {
     setExporting(true);
@@ -117,38 +208,52 @@ export function AuditLog({
       <DataToolbar
         searchId="audit-search"
         searchPlaceholder="Action or memo…"
+        searchValue={search}
+        onSearchChange={handleSearchChange}
         filters={
           <>
             <ToolbarField id="audit-from" label="From">
-              <Input id="audit-from" type="date" defaultValue="2026-09-18" className="h-8 w-40" />
+              <Input
+                id="audit-from"
+                type="date"
+                value={filters.from}
+                onChange={(e) => updateFilters({ from: e.target.value })}
+                className="h-8 w-40"
+              />
             </ToolbarField>
             <ToolbarField id="audit-to" label="To">
-              <Input id="audit-to" type="date" defaultValue="2026-09-25" className="h-8 w-40" />
+              <Input
+                id="audit-to"
+                type="date"
+                value={filters.to}
+                onChange={(e) => updateFilters({ to: e.target.value })}
+                className="h-8 w-40"
+              />
             </ToolbarField>
             <ToolbarField id="audit-actor" label="Actor">
-              <Select>
+              <Select value={filters.actorId} onValueChange={(v) => updateFilters({ actorId: v })}>
                 <SelectTrigger id="audit-actor" size="sm" className="w-40">
                   <SelectValue placeholder="Anyone" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={ANY}>Anyone</SelectItem>
                   {admins.map((a) => (
-                    <SelectItem key={a} value={a}>
-                      {a}
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name}
                     </SelectItem>
                   ))}
-                  <SelectItem value="customer">customer</SelectItem>
-                  <SelectItem value="system">system</SelectItem>
                 </SelectContent>
               </Select>
             </ToolbarField>
             <ToolbarField id="audit-action" label="Action">
-              <Select>
+              <Select value={filters.action} onValueChange={(v) => updateFilters({ action: v })}>
                 <SelectTrigger id="audit-action" size="sm" className="w-36">
                   <SelectValue placeholder="Any" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={ANY}>Any</SelectItem>
                   {ACTION_GROUPS.map((g) => (
-                    <SelectItem key={g} value={g}>
+                    <SelectItem key={g} value={g.replace(/\*$/, "")}>
                       {g}
                     </SelectItem>
                   ))}
@@ -156,11 +261,15 @@ export function AuditLog({
               </Select>
             </ToolbarField>
             <ToolbarField id="audit-subject" label="Subject type">
-              <Select>
+              <Select
+                value={filters.subjectType}
+                onValueChange={(v) => updateFilters({ subjectType: v })}
+              >
                 <SelectTrigger id="audit-subject" size="sm" className="w-36">
                   <SelectValue placeholder="Any" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={ANY}>Any</SelectItem>
                   {[
                     "product",
                     "order",
@@ -178,13 +287,18 @@ export function AuditLog({
               </Select>
             </ToolbarField>
             <ToolbarField id="audit-subject-id" label="Subject id">
-              <Input id="audit-subject-id" className="h-8 w-32 font-mono" />
+              <Input
+                id="audit-subject-id"
+                className="h-8 w-32 font-mono"
+                value={filters.subjectId}
+                onChange={(e) => handleSubjectIdChange(e.target.value)}
+              />
             </ToolbarField>
           </>
         }
       />
       {rows.length === 0 ? (
-        <EmptyState icon={ScrollTextIcon} title="No events match" />
+        <EmptyState icon={ScrollTextIcon} title={loading ? "Loading…" : "No events match"} />
       ) : (
         <div className="rounded-lg border border-border bg-surface">
           <Table>
@@ -317,11 +431,14 @@ export function AuditLog({
             </TableBody>
           </Table>
           <div className="flex items-center justify-between border-t border-border px-3 py-2 text-body-sm text-fg-muted">
-            <span>{rows.length} events (most recent 100)</span>
-            <span className="text-caption">
-              Date/actor/action/subject filters above are not wired to the query yet — export and
-              expand work on the current page of rows.
+            <span>
+              {rows.length} of {total} events
             </span>
+            {nextCursor ? (
+              <Button size="sm" variant="outline" onClick={handleLoadMore} disabled={loadingMore}>
+                {loadingMore ? "Loading…" : "Load more"}
+              </Button>
+            ) : null}
           </div>
         </div>
       )}

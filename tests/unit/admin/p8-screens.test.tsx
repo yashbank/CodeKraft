@@ -466,7 +466,9 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
     render(
       <AuditLog
         rows={AUDIT_ROWS}
-        admins={ADMINS.map((a) => a.name)}
+        nextCursor={null}
+        total={AUDIT_ROWS.length}
+        admins={ADMINS}
         approvalsHref="/admin/approvals"
       />,
     );

@@ -9,6 +9,7 @@ import type { ActionResult } from "@/lib/actions/envelope";
 import { fail } from "@/lib/actions/envelope";
 import type { Context } from "@/lib/authz/context";
 import { exportAuditLogsAction } from "./actions";
+import { listAuditLogsAction } from "./queries";
 
 async function withCtx<T>(
   action: (raw: unknown, ctx: Context) => Promise<ActionResult<T>>,
@@ -25,4 +26,8 @@ async function withCtx<T>(
 
 export async function exportAuditLogs(raw: unknown) {
   return withCtx(exportAuditLogsAction, raw);
+}
+
+export async function listAuditLogs(raw: unknown) {
+  return withCtx(listAuditLogsAction, raw);
 }
