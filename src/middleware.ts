@@ -3,10 +3,12 @@
  * Edge-safe: no imports from src/lib (env is read directly).
  */
 import { NextResponse, type NextRequest } from "next/server";
+import { inlineThemeScript } from "@/lib/theme";
 
 const ADMIN_HOST = process.env.ADMIN_HOST ?? "";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "";
 const APP_ENV = process.env.APP_ENV ?? "local";
+const LIGHT_ENABLED = process.env.FEATURE_THEME_LIGHT_EDITORIAL === "true";
 
 function makeNonce(): string {
   const bytes = new Uint8Array(16);
@@ -16,11 +18,26 @@ function makeNonce(): string {
   return btoa(s);
 }
 
+async function sha256Base64(input: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  let s = "";
+  for (const b of new Uint8Array(digest)) s += String.fromCharCode(b);
+  return btoa(s);
+}
+
+// Root layout's inline theme script is static per deployment (docs/08 §10) - hash
+// allow-list it once instead of making the layout dynamic just to apply a nonce.
+let themeScriptHashPromise: Promise<string> | null = null;
+function getThemeScriptHash(): Promise<string> {
+  themeScriptHashPromise ??= sha256Base64(inlineThemeScript(LIGHT_ENABLED));
+  return themeScriptHashPromise;
+}
+
 export function resolveHostKind(host: string): "admin" | "site" {
   return ADMIN_HOST !== "" && host === ADMIN_HOST ? "admin" : "site";
 }
 
-export function middleware(req: NextRequest): NextResponse {
+export async function middleware(req: NextRequest): Promise<NextResponse> {
   const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "";
   const kind = resolveHostKind(host);
   const { pathname } = req.nextUrl;
@@ -79,10 +96,12 @@ export function middleware(req: NextRequest): NextResponse {
 
   res.headers.set("x-nonce", nonce);
 
+  const themeScriptHash = await getThemeScriptHash();
+
   // CSP Policy with nonce and CSP violation reporting
   const cspPolicy = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' https:`,
+    `script-src 'self' 'nonce-${nonce}' 'sha256-${themeScriptHash}' 'strict-dynamic' 'unsafe-eval' https:`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: blob: https:",
@@ -99,6 +118,6 @@ export function middleware(req: NextRequest): NextResponse {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|brand/|noise.png).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icon.svg|robots.txt|sitemap.xml|brand/|noise.png).*)",
   ],
 };
