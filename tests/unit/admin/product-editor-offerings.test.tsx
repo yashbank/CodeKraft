@@ -304,3 +304,19 @@ describe("ProductEditor — media reorder (overnight item 3)", () => {
     });
   });
 });
+
+describe("ProductEditor — Ownership tab enabling (BUG-040)", () => {
+  afterEach(() => cleanup());
+
+  it("enables Request approval for a valid company+partner split that sums to 100%", async () => {
+    // PRODUCT_EDITOR's active ownership is companyCutBps 2000 + partner lines 5000/3000 = 10000,
+    // which is the pre-filled state when "Propose new split" is opened — a valid split that the
+    // enabling check must not reject just because the partner lines alone sum to 8000.
+    renderEditor();
+    await clickTab(/^Ownership/);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Propose new split" }));
+
+    expect(screen.getByRole("button", { name: "Request approval" })).toBeEnabled();
+  });
+});

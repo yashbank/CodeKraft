@@ -1,4 +1,5 @@
 import { HeartIcon } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
@@ -53,7 +54,19 @@ export function ProductCard({
       )}
     >
       <div className={cn("p-3 pb-0", layout === "row" && "sm:w-64 sm:shrink-0 sm:pb-3")}>
-        <MediaPlaceholder alt={p.coverAlt} tone={p.coverTone} ratio="16/10" />
+        {p.coverImageUrl ? (
+          <div className="relative aspect-[16/10] w-full overflow-hidden rounded-md border border-border">
+            <Image
+              src={p.coverImageUrl}
+              alt={p.coverAlt}
+              fill
+              sizes="(min-width: 640px) 256px, 100vw"
+              className="object-cover"
+            />
+          </div>
+        ) : (
+          <MediaPlaceholder alt={p.coverAlt} tone={p.coverTone} ratio="16/10" />
+        )}
         {p.isComingSoon ? (
           <Badge tone="warning" className="absolute top-5 left-5">
             Coming soon

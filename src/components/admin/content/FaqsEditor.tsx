@@ -27,7 +27,8 @@ import { Field } from "../RichTextField";
 import { RowActions } from "../RowActions";
 import type { FaqItem } from "../types";
 import { ContentEditorFrame, moveItem, SortableRow } from "./ContentEditorFrame";
-import { fromPlainText } from "@/modules/content/render";
+import { fromPlainText, toPlainText } from "@/modules/content/render";
+import type { RichTextDoc } from "@/modules/_shared/zod";
 import { removeFaq, reorderFaqsList, saveFaq } from "@/modules/content/admin-mutations";
 
 const CONTACT_RE = /[\w.+-]+@[\w-]+\.[\w.]+|\+?\d[\d\s-]{8,}\d/;
@@ -74,6 +75,15 @@ export function FaqsEditor({ faqs: initial, products }: { faqs: FaqItem[]; produ
       toast.error(result.error.message);
       return;
     }
+    const saved: FaqItem = {
+      id: result.data.faq.id,
+      question: result.data.faq.question,
+      answer: toPlainText(result.data.faq.answerJson as unknown as RichTextDoc),
+      scope: result.data.faq.scope,
+      product: f?.product,
+      published: result.data.faq.published,
+    };
+    setFaqs((all) => (f ? all.map((x) => (x.id === saved.id ? saved : x)) : [...all, saved]));
     toast.success("FAQ saved");
     setEditing(null);
     router.refresh();

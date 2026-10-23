@@ -443,8 +443,8 @@ export function ProductEditor({
   }
 
   async function submitOwnershipProposal(effectiveFrom: string) {
-    const companyOwned = split.lines.length === 0 && split.companyCutBps === 10000;
-    if (!companyOwned && split.lines.reduce((s, l) => s + l.bps, 0) !== 10000) return;
+    const grandTotal = split.companyCutBps + split.lines.reduce((s, l) => s + l.bps, 0);
+    if (grandTotal !== 10000) return;
     await proposeSplit(split, effectiveFrom);
   }
 
@@ -2319,8 +2319,8 @@ function ProposeSplitForm({
 }) {
   const [effectiveFrom, setEffectiveFrom] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
-  // Partner shares sum to 100 % of the partner pool; company cut is separate (server rule).
-  const total = split.lines.reduce((s, l) => s + l.bps, 0);
+  // Company cut + all partner shares must sum to 100 % (10 000 bps), same rule as SplitEditor.
+  const total = split.companyCutBps + split.lines.reduce((s, l) => s + l.bps, 0);
 
   return (
     <form

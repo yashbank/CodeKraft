@@ -59,6 +59,8 @@ export interface ProductSummary {
   coverAlt: string;
   /** Deterministic placeholder hue index for the cover frame (0–5). */
   coverTone: number;
+  /** Real cover image URL, when the product has one; falls back to the placeholder frame. */
+  coverImageUrl?: string;
   /** ISO date. */
   publishedAt: string;
   /** Relative popularity used by the "Most popular" sort. */

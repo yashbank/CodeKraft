@@ -68,7 +68,9 @@ async function main(): Promise<void> {
     sql`SELECT id FROM testimonials WHERE context = 'site' AND author_name ILIKE '%Arjun Bhaskar%' LIMIT 1`,
   );
   const keepTestimonialId = keepTestimonial[0]?.id ?? null;
-  console.log(`keep testimonial (Arjun Bhaskar, site): ${keepTestimonialId ?? "NOT FOUND - will not exempt any testimonial"}`);
+  console.log(
+    `keep testimonial (Arjun Bhaskar, site): ${keepTestimonialId ?? "NOT FOUND - will not exempt any testimonial"}`,
+  );
 
   const steps: Step[] = [
     { label: "chat messages", table: "chat_messages", where: sql`true` },
@@ -95,7 +97,11 @@ async function main(): Promise<void> {
     { label: "approval requests", table: "approval_requests", where: sql`true` },
     { label: "allocations (expect PROTECT: immutable)", table: "allocations", where: sql`true` },
     { label: "credit notes (expect PROTECT: immutable)", table: "credit_notes", where: sql`true` },
-    { label: "ledger entries (expect PROTECT: append-only)", table: "ledger_entries", where: sql`true` },
+    {
+      label: "ledger entries (expect PROTECT: append-only)",
+      table: "ledger_entries",
+      where: sql`true`,
+    },
     { label: "payouts (expect PROTECT: immutable)", table: "payouts", where: sql`true` },
     { label: "invoices (expect PROTECT: immutable)", table: "invoices", where: sql`true` },
     { label: "refunds", table: "refunds", where: sql`true` },
@@ -109,19 +115,24 @@ async function main(): Promise<void> {
     {
       label: "testimonials (except site/Arjun Bhaskar)",
       table: "testimonials",
-      where: keepTestimonialId
-        ? sql`id <> ${keepTestimonialId}::uuid`
-        : sql`true`,
+      where: keepTestimonialId ? sql`id <> ${keepTestimonialId}::uuid` : sql`true`,
     },
     {
       label: "demo FAQs (question/answer matches demo|test|placeholder|gibberish|lorem)",
       table: "faqs",
       where: sql`(${sql.join(
-        DEMO_FAQ_PATTERNS.flatMap((p) => [sql`question ILIKE ${p}`, sql`answer_json::text ILIKE ${p}`]),
+        DEMO_FAQ_PATTERNS.flatMap((p) => [
+          sql`question ILIKE ${p}`,
+          sql`answer_json::text ILIKE ${p}`,
+        ]),
         sql` OR `,
       )})`,
     },
-    { label: "products (cascades offerings/media/versions/blogs/faqs/testimonials/tags)", table: "products", where: sql`true` },
+    {
+      label: "products (cascades offerings/media/versions/blogs/faqs/testimonials/tags)",
+      table: "products",
+      where: sql`true`,
+    },
     { label: "partners", table: "partners", where: sql`true` },
     {
       label: "users (except the 2 super admins)",
@@ -142,16 +153,32 @@ async function main(): Promise<void> {
         ? sql`SELECT 1 AS id FROM ${sql.raw(step.table)} WHERE ${step.where} LIMIT 1`
         : sql`SELECT id FROM ${sql.raw(step.table)} WHERE ${step.where}`,
     );
-    const fullRows = await db.execute(sql`SELECT * FROM ${sql.raw(step.table)} WHERE ${step.where}`);
+    const fullRows = await db.execute(
+      sql`SELECT * FROM ${sql.raw(step.table)} WHERE ${step.where}`,
+    );
     snapshot[step.table] = fullRows;
 
     if (fullRows.length === 0) {
-      report.push({ label: step.label, table: step.table, matched: 0, deleted: 0, skipped: 0, errors: [] });
+      report.push({
+        label: step.label,
+        table: step.table,
+        matched: 0,
+        deleted: 0,
+        skipped: 0,
+        errors: [],
+      });
       continue;
     }
 
     if (!apply) {
-      report.push({ label: step.label, table: step.table, matched: fullRows.length, deleted: 0, skipped: 0, errors: [] });
+      report.push({
+        label: step.label,
+        table: step.table,
+        matched: fullRows.length,
+        deleted: 0,
+        skipped: 0,
+        errors: [],
+      });
       continue;
     }
 
@@ -209,8 +236,12 @@ async function main(): Promise<void> {
   }
 
   if (apply) {
-    const finalUsers = await db.execute<{ email: string }>(sql`SELECT email FROM users ORDER BY email`);
-    console.log(`\nusers remaining (${finalUsers.length}): ${finalUsers.map((u) => u.email).join(", ")}`);
+    const finalUsers = await db.execute<{ email: string }>(
+      sql`SELECT email FROM users ORDER BY email`,
+    );
+    console.log(
+      `\nusers remaining (${finalUsers.length}): ${finalUsers.map((u) => u.email).join(", ")}`,
+    );
   }
 
   await closeDb();

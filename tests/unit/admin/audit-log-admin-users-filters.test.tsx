@@ -46,9 +46,7 @@ describe("AuditLog filters (BUG-008/009/017)", () => {
 
     await waitFor(
       () => {
-        expect(listAuditLogsMock).toHaveBeenCalledWith(
-          expect.objectContaining({ q: "razorpay" }),
-        );
+        expect(listAuditLogsMock).toHaveBeenCalledWith(expect.objectContaining({ q: "razorpay" }));
       },
       { timeout: 1000 },
     );
