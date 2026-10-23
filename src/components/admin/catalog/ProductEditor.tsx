@@ -245,7 +245,10 @@ export function ProductEditor({
   const [removingMediaId, setRemovingMediaId] = React.useState<string | null>(null);
   const [reorderingMedia, setReorderingMedia] = React.useState(false);
   const active = product.ownership.find((o) => o.status === "active");
-  const pendingOwnership = product.ownership.find((o) => o.status === "pending");
+  // Only a row with an approvalId is a real in-review proposal; the
+  // auto-assigned initial v1 split (no approvalId) must not block new
+  // proposals (BUG-041), matching the server-side guard in ownership/service.ts.
+  const pendingOwnership = product.ownership.find((o) => o.status === "pending" && o.approvalId);
   const [split, setSplit] = React.useState<SplitValue>({
     companyCutBps: active?.companyCutBps ?? 10000,
     lines: active?.lines ?? [],

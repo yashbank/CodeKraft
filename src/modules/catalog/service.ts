@@ -1281,7 +1281,15 @@ export class DefaultCatalogService implements CatalogService {
         published: t.published,
       })),
       blog: null,
-      ownershipVersions: [],
+      ownershipVersions: await (async () => {
+        const { ownershipService } = await import("@/modules/ownership/service");
+        const result = await ownershipService.listVersions(
+          ctx,
+          { limit: 50, filters: { productId: p.id } },
+          dbClient,
+        );
+        return result.items;
+      })(),
       approval: null,
       orderCount: orderCnt?.count ?? 0,
     };
