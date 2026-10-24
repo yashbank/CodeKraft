@@ -112,6 +112,19 @@ export function TestimonialsLogos({
       toast.error(result.error.message);
       return;
     }
+    const saved: TestimonialItem = {
+      id: result.data.testimonial.id,
+      quote: result.data.testimonial.quote,
+      author: result.data.testimonial.authorName,
+      title: result.data.testimonial.authorTitle ?? undefined,
+      company: result.data.testimonial.company ?? undefined,
+      context: result.data.testimonial.context,
+      product: t?.product,
+      published: result.data.testimonial.published,
+    };
+    setTestimonials((all) =>
+      t ? all.map((x) => (x.id === saved.id ? saved : x)) : [...all, saved],
+    );
     toast.success("Testimonial saved");
     setTEdit(null);
     router.refresh();
@@ -167,6 +180,15 @@ export function TestimonialsLogos({
       toast.error(result.error.message);
       return;
     }
+    const saved: LogoRow = {
+      id: result.data.logo.id,
+      name: result.data.logo.name,
+      logoUrl: lUpload?.url ?? l?.logoUrl,
+      url: result.data.logo.url ?? undefined,
+      published: result.data.logo.published,
+      mediaId: result.data.logo.mediaId ?? mediaId,
+    };
+    setLogos((all) => (l ? all.map((x) => (x.id === saved.id ? saved : x)) : [...all, saved]));
     toast.success("Logo saved");
     setLEdit(null);
     router.refresh();

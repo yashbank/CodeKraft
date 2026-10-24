@@ -13,6 +13,7 @@ import { fail } from "@/lib/actions/envelope";
 import type { Context } from "@/lib/authz/context";
 import {
   createProductAction,
+  createProductVersionAction,
   deleteCategoryAction,
   deleteProductFaqAction,
   deleteProductTestimonialAction,
@@ -79,6 +80,10 @@ export async function publishProductBlogById(raw: unknown) {
 }
 export async function unpublishProductBlogById(raw: unknown) {
   return withCtx(unpublishProductBlogAction, raw);
+}
+
+export async function createProductVersion(raw: unknown) {
+  return withCtx(createProductVersionAction, raw);
 }
 
 export async function saveProductFaq(raw: unknown) {
