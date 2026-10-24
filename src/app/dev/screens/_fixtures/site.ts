@@ -7,6 +7,7 @@ import type {
   BlogPost,
   CaseStudy,
   ClientLogo,
+  FaqItem,
   LandingContent,
   LegalPageView,
   ProductDetail,
@@ -656,6 +657,8 @@ export const LANDING: LandingContent = {
     body: "We reply by email within 2 working days.",
   },
 };
+
+export const LANDING_FAQS: FaqItem[] = PRODUCT_DETAIL.faqs;
 
 export const LEGAL_PRIVACY: LegalPageView = {
   key: "privacy",

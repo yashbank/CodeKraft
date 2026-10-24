@@ -62,12 +62,15 @@ import {
   removeOffering,
   removeProductFaq,
   removeProductTestimonial,
+  publishProductBlogById,
   reorderProductFaqsList,
   requestProductArchive,
   requestProductDelete,
   saveOffering,
+  saveProductBlog,
   saveProductFaq,
   saveProductTestimonial,
+  unpublishProductBlogById,
   setOfferingPaymentMethods,
   setOfferingPrices,
   submitProductForApproval,
@@ -184,8 +187,8 @@ function flattenCategoryOptions(nodes: CategoryNode[]): Array<{ id: string; labe
  *
  * Basics / Content / SEO each save independently (their own form + `updateProduct` patch);
  * FAQs, testimonials, the ownership split, offerings (create/edit/delete), per-offering
- * delivery config and media upload/reorder each have their own real mutation. The blog body and
- * its own SEO fields are still display-only — see the phase report for why.
+ * delivery config and media upload/reorder each have their own real mutation. The Blog tab is
+ * its own independent form + `upsertProductBlogAction`/publish/unpublish (BUG-042).
  */
 export function ProductEditor({
   product,
@@ -244,6 +247,13 @@ export function ProductEditor({
   const [uploadingMedia, setUploadingMedia] = React.useState(false);
   const [removingMediaId, setRemovingMediaId] = React.useState<string | null>(null);
   const [reorderingMedia, setReorderingMedia] = React.useState(false);
+  const [blogCover, setBlogCover] = React.useState<{ mediaId?: string; url?: string }>({
+    mediaId: product.blog.coverMediaId,
+    url: product.blog.coverUrl,
+  });
+  const [blogCoverUploading, setBlogCoverUploading] = React.useState(false);
+  const blogCoverInputRef = React.useRef<HTMLInputElement>(null);
+  const [blogPublishing, setBlogPublishing] = React.useState(false);
   const active = product.ownership.find((o) => o.status === "active");
   // Only a row with an approvalId is a real in-review proposal; the
   // auto-assigned initial v1 split (no approvalId) must not block new
@@ -401,6 +411,72 @@ export function ProductEditor({
     }
     setExpectedUpdatedAt(new Date(result.data.product.updatedAt).toISOString());
     toast.success("SEO saved");
+    router.refresh();
+  }
+
+  async function handleBlogCoverChosen(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setBlogCoverUploading(true);
+    try {
+      const { uploadMediaFile } = await import("@/lib/admin/media-upload");
+      const up = await uploadMediaFile(file, "product_image");
+      setBlogCover({ mediaId: up.mediaId, url: up.url ?? URL.createObjectURL(file) });
+      toast.success("Cover uploaded — save the blog post to apply it");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setBlogCoverUploading(false);
+    }
+  }
+
+  async function saveBlog(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (isNew) return;
+    const data = new FormData(e.currentTarget);
+    const title = String(data.get("blogTitle") ?? "").trim();
+    const slug = String(data.get("blogSlug") ?? "").trim() || slugify(title);
+    const excerpt = String(data.get("blogExcerpt") ?? "").trim();
+    const body = String(data.get("blogBody") ?? "");
+    const seoTitle = String(data.get("blogSeoTitle") ?? "").trim();
+    const seoDescription = String(data.get("blogSeoDescription") ?? "").trim();
+    if (!title || !slug || !excerpt) {
+      toast.error("Blog title, slug and excerpt are required.");
+      return;
+    }
+    setSavingTab("blog");
+    const result = await saveProductBlog({
+      productId,
+      slug,
+      title,
+      excerpt,
+      bodyJson: fromPlainText(body),
+      coverMediaId: blogCover.mediaId,
+      seoTitle: seoTitle.length > 0 ? seoTitle : undefined,
+      seoDescription: seoDescription.length > 0 ? seoDescription : undefined,
+    });
+    setSavingTab(null);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Blog post saved");
+    router.refresh();
+  }
+
+  async function handleBlogPublishToggle() {
+    setBlogPublishing(true);
+    const result =
+      product.blog.status === "published"
+        ? await unpublishProductBlogById({ productId })
+        : await publishProductBlogById({ productId });
+    setBlogPublishing(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(product.blog.status === "published" ? "Blog unpublished" : "Blog published");
     router.refresh();
   }
 
@@ -1904,24 +1980,92 @@ export function ProductEditor({
           </TabsContent>
 
           <TabsContent value="blog" className="space-y-5">
-            <Banner tone="neutral">Blog fields shown below are read-only.</Banner>
-            <div className="flex items-center gap-2">
-              <StatusBadge kind="product_blogs.status" value={product.blog.status} />
-              <Button size="sm" variant="secondary" disabled>
-                {product.blog.status === "published" ? "Unpublish blog" : "Publish blog"}
+            <form onSubmit={saveBlog} className="space-y-5">
+              <div className="flex items-center gap-2">
+                <StatusBadge kind="product_blogs.status" value={product.blog.status} />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleBlogPublishToggle}
+                  disabled={blogPublishing || isNew}
+                >
+                  {product.blog.status === "published" ? "Unpublish blog" : "Publish blog"}
+                </Button>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field id="blog-title" label="Title">
+                  <Input id="blog-title" name="blogTitle" defaultValue={product.blog.title} />
+                </Field>
+                <Field id="blog-slug" label="Slug">
+                  <Input
+                    id="blog-slug"
+                    name="blogSlug"
+                    defaultValue={product.blog.slug}
+                    className="font-mono"
+                  />
+                </Field>
+              </div>
+              <Field id="blog-excerpt" label="Excerpt">
+                <Textarea
+                  id="blog-excerpt"
+                  name="blogExcerpt"
+                  defaultValue={product.blog.excerpt}
+                  rows={2}
+                />
+              </Field>
+              <RichTextField
+                id="blog-body"
+                name="blogBody"
+                label="Body"
+                defaultValue={product.blog.body}
+              />
+              <div className="space-y-2">
+                <Label>Cover image</Label>
+                <div className="flex items-center gap-3">
+                  {blogCover.url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={blogCover.url} alt="" className="h-16 w-16 rounded-md object-cover" />
+                  ) : null}
+                  <input
+                    ref={blogCoverInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleBlogCoverChosen}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={blogCoverUploading}
+                    onClick={() => blogCoverInputRef.current?.click()}
+                  >
+                    <UploadIcon aria-hidden />
+                    {blogCoverUploading ? "Uploading…" : "Upload cover"}
+                  </Button>
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field id="blog-seo-title" label="SEO title" optional>
+                  <Input
+                    id="blog-seo-title"
+                    name="blogSeoTitle"
+                    defaultValue={product.blog.seoTitle}
+                  />
+                </Field>
+                <Field id="blog-seo-description" label="SEO description" optional>
+                  <Input
+                    id="blog-seo-description"
+                    name="blogSeoDescription"
+                    defaultValue={product.blog.seoDescription}
+                  />
+                </Field>
+              </div>
+              <Button type="submit" disabled={savingTab === "blog" || isNew}>
+                Save blog
               </Button>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="blog-title" label="Title">
-                <Input id="blog-title" readOnly value={product.blog.title} />
-              </Field>
-              <Field id="blog-slug" label="Slug">
-                <Input id="blog-slug" readOnly value={product.blog.slug} className="font-mono" />
-              </Field>
-            </div>
-            <Field id="blog-excerpt" label="Excerpt">
-              <Textarea id="blog-excerpt" readOnly value={product.blog.excerpt} rows={2} />
-            </Field>
+            </form>
           </TabsContent>
 
           <TabsContent value="versions" className="space-y-4">

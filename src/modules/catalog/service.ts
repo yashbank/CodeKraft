@@ -20,6 +20,7 @@ import {
   categories,
   featuredProducts,
   products,
+  productBlogs,
   productFaqs,
   productMedia,
   productTags,
@@ -1235,6 +1236,12 @@ export class DefaultCatalogService implements CatalogService {
       .innerJoin(offerings, eq(orderItems.offeringId, offerings.id))
       .where(eq(offerings.productId, p.id));
 
+    const [blogRow] = await dbClient
+      .select()
+      .from(productBlogs)
+      .where(eq(productBlogs.productId, p.id))
+      .limit(1);
+
     return {
       product: p,
       tags: tagRows,
@@ -1280,7 +1287,7 @@ export class DefaultCatalogService implements CatalogService {
         position: t.position,
         published: t.published,
       })),
-      blog: null,
+      blog: blogRow ?? null,
       ownershipVersions: await (async () => {
         const { ownershipService } = await import("@/modules/ownership/service");
         const result = await ownershipService.listVersions(

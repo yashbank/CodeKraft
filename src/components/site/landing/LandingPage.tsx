@@ -18,6 +18,7 @@ import type {
   BlogTeaser,
   CaseStudySummary,
   ClientLogo,
+  FaqItem,
   LandingContent,
   ProductSummary,
   Service,
@@ -25,6 +26,7 @@ import type {
   Testimonial,
 } from "../types";
 import { Chapter } from "./Chapter";
+import { FaqSection } from "./FaqSection";
 import { LandingHero } from "./LandingHero";
 import { StoryRail } from "./StoryRail";
 
@@ -37,6 +39,7 @@ export interface LandingPageProps {
   logos: ClientLogo[];
   blogTeasers: BlogTeaser[];
   serviceOptions: ServiceOption[];
+  faqs: FaqItem[];
 }
 
 const CHAPTERS = [
@@ -62,6 +65,7 @@ export function LandingPage({
   logos,
   blogTeasers,
   serviceOptions,
+  faqs,
 }: LandingPageProps) {
   return (
     <>
@@ -218,6 +222,8 @@ export function LandingPage({
           </Container>
         </section>
       ) : null}
+
+      <FaqSection faqs={faqs} />
     </>
   );
 }

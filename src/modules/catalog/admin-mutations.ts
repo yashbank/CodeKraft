@@ -27,6 +27,11 @@ import {
   upsertProductTestimonialAction,
   upsertTagAction,
 } from "./actions";
+import {
+  publishProductBlogAction,
+  unpublishProductBlogAction,
+  upsertProductBlogAction,
+} from "@/modules/blog/actions";
 
 async function withCtx<T>(
   action: (raw: unknown, ctx: Context) => Promise<ActionResult<T>>,
@@ -64,6 +69,16 @@ export async function requestProductArchive(raw: unknown) {
 }
 export async function requestProductDelete(raw: unknown) {
   return withCtx(requestDeleteAction, raw);
+}
+
+export async function saveProductBlog(raw: unknown) {
+  return withCtx(upsertProductBlogAction, raw);
+}
+export async function publishProductBlogById(raw: unknown) {
+  return withCtx(publishProductBlogAction, raw);
+}
+export async function unpublishProductBlogById(raw: unknown) {
+  return withCtx(unpublishProductBlogAction, raw);
 }
 
 export async function saveProductFaq(raw: unknown) {
