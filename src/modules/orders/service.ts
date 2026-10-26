@@ -80,6 +80,17 @@ async function getDatabase(tx?: DbOrTx): Promise<DbOrTx> {
   return db;
 }
 
+const COUPON_REJECT_MESSAGES: Record<string, string> = {
+  not_found: "That coupon code isn't valid.",
+  inactive: "That coupon is no longer active.",
+  not_started: "That coupon isn't active yet.",
+  expired: "That coupon has expired.",
+  exhausted: "That coupon has been fully redeemed.",
+  currency_mismatch: "That coupon doesn't apply to this currency.",
+  product_restricted: "That coupon doesn't apply to this product.",
+  first_purchase_only: "That coupon is only for first purchases.",
+};
+
 export class DefaultOrdersService implements OrdersService {
   private readonly fallback = createNotImplementedOrdersService();
 
@@ -172,7 +183,9 @@ export class DefaultOrdersService implements OrdersService {
           value: validation.coupon.value,
         };
       } else {
-        warnings.push(`Coupon rejected: ${validation.reason}`);
+        warnings.push(
+          COUPON_REJECT_MESSAGES[validation.reason] ?? "This coupon code can't be applied.",
+        );
       }
     }
 

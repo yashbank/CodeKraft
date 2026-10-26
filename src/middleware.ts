@@ -33,6 +33,60 @@ function getThemeScriptHash(): Promise<string> {
   return themeScriptHashPromise;
 }
 
+function originOf(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * CSP_MODE=enforce|report. Default is report-only until CSP_MODE=enforce is set: prerendered
+ * routes (/, /blog, /contact, /legal/*, /auth/register) ship Next inline scripts without a
+ * per-request nonce, so enforcing 'strict-dynamic' would break hydration there. Flip to
+ * enforce once those routes are dynamic (or verified in a browser on preview).
+ */
+export function cspMode(): "enforce" | "report" {
+  return process.env.CSP_MODE === "enforce" ? "enforce" : "report";
+}
+
+export function buildCsp(nonce: string, themeHash: string): { header: string; policy: string } {
+  const dev = process.env.NODE_ENV !== "production";
+  const media = originOf(process.env.NEXT_PUBLIC_MEDIA_BASE_URL);
+  const umami = originOf(process.env.NEXT_PUBLIC_UMAMI_SRC);
+  const sentry = originOf(process.env.NEXT_PUBLIC_SENTRY_DSN);
+  const turnstile = "https://challenges.cloudflare.com";
+  const razorpayScript = "https://checkout.razorpay.com";
+  const razorpayApi = ["https://api.razorpay.com", "https://checkout.razorpay.com"];
+  // Presigned browser PUT to R2 (S3 API endpoint) + public media host.
+  const r2 = "https://*.r2.cloudflarestorage.com";
+  const list = (...xs: (string | null | false)[]) => xs.filter(Boolean).join(" ");
+  const policy = [
+    "default-src 'self'",
+    // 'strict-dynamic' makes browsers ignore host sources; they remain as legacy fallback only.
+    `script-src ${list("'self'", `'nonce-${nonce}'`, `'sha256-${themeHash}'`, "'strict-dynamic'", dev && "'unsafe-eval'", turnstile, razorpayScript, umami)}`,
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    `img-src ${list("'self'", "data:", "blob:", media, r2, "https://*.razorpay.com")}`,
+    `connect-src ${list("'self'", turnstile, ...razorpayApi, "https://lumberjack.razorpay.com", media, r2, umami, sentry, "https://*.ingest.sentry.io", "https://*.ingest.us.sentry.io", dev && "ws:", dev && "wss:")}`,
+    `frame-src ${list("'self'", turnstile, ...razorpayApi)}`,
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self' https://api.razorpay.com https://checkout.razorpay.com",
+    "frame-ancestors 'none'",
+    "upgrade-insecure-requests",
+    "report-uri /api/csp-report",
+    "report-to csp-endpoint",
+  ].join("; ");
+  return {
+    header:
+      cspMode() === "enforce" ? "Content-Security-Policy" : "Content-Security-Policy-Report-Only",
+    policy,
+  };
+}
+
 export function resolveHostKind(host: string): "admin" | "site" {
   return ADMIN_HOST !== "" && host === ADMIN_HOST ? "admin" : "site";
 }
@@ -51,7 +105,10 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   }
 
   const nonce = makeNonce();
+  const csp = buildCsp(nonce, await getThemeScriptHash());
   const reqHeaders = new Headers(req.headers);
+  // Next.js reads the nonce from the request CSP header to stamp its own inline scripts.
+  reqHeaders.set(csp.header, csp.policy);
   reqHeaders.set("x-nonce", nonce);
   reqHeaders.set("x-host-kind", kind);
   // Original (pre-rewrite) path so server layouts can build a correct login `next`.
@@ -90,7 +147,12 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   res.headers.set("X-Content-Type-Options", "nosniff");
   res.headers.set("X-Frame-Options", "DENY");
   res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  res.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+  res.headers.set(
+    "Permissions-Policy",
+    'camera=(), microphone=(), geolocation=(), payment=(self "https://checkout.razorpay.com" "https://api.razorpay.com")',
+  );
+  // allow-popups keeps Razorpay / OAuth popups able to talk back to the opener.
+  res.headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
 
   if (APP_ENV === "production" || APP_ENV === "staging") {
     res.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
@@ -98,24 +160,9 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
 
   res.headers.set("x-nonce", nonce);
 
-  const themeScriptHash = await getThemeScriptHash();
-
-  // CSP Policy with nonce and CSP violation reporting
-  const cspPolicy = [
-    "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'sha256-${themeScriptHash}' 'strict-dynamic' 'unsafe-eval' https: https://challenges.cloudflare.com`,
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com data:",
-    "img-src 'self' data: blob: https:",
-    "connect-src 'self' https: wss: https://challenges.cloudflare.com",
-    "frame-src 'self' https://challenges.cloudflare.com",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "frame-ancestors 'none'",
-    "report-uri /api/csp-report",
-  ].join("; ");
-
-  res.headers.set("Content-Security-Policy-Report-Only", cspPolicy);
+  // CSP was computed up-front (the nonce must also reach Next via the request headers).
+  res.headers.set(csp.header, csp.policy);
+  res.headers.set("Reporting-Endpoints", 'csp-endpoint="/api/csp-report"');
   return res;
 }
 

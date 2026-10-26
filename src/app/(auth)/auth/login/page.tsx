@@ -5,7 +5,7 @@ import { LoginScreen, type LoginReason } from "@/components/account/LoginScreen"
 import { hostFromHeaders } from "@/modules/auth/service";
 
 export const metadata: Metadata = {
-  title: "Sign in — CodeKraft",
+  title: "Sign in",
   description: "Sign in to access your CodeKraft products, licenses, and services.",
 };
 
