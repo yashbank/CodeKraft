@@ -31,7 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
 import { fromPlainText } from "@/modules/content/render";
-import { createQuery } from "@/modules/queries/customer-mutations";
+import { createQuery, replyToMyQuery } from "@/modules/queries/customer-mutations";
 import { EmptyState } from "./EmptyState";
 import { formatDate, formatDateTime, relativeTime } from "./format";
 import type { ChatTranscript, QueryStatus, QuerySummary } from "./types";
@@ -294,10 +294,27 @@ export function QueryThreadScreen({
   links: { queries: string };
   sendError?: boolean;
 }) {
+  const router = useRouter();
   const [draft, setDraft] = React.useState(
     sendError ? "Here's the log file you asked for — attached." : "",
   );
+  const [sending, setSending] = React.useState(false);
   const closed = q.status === "closed";
+
+  async function handleReply(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const body = draft.trim();
+    if (!body) return;
+    setSending(true);
+    const result = await replyToMyQuery({ queryId: q.id, bodyJson: fromPlainText(body) });
+    setSending(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    setDraft("");
+    router.refresh();
+  }
   return (
     <div className="flex min-h-[70vh] flex-col gap-4">
       <nav aria-label="Breadcrumb">
@@ -386,7 +403,7 @@ export function QueryThreadScreen({
 
       <form
         className="sticky bottom-16 space-y-2 rounded-lg border border-border bg-surface p-3 lg:bottom-0"
-        onSubmit={(e) => e.preventDefault()}
+        onSubmit={handleReply}
       >
         {sendError ? (
           <p role="alert" className="text-caption text-danger">
@@ -404,16 +421,16 @@ export function QueryThreadScreen({
           rows={3}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          disabled={closed}
+          disabled={closed || sending}
           placeholder={closed ? "This query is closed — start a new one" : "Write a reply"}
           maxLength={4000}
         />
         <div className="flex items-center justify-between gap-2">
-          <Button type="button" variant="ghost" size="sm" disabled={closed}>
+          <Button type="button" variant="ghost" size="sm" disabled={closed || sending}>
             <PaperclipIcon aria-hidden /> Attach
           </Button>
-          <Button type="submit" size="sm" disabled={closed || draft.trim().length === 0}>
-            Send
+          <Button type="submit" size="sm" disabled={closed || sending || draft.trim().length === 0}>
+            {sending ? "Sending…" : "Send"}
           </Button>
         </div>
       </form>

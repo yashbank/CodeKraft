@@ -17,13 +17,16 @@ import type {
   BlogTeaser,
   CaseStudySummary,
   ClientLogo,
+  FaqItem,
   LandingContent,
   ProductSummary,
   Service,
   ServiceOption,
   Testimonial,
 } from "@/components/site/types";
+import { toPlainText } from "@/modules/content/render";
 import type { LandingChapterView } from "@/modules/content/types";
+import type { RichTextDoc } from "@/modules/_shared/zod";
 
 // ISR (docs/08 §10). Anonymous data only. Every admin save that changes homepage content
 // calls revalidatePath("/", "layout") (content, catalog, settings admin wrappers), so edits show
@@ -124,6 +127,13 @@ export default async function LandingRoute() {
   // documented empty state, not a placeholder hack.
   const blogTeasers: BlogTeaser[] = [];
 
+  const faqRows = landingResult.ok ? landingResult.data.faqs : [];
+  const faqs: FaqItem[] = faqRows.map((f) => ({
+    id: f.id,
+    question: f.question,
+    answer: toPlainText(f.answer as unknown as RichTextDoc),
+  }));
+
   return (
     <LandingPage
       content={content}
@@ -134,6 +144,7 @@ export default async function LandingRoute() {
       logos={logos}
       blogTeasers={blogTeasers}
       serviceOptions={serviceOptions}
+      faqs={faqs}
     />
   );
 }

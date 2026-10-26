@@ -1,5 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "@/lib/db";
+import { AppError, ErrorCode } from "@/lib/errors";
 import { queriesService } from "@/modules/queries/service";
 import { createAdmin, createUser } from "../../factories/users";
 import { createOrder } from "../../factories/commerce";
@@ -137,5 +138,76 @@ describe("Queries Integration (P6.5)", () => {
     const updated = await db.select().from(queries).where(eq(queries.id, q.queryId)).limit(1);
 
     expect(defined(updated[0], "updated[0]").status).toBe("closed");
+  });
+
+  it("getMyQuery returns the owner's thread with messages in chronological order (BUG-007)", async () => {
+    const customer = await createUser({ email: "mine-cust@test.com" });
+    const admin = await createAdmin({ email: "mine-admin@test.com" });
+
+    const q = await queriesService.createQuery(
+      { userId: customer.id, roles: ["customer"] } as any,
+      {
+        source: "dashboard",
+        subject: "Thread order check",
+        bodyJson: { type: "doc", content: [{ type: "paragraph", text: "First message." }] },
+      },
+    );
+    await queriesService.replyToQuery({ userId: admin.id, roles: ["admin"] } as any, {
+      queryId: q.queryId,
+      bodyJson: { type: "doc", content: [{ type: "paragraph", text: "Second message." }] },
+    });
+
+    const thread = await queriesService.getMyQuery(
+      { userId: customer.id, roles: ["customer"] } as any,
+      { queryId: q.queryId },
+    );
+
+    expect(thread.messages.map((m) => m.bodyJson)).toEqual([
+      { type: "doc", content: [{ type: "paragraph", text: "First message." }] },
+      { type: "doc", content: [{ type: "paragraph", text: "Second message." }] },
+    ]);
+  });
+
+  it("getMyQuery rejects a thread that belongs to a different customer", async () => {
+    const owner = await createUser({ email: "owner-cust@test.com" });
+    const other = await createUser({ email: "other-cust@test.com" });
+
+    const q = await queriesService.createQuery({ userId: owner.id, roles: ["customer"] } as any, {
+      source: "dashboard",
+      subject: "Not yours",
+      bodyJson: { type: "doc", content: [{ type: "paragraph", text: "Private." }] },
+    });
+
+    await expect(
+      queriesService.getMyQuery({ userId: other.id, roles: ["customer"] } as any, {
+        queryId: q.queryId,
+      }),
+    ).rejects.toSatisfy((err: unknown) => {
+      expect(err).toBeInstanceOf(AppError);
+      expect((err as AppError).code).toBe(ErrorCode.NOT_FOUND);
+      return true;
+    });
+  });
+
+  it("replyToQuery rejects a customer replying on another customer's thread", async () => {
+    const owner = await createUser({ email: "owner-reply@test.com" });
+    const other = await createUser({ email: "other-reply@test.com" });
+
+    const q = await queriesService.createQuery({ userId: owner.id, roles: ["customer"] } as any, {
+      source: "dashboard",
+      subject: "Not yours either",
+      bodyJson: { type: "doc", content: [{ type: "paragraph", text: "Private." }] },
+    });
+
+    await expect(
+      queriesService.replyToQuery({ userId: other.id, roles: ["customer"] } as any, {
+        queryId: q.queryId,
+        bodyJson: { type: "doc", content: [{ type: "paragraph", text: "Snooping." }] },
+      }),
+    ).rejects.toSatisfy((err: unknown) => {
+      expect(err).toBeInstanceOf(AppError);
+      expect((err as AppError).code).toBe(ErrorCode.NOT_FOUND);
+      return true;
+    });
   });
 });

@@ -15,13 +15,17 @@ import { writeFileSync, mkdirSync } from "node:fs";
 import { eq, or, like } from "drizzle-orm";
 
 async function main(): Promise<void> {
-  const [{ getDb, closeDb }, { testimonials }, { products, productFaqs, productMedia }, { offerings }] =
-    await Promise.all([
-      import("../../src/lib/db"),
-      import("../../drizzle/schema/content"),
-      import("../../drizzle/schema/catalog"),
-      import("../../drizzle/schema/offerings"),
-    ]);
+  const [
+    { getDb, closeDb },
+    { testimonials },
+    { products, productFaqs, productMedia },
+    { offerings },
+  ] = await Promise.all([
+    import("../../src/lib/db"),
+    import("../../drizzle/schema/content"),
+    import("../../drizzle/schema/catalog"),
+    import("../../drizzle/schema/offerings"),
+  ]);
   const db = getDb();
 
   const junkTestimonials = await db
@@ -35,14 +39,20 @@ async function main(): Promise<void> {
       ),
     );
 
-  const [cloudPilot] = await db.select().from(products).where(eq(products.slug, "cloudpilot-managed-platform"));
+  const [cloudPilot] = await db
+    .select()
+    .from(products)
+    .where(eq(products.slug, "cloudpilot-managed-platform"));
   if (!cloudPilot) throw new Error("cloudpilot-managed-platform product not found");
 
   const junkOfferings = await db
     .select()
     .from(offerings)
     .where(eq(offerings.productId, cloudPilot.id));
-  const junkFaqs = await db.select().from(productFaqs).where(eq(productFaqs.productId, cloudPilot.id));
+  const junkFaqs = await db
+    .select()
+    .from(productFaqs)
+    .where(eq(productFaqs.productId, cloudPilot.id));
   const junkMedia = await db
     .select()
     .from(productMedia)
@@ -54,7 +64,8 @@ async function main(): Promise<void> {
     JSON.stringify({ junkTestimonials, cloudPilot, junkOfferings, junkFaqs, junkMedia }, null, 2),
   );
 
-  for (const row of junkTestimonials) await db.delete(testimonials).where(eq(testimonials.id, row.id));
+  for (const row of junkTestimonials)
+    await db.delete(testimonials).where(eq(testimonials.id, row.id));
   for (const row of junkOfferings) await db.delete(offerings).where(eq(offerings.id, row.id));
   for (const row of junkFaqs) await db.delete(productFaqs).where(eq(productFaqs.id, row.id));
   for (const row of junkMedia) await db.delete(productMedia).where(eq(productMedia.id, row.id));

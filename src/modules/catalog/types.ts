@@ -111,6 +111,7 @@ export interface TagRef {
 
 /** API-CAT-30/34/36 `ProductCard` — prices already in the display currency. */
 export interface ProductCard {
+  id: string;
   slug: string;
   name: string;
   shortDescription: string;

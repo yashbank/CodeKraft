@@ -97,6 +97,19 @@ export function ServicesEditor({ services: initial }: { services: ServiceRow[] }
       toast.error(result.error.message);
       return;
     }
+    const saved: Row = {
+      id: result.data.service.id,
+      slug: result.data.service.slug,
+      title: result.data.service.title,
+      summary: result.data.service.summary ?? "",
+      icon: result.data.service.icon ?? "code",
+      deliverables: result.data.service.deliverables ?? [],
+      published: result.data.service.published,
+      position: result.data.service.position,
+    };
+    setServices((all) =>
+      current ? all.map((x) => (x.id === saved.id ? saved : x)) : [...all, saved],
+    );
     toast.success("Service saved — content revalidated");
     setEditing(null);
     router.refresh();

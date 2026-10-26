@@ -14,7 +14,12 @@ export default function Page() {
     >
       <AuditLog
         rows={AUDIT_ROWS}
-        admins={["Priya Nair", "Arjun Mehta"]}
+        nextCursor={null}
+        total={AUDIT_ROWS.length}
+        admins={[
+          { id: "admin-priya", name: "Priya Nair" },
+          { id: "admin-arjun", name: "Arjun Mehta" },
+        ]}
         approvalsHref={href("/approvals")}
       />
     </PreviewShell>

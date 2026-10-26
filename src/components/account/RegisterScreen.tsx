@@ -37,8 +37,10 @@ export function RegisterScreen({
   onGoogleClick?: () => void;
 }) {
   const [password, setPassword] = React.useState("");
+  const [fieldErrors, setFieldErrors] = React.useState<{ name?: string; email?: string }>({});
   const loading = state === "loading";
   const rulesOk = passwordChecks(password).every((c) => c.ok);
+  const passwordInvalid = password.length > 0 && !rulesOk;
 
   if (state === "sent") {
     return (
@@ -67,15 +69,19 @@ export function RegisterScreen({
       <AuthCard title="Create your account">
         <form
           className="space-y-4"
+          noValidate
           aria-busy={loading || undefined}
           onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
-            onSubmit?.({
-              name: String(fd.get("name") ?? ""),
-              email: String(fd.get("email") ?? ""),
-              password,
-            });
+            const name = String(fd.get("name") ?? "");
+            const email = String(fd.get("email") ?? "");
+            const next: { name?: string; email?: string } = {};
+            if (!name.trim()) next.name = "Enter your full name";
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) next.email = "Enter a valid email";
+            setFieldErrors(next);
+            if (Object.keys(next).length > 0 || password.length === 0 || !rulesOk) return;
+            onSubmit?.({ name, email, password });
           }}
         >
           <GoogleButton disabled={loading} onClick={onGoogleClick} />
@@ -84,6 +90,25 @@ export function RegisterScreen({
             or
             <Separator className="flex-1" />
           </div>
+          {Object.entries(fieldErrors).filter(([, v]) => Boolean(v)).length > 0 ? (
+            <div
+              role="alert"
+              className="rounded-md border-l-4 border-danger bg-danger-soft px-4 py-3 text-body-sm text-danger"
+            >
+              <p className="font-semibold">Please fix the following:</p>
+              <ul className="mt-1 list-disc pl-5">
+                {Object.entries(fieldErrors)
+                  .filter(([, v]) => Boolean(v))
+                  .map(([k, msg]) => (
+                    <li key={k}>
+                      <a href={`#reg-${k}`} className="underline underline-offset-2">
+                        {msg}
+                      </a>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          ) : null}
           {state === "error" ? (
             <Banner tone="danger">
               {errorMessage ?? "Something went wrong. Please try again."}
@@ -99,8 +124,15 @@ export function RegisterScreen({
               autoComplete="name"
               required
               disabled={loading}
+              aria-invalid={fieldErrors.name ? true : undefined}
+              aria-describedby={fieldErrors.name ? "reg-name-error" : undefined}
               className="h-12 lg:h-10"
             />
+            {fieldErrors.name ? (
+              <p id="reg-name-error" className="text-caption text-danger">
+                {fieldErrors.name}
+              </p>
+            ) : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="reg-email" required>
@@ -113,9 +145,15 @@ export function RegisterScreen({
               autoComplete="email"
               required
               disabled={loading}
-              aria-invalid={state === "error" || undefined}
+              aria-invalid={state === "error" || fieldErrors.email ? true : undefined}
+              aria-describedby={fieldErrors.email ? "reg-email-error" : undefined}
               className="h-12 lg:h-10"
             />
+            {fieldErrors.email ? (
+              <p id="reg-email-error" className="text-caption text-danger">
+                {fieldErrors.email}
+              </p>
+            ) : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="reg-password" required>
@@ -152,10 +190,16 @@ export function RegisterScreen({
             className="w-full"
             size="lg"
             loading={loading}
-            disabled={!loading && password.length > 0 && !rulesOk}
+            disabled={!loading && passwordInvalid}
+            aria-describedby={passwordInvalid ? "reg-password-rules" : undefined}
           >
             Create account
           </Button>
+          {passwordInvalid ? (
+            <p className="text-center text-caption text-danger" aria-live="polite">
+              Finish the password requirements above to create your account.
+            </p>
+          ) : null}
           <div className="space-y-2 text-center text-body-sm text-fg-muted">
             {phoneOtpEnabled ? (
               <p>

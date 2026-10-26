@@ -2,7 +2,7 @@
  * Ownership service implementation (docs/05 §4, docs/06 API-CAT-16/17, BR-05/06/07, PHASE-03 P3.8).
  * Full implementation satisfying OwnershipService contracts.
  */
-import { and, desc, eq, inArray, lte, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, lte, sql } from "drizzle-orm";
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
 import type { DbOrTx, TxCtx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
@@ -100,7 +100,11 @@ export class DefaultOwnershipService implements OwnershipService {
         );
       }
 
-      // 4. Check no other pending version exists for this product
+      // 4. Check no other pending version exists for this product.
+      // Only rows with an attached approval request are genuine in-review
+      // proposals; the auto-created initial v1 row (createInitial) is left
+      // "pending" with no approvalRequestId until publish and must not block
+      // new proposals.
       const [pendingExisting] = await actionTx
         .select({ id: productOwnerships.id })
         .from(productOwnerships)
@@ -108,6 +112,7 @@ export class DefaultOwnershipService implements OwnershipService {
           and(
             eq(productOwnerships.productId, input.productId),
             eq(productOwnerships.status, "pending"),
+            isNotNull(productOwnerships.approvalRequestId),
           ),
         )
         .limit(1);

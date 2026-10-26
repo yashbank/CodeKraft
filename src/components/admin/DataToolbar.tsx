@@ -10,6 +10,8 @@ export function DataToolbar({
   searchId,
   searchPlaceholder = "Search…",
   searchLabel = "Search",
+  searchValue,
+  onSearchChange,
   filters,
   actions,
   className,
@@ -17,6 +19,9 @@ export function DataToolbar({
   searchId: string;
   searchPlaceholder?: string;
   searchLabel?: string;
+  /** Controlled search input; omit for the old uncontrolled behaviour. */
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
   filters?: ReactNode;
   actions?: ReactNode;
   className?: string;
@@ -31,7 +36,15 @@ export function DataToolbar({
           aria-hidden
           className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-fg-subtle"
         />
-        <Input id={searchId} type="search" placeholder={searchPlaceholder} className="pl-9" />
+        <Input
+          id={searchId}
+          type="search"
+          placeholder={searchPlaceholder}
+          className="pl-9"
+          {...(onSearchChange
+            ? { value: searchValue ?? "", onChange: (e) => onSearchChange(e.target.value) }
+            : {})}
+        />
       </div>
       {filters ? <div className="flex flex-wrap items-end gap-2">{filters}</div> : null}
       {actions ? <div className="ml-auto flex flex-wrap items-center gap-2">{actions}</div> : null}

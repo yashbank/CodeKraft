@@ -54,20 +54,25 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { SEMVER_PATTERN } from "@/modules/catalog/contracts";
 import { slugify } from "@/modules/catalog/slugs";
 import { fromPlainText, toPlainText } from "@/modules/content/render";
 import {
   createProduct,
+  createProductVersion,
   proposeOwnershipSplit,
   removeOffering,
   removeProductFaq,
   removeProductTestimonial,
+  publishProductBlogById,
   reorderProductFaqsList,
   requestProductArchive,
   requestProductDelete,
   saveOffering,
+  saveProductBlog,
   saveProductFaq,
   saveProductTestimonial,
+  unpublishProductBlogById,
   setOfferingPaymentMethods,
   setOfferingPrices,
   submitProductForApproval,
@@ -89,6 +94,7 @@ import type {
   OfferingRow,
   ProductEditorData,
   ProductFlag,
+  ProductVersionRow,
   TestimonialItem,
 } from "../types";
 import { SplitEditor, splitSummary, type SplitValue } from "./SplitEditor";
@@ -184,8 +190,8 @@ function flattenCategoryOptions(nodes: CategoryNode[]): Array<{ id: string; labe
  *
  * Basics / Content / SEO each save independently (their own form + `updateProduct` patch);
  * FAQs, testimonials, the ownership split, offerings (create/edit/delete), per-offering
- * delivery config and media upload/reorder each have their own real mutation. The blog body and
- * its own SEO fields are still display-only — see the phase report for why.
+ * delivery config and media upload/reorder each have their own real mutation. The Blog tab is
+ * its own independent form + `upsertProductBlogAction`/publish/unpublish (BUG-042).
  */
 export function ProductEditor({
   product,
@@ -244,8 +250,32 @@ export function ProductEditor({
   const [uploadingMedia, setUploadingMedia] = React.useState(false);
   const [removingMediaId, setRemovingMediaId] = React.useState<string | null>(null);
   const [reorderingMedia, setReorderingMedia] = React.useState(false);
+  const [blogCover, setBlogCover] = React.useState<{ mediaId?: string; url?: string }>({
+    mediaId: product.blog.coverMediaId,
+    url: product.blog.coverUrl,
+  });
+  const [blogCoverUploading, setBlogCoverUploading] = React.useState(false);
+  const blogCoverInputRef = React.useRef<HTMLInputElement>(null);
+  const [blogPublishing, setBlogPublishing] = React.useState(false);
+  const [versions, setVersions] = React.useState<ProductVersionRow[]>(product.versions);
+  const [newVersion, setNewVersion] = React.useState("");
+  const [versionSummary, setVersionSummary] = React.useState("");
+  const [versionAdded, setVersionAdded] = React.useState("");
+  const [versionChanged, setVersionChanged] = React.useState("");
+  const [versionFixed, setVersionFixed] = React.useState("");
+  const [versionBreaking, setVersionBreaking] = React.useState("");
+  const [versionReleaseFile, setVersionReleaseFile] = React.useState<{
+    mediaId?: string;
+    name?: string;
+  }>({});
+  const [versionReleaseFileUploading, setVersionReleaseFileUploading] = React.useState(false);
+  const versionReleaseFileInputRef = React.useRef<HTMLInputElement>(null);
+  const [savingVersion, setSavingVersion] = React.useState(false);
   const active = product.ownership.find((o) => o.status === "active");
-  const pendingOwnership = product.ownership.find((o) => o.status === "pending");
+  // Only a row with an approvalId is a real in-review proposal; the
+  // auto-assigned initial v1 split (no approvalId) must not block new
+  // proposals (BUG-041), matching the server-side guard in ownership/service.ts.
+  const pendingOwnership = product.ownership.find((o) => o.status === "pending" && o.approvalId);
   const [split, setSplit] = React.useState<SplitValue>({
     companyCutBps: active?.companyCutBps ?? 10000,
     lines: active?.lines ?? [],
@@ -401,6 +431,141 @@ export function ProductEditor({
     router.refresh();
   }
 
+  async function handleBlogCoverChosen(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setBlogCoverUploading(true);
+    try {
+      const { uploadMediaFile } = await import("@/lib/admin/media-upload");
+      const up = await uploadMediaFile(file, "product_image");
+      setBlogCover({ mediaId: up.mediaId, url: up.url ?? URL.createObjectURL(file) });
+      toast.success("Cover uploaded — save the blog post to apply it");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setBlogCoverUploading(false);
+    }
+  }
+
+  async function saveBlog(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (isNew) return;
+    const data = new FormData(e.currentTarget);
+    const title = String(data.get("blogTitle") ?? "").trim();
+    const slug = String(data.get("blogSlug") ?? "").trim() || slugify(title);
+    const excerpt = String(data.get("blogExcerpt") ?? "").trim();
+    const body = String(data.get("blogBody") ?? "");
+    const seoTitle = String(data.get("blogSeoTitle") ?? "").trim();
+    const seoDescription = String(data.get("blogSeoDescription") ?? "").trim();
+    if (!title || !slug || !excerpt) {
+      toast.error("Blog title, slug and excerpt are required.");
+      return;
+    }
+    setSavingTab("blog");
+    const result = await saveProductBlog({
+      productId,
+      slug,
+      title,
+      excerpt,
+      bodyJson: fromPlainText(body),
+      coverMediaId: blogCover.mediaId,
+      seoTitle: seoTitle.length > 0 ? seoTitle : undefined,
+      seoDescription: seoDescription.length > 0 ? seoDescription : undefined,
+    });
+    setSavingTab(null);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Blog post saved");
+    router.refresh();
+  }
+
+  async function handleVersionReleaseFileChosen(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setVersionReleaseFileUploading(true);
+    try {
+      const { uploadMediaFile } = await import("@/lib/admin/media-upload");
+      const up = await uploadMediaFile(file, "release_file");
+      setVersionReleaseFile({ mediaId: up.mediaId, name: file.name });
+      toast.success("Release file uploaded");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setVersionReleaseFileUploading(false);
+    }
+  }
+
+  function splitLines(value: string): string[] | undefined {
+    const lines = value
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+    return lines.length > 0 ? lines : undefined;
+  }
+
+  async function saveVersion() {
+    const version = newVersion.trim();
+    if (!SEMVER_PATTERN.test(version)) {
+      toast.error("Version must be a valid semver string, e.g. 1.2.0");
+      return;
+    }
+    setSavingVersion(true);
+    const result = await createProductVersion({
+      productId,
+      version,
+      changelogJson: {
+        summary: versionSummary.trim().length > 0 ? versionSummary.trim() : undefined,
+        added: splitLines(versionAdded),
+        changed: splitLines(versionChanged),
+        fixed: splitLines(versionFixed),
+        breaking: splitLines(versionBreaking),
+      },
+      releaseFile: versionReleaseFile.mediaId ? { mediaId: versionReleaseFile.mediaId } : undefined,
+    });
+    setSavingVersion(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    setVersions((v) => [
+      {
+        version: result.data.version.version,
+        releasedAt: result.data.version.releasedAt,
+        files: versionReleaseFile.mediaId ? 1 : 0,
+        changelog: result.data.version.changelog?.summary ?? "",
+      },
+      ...v,
+    ]);
+    setNewVersion("");
+    setVersionSummary("");
+    setVersionAdded("");
+    setVersionChanged("");
+    setVersionFixed("");
+    setVersionBreaking("");
+    setVersionReleaseFile({});
+    toast.success("Version added");
+    router.refresh();
+  }
+
+  async function handleBlogPublishToggle() {
+    setBlogPublishing(true);
+    const result =
+      product.blog.status === "published"
+        ? await unpublishProductBlogById({ productId })
+        : await publishProductBlogById({ productId });
+    setBlogPublishing(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(product.blog.status === "published" ? "Blog unpublished" : "Blog published");
+    router.refresh();
+  }
+
   async function confirmLifecycle() {
     if (!lifecycleDialog) return;
     if (lifecycleReason.trim().length === 0) {
@@ -443,8 +608,8 @@ export function ProductEditor({
   }
 
   async function submitOwnershipProposal(effectiveFrom: string) {
-    const companyOwned = split.lines.length === 0 && split.companyCutBps === 10000;
-    if (!companyOwned && split.lines.reduce((s, l) => s + l.bps, 0) !== 10000) return;
+    const grandTotal = split.companyCutBps + split.lines.reduce((s, l) => s + l.bps, 0);
+    if (grandTotal !== 10000) return;
     await proposeSplit(split, effectiveFrom);
   }
 
@@ -1901,32 +2066,184 @@ export function ProductEditor({
           </TabsContent>
 
           <TabsContent value="blog" className="space-y-5">
-            <Banner tone="neutral">Blog fields shown below are read-only.</Banner>
-            <div className="flex items-center gap-2">
-              <StatusBadge kind="product_blogs.status" value={product.blog.status} />
-              <Button size="sm" variant="secondary" disabled>
-                {product.blog.status === "published" ? "Unpublish blog" : "Publish blog"}
+            <form onSubmit={saveBlog} className="space-y-5">
+              <div className="flex items-center gap-2">
+                <StatusBadge kind="product_blogs.status" value={product.blog.status} />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleBlogPublishToggle}
+                  disabled={blogPublishing || isNew}
+                >
+                  {product.blog.status === "published" ? "Unpublish blog" : "Publish blog"}
+                </Button>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field id="blog-title" label="Title">
+                  <Input id="blog-title" name="blogTitle" defaultValue={product.blog.title} />
+                </Field>
+                <Field id="blog-slug" label="Slug">
+                  <Input
+                    id="blog-slug"
+                    name="blogSlug"
+                    defaultValue={product.blog.slug}
+                    className="font-mono"
+                  />
+                </Field>
+              </div>
+              <Field id="blog-excerpt" label="Excerpt">
+                <Textarea
+                  id="blog-excerpt"
+                  name="blogExcerpt"
+                  defaultValue={product.blog.excerpt}
+                  rows={2}
+                />
+              </Field>
+              <RichTextField
+                id="blog-body"
+                name="blogBody"
+                label="Body"
+                defaultValue={product.blog.body}
+              />
+              <div className="space-y-2">
+                <Label>Cover image</Label>
+                <div className="flex items-center gap-3">
+                  {blogCover.url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={blogCover.url} alt="" className="h-16 w-16 rounded-md object-cover" />
+                  ) : null}
+                  <input
+                    ref={blogCoverInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleBlogCoverChosen}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={blogCoverUploading}
+                    onClick={() => blogCoverInputRef.current?.click()}
+                  >
+                    <UploadIcon aria-hidden />
+                    {blogCoverUploading ? "Uploading…" : "Upload cover"}
+                  </Button>
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field id="blog-seo-title" label="SEO title" optional>
+                  <Input
+                    id="blog-seo-title"
+                    name="blogSeoTitle"
+                    defaultValue={product.blog.seoTitle}
+                  />
+                </Field>
+                <Field id="blog-seo-description" label="SEO description" optional>
+                  <Input
+                    id="blog-seo-description"
+                    name="blogSeoDescription"
+                    defaultValue={product.blog.seoDescription}
+                  />
+                </Field>
+              </div>
+              <Button type="submit" disabled={savingTab === "blog" || isNew}>
+                Save blog
               </Button>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="blog-title" label="Title">
-                <Input id="blog-title" readOnly value={product.blog.title} />
-              </Field>
-              <Field id="blog-slug" label="Slug">
-                <Input id="blog-slug" readOnly value={product.blog.slug} className="font-mono" />
-              </Field>
-            </div>
-            <Field id="blog-excerpt" label="Excerpt">
-              <Textarea id="blog-excerpt" readOnly value={product.blog.excerpt} rows={2} />
-            </Field>
+            </form>
           </TabsContent>
 
           <TabsContent value="versions" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-body-sm text-fg-muted">
-                Adding a version sets `current_version` and notifies owners per update policy.
-              </p>
-              <Button size="sm" disabled title="Add version">
+            <p className="text-body-sm text-fg-muted">
+              Adding a version sets `current_version` and notifies owners per update policy.
+            </p>
+            <div className="space-y-3 rounded-lg border border-border bg-surface p-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field id="ver-version" label="Version (semver)" required>
+                  <Input
+                    id="ver-version"
+                    data-testid="version-input"
+                    placeholder="1.2.0"
+                    className="font-mono"
+                    value={newVersion}
+                    onChange={(e) => setNewVersion(e.target.value)}
+                  />
+                </Field>
+                <Field id="ver-summary" label="Changelog summary" optional>
+                  <Input
+                    id="ver-summary"
+                    data-testid="version-summary"
+                    value={versionSummary}
+                    onChange={(e) => setVersionSummary(e.target.value)}
+                  />
+                </Field>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field id="ver-added" label="Added (one per line)" optional>
+                  <Textarea
+                    id="ver-added"
+                    data-testid="version-added"
+                    rows={3}
+                    value={versionAdded}
+                    onChange={(e) => setVersionAdded(e.target.value)}
+                  />
+                </Field>
+                <Field id="ver-changed" label="Changed (one per line)" optional>
+                  <Textarea
+                    id="ver-changed"
+                    rows={3}
+                    value={versionChanged}
+                    onChange={(e) => setVersionChanged(e.target.value)}
+                  />
+                </Field>
+                <Field id="ver-fixed" label="Fixed (one per line)" optional>
+                  <Textarea
+                    id="ver-fixed"
+                    rows={3}
+                    value={versionFixed}
+                    onChange={(e) => setVersionFixed(e.target.value)}
+                  />
+                </Field>
+                <Field id="ver-breaking" label="Breaking (one per line)" optional>
+                  <Textarea
+                    id="ver-breaking"
+                    rows={3}
+                    value={versionBreaking}
+                    onChange={(e) => setVersionBreaking(e.target.value)}
+                  />
+                </Field>
+              </div>
+              <div className="space-y-2">
+                <Label>Release file</Label>
+                <div className="flex items-center gap-3">
+                  {versionReleaseFile.name ? (
+                    <span className="text-body-sm text-fg-muted">{versionReleaseFile.name}</span>
+                  ) : null}
+                  <input
+                    ref={versionReleaseFileInputRef}
+                    type="file"
+                    className="hidden"
+                    onChange={handleVersionReleaseFileChosen}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={versionReleaseFileUploading}
+                    onClick={() => versionReleaseFileInputRef.current?.click()}
+                  >
+                    <UploadIcon aria-hidden />
+                    {versionReleaseFileUploading ? "Uploading…" : "Upload release file"}
+                  </Button>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                data-testid="add-version-submit"
+                disabled={savingVersion || isNew || newVersion.trim().length === 0}
+                onClick={saveVersion}
+              >
                 <PlusIcon aria-hidden /> Add version
               </Button>
             </div>
@@ -1940,7 +2257,7 @@ export function ProductEditor({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {product.versions.map((v) => (
+                  {versions.map((v) => (
                     <TableRow key={v.version}>
                       <TableCell className="font-mono">{v.version}</TableCell>
                       <TableCell>{formatDate(v.releasedAt)}</TableCell>
@@ -2319,8 +2636,8 @@ function ProposeSplitForm({
 }) {
   const [effectiveFrom, setEffectiveFrom] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
-  // Partner shares sum to 100 % of the partner pool; company cut is separate (server rule).
-  const total = split.lines.reduce((s, l) => s + l.bps, 0);
+  // Company cut + all partner shares must sum to 100 % (10 000 bps), same rule as SplitEditor.
+  const total = split.companyCutBps + split.lines.reduce((s, l) => s + l.bps, 0);
 
   return (
     <form

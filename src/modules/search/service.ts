@@ -110,6 +110,7 @@ export class DefaultSearchService implements SearchService {
         .where(eq(productTags.productId, p.id));
 
       cards.push({
+        id: p.id,
         slug: p.slug,
         name: p.name,
         shortDescription: p.shortDescription,

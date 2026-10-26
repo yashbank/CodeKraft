@@ -22,6 +22,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupCard } from "@/components/ui/radio-group";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -40,6 +47,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ApprovalGateNotice, Banner } from "../Banner";
+import { DataToolbar, ToolbarField } from "../DataToolbar";
+import { EmptyState } from "../EmptyState";
+import { UsersIcon } from "lucide-react";
 import {
   changeAdminRole,
   inviteAdmin,
@@ -51,6 +61,8 @@ import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
 import { RowActions } from "../RowActions";
 import type { AdminRole, AdminUserRow } from "../types";
+
+const ROLE_FILTER_ANY = "all";
 
 const ROLE_LABEL: Record<AdminRole, string> = {
   super_admin: "Super Admin",
@@ -101,6 +113,17 @@ export function AdminUsers({
   const [confirmRole, setConfirmRole] = React.useState<AdminRole>("admin");
   const [confirmSubmitting, setConfirmSubmitting] = React.useState(false);
   const [reveal, setReveal] = React.useState(false);
+  const [search, setSearch] = React.useState("");
+  const [roleFilter, setRoleFilter] = React.useState<AdminRole | typeof ROLE_FILTER_ANY>(
+    ROLE_FILTER_ANY,
+  );
+
+  const filteredUsers = users.filter((u) => {
+    if (roleFilter !== ROLE_FILTER_ANY && u.role !== roleFilter) return false;
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+  });
 
   function openConfirm(kind: "role" | "remove", user: AdminUserRow) {
     setConfirmRole(user.role === "admin" ? "super_admin" : "admin");
@@ -210,145 +233,175 @@ export function AdminUsers({
           adjustments) cannot be executed until a second admin is active.
         </Banner>
       ) : null}
-      <div className="rounded-lg border border-border bg-surface">
-        <Table>
-          <TableCaption className="sr-only">Admin users</TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead>User</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Partner</TableHead>
-              <TableHead>TOTP</TableHead>
-              <TableHead>Last sign-in</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-12">
-                <span className="sr-only">Actions</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users.map((u) => {
-              const lastSuper = u.role === "super_admin" && superAdmins.length === 1;
-              return (
-                <TableRow key={u.id}>
-                  <TableCell>
-                    <span className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarFallback>{initials(u.name)}</AvatarFallback>
-                      </Avatar>
-                      <span>
-                        <span className="block font-medium">
-                          {u.name}
-                          {u.id === currentUserId ? (
-                            <span className="text-fg-muted"> (you)</span>
-                          ) : null}
+      <DataToolbar
+        searchId="admin-users-search"
+        searchPlaceholder="Name or email…"
+        searchValue={search}
+        onSearchChange={setSearch}
+        filters={
+          <ToolbarField id="admin-users-role" label="Role">
+            <Select
+              value={roleFilter}
+              onValueChange={(v) => setRoleFilter(v as AdminRole | typeof ROLE_FILTER_ANY)}
+            >
+              <SelectTrigger id="admin-users-role" size="sm" className="w-36">
+                <SelectValue placeholder="Any" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ROLE_FILTER_ANY}>Any role</SelectItem>
+                {(["super_admin", "admin", "staff"] as AdminRole[]).map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {ROLE_LABEL[r]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </ToolbarField>
+        }
+      />
+      {filteredUsers.length === 0 ? (
+        <EmptyState icon={UsersIcon} title="No admin users match" />
+      ) : (
+        <div className="rounded-lg border border-border bg-surface">
+          <Table>
+            <TableCaption className="sr-only">Admin users</TableCaption>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Partner</TableHead>
+                <TableHead>TOTP</TableHead>
+                <TableHead>Last sign-in</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-12">
+                  <span className="sr-only">Actions</span>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredUsers.map((u) => {
+                const lastSuper = u.role === "super_admin" && superAdmins.length === 1;
+                return (
+                  <TableRow key={u.id}>
+                    <TableCell>
+                      <span className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarFallback>{initials(u.name)}</AvatarFallback>
+                        </Avatar>
+                        <span>
+                          <span className="block font-medium">
+                            {u.name}
+                            {u.id === currentUserId ? (
+                              <span className="text-fg-muted"> (you)</span>
+                            ) : null}
+                          </span>
+                          <span className="block text-caption text-fg-muted">{u.email}</span>
                         </span>
-                        <span className="block text-caption text-fg-muted">{u.email}</span>
                       </span>
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      tone={
-                        u.role === "super_admin"
-                          ? "accent"
-                          : u.role === "admin"
-                            ? "info"
-                            : "neutral"
-                      }
-                    >
-                      {ROLE_LABEL[u.role]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {u.partner ? (
-                      <button
-                        type="button"
-                        className="text-left hover:text-accent-text"
-                        onClick={() => setPartnerSheet(u)}
-                      >
-                        {u.partner.displayName}
-                        <span className="block text-caption text-fg-muted">
-                          {u.partner.activeShares} active shares
-                        </span>
-                      </button>
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {u.totp ? (
-                      <Badge tone="success" size="sm">
-                        <ShieldCheckIcon aria-hidden /> Enabled
-                      </Badge>
-                    ) : (
-                      <Badge tone="warning" size="sm">
-                        Not set up
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-fg-muted">
-                    {u.lastSignInAt ? formatDateTime(u.lastSignInAt) : "—"}
-                  </TableCell>
-                  <TableCell>
-                    <span className="flex flex-wrap gap-1">
+                    </TableCell>
+                    <TableCell>
                       <Badge
                         tone={
-                          u.status === "active"
-                            ? "success"
-                            : u.status === "invited"
+                          u.role === "super_admin"
+                            ? "accent"
+                            : u.role === "admin"
                               ? "info"
-                              : "warning"
+                              : "neutral"
                         }
-                        size="sm"
                       >
-                        {u.status === "pending_change"
-                          ? "Pending change"
-                          : u.status.charAt(0).toUpperCase() + u.status.slice(1)}
+                        {ROLE_LABEL[u.role]}
                       </Badge>
-                      {u.pendingApprovalId ? (
-                        <Link href={approvalsHref}>
-                          <Badge tone="warning" size="sm">
-                            approval
-                          </Badge>
-                        </Link>
-                      ) : null}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <RowActions
-                      label={`Actions for ${u.name}`}
-                      actions={[
-                        {
-                          label: "Change role",
-                          onSelect: () => openConfirm("role", u),
-                        },
-                        {
-                          label: "Edit partner details",
-                          onSelect: () => setPartnerSheet(u),
-                          disabled: !u.partner,
-                        },
-                        { label: "Resend invite", disabled: true },
-                        {
-                          label: "Revoke sessions",
-                          disabled: true,
-                          separatorBefore: true,
-                        },
-                        {
-                          label: "Remove access",
-                          destructive: true,
-                          onSelect: () => openConfirm("remove", u),
-                          disabled: lastSuper,
-                        },
-                      ]}
-                    />
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+                    </TableCell>
+                    <TableCell>
+                      {u.partner ? (
+                        <button
+                          type="button"
+                          className="text-left hover:text-accent-text"
+                          onClick={() => setPartnerSheet(u)}
+                        >
+                          {u.partner.displayName}
+                          <span className="block text-caption text-fg-muted">
+                            {u.partner.activeShares} active shares
+                          </span>
+                        </button>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {u.totp ? (
+                        <Badge tone="success" size="sm">
+                          <ShieldCheckIcon aria-hidden /> Enabled
+                        </Badge>
+                      ) : (
+                        <Badge tone="warning" size="sm">
+                          Not set up
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-fg-muted">
+                      {u.lastSignInAt ? formatDateTime(u.lastSignInAt) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <span className="flex flex-wrap gap-1">
+                        <Badge
+                          tone={
+                            u.status === "active"
+                              ? "success"
+                              : u.status === "invited"
+                                ? "info"
+                                : "warning"
+                          }
+                          size="sm"
+                        >
+                          {u.status === "pending_change"
+                            ? "Pending change"
+                            : u.status.charAt(0).toUpperCase() + u.status.slice(1)}
+                        </Badge>
+                        {u.pendingApprovalId ? (
+                          <Link href={approvalsHref}>
+                            <Badge tone="warning" size="sm">
+                              approval
+                            </Badge>
+                          </Link>
+                        ) : null}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <RowActions
+                        label={`Actions for ${u.name}`}
+                        actions={[
+                          {
+                            label: "Change role",
+                            onSelect: () => openConfirm("role", u),
+                          },
+                          {
+                            label: "Edit partner details",
+                            onSelect: () => setPartnerSheet(u),
+                            disabled: !u.partner,
+                          },
+                          { label: "Resend invite", disabled: true },
+                          {
+                            label: "Revoke sessions",
+                            disabled: true,
+                            separatorBefore: true,
+                          },
+                          {
+                            label: "Remove access",
+                            destructive: true,
+                            onSelect: () => openConfirm("remove", u),
+                            disabled: lastSuper,
+                          },
+                        ]}
+                      />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
       <p className="mt-3 text-caption text-fg-muted">
         Resend invite and Revoke sessions are currently disabled.
       </p>

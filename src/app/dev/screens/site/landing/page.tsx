@@ -6,6 +6,7 @@ import {
   CLIENT_LOGOS,
   FEATURED_PRODUCTS,
   LANDING,
+  LANDING_FAQS,
   SERVICE_OPTIONS,
   SERVICES,
   TESTIMONIALS,
@@ -39,6 +40,7 @@ export default async function Page({ searchParams }: { searchParams: SearchParam
         logos={CLIENT_LOGOS}
         blogTeasers={state === "no-proof" ? [] : BLOG_POSTS}
         serviceOptions={SERVICE_OPTIONS}
+        faqs={LANDING_FAQS}
       />
     </SitePreview>
   );

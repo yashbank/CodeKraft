@@ -7,7 +7,12 @@
  */
 import { z } from "zod";
 import { defineAction } from "@/lib/actions/envelope";
-import { getQueryAdminSchema, listMyQueriesSchema, listQueriesAdminSchema } from "./types";
+import {
+  getMyQuerySchema,
+  getQueryAdminSchema,
+  listMyQueriesSchema,
+  listQueriesAdminSchema,
+} from "./types";
 import { queriesService } from "./service";
 import { getDb } from "@/lib/db";
 import { listActiveAdminUsers, type AdminDirectoryEntry } from "@/modules/approvals/approver-set";
@@ -46,4 +51,16 @@ export const listMyQueriesQuery = defineAction({
   input: listMyQueriesSchema,
   permission: "support.self",
   handler: (input, ctx) => queriesService.listMyQueries(ctx, input),
+});
+
+/**
+ * API-CHAT-02 `getMyQuery` — `support.self`, own thread only. Backs `/account/queries/[id]`
+ * (BUG-007): the list screen already links to `${links.query}/${q.id}`, but no action or route
+ * ever called `queriesService.getMyQuery` (fully implemented, just unwired).
+ */
+export const getMyQueryQuery = defineAction({
+  name: "API-CHAT-02 query.get_mine",
+  input: getMyQuerySchema,
+  permission: "support.self",
+  handler: (input, ctx) => queriesService.getMyQuery(ctx, input),
 });

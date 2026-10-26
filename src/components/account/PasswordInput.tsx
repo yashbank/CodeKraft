@@ -38,7 +38,7 @@ export function PasswordInput({
           aria-pressed={visible}
           aria-controls={id}
           onClick={() => setVisible((v) => !v)}
-          className="absolute inset-y-1 right-1 inline-flex items-center gap-1 rounded-sm px-2 text-body-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="absolute inset-y-1 right-1 inline-flex items-center gap-1 rounded-sm px-2 text-body-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring max-sm:after:absolute max-sm:after:-inset-2 max-sm:after:content-['']"
         >
           {visible ? (
             <EyeOffIcon aria-hidden className="size-4" />

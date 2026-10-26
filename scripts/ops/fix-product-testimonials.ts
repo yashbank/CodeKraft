@@ -20,8 +20,14 @@ async function main(): Promise<void> {
   const { productTestimonials } = await import("../../drizzle/schema/catalog");
   const db = getDb();
 
-  const rows = await db.select().from(productTestimonials).where(inArray(productTestimonials.id, JUNK_IDS));
-  writeFileSync("scratch/fix-round-2-product-testimonials-snapshot.json", JSON.stringify(rows, null, 2));
+  const rows = await db
+    .select()
+    .from(productTestimonials)
+    .where(inArray(productTestimonials.id, JUNK_IDS));
+  writeFileSync(
+    "scratch/fix-round-2-product-testimonials-snapshot.json",
+    JSON.stringify(rows, null, 2),
+  );
 
   const deleted = await db
     .delete(productTestimonials)

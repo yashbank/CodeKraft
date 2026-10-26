@@ -2,9 +2,13 @@
 
 import { ExternalLinkIcon, HeartIcon } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { useSession } from "@/modules/auth/client";
+import { getMyWishlistIds } from "@/modules/catalog/site-queries";
+import { toggleWishlist } from "@/modules/catalog/site-mutations";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupCard } from "@/components/ui/radio-group";
@@ -47,17 +51,40 @@ export function OfferingPanel({
   product,
   serviceOptions,
   ownedOfferingIds = [],
-  wishlisted,
+  wishlisted: wishlistedProp,
   signedIn: signedInProp = false,
 }: OfferingPanelProps) {
-  // The product page is cached/anonymous, so the session is read in the browser.
+  // The product page is cached/anonymous, so the session and wishlist state are read in the browser.
   const { data: session } = useSession();
   const signedIn = signedInProp || Boolean(session);
+  const pathname = usePathname();
   const offerings = product.offerings;
   const [selectedId, setSelectedId] = useState(offerings[0]?.id ?? "");
   const [sheet, setSheet] = useState<null | "quote" | "customise">(null);
   const [barVisible, setBarVisible] = useState(false);
+  const [wishlisted, setWishlisted] = useState(wishlistedProp ?? false);
   const ctaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!signedIn) return;
+    let cancelled = false;
+    void getMyWishlistIds().then((result) => {
+      if (!cancelled && result.ok) setWishlisted(result.data.includes(product.id));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [signedIn, product.id]);
+
+  async function handleWishlistToggle() {
+    const next = !wishlisted;
+    setWishlisted(next);
+    const result = await toggleWishlist({ productId: product.id, on: next });
+    if (!result.ok) {
+      setWishlisted(!next);
+      toast.error(result.error.message);
+    }
+  }
 
   useEffect(() => {
     const el = ctaRef.current;
@@ -241,11 +268,12 @@ export function OfferingPanel({
         </div>
         <div className="mt-3 flex items-center justify-between text-caption text-fg-subtle">
           <span>{selected?.isRefundable ? "Refundable within 7 days" : "Non-refundable"}</span>
-          {wishlisted !== undefined ? (
+          {signedIn ? (
             <button
               type="button"
               aria-pressed={wishlisted}
               aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+              onClick={handleWishlistToggle}
               className="inline-flex items-center gap-1.5 rounded-sm text-body-sm text-fg-muted hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               <HeartIcon
@@ -254,7 +282,16 @@ export function OfferingPanel({
               />
               Wishlist
             </button>
-          ) : null}
+          ) : (
+            <Link
+              href={`/auth/login?next=${encodeURIComponent(pathname)}`}
+              aria-label="Sign in to add to wishlist"
+              className="inline-flex items-center gap-1.5 rounded-sm text-body-sm text-fg-muted hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              <HeartIcon aria-hidden className="size-4" />
+              Wishlist
+            </Link>
+          )}
         </div>
         {product.liveDemoUrl ? (
           <a

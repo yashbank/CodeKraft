@@ -519,6 +519,9 @@ export const PRODUCT_EDITOR: ProductEditorData = {
     title: "Why standing meetings failed and what we did next",
     slug: "standing-meetings",
     excerpt: "A short history of our sit-stand experiments.",
+    body: "A short history of our sit-stand experiments, in full.",
+    seoTitle: "",
+    seoDescription: "",
     status: "published",
   },
   versions: [

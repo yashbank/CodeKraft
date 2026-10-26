@@ -46,7 +46,7 @@ export default async function ChatPage() {
         menuIntents={MENU_INTENTS}
         transcripts={transcripts}
         messagesLeft={0}
-        capReached
+        emailUnverified
         links={{ queries: "/account/queries" }}
       />
     );

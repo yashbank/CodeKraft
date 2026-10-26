@@ -207,6 +207,11 @@ export interface ProductEditorData {
     title: string;
     slug: string;
     excerpt: string;
+    body: string;
+    coverMediaId?: string;
+    coverUrl?: string;
+    seoTitle: string;
+    seoDescription: string;
     status: StatusValue<"product_blogs.status">;
   };
   versions: ProductVersionRow[];

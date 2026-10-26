@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 
+import { useSession } from "@/modules/auth/client";
 import { Container } from "./Container";
 import { LEGAL_LINKS, SITE_NAV } from "./nav";
 import { ThemeToggle } from "./ThemeToggle";
@@ -7,10 +10,13 @@ import { Wordmark } from "./Wordmark";
 
 /**
  * Site footer — docs/07 §3.2 / docs/08 §6.4. Four columns at md+: wordmark + positioning line +
- * theme toggle · Explore · Company (Contact = inquiry form, Sign in) · Legal. No email, phone,
- * WhatsApp, social icons or newsletter box (D-808). Governing law line (D-1504).
+ * theme toggle · Explore · Company (Contact = inquiry form, Sign in / My account, session-aware
+ * like `SiteHeader`) · Legal. No email, phone, WhatsApp, social icons or newsletter box (D-808).
+ * Governing law line (D-1504).
  */
 export function SiteFooter({ themeToggleEnabled = false }: { themeToggleEnabled?: boolean }) {
+  const { data: session } = useSession();
+  const [authHref, authLabel] = session ? ["/account", "My account"] : ["/auth/login", "Sign in"];
   const year = new Date().getUTCFullYear();
   const explore = SITE_NAV.filter((i) => i.href !== "/contact");
   return (
@@ -29,7 +35,7 @@ export function SiteFooter({ themeToggleEnabled = false }: { themeToggleEnabled?
             title="Company"
             links={[
               { href: "/contact", label: "Contact (inquiry form)" },
-              { href: "/auth/login", label: "Sign in" },
+              { href: authHref, label: authLabel },
             ]}
           />
           <FooterColumn title="Legal" links={LEGAL_LINKS} />

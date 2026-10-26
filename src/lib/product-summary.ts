@@ -5,7 +5,7 @@ import type { ProductCard } from "@/modules/catalog/types";
 /** Maps a catalog ProductCard (list/featured query result) onto the site ProductSummary view model. */
 export function toProductSummary(card: ProductCard): ProductSummary {
   return {
-    id: card.slug,
+    id: card.id,
     slug: card.slug,
     name: card.name,
     shortDescription: card.shortDescription,
@@ -22,8 +22,9 @@ export function toProductSummary(card: ProductCard): ProductSummary {
     techStack: [],
     industries: [],
     audiences: [],
-    coverAlt: card.name,
+    coverAlt: card.coverImage?.alt ?? card.name,
     coverTone: toneFromSlug(card.slug),
+    coverImageUrl: card.coverImage?.url,
     publishedAt: new Date().toISOString(),
     popularity: 0,
   };

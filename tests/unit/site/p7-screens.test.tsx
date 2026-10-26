@@ -32,6 +32,7 @@ import {
   CLIENT_LOGOS,
   FEATURED_PRODUCTS,
   LANDING,
+  LANDING_FAQS,
   LEGAL_NAV,
   LEGAL_PRIVACY,
   PRODUCTS,
@@ -90,10 +91,34 @@ describe("Phase 7: Public Site & Customer UI", () => {
         testimonials={TESTIMONIALS}
         logos={CLIENT_LOGOS}
         blogTeasers={BLOG_POSTS}
+        faqs={LANDING_FAQS}
       />,
     );
 
     expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
+  });
+
+  it("renders the FAQ accordion when faqs exist, and omits it when empty (BUG-037)", () => {
+    const base = {
+      content: LANDING,
+      services: SERVICES,
+      serviceOptions: SERVICE_OPTIONS,
+      featuredProducts: FEATURED_PRODUCTS,
+      caseStudies: CASE_STUDIES,
+      testimonials: TESTIMONIALS,
+      logos: CLIENT_LOGOS,
+      blogTeasers: BLOG_POSTS,
+    };
+
+    const { unmount } = render(<LandingPage {...base} faqs={LANDING_FAQS} />);
+    expect(screen.getByRole("heading", { name: /questions we hear a lot/i })).toBeInTheDocument();
+    expect(screen.getByText(LANDING_FAQS[0]!.question)).toBeInTheDocument();
+    unmount();
+
+    render(<LandingPage {...base} faqs={[]} />);
+    expect(
+      screen.queryByRole("heading", { name: /questions we hear a lot/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders ServicesPage and enforces BR-01 (no prices on services page)", () => {

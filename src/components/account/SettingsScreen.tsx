@@ -87,6 +87,11 @@ export function SettingsScreen({
   const [emailChangePw, setEmailChangePw] = React.useState("");
   const [sendingVerification, setSendingVerification] = React.useState(false);
   const [changingPassword, setChangingPassword] = React.useState(false);
+  const [securityErrors, setSecurityErrors] = React.useState<{
+    currentPassword?: string;
+    newPassword?: string;
+    confirmPassword?: string;
+  }>({});
   const [savingNotificationPref, setSavingNotificationPref] = React.useState(false);
   const [deletingAccount, setDeletingAccount] = React.useState(false);
   const [deleteAccountPw, setDeleteAccountPw] = React.useState("");
@@ -391,15 +396,22 @@ export function SettingsScreen({
             <div className="space-y-8">
               <form
                 className="space-y-4"
+                noValidate
                 onSubmit={async (e) => {
                   e.preventDefault();
                   const form = new FormData(e.currentTarget);
                   const currentPassword = String(form.get("currentPassword") ?? "");
                   const confirmPassword = String(form.get("confirmPassword") ?? "");
-                  if (newPw !== confirmPassword) {
-                    toast.error("New password and confirmation don't match");
-                    return;
-                  }
+                  const nextErrors: typeof securityErrors = {};
+                  if (!currentPassword) nextErrors.currentPassword = "Enter your current password";
+                  if (!newPw) nextErrors.newPassword = "Enter a new password";
+                  else if (newPw.length < 12)
+                    nextErrors.newPassword = "Must be at least 12 characters";
+                  if (!confirmPassword) nextErrors.confirmPassword = "Confirm your new password";
+                  else if (newPw && newPw !== confirmPassword)
+                    nextErrors.confirmPassword = "New password and confirmation don't match";
+                  setSecurityErrors(nextErrors);
+                  if (Object.keys(nextErrors).length > 0) return;
                   setChangingPassword(true);
                   const result = await changeMyPassword({
                     currentPassword,
@@ -412,6 +424,7 @@ export function SettingsScreen({
                     return;
                   }
                   setNewPw("");
+                  setSecurityErrors({});
                   e.currentTarget.reset();
                   toast.success("Password changed");
                 }}
@@ -425,8 +438,16 @@ export function SettingsScreen({
                     id="sec-current"
                     name="currentPassword"
                     autoComplete="current-password"
-                    required
+                    aria-invalid={securityErrors.currentPassword ? true : undefined}
+                    aria-describedby={
+                      securityErrors.currentPassword ? "sec-current-error" : undefined
+                    }
                   />
+                  {securityErrors.currentPassword ? (
+                    <p id="sec-current-error" role="alert" className="text-caption text-danger">
+                      {securityErrors.currentPassword}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="sec-new" required>
@@ -435,12 +456,17 @@ export function SettingsScreen({
                   <PasswordInput
                     id="sec-new"
                     autoComplete="new-password"
-                    required
                     minLength={12}
                     value={newPw}
                     onChange={(e) => setNewPw(e.target.value)}
-                    aria-describedby="sec-rules"
+                    aria-invalid={securityErrors.newPassword ? true : undefined}
+                    aria-describedby={securityErrors.newPassword ? "sec-new-error" : "sec-rules"}
                   />
+                  {securityErrors.newPassword ? (
+                    <p id="sec-new-error" role="alert" className="text-caption text-danger">
+                      {securityErrors.newPassword}
+                    </p>
+                  ) : null}
                   <PasswordRules value={newPw} id="sec-rules" />
                 </div>
                 <div className="space-y-2">
@@ -451,8 +477,16 @@ export function SettingsScreen({
                     id="sec-confirm"
                     name="confirmPassword"
                     autoComplete="new-password"
-                    required
+                    aria-invalid={securityErrors.confirmPassword ? true : undefined}
+                    aria-describedby={
+                      securityErrors.confirmPassword ? "sec-confirm-error" : undefined
+                    }
                   />
+                  {securityErrors.confirmPassword ? (
+                    <p id="sec-confirm-error" role="alert" className="text-caption text-danger">
+                      {securityErrors.confirmPassword}
+                    </p>
+                  ) : null}
                 </div>
                 <Button type="submit" disabled={changingPassword}>
                   {changingPassword ? "Updating…" : "Update password"}
@@ -473,7 +507,12 @@ export function SettingsScreen({
                   </p>
                   <ConfirmDialog
                     trigger={
-                      <Button variant="secondary" size="sm" disabled={signingOutEverywhere}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="max-sm:h-11 max-sm:px-4"
+                        disabled={signingOutEverywhere}
+                      >
                         Sign out other sessions
                       </Button>
                     }
@@ -591,12 +630,15 @@ export function SettingsScreen({
                   A service delivery is in progress — open a query to close it first.
                 </Banner>
               ) : null}
-              <div className="flex items-center gap-2">
-                <Checkbox id="del-ack" />
-                <Label htmlFor="del-ack" className="font-medium">
+              <label htmlFor="del-ack" className="flex min-h-11 items-center gap-2 sm:min-h-0">
+                <Checkbox
+                  id="del-ack"
+                  className="relative max-sm:after:absolute max-sm:after:-inset-2.5 max-sm:after:content-['']"
+                />
+                <span className="font-medium text-body-sm">
                   I understand this can&apos;t be undone
-                </Label>
-              </div>
+                </span>
+              </label>
               <ConfirmDialog
                 trigger={
                   <Button variant="destructive" disabled={deleteBlocked || deletingAccount}>

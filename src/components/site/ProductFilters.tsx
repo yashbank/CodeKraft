@@ -1,5 +1,7 @@
 "use client";
 
+import { useId } from "react";
+
 import {
   Accordion,
   AccordionContent,
@@ -88,6 +90,9 @@ export function ProductFilters({
 }) {
   const active = countActiveFilters(value);
   const set = (patch: Partial<ProductFilterState>) => onChange({ ...value, ...patch });
+  // Desktop and the mobile Sheet both mount this panel at once (docs/08 §SCR-SITE-03) — scope
+  // every input id to this instance so the two copies never collide and break label association.
+  const scope = useId();
 
   return (
     <aside aria-label="Filters" className={cn("space-y-2", className)}>
@@ -111,7 +116,7 @@ export function ProductFilters({
               {categories.map((c) => (
                 <li key={c.slug} className="space-y-2">
                   <CheckRow
-                    id={`cat-${c.slug}`}
+                    id={`${scope}-cat-${c.slug}`}
                     label={c.name}
                     checked={value.categories.includes(c.slug)}
                     onCheckedChange={() => set({ categories: toggle(value.categories, c.slug) })}
@@ -121,7 +126,7 @@ export function ProductFilters({
                       {c.children.map((ch) => (
                         <li key={ch.slug}>
                           <CheckRow
-                            id={`cat-${ch.slug}`}
+                            id={`${scope}-cat-${ch.slug}`}
                             label={ch.name}
                             checked={value.categories.includes(ch.slug)}
                             onCheckedChange={() =>
@@ -143,9 +148,9 @@ export function ProductFilters({
           <AccordionContent>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="price-min">Min ({currencySymbol})</Label>
+                <Label htmlFor={`${scope}-price-min`}>Min ({currencySymbol})</Label>
                 <Input
-                  id="price-min"
+                  id={`${scope}-price-min`}
                   inputMode="numeric"
                   className="tnum"
                   placeholder="0"
@@ -158,9 +163,9 @@ export function ProductFilters({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="price-max">Max ({currencySymbol})</Label>
+                <Label htmlFor={`${scope}-price-max`}>Max ({currencySymbol})</Label>
                 <Input
-                  id="price-max"
+                  id={`${scope}-price-max`}
                   inputMode="numeric"
                   className="tnum"
                   placeholder="Any"
@@ -183,7 +188,7 @@ export function ProductFilters({
               {MODELS.map((m) => (
                 <li key={m}>
                   <CheckRow
-                    id={`model-${m}`}
+                    id={`${scope}-model-${m}`}
                     label={m === "one_time" ? "One-time" : PURCHASE_MODEL_LABEL[m]}
                     checked={value.models.includes(m)}
                     onCheckedChange={() => set({ models: toggle(value.models, m) })}
@@ -201,7 +206,7 @@ export function ProductFilters({
               {DELIVERIES.map((d) => (
                 <li key={d}>
                   <CheckRow
-                    id={`delivery-${d}`}
+                    id={`${scope}-delivery-${d}`}
                     label={DELIVERY_LABEL[d]}
                     checked={value.deliveries.includes(d)}
                     onCheckedChange={() => set({ deliveries: toggle(value.deliveries, d) })}
@@ -214,6 +219,7 @@ export function ProductFilters({
 
         <FacetGroup
           id="tech"
+          idPrefix={scope}
           title="Tech stack"
           options={techOptions}
           selected={value.tech}
@@ -221,6 +227,7 @@ export function ProductFilters({
         />
         <FacetGroup
           id="industry"
+          idPrefix={scope}
           title="Industry"
           options={industryOptions}
           selected={value.industries}
@@ -228,6 +235,7 @@ export function ProductFilters({
         />
         <FacetGroup
           id="audience"
+          idPrefix={scope}
           title="Target audience"
           options={audienceOptions}
           selected={value.audiences}
@@ -240,12 +248,14 @@ export function ProductFilters({
 
 function FacetGroup({
   id,
+  idPrefix,
   title,
   options,
   selected,
   onToggle,
 }: {
   id: string;
+  idPrefix: string;
   title: string;
   options: string[];
   selected: string[];
@@ -260,7 +270,7 @@ function FacetGroup({
           {options.map((o) => (
             <li key={o}>
               <CheckRow
-                id={`${id}-${o}`}
+                id={`${idPrefix}-${id}-${o}`}
                 label={o}
                 checked={selected.includes(o)}
                 onCheckedChange={() => onToggle(o)}
