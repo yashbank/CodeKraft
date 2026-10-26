@@ -40,7 +40,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
 import { CURRENCIES } from "@/lib/money";
-import { updateRazorpaySettings } from "@/modules/settings/admin-mutations";
+import { updateRazorpaySettings, updateSettings } from "@/modules/settings/admin-mutations";
 import { testRazorpayConnection } from "@/modules/settings/razorpay-test-connection";
 import { Banner } from "../Banner";
 import { Gauge } from "../charts/Gauge";
@@ -245,6 +245,9 @@ function RazorpaySection({
   );
 }
 
+/** Sections whose fields map onto `site_settings` keys; the rest have no backend yet (BUG-059). */
+const SAVEABLE_SECTIONS: readonly string[] = ["tax", "ai", "retention", "theme"];
+
 const SECTIONS = [
   ["general", "General / seller"],
   ["currencies", "Currencies & FX"],
@@ -281,7 +284,51 @@ export function SettingsScreen({
   const [upi, setUpi] = React.useState(s.payments.upiEnabled);
   const [menuOnly, setMenuOnly] = React.useState(s.ai.menuOnly);
   const ro = !isSuperAdmin;
+  const router = useRouter();
+  const formRef = React.useRef<HTMLFormElement>(null);
+  const [theme, setTheme] = React.useState(s.theme.defaultTheme);
+  const [saving, setSaving] = React.useState(false);
+  const saveable = SAVEABLE_SECTIONS.includes(section);
   const title = SECTIONS.find(([k]) => k === section)?.[1] ?? "";
+
+  async function handleSave() {
+    const val = (id: string) =>
+      (formRef.current?.querySelector<HTMLInputElement>(`#${id}`)?.value ?? "").trim();
+    let patch: Record<string, unknown>;
+    if (section === "tax") {
+      const gstin = val("st-gstin").toUpperCase();
+      patch = {
+        gstin: gstin === "" ? null : gstin,
+        taxRateBps: Math.round(Number(val("st-rate")) * 100),
+      };
+    } else if (section === "ai") {
+      patch = {
+        aiDailyPlatformCap: Number(val("st-cap")),
+        aiDailyUserCap: Number(val("st-user-cap")),
+        chatTimeoutMs: Math.round(Number(val("st-timeout")) * 1000),
+      };
+    } else if (section === "retention") {
+      patch = {
+        retention: { chatMonths: Number(val("rt-chat")), recordsYears: s.retention.recordYears },
+      };
+    } else if (section === "theme") {
+      patch = { defaultTheme: theme };
+    } else {
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await updateSettings({ patch });
+      if (!res.ok) {
+        toast.error(res.error.message);
+        return;
+      }
+      toast.success("Settings saved", { description: "View in audit log" });
+      router.refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <>
@@ -324,6 +371,7 @@ export function SettingsScreen({
         </nav>
         <form
           className="max-w-[760px] space-y-6 tv:max-w-[900px]"
+          ref={formRef}
           onSubmit={(e) => e.preventDefault()}
           key={section}
         >
@@ -660,7 +708,8 @@ export function SettingsScreen({
                 Why this matters: the default theme is what visitors see before they toggle.
               </p>
               <RadioGroup
-                defaultValue={s.theme.defaultTheme}
+                value={theme}
+                onValueChange={setTheme}
                 className="grid gap-3 sm:grid-cols-2"
                 disabled={ro}
               >
@@ -957,7 +1006,11 @@ export function SettingsScreen({
 
           <div className="sticky bottom-0 -mx-4 flex items-center gap-2 border-t border-border bg-canvas px-4 py-3 lg:-mx-6 lg:px-6">
             <span className="text-caption text-fg-muted">
-              Changes are audited with before/after.
+              {saveable
+                ? "Changes are audited with before/after."
+                : section === "payment-methods"
+                  ? "Use the Razorpay card's own save button. Other payment settings are not available yet."
+                  : "Saving this section is not available yet."}
             </span>
             <span className="ml-auto flex gap-2">
               <Button variant="ghost" size="sm" disabled={ro}>
@@ -965,10 +1018,8 @@ export function SettingsScreen({
               </Button>
               <Button
                 size="sm"
-                disabled={ro}
-                onClick={() =>
-                  toast.success("Settings saved", { description: "View in audit log" })
-                }
+                disabled={ro || !saveable || saving}
+                onClick={() => void handleSave()}
               >
                 Save changes
               </Button>

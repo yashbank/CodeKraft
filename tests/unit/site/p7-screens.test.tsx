@@ -7,6 +7,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/",
 }));
 
+vi.mock("@/modules/leads/site-actions", () => ({ submitLead: vi.fn() }));
 const sessionMock = vi.hoisted(() => ({ data: null as unknown }));
 vi.mock("@/modules/auth/client", () => ({ useSession: () => sessionMock }));
 

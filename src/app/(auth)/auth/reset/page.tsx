@@ -10,18 +10,20 @@ export const metadata: Metadata = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ token?: string; step?: string; email?: string }>;
+  searchParams: Promise<{ token?: string; error?: string; step?: string; email?: string }>;
 }
 
 export default async function ResetPasswordPage({ searchParams }: PageProps) {
-  const { token, step: queryStep, email } = await searchParams;
+  const { token, step: queryStep, email, error } = await searchParams;
 
   let step: ResetPasswordStep = "request";
   if (queryStep && ["request", "sent", "set", "done", "invalid"].includes(queryStep)) {
     step = queryStep as ResetPasswordStep;
+  } else if (error) {
+    step = "invalid";
   } else if (token) {
     step = "set";
   }
 
-  return <ResetPasswordScreen step={step} email={email} />;
+  return <ResetPasswordScreen step={step} email={email} token={token} />;
 }

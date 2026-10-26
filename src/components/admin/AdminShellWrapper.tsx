@@ -5,6 +5,7 @@ import * as React from "react";
 
 import { AdminShell, type AdminRoute } from "./AdminShell";
 import type { AdminNotification, AdminUserRef } from "./types";
+import { searchAdmin } from "@/lib/admin/global-search";
 import { PRIYA } from "@/app/dev/screens/_fixtures/admin";
 
 const ADMIN_ROUTE_MAP: Record<string, string> = {
@@ -113,6 +114,7 @@ export function AdminShellWrapper({
       now={new Date().toISOString()}
       title={title}
       routes={ADMIN_ROUTE_MAP}
+      onSearch={searchAdmin}
     >
       {children}
     </AdminShell>

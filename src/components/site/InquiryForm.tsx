@@ -17,6 +17,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
 
+import { submitInquiry } from "./submit-inquiry";
+import { TURNSTILE_DEV_TOKEN, TurnstileWidget, turnstileEnabled } from "./TurnstileWidget";
 import type { InquiryResult, InquiryValues, ServiceOption } from "./types";
 
 export type InquirySource = "inquiry_form" | "product_cta";
@@ -28,7 +30,9 @@ export interface InquiryFormProps {
   source?: InquirySource;
   /** Prefill (service interest from a "Discuss this service" CTA, message from case studies…). */
   defaults?: Partial<InquiryValues>;
-  /** P7: the `createLead` Server Action. Default simulates a success after 600 ms. */
+  /** Product the inquiry is about (`product_cta` leads). */
+  productId?: string;
+  /** Defaults to the real `createLead` Server Action (`submitInquiry`). */
   onSubmit?: (values: InquiryValues, source: InquirySource) => Promise<InquiryResult>;
   /** Previews: render straight into a state. */
   initialStatus?: "idle" | "success" | "error" | "turnstile_down";
@@ -51,12 +55,6 @@ const EMPTY: InquiryValues = {
   message: "",
 };
 
-async function simulateSubmit(values: InquiryValues): Promise<InquiryResult> {
-  await new Promise((r) => setTimeout(r, 600));
-  const ref = values.email.length.toString(16).toUpperCase().padStart(2, "0");
-  return { ok: true, reference: `CK-L-3F${ref}` };
-}
-
 /**
  * Inquiry form — SCR-SITE-09 (full page) and the shared `InquirySheet` (compact). Creates a lead
  * via `createLead` (API-LEAD-01) in P7. Validates on blur, shows a `role="alert"` summary, keeps
@@ -68,7 +66,8 @@ export function InquiryForm({
   variant = "compact",
   source = "inquiry_form",
   defaults,
-  onSubmit = simulateSubmit,
+  productId,
+  onSubmit,
   initialStatus = "idle",
   onDone,
   className,
@@ -83,6 +82,8 @@ export function InquiryForm({
   const [result, setResult] = useState<InquiryResult | null>(
     initialStatus === "success" ? { ok: true, reference: "CK-L-3F9A" } : null,
   );
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
   const successHeading = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -93,7 +94,7 @@ export function InquiryForm({
     const next: typeof errors = {};
     if (!v.name.trim()) next.name = "Enter your name";
     if (!EMAIL_RE.test(v.email)) next.email = "Enter a valid work email";
-    if (!v.message.trim()) next.message = "Tell us a little about what you need";
+    if (v.message.trim().length < 10) next.message = "Tell us a little about what you need";
     if (v.message.length > MESSAGE_MAX)
       next.message = `Keep it under ${String(MESSAGE_MAX)} characters`;
     return next;
@@ -116,8 +117,13 @@ export function InquiryForm({
     setErrors(next);
     setTouched({ name: true, email: true, message: true });
     if (Object.keys(next).length > 0) return;
+    if (turnstileEnabled && !captcha) return;
     setStatus("submitting");
-    const res = await onSubmit(values, source);
+    const res = onSubmit
+      ? await onSubmit(values, source)
+      : await submitInquiry(values, source, productId, captcha ?? TURNSTILE_DEV_TOKEN);
+    setCaptcha(null);
+    setCaptchaReset((n) => n + 1);
     setResult(res);
     setStatus(res.ok ? "success" : "error");
   }
@@ -348,6 +354,7 @@ export function InquiryForm({
         </Field>
       </div>
 
+      <TurnstileWidget onToken={setCaptcha} resetKey={captchaReset} />
       <div
         aria-label="Browser verification"
         className="flex items-center gap-3 rounded-md border border-dashed border-border-strong bg-canvas px-4 py-3 text-body-sm text-fg-muted"
@@ -368,7 +375,7 @@ export function InquiryForm({
           type="submit"
           size={variant === "full" ? "lg" : "md"}
           loading={busy}
-          disabled={turnstileDown}
+          disabled={turnstileDown || (turnstileEnabled && !captcha)}
           className="sm:shrink-0"
         >
           Send inquiry

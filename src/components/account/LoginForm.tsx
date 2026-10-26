@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { safeRedirectPath } from "@/lib/safe-redirect";
 import { authClient } from "@/modules/auth/client";
 import { GoogleButton } from "./GoogleButton";
 import { PasswordInput } from "./PasswordInput";
@@ -49,7 +50,7 @@ export function LoginForm({
 }: LoginFormProps) {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") ?? defaultNext;
+  const next = safeRedirectPath(params.get("next") ?? params.get("returnTo"), defaultNext);
   const [error, setError] = useState<string | null>(initialError);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [pending, start] = useTransition();

@@ -20,6 +20,7 @@ export interface InquirySheetProps {
   title?: string;
   description?: string;
   defaults?: Partial<InquiryValues>;
+  productId?: string;
   onSubmit?: InquiryFormProps["onSubmit"];
 }
 
@@ -36,6 +37,7 @@ export function InquirySheet({
   title,
   description,
   defaults,
+  productId,
   onSubmit,
 }: InquirySheetProps) {
   const heading = title ?? (source === "product_cta" ? "Request customisation" : "Start a project");
@@ -59,6 +61,7 @@ export function InquirySheet({
               source={source}
               serviceOptions={serviceOptions}
               defaults={defaults}
+              productId={productId}
               onSubmit={onSubmit}
               onDone={() => onOpenChange(false)}
             />

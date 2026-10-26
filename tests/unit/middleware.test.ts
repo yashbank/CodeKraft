@@ -34,6 +34,12 @@ describe("middleware host matrix (docs/04 §8, docs/09 §3.5)", () => {
     expect(res.headers.get("x-middleware-rewrite")).toBeNull();
     expect(res.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
   });
+  it("forwards the original path+search for login redirects", async () => {
+    const res = await middleware(
+      req("http://admin.localhost:3000/orders?page=2", "admin.localhost:3000"),
+    );
+    expect(res.headers.get("x-middleware-request-x-request-path")).toBe("/orders?page=2");
+  });
   it("hides /admin on the public host", async () => {
     const res = await middleware(req("http://localhost:3000/admin/orders", "localhost:3000"));
     expect(res.headers.get("x-middleware-rewrite")).toContain("/__404");
@@ -55,5 +61,13 @@ describe("middleware host matrix (docs/04 §8, docs/09 §3.5)", () => {
     expect(res.headers.get("Content-Security-Policy-Report-Only")).toMatch(
       /'sha256-[A-Za-z0-9+/=]{20,}'/,
     );
+  });
+  it("allows Cloudflare Turnstile in script/frame/connect-src", async () => {
+    const res = await middleware(req("http://localhost:3000/", "localhost:3000"));
+    const csp = res.headers.get("Content-Security-Policy-Report-Only") ?? "";
+    for (const d of ["script-src", "frame-src", "connect-src"]) {
+      const dir = csp.split("; ").find((x) => x.startsWith(d)) ?? "";
+      expect(dir).toContain("https://challenges.cloudflare.com");
+    }
   });
 });

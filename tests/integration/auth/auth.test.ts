@@ -151,7 +151,9 @@ describe("Better Auth (admin host)", () => {
       headers: new Headers({ host: "admin.localhost:3000" }),
       asResponse: true,
     });
-    expect(denied.status).toBe(401);
+    // Credentials are valid but the role is not: 403 with a specific code (BUG-087).
+    expect(denied.status).toBe(403);
+    expect(JSON.stringify(await denied.json())).toContain("ADMIN_ACCESS_REQUIRED");
     await db.insert(m.schema.userRoles).values({ userId: u!.id, roleKey: "super_admin" });
     const ok = await admin.api.signInEmail({
       body: { email: e, password: PW },

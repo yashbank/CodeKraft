@@ -315,6 +315,21 @@ export function QueryThreadScreen({
     setDraft("");
     router.refresh();
   }
+  async function handleResolve() {
+    setSending(true);
+    const result = await replyToMyQuery({
+      queryId: q.id,
+      bodyJson: fromPlainText("Marked as resolved by customer."),
+      setStatus: "resolved",
+    });
+    setSending(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Marked as resolved");
+    router.refresh();
+  }
   return (
     <div className="flex min-h-[70vh] flex-col gap-4">
       <nav aria-label="Breadcrumb">
@@ -350,7 +365,7 @@ export function QueryThreadScreen({
           </div>
         </div>
         {q.status === "open" || q.status === "waiting_customer" ? (
-          <Button variant="secondary" size="sm">
+          <Button variant="secondary" size="sm" disabled={sending} onClick={handleResolve}>
             Mark resolved
           </Button>
         ) : null}

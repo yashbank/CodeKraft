@@ -227,6 +227,8 @@ export interface AdminShellProps {
   readMostly?: boolean;
   breadcrumbs?: Array<{ label: string; href?: string }>;
   searchItems?: SearchItem[];
+  /** Server-backed ⌘K search; results are merged after `searchItems`. */
+  onSearch?: (query: string) => Promise<SearchItem[]>;
   /** Remap admin routes to other hrefs (previews). Unmapped routes are used as-is. */
   routes?: Record<string, string>;
   /** CSS length the sticky sidebar must clear (the dev preview header). */
@@ -252,6 +254,7 @@ export function AdminShell({
   readMostly = false,
   breadcrumbs,
   searchItems = [],
+  onSearch,
   routes,
   stickyTop = "0px",
   children,
@@ -260,6 +263,30 @@ export function AdminShell({
   const [open, setOpen] = React.useState(true);
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [paletteOpen, setPaletteOpen] = React.useState(false);
+  const [paletteQuery, setPaletteQuery] = React.useState("");
+  const [remoteItems, setRemoteItems] = React.useState<SearchItem[]>([]);
+
+  React.useEffect(() => {
+    const q = paletteQuery.trim();
+    if (!onSearch || q.length < 2) {
+      setRemoteItems([]);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(() => {
+      onSearch(q)
+        .then((r) => {
+          if (!cancelled) setRemoteItems(r);
+        })
+        .catch(() => {
+          if (!cancelled) setRemoteItems([]);
+        });
+    }, 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [paletteQuery, onSearch]);
   const [readIds, setReadIds] = React.useState<ReadonlySet<string>>(() => new Set());
   const unread = notifications.filter((n) => !n.read && !readIds.has(n.id)).length;
 
@@ -548,11 +575,15 @@ export function AdminShell({
         title="Search"
         description="Products, orders by number, customers by email, leads by name"
       >
-        <CommandInput placeholder="Search products, orders, customers, leads…" />
+        <CommandInput
+          placeholder="Search products, orders, customers, leads…"
+          value={paletteQuery}
+          onValueChange={setPaletteQuery}
+        />
         <CommandList>
           <CommandEmpty>No results.</CommandEmpty>
           {(["Products", "Orders", "Customers", "Leads", "Go to"] as const).map((group) => {
-            const items = searchItems.filter((s) => s.group === group);
+            const items = [...searchItems, ...remoteItems].filter((s) => s.group === group);
             if (items.length === 0) return null;
             return (
               <CommandGroup key={group} heading={group}>
@@ -560,7 +591,7 @@ export function AdminShell({
                   <CommandItem
                     key={`${group}-${s.label}`}
                     asChild
-                    value={`${group} ${s.label} ${s.hint ?? ""}`}
+                    value={`${group} ${s.label} ${s.hint ?? ""}${remoteItems.includes(s) ? ` ${paletteQuery}` : ""}`}
                   >
                     <Link href={s.href} onClick={() => setPaletteOpen(false)}>
                       <span>{s.label}</span>

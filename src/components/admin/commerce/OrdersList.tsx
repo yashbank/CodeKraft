@@ -352,7 +352,15 @@ export function OrdersList({
                     const days = o.expiresAt ? daysUntil(o.expiresAt, now) : null;
                     const urgent = days !== null && days < 1;
                     return (
-                      <TableRow key={o.id}>
+                      <TableRow
+                        key={o.id}
+                        className="cursor-pointer"
+                        onClick={(e) => {
+                          // Links/buttons/menus handle themselves; only bare-row clicks navigate.
+                          if ((e.target as HTMLElement).closest("a,button,[role=menuitem]")) return;
+                          router.push(`${detailHref}/${o.id}`);
+                        }}
+                      >
                         <TableCell>
                           <Link
                             href={`${detailHref}/${o.id}`}

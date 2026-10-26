@@ -328,3 +328,26 @@ describe("ProductEditor — Ownership tab enabling (BUG-040)", () => {
     expect(screen.getByRole("button", { name: "Request approval" })).toBeEnabled();
   });
 });
+
+describe("ProductEditor publish gating (BUG-061)", () => {
+  afterEach(() => cleanup());
+
+  it("disables Submit for approval and lists missing items while readiness is incomplete", async () => {
+    render(
+      <ProductEditor
+        product={{ ...PRODUCT_EDITOR, status: "draft", offerings: [], media: [], ownership: [] }}
+        categories={CATEGORIES}
+        approvers={["Priya Nair"]}
+        listHref="/admin/products"
+        approvalsHref="/admin/approvals"
+        currencies={["INR", "USD"]}
+        gstinConfigured={true}
+      />,
+    );
+    await clickTab(/^publish/i);
+    const btns = screen.getAllByRole("button", { name: "Submit for approval" });
+    const formBtn = btns.find((b) => b.closest("form") !== null) as HTMLButtonElement;
+    expect(formBtn.disabled).toBe(true);
+    expect(screen.getByTestId("publish-blocked").textContent).toMatch(/Offering with base price/);
+  });
+});

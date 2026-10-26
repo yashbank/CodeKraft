@@ -5,7 +5,7 @@ import { audit } from "@/lib/audit-port";
 import { hasAdminClassRole, loadRoles } from "@/modules/auth/roles-port";
 import { getSession, hostFromHeaders } from "@/modules/auth/service";
 import { AdminForbidden } from "@/components/admin/AdminForbidden";
-import { AdminLoginPrompt } from "@/components/admin/AdminLoginPrompt";
+import { redirectToLogin } from "@/lib/authz/login-redirect";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const h = await headers();
   if (hostFromHeaders(h) !== "admin") notFound();
   const session = await getSession(h);
-  if (!session) return <AdminLoginPrompt />;
+  if (!session) return redirectToLogin("/");
   const roles = await loadRoles(session.user.id);
   if (!hasAdminClassRole(roles)) {
     await audit({

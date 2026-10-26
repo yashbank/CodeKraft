@@ -131,9 +131,10 @@ export function afterHook(host: AuthHost) {
             meta: { host },
             ...meta,
           });
-          throw ctx.error("UNAUTHORIZED", {
-            message: "Invalid email or password.",
-            code: "INVALID_CREDENTIALS",
+          // Credentials were already verified here, so naming the real reason leaks nothing.
+          throw ctx.error("FORBIDDEN", {
+            message: "This account doesn't have admin access.",
+            code: "ADMIN_ACCESS_REQUIRED",
           });
         }
       }

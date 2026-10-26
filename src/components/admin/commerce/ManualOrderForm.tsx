@@ -159,6 +159,25 @@ export function ManualOrderForm({
   const selectedCustomer = customers.find((c) => c.id === customerId);
   const validProductLines = productLines.filter((l) => l.offeringId);
 
+  const submitBlockReason: string | null =
+    type === "product"
+      ? !customerId
+        ? "Select a customer to create the order."
+        : validProductLines.length === 0
+          ? "Pick an offering for at least one line."
+          : total <= 0
+            ? "Order total must be greater than zero."
+            : null
+      : !clientName.trim() || !clientEmail.trim()
+        ? "Enter the client name and email."
+        : !splitsValid
+          ? "Every project line needs a split that sums to 100 %."
+          : lines.some((l) => !l.description.trim() || safeMinor(l.unit) <= 0)
+            ? "Every line needs a description and a unit price above zero."
+            : total <= 0
+              ? "Order total must be greater than zero."
+              : null;
+
   async function handleCreate() {
     if (type === "project") {
       setSubmitting(true);
@@ -701,17 +720,14 @@ export function ManualOrderForm({
               <Banner tone="danger">Every project line needs a split that sums to 100 %.</Banner>
             ) : null}
             <div className="flex flex-col gap-2">
+              {submitBlockReason ? (
+                <p id="create-order-reason" className="text-caption text-fg-muted">
+                  {submitBlockReason}
+                </p>
+              ) : null}
               <Button
-                disabled={
-                  submitting ||
-                  total <= 0 ||
-                  (type === "project" &&
-                    (!clientName.trim() ||
-                      !clientEmail.trim() ||
-                      !splitsValid ||
-                      lines.some((l) => !l.description.trim() || safeMinor(l.unit) <= 0))) ||
-                  (type === "product" && (!customerId || validProductLines.length === 0))
-                }
+                disabled={submitting || submitBlockReason !== null}
+                aria-describedby={submitBlockReason ? "create-order-reason" : undefined}
                 loading={submitting}
                 onClick={handleCreate}
               >

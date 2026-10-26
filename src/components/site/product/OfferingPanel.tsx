@@ -101,7 +101,7 @@ export function OfferingPanel({
   const checkoutHref = selected
     ? signedIn
       ? `/checkout/${selected.id}`
-      : `/auth/login?returnTo=${encodeURIComponent(`/products/${product.slug}?offering=${selected.id}`)}`
+      : `/auth/login?next=${encodeURIComponent(`/products/${product.slug}?offering=${selected.id}`)}`
     : "#";
 
   const primaryCta = (extraClass?: string) => {
@@ -333,6 +333,7 @@ export function OfferingPanel({
         onOpenChange={(o) => !o && setSheet(null)}
         serviceOptions={serviceOptions}
         source="product_cta"
+        productId={product.id}
         title={
           sheet === "quote"
             ? `Request a quote for ${product.name}`

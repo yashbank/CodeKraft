@@ -399,7 +399,8 @@ export function SettingsScreen({
                 noValidate
                 onSubmit={async (e) => {
                   e.preventDefault();
-                  const form = new FormData(e.currentTarget);
+                  const formEl = e.currentTarget;
+                  const form = new FormData(formEl);
                   const currentPassword = String(form.get("currentPassword") ?? "");
                   const confirmPassword = String(form.get("confirmPassword") ?? "");
                   const nextErrors: typeof securityErrors = {};
@@ -425,7 +426,7 @@ export function SettingsScreen({
                   }
                   setNewPw("");
                   setSecurityErrors({});
-                  e.currentTarget.reset();
+                  formEl.reset();
                   toast.success("Password changed");
                 }}
               >

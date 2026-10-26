@@ -80,39 +80,46 @@ export function ServicesEditor({ services: initial }: { services: ServiceRow[] }
       .filter(Boolean);
 
     setSaving(true);
-    const result = await saveService({
-      id: current?.id,
-      slug,
-      title,
-      summary: String(data.get("summary") ?? "").trim(),
-      deliverables,
-      bodyJson: fromPlainText(String(data.get("body") ?? "")),
-      icon,
-      position: current?.position ?? services.length,
-      published,
-    });
-    setSaving(false);
+    try {
+      const result = await saveService({
+        id: current?.id,
+        slug,
+        title,
+        summary: String(data.get("summary") ?? "").trim(),
+        deliverables,
+        bodyJson: fromPlainText(String(data.get("body") ?? "")),
+        icon,
+        position: current?.position ?? services.length,
+        published,
+      });
 
-    if (!result.ok) {
-      toast.error(result.error.message);
-      return;
+      if (!result.ok) {
+        toast.error(result.error.message);
+        return;
+      }
+      const svc = result.data.service;
+      const saved: Row = {
+        id: svc.id,
+        slug: svc.slug,
+        title: svc.title,
+        summary: svc.summary ?? "",
+        icon: svc.icon ?? "code",
+        deliverables: svc.deliverables ?? [],
+        published: svc.published,
+        position: svc.position,
+      };
+      setServices((all) =>
+        current ? all.map((x) => (x.id === saved.id ? saved : x)) : [...all, saved],
+      );
+      setEditing(null);
+      toast.success("Service saved — content revalidated");
+      router.refresh();
+    } catch (err) {
+      // BUG-060: a throw (network/serialization) used to leave the sheet stuck on "Saving…".
+      toast.error(err instanceof Error ? err.message : "Couldn't save the service");
+    } finally {
+      setSaving(false);
     }
-    const saved: Row = {
-      id: result.data.service.id,
-      slug: result.data.service.slug,
-      title: result.data.service.title,
-      summary: result.data.service.summary ?? "",
-      icon: result.data.service.icon ?? "code",
-      deliverables: result.data.service.deliverables ?? [],
-      published: result.data.service.published,
-      position: result.data.service.position,
-    };
-    setServices((all) =>
-      current ? all.map((x) => (x.id === saved.id ? saved : x)) : [...all, saved],
-    );
-    toast.success("Service saved — content revalidated");
-    setEditing(null);
-    router.refresh();
   }
 
   async function handleDelete(s: Row) {

@@ -18,24 +18,28 @@ export async function verifyTurnstile(
     return { success: false, error: "CAPTCHA_TOKEN_REQUIRED" };
   }
 
-  // Test token handling for local/test environments
-  if (token === "test-invalid-token" || token === "invalid-token") {
-    return { success: false, error: "CAPTCHA_FAILED" };
+  const isProd = process.env.NODE_ENV === "production";
+
+  // Test/dev shortcuts are never honored in production (CAPTCHA bypass).
+  if (!isProd) {
+    if (token === "test-invalid-token" || token === "invalid-token") {
+      return { success: false, error: "CAPTCHA_FAILED" };
+    }
+    if (
+      token.startsWith("test-valid") ||
+      token === "mock-turnstile-token" ||
+      process.env.TURNSTILE_SECRET_KEY === "test" ||
+      process.env.NODE_ENV === "test"
+    ) {
+      return { success: true };
+    }
   }
 
-  if (
-    token.startsWith("test-valid") ||
-    token === "mock-turnstile-token" ||
-    process.env.TURNSTILE_SECRET_KEY === "test" ||
-    process.env.NODE_ENV === "test"
-  ) {
-    return { success: true };
-  }
-
-  const secret = process.env.TURNSTILE_SECRET_KEY;
+  // Prod env documents TURNSTILE_SECRET; TURNSTILE_SECRET_KEY kept as an alias.
+  const secret = process.env.TURNSTILE_SECRET_KEY ?? process.env.TURNSTILE_SECRET;
   if (!secret) {
     // Fail-closed in production if secret missing
-    if (process.env.NODE_ENV === "production") {
+    if (isProd) {
       throw new AppError(ErrorCode.CAPTCHA_FAILED, "Turnstile verification unavailable");
     }
     return { success: true };

@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,9 +11,10 @@ import { Label } from "@/components/ui/label";
 import { AuthCard, AuthLayout } from "./AuthLayout";
 import { Banner } from "./Banner";
 import { CountdownButton } from "./CountdownButton";
+import { authClient } from "@/modules/auth/client";
 import { maskEmail } from "./format";
 import { PasswordInput } from "./PasswordInput";
-import { PasswordRules } from "./PasswordRules";
+import { PasswordRules, passwordChecks } from "./PasswordRules";
 import { TurnstilePlaceholder } from "./TurnstilePlaceholder";
 
 export type ResetPasswordStep = "request" | "sent" | "set" | "done" | "invalid";
@@ -21,19 +24,75 @@ export type ResetPasswordStep = "request" | "sent" | "set" | "done" | "invalid";
  * Never confirms whether an account exists. Phase 7 wires `forgetPassword` / `resetPassword`.
  */
 export function ResetPasswordScreen({
-  step,
-  email = "you@example.com",
-  loading = false,
-  error,
+  step: stepProp,
+  email: emailProp = "you@example.com",
+  loading: loadingProp = false,
+  error: errorProp,
+  token,
 }: {
   step: ResetPasswordStep;
   email?: string;
   loading?: boolean;
   error?: string | null;
+  /** Reset token from the emailed link (`?token=`). */
+  token?: string;
 }) {
+  const router = useRouter();
+  const [sentEmail, setSentEmail] = React.useState<string | null>(null);
+  const [submitting, setSubmitting] = React.useState(false);
+  const [requestError, setRequestError] = React.useState<string | null>(null);
+  const step = sentEmail !== null && stepProp === "request" ? "sent" : stepProp;
+  const email = sentEmail ?? emailProp;
+  const loading = loadingProp || submitting;
+  const error = requestError ?? errorProp;
   const [password, setPassword] = React.useState("");
   const [confirm, setConfirm] = React.useState("");
   const [touched, setTouched] = React.useState(false);
+  async function requestReset(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const value = String(new FormData(e.currentTarget).get("email") ?? "").trim();
+    if (!value) return;
+    setSubmitting(true);
+    setRequestError(null);
+    try {
+      // Better Auth answers identically whether or not the account exists (no enumeration).
+      const res = await authClient.requestPasswordReset({
+        email: value,
+        redirectTo: "/auth/reset",
+      });
+      if (res.error) {
+        setRequestError("We couldn't send the reset link. Please try again in a moment.");
+      } else {
+        setSentEmail(value);
+      }
+    } catch {
+      setRequestError("We couldn't send the reset link. Please try again in a moment.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function setNewPassword(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setTouched(true);
+    if (!token || confirm !== password || !passwordChecks(password).every((c) => c.ok)) return;
+    setSubmitting(true);
+    setRequestError(null);
+    try {
+      const res = await authClient.resetPassword({ newPassword: password, token });
+      if (res.error) {
+        setRequestError(res.error.message ?? "We couldn't update your password. Please try again.");
+      } else {
+        toast.success("Password updated. Sign in with your new password.");
+        router.push("/auth/login");
+      }
+    } catch {
+      setRequestError("We couldn't update your password. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   const mismatch = touched && confirm.length > 0 && confirm !== password;
 
   return (
@@ -43,7 +102,7 @@ export function ResetPasswordScreen({
           <form
             className="space-y-4"
             aria-busy={loading || undefined}
-            onSubmit={(e) => e.preventDefault()}
+            onSubmit={(e) => void requestReset(e)}
           >
             {error ? <Banner tone="danger">{error}</Banner> : null}
             <div className="space-y-2">
@@ -91,7 +150,7 @@ export function ResetPasswordScreen({
           <form
             className="space-y-4"
             aria-busy={loading || undefined}
-            onSubmit={(e) => e.preventDefault()}
+            onSubmit={(e) => void setNewPassword(e)}
           >
             {error ? <Banner tone="danger">{error}</Banner> : null}
             <div className="space-y-2">

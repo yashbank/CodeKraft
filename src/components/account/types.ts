@@ -207,6 +207,8 @@ export interface OrderView {
   enabledMethods: PaymentProvider[];
   instructionsFor: PaymentInstructions;
   payment?: {
+    /** payments.id; target of `submitPaymentReference`. */
+    id?: string;
     status: PaymentStatus;
     reference?: string;
     paidOn?: string;

@@ -201,7 +201,19 @@ export function OrderDetail({
             {primary === "confirm" ? (
               <Button onClick={() => setConfirmOpen(true)}>Confirm payment</Button>
             ) : null}
-            {primary === "fulfil" ? <Button>Fulfil</Button> : null}
+            {primary === "fulfil" || !paid ? (
+              <Button
+                disabled={!paid}
+                title={paid ? undefined : "Available once the order is paid"}
+                onClick={() =>
+                  document
+                    .getElementById("order-fulfilment")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+              >
+                Fulfil
+              </Button>
+            ) : null}
             <RowActions
               label="More order actions"
               actions={[
@@ -807,7 +819,11 @@ function Card({
   hint?: string;
 }) {
   return (
-    <section aria-label={title} className="rounded-lg border border-border bg-surface p-4 lg:p-5">
+    <section
+      id={title === "Items & fulfilment" ? "order-fulfilment" : undefined}
+      aria-label={title}
+      className="scroll-mt-20 rounded-lg border border-border bg-surface p-4 lg:p-5"
+    >
       <h2 className="mb-3 text-h4">{title}</h2>
       {collapsedOnPhone ? (
         <>

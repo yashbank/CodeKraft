@@ -624,6 +624,13 @@ export function ChatScreen({
               maxLength={2000}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                // Enter sends; Shift+Enter newline; skip while an IME composition is active.
+                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  e.currentTarget.form?.requestSubmit();
+                }
+              }}
               disabled={capReached || emailUnverified || streaming}
               placeholder={
                 emailUnverified

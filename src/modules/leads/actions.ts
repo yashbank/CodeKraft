@@ -20,9 +20,7 @@ import { leadsService } from "./service";
 /**
  * API-LEAD-01 `createLead` — public (visitor or signed-in customer). Was missing its
  * `definePublicAction` wrapper even though `leadsService.createLead` (service.ts) is implemented.
- * NOTE: no UI calls this yet. `/contact` and the `InquirySheet` callers still use
- * `InquiryForm`'s built-in `simulateSubmit` fallback (fake success, no `leads` row), because
- * wiring them needs a Turnstile decision (no real widget exists; see the handoff doc).
+ * The browser reaches it through `site-actions.ts` `submitLead` (supplies the Context).
  */
 export const createLeadAction = definePublicAction({
   name: "API-LEAD-01 createLead",

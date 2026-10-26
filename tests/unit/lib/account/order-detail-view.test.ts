@@ -210,6 +210,7 @@ describe("mapOrderDetailToOrderView (SCR-ACC-11)", () => {
   it("maps the payment summary fields (status/reference/paidOn/confirmedAt/received)", () => {
     const view = mapOrderDetailToOrderView(baseDetail({ payments: [basePayment()] }));
     expect(view.payment).toEqual({
+      id: "pay-1",
       status: "confirmed",
       reference: "UTR12345678",
       paidOn: "2026-01-01T12:00:00Z",

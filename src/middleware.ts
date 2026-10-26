@@ -54,6 +54,8 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   const reqHeaders = new Headers(req.headers);
   reqHeaders.set("x-nonce", nonce);
   reqHeaders.set("x-host-kind", kind);
+  // Original (pre-rewrite) path so server layouts can build a correct login `next`.
+  reqHeaders.set("x-request-path", pathname + req.nextUrl.search);
 
   let res: NextResponse;
   if (kind === "admin") {
@@ -101,11 +103,12 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   // CSP Policy with nonce and CSP violation reporting
   const cspPolicy = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'sha256-${themeScriptHash}' 'strict-dynamic' 'unsafe-eval' https:`,
+    `script-src 'self' 'nonce-${nonce}' 'sha256-${themeScriptHash}' 'strict-dynamic' 'unsafe-eval' https: https://challenges.cloudflare.com`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: blob: https:",
-    "connect-src 'self' https: wss:",
+    "connect-src 'self' https: wss: https://challenges.cloudflare.com",
+    "frame-src 'self' https://challenges.cloudflare.com",
     "object-src 'none'",
     "base-uri 'self'",
     "frame-ancestors 'none'",

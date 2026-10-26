@@ -214,6 +214,19 @@ export function AccountShell({
                     <Link href="/" className="flex items-center gap-2 text-body-sm text-fg-muted">
                       <ArrowLeftIcon aria-hidden className="size-4" /> Back to site
                     </Link>
+                    <button
+                      type="button"
+                      className="mt-3 flex items-center gap-2 text-body-sm text-fg-muted"
+                      onClick={() => {
+                        void authClient.signOut().then(() => {
+                          setDrawer(false);
+                          router.push("/");
+                          router.refresh();
+                        });
+                      }}
+                    >
+                      <LogOutIcon aria-hidden className="size-4" /> Sign out
+                    </button>
                   </div>
                 </SheetContent>
               </Sheet>

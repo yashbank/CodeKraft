@@ -114,6 +114,7 @@ export function mapOrderDetailToOrderView(detail: OrderDetail): OrderView {
 
   const payment: OrderView["payment"] = latestPayment
     ? {
+        id: latestPayment.paymentId,
         status: latestPayment.status,
         reference: latestPayment.customerReference ?? undefined,
         paidOn: latestPayment.customerSubmittedAt ?? undefined,

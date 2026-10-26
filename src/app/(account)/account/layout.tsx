@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { redirectToLogin } from "@/lib/authz/login-redirect";
 import { getSession } from "@/modules/auth/service";
 import { AccountShellWrapper } from "@/components/account/AccountShellWrapper";
 
@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function AccountAreaLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session) {
-    redirect("/auth/login?next=/account");
+    return redirectToLogin("/account");
   }
 
   const name: string =

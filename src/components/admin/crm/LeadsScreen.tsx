@@ -862,6 +862,31 @@ export function LeadsScreen({
                   toast.error(result.error.message);
                   return;
                 }
+                // BUG-090: merge the saved row into local state so the list is fresh without a reload
+                // (the service only returns `leadId`, so the row is built from the submitted input).
+                const email = String(fd.get("email") ?? "").trim();
+                const phone = String(fd.get("phone") ?? "").trim();
+                const company = String(fd.get("company") ?? "").trim();
+                setLeads((ls) => [
+                  {
+                    id: result.data.leadId,
+                    name,
+                    company: company || undefined,
+                    email,
+                    phone: phone || undefined,
+                    source: "manual",
+                    product:
+                      newProduct !== "none"
+                        ? products.find((p) => p.id === newProduct)?.name
+                        : undefined,
+                    services: serviceInterest,
+                    status: "new",
+                    assignee: assignToMe ? currentUser : undefined,
+                    priority: newPriority,
+                    createdAt: new Date().toISOString(),
+                  },
+                  ...ls,
+                ]);
                 toast.success("Lead created");
                 setNewOpen(false);
                 formEl.reset();

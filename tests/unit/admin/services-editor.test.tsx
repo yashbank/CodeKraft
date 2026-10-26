@@ -49,3 +49,23 @@ describe("ServicesEditor create flow (BUG-046)", () => {
     );
   });
 });
+
+describe("ServicesEditor save (BUG-060)", () => {
+  it("resets Saving and surfaces a toast when saveService rejects", async () => {
+    const { saveService } = await import("@/modules/content/admin-mutations");
+    vi.mocked(saveService).mockRejectedValueOnce(new Error("boom"));
+    render(<ServicesEditor services={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: /add service/i }));
+    fireEvent.change(screen.getByLabelText(/title/i), { target: { value: "X svc" } });
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    await waitFor(() => expect(screen.getByRole("button", { name: /^save$/i })).toBeEnabled());
+  });
+
+  it("closes the sheet after a successful save", async () => {
+    render(<ServicesEditor services={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: /add service/i }));
+    fireEvent.change(screen.getByLabelText(/title/i), { target: { value: "Closes" } });
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: /^save$/i })).toBeNull());
+  });
+});

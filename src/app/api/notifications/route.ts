@@ -5,7 +5,7 @@
 import { NextResponse } from "next/server";
 import { resolveRouteContext } from "@/lib/authz/resolve-route-context";
 import { requireContext } from "@/lib/authz/context";
-import { ErrorCode } from "@/lib/errors";
+import { ErrorCode, isAppError } from "@/lib/errors";
 import { notificationsService } from "@/modules/notifications/service";
 import { pollNotificationsSchema } from "@/modules/notifications/types";
 
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, data: result });
   } catch (caught) {
     const err = caught as { statusCode?: number; code?: string; message?: string };
-    const status = err.statusCode ?? 500;
+    const status = isAppError(caught) ? caught.httpStatus : (err.statusCode ?? 500);
     return NextResponse.json(
       {
         ok: false,

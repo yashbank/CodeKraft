@@ -9,6 +9,7 @@ import {
   XIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -30,6 +31,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
 import { format } from "@/lib/money";
+import { submitPaymentReference } from "@/modules/payments/customer-mutations";
 import { Banner } from "./Banner";
 import { PaymentMethodChoice } from "./CheckoutScreen";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -214,6 +216,8 @@ export function OrderStatusScreen({
   const stage = orderStage(o);
   const [method, setMethod] = React.useState<PaymentProvider>(o.paymentMethod);
   const [reference, setReference] = React.useState(o.payment?.reference ?? "");
+  const router = useRouter();
+  const [submitting, setSubmitting] = React.useState(false);
   const [retrying, setRetrying] = React.useState(false);
   const [summaryOpen, setSummaryOpen] = React.useState(false);
   const expiresIn = o.expiresAt ? timeUntil(o.expiresAt, now) : null;
@@ -234,11 +238,24 @@ export function OrderStatusScreen({
   const referenceForm = (
     <form
       className="space-y-4 rounded-lg border border-border bg-surface p-4"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
-        toast.success("Reference submitted", {
-          description: "We'll confirm within 1 working day.",
-        });
+        const paymentId = o.payment?.id;
+        if (!paymentId) {
+          toast.error("No payment found for this order. Please contact support.");
+          return;
+        }
+        setSubmitting(true);
+        const result = await submitPaymentReference({ paymentId, reference: reference.trim() });
+        setSubmitting(false);
+        if (result.ok) {
+          toast.success("Reference submitted", {
+            description: "We'll confirm within 1 working day.",
+          });
+          router.refresh();
+        } else {
+          toast.error(result.error.message);
+        }
       }}
     >
       <h3 className="text-body font-semibold text-fg">
@@ -273,7 +290,7 @@ export function OrderStatusScreen({
         </div>
       </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Button type="submit" disabled={reference.trim().length < 6}>
+        <Button type="submit" disabled={submitting || reference.trim().length < 6}>
           I&apos;ve paid — submit reference
         </Button>
         {o.enabledMethods.length > 1 ? (

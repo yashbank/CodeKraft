@@ -4,6 +4,7 @@ import { SearchIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, type ReactNode } from "react";
 
+import { SignOutButton } from "@/components/account/SignOutButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -90,9 +91,7 @@ export function SystemPage({
               <Link href="/products">Browse products</Link>
             </Button>
           ) : variant === "forbidden_admin" ? (
-            <Button asChild size="lg">
-              <Link href="/auth/logout">Sign out</Link>
-            </Button>
+            <SignOutButton />
           ) : (
             <Button asChild size="lg">
               <Link href={homeHref}>Go home</Link>

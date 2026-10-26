@@ -594,11 +594,28 @@ export function ProductEditor({
     router.refresh();
   }
 
+  /** Required readiness items still missing (SEO is optional). BUG-061. */
+  const missingReadiness = [
+    ...(complete.offerings ? [] : ["Offering with base price and payment method"]),
+    ...(complete.media ? [] : ["At least one image with alt text"]),
+    ...(complete.ownership ? [] : ["Ownership active or pending"]),
+  ];
+
   async function submitForApproval(publishAt: string) {
-    const result = await submitProductForApproval({
-      productId,
-      publishAt: publishAt.length > 0 ? new Date(publishAt).toISOString() : undefined,
-    });
+    if (missingReadiness.length > 0) {
+      toast.error(`Not ready to publish: ${missingReadiness.join("; ")}`);
+      return;
+    }
+    let result;
+    try {
+      result = await submitProductForApproval({
+        productId,
+        publishAt: publishAt.length > 0 ? new Date(publishAt).toISOString() : undefined,
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't submit for approval");
+      return;
+    }
     if (!result.ok) {
       toast.error(result.error.message);
       return;
@@ -2464,11 +2481,20 @@ export function ProductEditor({
                   disabled={
                     product.status === "published" ||
                     product.status === "pending_approval" ||
-                    product.status === "archived"
+                    product.status === "archived" ||
+                    missingReadiness.length > 0
                   }
                 >
                   Submit for approval
                 </Button>
+                {missingReadiness.length > 0 ? (
+                  <p
+                    className="self-center text-caption text-fg-muted"
+                    data-testid="publish-blocked"
+                  >
+                    Complete before submitting: {missingReadiness.join("; ")}.
+                  </p>
+                ) : null}
                 {product.status === "published" ? (
                   <Button
                     type="button"

@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       serviceInterest: body.serviceInterest ? [body.serviceInterest] : [],
       budgetHint: body.budget || undefined,
       productId: body.productId || undefined,
-      turnstileToken: body.turnstileToken || "test-bypass-token",
+      turnstileToken: body.turnstileToken,
     });
 
     return NextResponse.json({
