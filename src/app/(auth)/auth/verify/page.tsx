@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { VerifyEmailScreen, type VerifyEmailState } from "@/components/account/VerifyEmailScreen";
 
 export const metadata: Metadata = {
-  title: "Verify your email — CodeKraft",
+  title: "Verify your email",
   description: "Verify your email address to activate your account and access software purchases.",
 };
 

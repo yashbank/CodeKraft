@@ -5,7 +5,7 @@ import {
 } from "@/components/account/ResetPasswordScreen";
 
 export const metadata: Metadata = {
-  title: "Reset password — CodeKraft",
+  title: "Reset password",
   description: "Reset your CodeKraft account password.",
 };
 

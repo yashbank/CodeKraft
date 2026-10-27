@@ -13,5 +13,12 @@ describe("safeRedirectPath", () => {
     "",
     null,
     "/a\nb",
+    "/%2F%2Fevil.com",
+    "/%5Cevil.com",
+    "/\\/evil.com",
+    "/\t/evil.com",
+    " //evil.com",
+    "JaVaScRiPt:alert(1)",
+    "data:text/html,x",
   ])("rejects %s", (v) => expect(safeRedirectPath(v, "/account")).toBe("/account"));
 });

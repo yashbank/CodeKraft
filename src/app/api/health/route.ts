@@ -5,20 +5,20 @@ import { getDb } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-const VERSION = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? process.env.APP_VERSION ?? "dev";
-
-/** docs/06 §3.7 — 200 ok after SELECT 1, 503 degraded otherwise. Used by uptime ping and Docker HEALTHCHECK. */
+/**
+ * docs/06 §3.7 — 200 ok after SELECT 1, 503 degraded otherwise. Used by uptime ping and Docker HEALTHCHECK.
+ * BUG-075: public body is only {ok,status}; no version/commit/DB detail is exposed.
+ */
 export async function GET(): Promise<NextResponse> {
-  const time = new Date().toISOString();
   try {
     await getDb().execute(sql`select 1`);
     return NextResponse.json(
-      { status: "ok", db: "ok", version: VERSION, time },
+      { ok: true, status: "ok" },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch {
     return NextResponse.json(
-      { status: "degraded", db: "error", version: VERSION, time },
+      { ok: false, status: "degraded" },
       { status: 503, headers: { "Cache-Control": "no-store" } },
     );
   }

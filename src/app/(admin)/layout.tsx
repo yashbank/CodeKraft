@@ -9,6 +9,9 @@ import { redirectToLogin } from "@/lib/authz/login-redirect";
 
 export const dynamic = "force-dynamic";
 
+/** BUG-074: tinted favicon so admin tabs are distinguishable from the storefront. */
+export const metadata = { icons: { icon: "/brand/admin-icon.svg" } };
+
 /**
  * Admin area: only reachable through the admin host (middleware rewrite) and only for
  * admin-class sessions (docs/09 §3.1, §3.5). Full admin shell lands in P8.
