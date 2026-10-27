@@ -14,6 +14,7 @@ import { approvalsService } from "@/modules/approvals/service";
 import { offeringsService } from "@/modules/offerings/service";
 import { revalidateTagSafe, revalidateTagsSafe } from "@/lib/revalidate";
 import { getPublicMediaBaseUrl } from "@/lib/storage";
+import { loadProductCovers } from "./cover-images";
 import { triggerReindexSafe } from "@/modules/search/indexer";
 import type { Currency } from "@/lib/money";
 import {
@@ -1710,6 +1711,10 @@ export class DefaultCatalogService implements CatalogService {
       .orderBy(featuredProducts.position)
       .limit(max);
 
+    const covers = await loadProductCovers(
+      dbClient,
+      rows.map((r) => r.product.id),
+    );
     const cards: ProductCard[] = [];
 
     for (const r of rows) {
@@ -1750,7 +1755,7 @@ export class DefaultCatalogService implements CatalogService {
         slug: p.slug,
         name: p.name,
         shortDescription: p.shortDescription,
-        coverImage: null,
+        coverImage: covers.get(p.id) ?? null,
         category: cat ? { id: cat.id, slug: cat.slug, name: cat.name } : null,
         tags: tagRows,
         fromPrice: minRow
@@ -1795,6 +1800,10 @@ export class DefaultCatalogService implements CatalogService {
       .orderBy(desc(products.publishedAt))
       .limit(max);
 
+    const covers = await loadProductCovers(
+      dbClient,
+      rows.map((r) => r.product.id),
+    );
     const cards: ProductCard[] = [];
     for (const r of rows) {
       const p = r.product;
@@ -1834,7 +1843,7 @@ export class DefaultCatalogService implements CatalogService {
         slug: p.slug,
         name: p.name,
         shortDescription: p.shortDescription,
-        coverImage: null,
+        coverImage: covers.get(p.id) ?? null,
         category: cat ? { id: cat.id, slug: cat.slug, name: cat.name } : null,
         tags: tagRows,
         fromPrice: minRow
@@ -1917,6 +1926,10 @@ export class DefaultCatalogService implements CatalogService {
     const hasMore = rows.length > limit;
     const items = hasMore ? rows.slice(0, limit) : rows;
 
+    const covers = await loadProductCovers(
+      dbClient,
+      items.map((r) => r.product.id),
+    );
     const cards: WishlistProductCard[] = items.map((r) => ({
       id: r.product.id,
       productId: r.product.id,
@@ -1924,7 +1937,7 @@ export class DefaultCatalogService implements CatalogService {
       slug: r.product.slug,
       name: r.product.name,
       shortDescription: r.product.shortDescription,
-      coverImage: null,
+      coverImage: covers.get(r.product.id) ?? null,
       category: r.category
         ? { id: r.category.id, slug: r.category.slug, name: r.category.name }
         : null,

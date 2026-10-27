@@ -101,6 +101,10 @@ export interface Testimonial {
 export interface ClientLogo {
   id: string;
   name: string;
+  /** Uploaded logo image (Admin → Content → Testimonials & logos); omitted = name as text. */
+  logoUrl?: string;
+  /** Optional link to the client's site. */
+  href?: string;
 }
 
 export interface BlogTeaser {
@@ -112,6 +116,8 @@ export interface BlogTeaser {
   readingMinutes: number;
   coverAlt: string;
   coverTone: number;
+  /** Uploaded cover (Admin → Content → Blog → Cover image); omitted = gradient placeholder. */
+  coverUrl?: string;
   product: { slug: string; name: string; category: CategoryRef };
 }
 
@@ -166,6 +172,8 @@ export interface CaseStudySummary {
   publishedAt: string;
   coverAlt: string;
   coverTone: number;
+  /** Uploaded cover (Admin → Content → Case studies → Cover image); omitted = placeholder. */
+  coverUrl?: string;
 }
 
 export interface CaseStudy extends CaseStudySummary {

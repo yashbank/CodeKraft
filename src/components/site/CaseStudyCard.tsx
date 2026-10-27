@@ -24,7 +24,12 @@ export function CaseStudyCard({
       className={cn("group relative gap-0 overflow-hidden py-0", className)}
     >
       <div className="relative p-3 pb-0">
-        <MediaPlaceholder alt={study.coverAlt} tone={study.coverTone} ratio="4/3" />
+        <MediaPlaceholder
+          alt={study.coverAlt}
+          tone={study.coverTone}
+          src={study.coverUrl}
+          ratio="4/3"
+        />
         <Badge tone="neutral" className="absolute top-5 left-5">
           {study.industry}
         </Badge>

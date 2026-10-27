@@ -49,7 +49,11 @@ export function EntitlementCard({
       )}
       aria-labelledby={`ent-${e.id}-title`}
     >
-      <ProductCover name={e.productName} className={compact ? "size-12" : "size-16"} />
+      <ProductCover
+        name={e.productName}
+        imageUrl={e.productImageUrl}
+        className={compact ? "size-12" : "size-16"}
+      />
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex flex-wrap items-center gap-2">
           <h3 id={`ent-${e.id}-title`} className="text-body font-semibold text-fg">

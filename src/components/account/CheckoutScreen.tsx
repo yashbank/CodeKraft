@@ -649,7 +649,11 @@ export function CheckoutScreen({
             ) : (
               <>
                 <div className="flex gap-3">
-                  <ProductCover name={offering.productName} className="size-14" />
+                  <ProductCover
+                    name={offering.productName}
+                    imageUrl={offering.productImageUrl}
+                    className="size-14"
+                  />
                   <div className="min-w-0">
                     <p className="text-body font-semibold text-fg">{offering.productName}</p>
                     <p className="text-body-sm text-fg-muted">{offering.offeringName}</p>

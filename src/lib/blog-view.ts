@@ -23,6 +23,7 @@ export function toBlogTeaser(card: BlogCard): BlogTeaser {
     readingMinutes: readingMinutes(`${card.title} ${card.excerpt ?? ""}`),
     coverAlt: card.cover?.alt ?? card.title,
     coverTone: toneFromSlug(card.slug),
+    coverUrl: card.cover?.url || undefined,
     product: {
       slug: card.product.slug,
       name: card.product.name,

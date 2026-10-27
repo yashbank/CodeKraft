@@ -1,4 +1,5 @@
 import { FileTextIcon, ImageIcon, PlayIcon, PresentationIcon } from "lucide-react";
+import Image from "next/image";
 
 import { cn } from "@/components/ui/_utils";
 
@@ -17,6 +18,7 @@ const TONES = [
  * Token-gradient stand-in for product/case-study/blog media until `next/image` + `media` rows
  * land (P7). Keeps the final aspect ratio so layouts don't shift when real images arrive.
  * `alt` is exposed via `role="img"` so screen readers get the same description.
+ * Pass `src` (an uploaded image URL) to render the real image in the same frame instead.
  */
 export function MediaPlaceholder({
   alt,
@@ -24,9 +26,14 @@ export function MediaPlaceholder({
   kind = "image",
   ratio = "16/10",
   label,
+  src,
+  sizes = "(min-width: 1024px) 50vw, 100vw",
   className,
 }: {
   alt: string;
+  /** Real image URL; when set the frame shows it instead of the gradient stand-in. */
+  src?: string | null;
+  sizes?: string;
   tone?: number;
   kind?: MediaKind;
   /** CSS aspect-ratio value. */
@@ -35,6 +42,19 @@ export function MediaPlaceholder({
   label?: string;
   className?: string;
 }) {
+  if (src) {
+    return (
+      <div
+        style={{ aspectRatio: ratio }}
+        className={cn(
+          "relative w-full overflow-hidden rounded-md border border-border bg-elevated",
+          className,
+        )}
+      >
+        <Image src={src} alt={alt} fill sizes={sizes} className="object-cover" />
+      </div>
+    );
+  }
   const Icon =
     kind === "video_embed"
       ? PlayIcon

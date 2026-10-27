@@ -7,6 +7,7 @@ import type { DbOrTx } from "@/lib/db";
 import type { Context } from "@/lib/authz/context";
 import type { ListResult } from "@/modules/_shared/zod";
 import { categories, products, productTags, tags } from "../../../drizzle/schema/catalog";
+import { loadProductCovers } from "../catalog/cover-images";
 import type { ProductCard } from "../catalog/types";
 import type { ListProductsInput, RetrievedChunk, SearchService } from "./contracts";
 import type { FilterFacets } from "./types";
@@ -97,6 +98,10 @@ export class DefaultSearchService implements SearchService {
     const hasMore = rows.length > limit;
     const items = hasMore ? rows.slice(0, limit) : rows;
 
+    const covers = await loadProductCovers(
+      dbClient,
+      items.map((r) => r.product.id),
+    );
     const cards: ProductCard[] = [];
 
     for (const r of items) {
@@ -114,7 +119,7 @@ export class DefaultSearchService implements SearchService {
         slug: p.slug,
         name: p.name,
         shortDescription: p.shortDescription,
-        coverImage: null,
+        coverImage: covers.get(p.id) ?? null,
         category: cat ? { id: cat.id, slug: cat.slug, name: cat.name } : null,
         tags: tagRows,
         fromPrice: null,

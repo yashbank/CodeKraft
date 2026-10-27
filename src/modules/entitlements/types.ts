@@ -235,7 +235,14 @@ export type SubscriptionView = z.infer<typeof subscriptionViewSchema>;
  */
 export const entitlementViewSchema = z.object({
   entitlementId: uuid,
-  product: z.object({ id: uuid, name: z.string(), slug: z.string(), published: z.boolean() }),
+  product: z.object({
+    id: uuid,
+    name: z.string(),
+    slug: z.string(),
+    published: z.boolean(),
+    /** Primary product image (R8-13); null = initials placeholder. */
+    imageUrl: z.string().nullable().optional(),
+  }),
   offering: z.object({ id: uuid, name: z.string() }),
   deliveryType: deliveryTypeSchema,
   status: entitlementStatusSchema,
