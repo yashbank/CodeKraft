@@ -19,6 +19,10 @@ import type {
   PaymentProvider,
 } from "@/components/account/types";
 import type { BillingInput, CheckoutPreview } from "@/modules/orders/types";
+import {
+  ALL_MANUAL_AVAILABLE,
+  type ManualMethodAvailability,
+} from "@/modules/payments/availability";
 import type { CustomerProfileView, UserView } from "@/modules/users/types";
 
 /**
@@ -48,10 +52,24 @@ export function toManualPaymentProviders(methods: readonly string[]): PaymentPro
 export function toCheckoutPaymentProviders(
   methods: readonly string[],
   razorpayAvailable: boolean,
+  manual: ManualMethodAvailability = ALL_MANUAL_AVAILABLE,
 ): PaymentProvider[] {
   return methods.filter(
     (m): m is PaymentProvider =>
-      m === "manual_upi" || m === "manual_bank" || (m === "razorpay" && razorpayAvailable),
+      (m === "manual_upi" && manual.manual_upi) ||
+      (m === "manual_bank" && manual.manual_bank) ||
+      (m === "razorpay" && razorpayAvailable),
+  );
+}
+
+/** Manual methods the offering accepts but whose details admin hasn't filled in yet (R8-01). */
+export function unconfiguredManualMethods(
+  methods: readonly string[],
+  manual: ManualMethodAvailability,
+): PaymentProvider[] {
+  return methods.filter(
+    (m): m is PaymentProvider =>
+      (m === "manual_upi" && !manual.manual_upi) || (m === "manual_bank" && !manual.manual_bank),
   );
 }
 
@@ -64,6 +82,7 @@ const PURCHASE_MODEL_LINE: Record<string, string> = {
 export function mapCheckoutPreviewToOffering(
   preview: CheckoutPreview,
   razorpayAvailable = false,
+  manual: ManualMethodAvailability = ALL_MANUAL_AVAILABLE,
 ): CheckoutOffering {
   return {
     productName: preview.product.title,
@@ -76,7 +95,8 @@ export function mapCheckoutPreviewToOffering(
       ? `GST (${(preview.taxRateBps / 100).toFixed(0)}%)`
       : "Tax",
     tax: preview.product.taxEnabled ? preview.tax : null,
-    enabledMethods: toCheckoutPaymentProviders(preview.enabledMethods, razorpayAvailable),
+    enabledMethods: toCheckoutPaymentProviders(preview.enabledMethods, razorpayAvailable, manual),
+    unavailableMethods: unconfiguredManualMethods(preview.enabledMethods, manual),
     displayCurrency: preview.displayTotal.currency,
     productHref: `/products/${preview.product.slug}`,
   };

@@ -5,7 +5,11 @@
  * Uses defineAction (SA-07).
  */
 import { defineAction } from "@/lib/actions/envelope";
-import { assignDeliveryTaskSchema, completeDeliveryTaskSchema } from "./types";
+import {
+  assignDeliveryTaskSchema,
+  completeDeliveryTaskSchema,
+  setLicenseKeySchema,
+} from "./types";
 import { deliveryService } from "./service";
 
 export const completeDeliveryTaskAction = defineAction({
@@ -20,4 +24,12 @@ export const assignDeliveryTaskAction = defineAction({
   input: assignDeliveryTaskSchema,
   permission: "delivery.tasks.write",
   handler: (input, ctx) => deliveryService.assignDeliveryTask(ctx, input),
+});
+
+/** API-DEL-08 `setLicenseKey` (R8-03) — encrypts the key, closes the open provision task. */
+export const setLicenseKeyAction = defineAction({
+  name: "API-DEL-08 setLicenseKey",
+  input: setLicenseKeySchema,
+  permission: "delivery.tasks.write",
+  handler: (input, ctx) => deliveryService.setLicenseKey(ctx, input),
 });

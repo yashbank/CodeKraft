@@ -63,7 +63,20 @@ export const bankDetailsSchema = z.strictObject({
   ifsc: ifscSchema,
   bankName: text(120),
   branch: text(120).optional(),
+  swift: z
+    .string()
+    .trim()
+    .regex(/^[A-Z0-9]{8}([A-Z0-9]{3})?$/, "8 or 11 letters/digits")
+    .optional(),
 });
+
+/** Max length of the inline UPI QR data URL (~220 KB image). */
+export const UPI_QR_IMAGE_MAX_CHARS = 300_000;
+/** R8-01: admin-uploaded UPI QR image, stored inline as a base64 data URL. */
+export const upiQrImageSchema = z
+  .string()
+  .max(UPI_QR_IMAGE_MAX_CHARS, "QR image is too large (max ~220 KB)")
+  .regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/, "must be a PNG, JPEG or WebP image");
 
 export const retentionSchema = z.strictObject({
   chatMonths: z.number().int().min(1).max(120),
@@ -88,6 +101,8 @@ export const siteSettingsSchema = z.strictObject({
   gstin: gstinSchema.nullable(),
   sellerDetails: sellerDetailsSchema.nullable(),
   upiVpa: upiVpaSchema.nullable(),
+  upiPayeeName: text(80).nullable(),
+  upiQrImage: upiQrImageSchema.nullable(),
   bankDetails: bankDetailsSchema.nullable(),
   razorpaySettings: razorpaySettingsSchema.nullable(),
   enabledPaymentMethods: z.array(paymentMethodSchema).max(5),
@@ -109,6 +124,8 @@ export const SITE_SETTINGS_DEFAULTS: SiteSettings = Object.freeze({
   gstin: null,
   sellerDetails: null,
   upiVpa: null,
+  upiPayeeName: null,
+  upiQrImage: null,
   bankDetails: null,
   razorpaySettings: null,
   enabledPaymentMethods: ["manual_upi", "manual_bank"],

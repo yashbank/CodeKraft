@@ -43,6 +43,7 @@ import { CURRENCIES } from "@/lib/money";
 import { updateRazorpaySettings, updateSettings } from "@/modules/settings/admin-mutations";
 import { testRazorpayConnection } from "@/modules/settings/razorpay-test-connection";
 import { Banner } from "../Banner";
+import { ManualPaymentSettings } from "./ManualPaymentSettings";
 import { Gauge } from "../charts/Gauge";
 import { formatDateTime, plainNumber } from "../format";
 import { PageHeader } from "../PageHeader";
@@ -311,7 +312,6 @@ export function SettingsScreen({
 }: SettingsScreenProps) {
   const [section, setSection] = React.useState<SectionKey>(initialSection);
   const [dangerous, setDangerous] = React.useState<string | null>(null);
-  const [upi, setUpi] = React.useState(s.payments.upiEnabled);
   const [menuOnly, setMenuOnly] = React.useState(s.ai.menuOnly);
   const ro = !isSuperAdmin;
   const router = useRouter();
@@ -718,100 +718,7 @@ export function SettingsScreen({
 
           {section === "payment-methods" ? (
             <>
-              <p className="text-body-sm text-fg-muted">
-                Why this matters: these details are shown to customers at checkout and on the order
-                page.
-              </p>
-              <section
-                aria-labelledby="pm-upi"
-                className="space-y-3 rounded-lg border border-border bg-surface p-4"
-              >
-                <div className="flex items-center gap-3">
-                  <Switch
-                    id="st-upi"
-                    checked={upi}
-                    disabled={ro}
-                    onCheckedChange={(v) => (v ? setUpi(true) : setDangerous("Disable UPI?"))}
-                  />
-                  <Label htmlFor="st-upi" id="pm-upi">
-                    UPI enabled
-                  </Label>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-[1fr_1fr_160px]">
-                  <Field id="st-vpa" label="VPA" required={upi}>
-                    <Input
-                      id="st-vpa"
-                      defaultValue={s.payments.vpa}
-                      className="font-mono"
-                      disabled={ro}
-                      placeholder="name@bank"
-                    />
-                  </Field>
-                  <Field id="st-payee" label="Payee name">
-                    <Input id="st-payee" defaultValue={s.payments.payeeName} disabled={ro} />
-                  </Field>
-                  <div className="space-y-1.5">
-                    <span className="text-body-sm font-semibold">Sample QR</span>
-                    <div
-                      className="grid size-28 place-items-center rounded-md bg-inverse-fg text-caption text-inverse"
-                      aria-label="Sample UPI QR preview on white"
-                    >
-                      QR
-                    </div>
-                  </div>
-                </div>
-              </section>
-              <section
-                aria-labelledby="pm-bank"
-                className="space-y-3 rounded-lg border border-border bg-surface p-4"
-              >
-                <div className="flex items-center gap-3">
-                  <Switch id="st-bank" defaultChecked={s.payments.bankEnabled} disabled={ro} />
-                  <Label htmlFor="st-bank" id="pm-bank">
-                    Bank transfer enabled
-                  </Label>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field id="st-acct-name" label="Account name" required>
-                    <Input id="st-acct-name" defaultValue={s.payments.accountName} disabled={ro} />
-                  </Field>
-                  <Field id="st-acct-no" label="Account number" required>
-                    <Input
-                      id="st-acct-no"
-                      defaultValue={s.payments.accountNumber}
-                      className="font-mono"
-                      disabled={ro}
-                    />
-                  </Field>
-                  <Field id="st-ifsc" label="IFSC" required>
-                    <Input
-                      id="st-ifsc"
-                      defaultValue={s.payments.ifsc}
-                      className="font-mono uppercase"
-                      disabled={ro}
-                    />
-                  </Field>
-                  <Field id="st-bank-name" label="Bank name" required>
-                    <Input id="st-bank-name" defaultValue={s.payments.bankName} disabled={ro} />
-                  </Field>
-                  <Field id="st-swift" label="SWIFT" optional>
-                    <Input
-                      id="st-swift"
-                      defaultValue={s.payments.swift}
-                      className="font-mono"
-                      disabled={ro}
-                    />
-                  </Field>
-                  <Field id="st-instr" label="Instructions note" className="sm:col-span-2">
-                    <Textarea
-                      id="st-instr"
-                      rows={2}
-                      defaultValue={s.payments.instructions}
-                      disabled={ro}
-                    />
-                  </Field>
-                </div>
-              </section>
+              <ManualPaymentSettings payments={s.payments} ro={ro} />
               <RazorpaySection razorpay={s.payments.razorpay} ro={ro} />
               <div className="grid gap-3 sm:grid-cols-2">
                 {["Stripe", "PayPal"].map((g) => (
@@ -826,10 +733,12 @@ export function SettingsScreen({
                   </div>
                 ))}
               </div>
-              <Banner tone="warning">
-                Disabling a method used by active offerings affects:{" "}
-                {s.payments.affectedOfferings.join(", ")}.
-              </Banner>
+              {s.payments.affectedOfferings.length > 0 ? (
+                <Banner tone="warning">
+                  Disabling a method used by active offerings affects:{" "}
+                  {s.payments.affectedOfferings.join(", ")}.
+                </Banner>
+              ) : null}
             </>
           ) : null}
 
@@ -1140,7 +1049,7 @@ export function SettingsScreen({
               {saveable
                 ? "Changes are audited with before/after."
                 : section === "payment-methods"
-                  ? "Use the Razorpay card's own save button. Other payment settings are not available yet."
+                  ? "UPI / bank details and Razorpay each have their own save button above."
                   : "Saving this section is not available yet."}
             </span>
             <span className="ml-auto flex gap-2">
@@ -1164,13 +1073,11 @@ export function SettingsScreen({
           <DialogHeader>
             <DialogTitle>{dangerous}</DialogTitle>
             <DialogDescription>
-              {dangerous?.startsWith("Disable UPI")
-                ? "Checkout will hide UPI; active offerings that only accept UPI cannot be bought until another method is enabled."
-                : dangerous?.startsWith("Switch")
-                  ? "The assistant will only offer quick-reply menus until you turn this off."
-                  : dangerous?.startsWith("Lower")
-                    ? "No AI answers will be served today."
-                    : "Visitors will see the static poster instead of the 3D scene."}
+              {dangerous?.startsWith("Switch")
+                ? "The assistant will only offer quick-reply menus until you turn this off."
+                : dangerous?.startsWith("Lower")
+                  ? "No AI answers will be served today."
+                  : "Visitors will see the static poster instead of the 3D scene."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1180,7 +1087,6 @@ export function SettingsScreen({
             <Button
               variant="destructive"
               onClick={() => {
-                if (dangerous?.startsWith("Disable UPI")) setUpi(false);
                 if (dangerous?.startsWith("Switch")) setMenuOnly(true);
                 setDangerous(null);
               }}

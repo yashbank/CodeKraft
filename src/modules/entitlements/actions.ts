@@ -10,8 +10,11 @@ import {
   extendAccessSchema,
   grantEntitlementSchema,
   resetDownloadCountSchema,
+  revealLicenseKeySchema,
   revokeEntitlementSchema,
 } from "./types";
+import { AppError, ErrorCode } from "@/lib/errors";
+import { checkClass } from "@/lib/rate-limit";
 import { entitlementsService } from "./service";
 
 export const grantEntitlementManualAction = defineAction({
@@ -40,4 +43,25 @@ export const extendAccessAction = defineAction({
   input: extendAccessSchema,
   permission: "entitlements.admin",
   handler: (input, ctx) => entitlementsService.extendAccess(ctx, input),
+});
+
+/**
+ * API-DEL-03 `revealLicenseKey` (R8-03) — the customer's own key, rate class `key_reveal`
+ * (10/hour per user), audited `license.revealed` inside the service.
+ */
+export const revealLicenseKeyAction = defineAction({
+  name: "API-DEL-03 revealLicenseKey",
+  input: revealLicenseKeySchema,
+  permission: "delivery.self",
+  handler: async (input, ctx) => {
+    if (ctx.userId) {
+      const limited = await checkClass("key_reveal", { user: ctx.userId });
+      if (!limited.allowed) {
+        throw new AppError(ErrorCode.RATE_LIMITED, undefined, {
+          retryAfterMs: Math.max(0, limited.resetAt - Date.now()),
+        });
+      }
+    }
+    return entitlementsService.revealLicenseKey(ctx, input);
+  },
 });

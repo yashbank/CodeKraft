@@ -582,11 +582,27 @@ export function CheckoutScreen({
           </Step>
 
           <Step n={3} title="Payment method">
-            <PaymentMethodChoice
-              methods={offering.enabledMethods}
-              value={method}
-              onChange={setMethod}
-            />
+            {offering.enabledMethods.length > 0 ? (
+              <PaymentMethodChoice
+                methods={offering.enabledMethods}
+                value={method}
+                onChange={setMethod}
+              />
+            ) : (
+              <Banner tone="warning" title="Online payment isn't available right now">
+                We haven&apos;t finished setting up payments for this product yet. Please{" "}
+                <Link href="/contact" className="text-accent-text underline">
+                  contact us
+                </Link>{" "}
+                and we&apos;ll help you complete your purchase.
+              </Banner>
+            )}
+            {offering.enabledMethods.length > 0 && offering.unavailableMethods?.length ? (
+              <p className="text-caption text-fg-muted" data-testid="unavailable-methods">
+                {offering.unavailableMethods.map((m) => METHODS[m].label).join(" and ")}{" "}
+                {offering.unavailableMethods.length > 1 ? "are" : "is"} not available right now.
+              </p>
+            ) : null}
             <div className="flex items-start gap-2">
               <Checkbox
                 id="consent"
@@ -622,7 +638,7 @@ export function CheckoutScreen({
                 size="lg"
                 className="w-full lg:w-auto"
                 loading={submitting}
-                disabled={!consent && !submitting}
+                disabled={(!consent || offering.enabledMethods.length === 0) && !submitting}
               >
                 {submitting ? "Placing order…" : `Place order · ${format(total)}`}
               </Button>

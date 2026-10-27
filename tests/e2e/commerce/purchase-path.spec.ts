@@ -7,8 +7,9 @@ config({ path: ".env.local" });
 // Dev server compiles each route on first hit.
 const slow = expect.configure({ timeout: 60_000 });
 
-const SITE = "http://localhost:3000";
-const ADMIN = "http://admin.localhost:3000";
+const PORT = process.env.PORT ?? "3000";
+const SITE = process.env.E2E_SITE_URL ?? `http://localhost:${PORT}`;
+const ADMIN = process.env.E2E_ADMIN_URL ?? `http://admin.localhost:${PORT}`;
 const PW = "e2e-passphrase-long-enough-9";
 const ADMIN_EMAIL = "yashbank2002@gmail.com";
 const ADMIN_PW = "local-super-admin-passphrase-2026";

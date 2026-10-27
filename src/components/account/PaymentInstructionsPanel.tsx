@@ -251,7 +251,15 @@ export function PaymentInstructionsPanel({
           : "Complete the transfer below, then submit your reference — we confirm manually (usually within 1 working day) and access unlocks once we do."}
       </Banner>
 
-      {instructions.method === "manual_upi" ? (
+      {"unconfigured" in instructions && instructions.unconfigured ? (
+        <Banner tone="warning" title="Payment details aren't available yet">
+          We&apos;re still setting up this payment method. Please{" "}
+          <a href="/contact" className="underline">
+            contact us
+          </a>{" "}
+          with order <span className="font-mono">{orderNo}</span> and we&apos;ll help you pay.
+        </Banner>
+      ) : instructions.method === "manual_upi" ? (
         <section className="space-y-3">
           <h2 className="text-h4 text-fg">Pay via UPI</h2>
           {instructions.qrDataUrl ? (
@@ -259,8 +267,17 @@ export function PaymentInstructionsPanel({
             <img
               src={instructions.qrDataUrl}
               alt="Scan to pay with any UPI app"
-              className="size-40 rounded-lg border border-border"
+              className="size-48 rounded-lg border border-border bg-white object-contain p-2"
             />
+          ) : null}
+          {instructions.upiUri ? (
+            <p className="text-body-sm text-fg-muted">
+              On your phone?{" "}
+              <a href={instructions.upiUri} className="text-accent-text underline">
+                Open in your UPI app
+              </a>{" "}
+              — or pay the UPI ID below from any UPI app.
+            </p>
           ) : null}
           <dl className="divide-y divide-border">
             <Row label="UPI ID" value={instructions.vpa} mono />

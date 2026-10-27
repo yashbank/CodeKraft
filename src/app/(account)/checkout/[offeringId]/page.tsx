@@ -9,6 +9,7 @@ import { previewCheckoutAction } from "@/modules/orders/actions";
 import { findPendingCheckoutOrder } from "@/modules/orders/resume";
 import { settingsService } from "@/modules/settings/service";
 import { getMyProfileQuery } from "@/modules/users/queries";
+import { manualMethodAvailability } from "@/modules/payments/availability";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +83,11 @@ export default async function CheckoutPage({ params }: PageProps) {
     );
   }
 
-  const offering = mapCheckoutPreviewToOffering(previewResult.data, razorpayAvailable);
+  const offering = mapCheckoutPreviewToOffering(
+    previewResult.data,
+    razorpayAvailable,
+    manualMethodAvailability(siteSettings),
+  );
   const billing = profileResult.ok
     ? mapProfileToBilling(profileResult.data.user, profileResult.data.profile)
     : { name: session.user.name ?? "", email: session.user.email, country: "IN" };

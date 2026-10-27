@@ -902,13 +902,17 @@ export interface SettingsData {
     upiEnabled: boolean;
     vpa: string;
     payeeName: string;
+    /** Admin-uploaded UPI QR image (data URL) or `null` (R8-01). */
+    qrImage: string | null;
     bankEnabled: boolean;
     accountName: string;
     accountNumber: string;
     ifsc: string;
     bankName: string;
+    branch?: string;
     swift?: string;
-    instructions: string;
+    /** Every enabled method key (incl. gateways) so a manual-method save keeps the others. */
+    enabledMethods: string[];
     affectedOfferings: string[];
     /** V1.1 Razorpay gateway config (D-501) — TEST MODE ONLY; `keySecretMasked`/
      * `webhookSecretMasked` are already last-4-masked (or `""` when unset) and MUST NEVER be

@@ -47,8 +47,15 @@ function mapPaymentInstructions(
   instructions: ProviderPaymentInstructions | null,
 ): AccountPaymentInstructions {
   if (!instructions) return {};
+  if ("unconfigured" in instructions && instructions.unconfigured) return { notConfigured: true };
   if (instructions.method === "manual_upi") {
-    return { upi: { vpa: instructions.vpa, payeeName: instructions.payeeName } };
+    return {
+      upi: {
+        vpa: instructions.vpa,
+        payeeName: instructions.payeeName,
+        qrDataUrl: instructions.qrDataUrl,
+      },
+    };
   }
   if (instructions.method === "manual_bank") {
     return {
