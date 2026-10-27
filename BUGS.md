@@ -27,48 +27,54 @@
 | BUG-045 | major | admin /admin/admin-users (invite dialog) | The "Staff" role radio is disabled with the text "defined, not seeded in release 1" - staff invites are blocked by the UI itself, not a server error. Partner invite (role=admin + partner) works correctly end to end (approval-request flow, not an email-token invite). | open |
 | BUG-046 | minor | admin Content > Services, Testimonials/Logos | Confirmed: same stale-list-after-create pattern as BUG-036 — `ServicesEditor.handleSave`, `TestimonialsLogos.handleSaveTestimonial`, and `handleSaveLogo` only called `router.refresh()`, never patching local state, so a newly created row only appeared after a manual reload. Fixed the same way as BUG-036: each handler now merges the saved row (from the server response) into local state (update-in-place if editing, append if new) before calling `router.refresh()`. | fixed |
 | BUG-047 | minor | admin /admin/finance, /admin/finance/payouts, /admin/finance/invoices | Confirmed: no `page.tsx` existed at these paths, so direct navigation 404'd. `/payouts` was superseded by the combined "Partners & Payouts" screen (`/admin/finance/partners`) and `/invoices` by "Reports & Statements" (`/admin/finance/reports`); bare `/admin/finance` had no index. Added three thin redirect pages: `/admin/finance` → `/admin/finance/ledger`, `/admin/finance/payouts` → `/admin/finance/partners`, `/admin/finance/invoices` → `/admin/finance/reports`. | fixed |
-| BUG-048 | blocker | /account/orders/[id] | "I've paid - submit reference" only fires a toast, no server call; payments.customer_reference stays null (OrderStatusScreen.tsx:232). Local audit LC-03. | open |
+| BUG-048 | blocker | /account/orders/[id] | "I've paid - submit reference" only fires a toast, no server call; payments.customer_reference stays null (OrderStatusScreen.tsx:232). Local audit LC-03. | fixed (browser-verified local, round 6) |
 | BUG-049 | blocker | /contact, product InquirySheet | Inquiry submit uses simulateSubmit; createLead never called, leads table stays empty. Local audit LC-04. | open |
-| BUG-050 | blocker | /products/[slug] "Request a quote" | Quote sheet has no onSubmit; simulated success, nothing persisted (custom_quotes 0). Local audit LC-05. | open |
-| BUG-051 | blocker | /auth/reset | "Send reset link" does nothing: onSubmit only preventDefault, no request (ResetPasswordScreen.tsx:46). Local audit LC-06. | open |
-| BUG-052 | major | /products/[slug] Buy now (logged out) | Links /auth/login?returnTo=..., LoginForm reads only ?next= so buyer lands on /account. Prod PC-01, local LC-02. | open |
-| BUG-053 | major | /account/* | No sign-out control in customer UI (mobile account sheet and elsewhere); /auth/logout 404. Prod PC-02, local LC-08. | open |
-| BUG-054 | major | /account/queries/[id] | "Mark resolved" has no onClick. Local LC-07 (see MANUAL #10). | open |
-| BUG-055 | major | /account/settings Security | Password change succeeds but e.currentTarget null after await -> pageerror, no success toast (SettingsScreen.tsx:428). Local LC-09. | open |
+| BUG-050 | blocker | /products/[slug] "Request a quote" | Quote sheet has no onSubmit; simulated success, nothing persisted (custom_quotes 0). Local audit LC-05. | fixed, browser check partial |
+| BUG-051 | blocker | /auth/reset | "Send reset link" does nothing: onSubmit only preventDefault, no request (ResetPasswordScreen.tsx:46). Local audit LC-06. | fixed (browser-verified local, round 6) |
+| BUG-052 | major | /products/[slug] Buy now (logged out) | Links /auth/login?returnTo=..., LoginForm reads only ?next= so buyer lands on /account. Prod PC-01, local LC-02. | fixed (browser-verified local, round 6) |
+| BUG-053 | major | /account/* | No sign-out control in customer UI (mobile account sheet and elsewhere); /auth/logout 404. Prod PC-02, local LC-08. | fixed (browser-verified local, round 6) |
+| BUG-054 | major | /account/queries/[id] | "Mark resolved" has no onClick. Local LC-07 (see MANUAL #10). | fixed (browser-verified local, round 6) |
+| BUG-055 | major | /account/settings Security | Password change succeeds but e.currentTarget null after await -> pageerror, no success toast (SettingsScreen.tsx:428). Local LC-09. | fixed (browser-verified local, round 6) |
 | BUG-056 | major | admin /orders/[id] | "Fulfil" header button has no onClick (OrderDetail.tsx:204). Local LA-01. | open |
-| BUG-057 | major | admin /orders | Order number link / row click does not navigate to detail. Local LA-02. | open |
-| BUG-058 | major | admin global search | Never returns results; AdminShell searchItems defaults to [] and nothing supplies them. Local LA-03. | open |
+| BUG-057 | major | admin /orders | Order number link / row click does not navigate to detail. Local LA-02. | fixed (browser-verified local, round 6) |
+| BUG-058 | major | admin global search | Never returns results; AdminShell searchItems defaults to [] and nothing supplies them. Local LA-03. | fixed (browser-verified local, round 6) |
 | BUG-059 | major | admin /settings | "Save changes" (all sections except Razorpay) is toast-only, nothing persists (SettingsScreen.tsx:54). Local LA-04. | open |
-| BUG-060 | major | admin /content/services | Save stuck on "Saving…", sheet stays open, though POST 200 and row persists. Local LA-06. | open |
-| BUG-061 | major | admin /products/[id] Publish | "Submit for approval" enabled while readiness incomplete; click is a silent no-op. Local LA-07. | open |
-| BUG-062 | major | admin /dashboard | "Revenue by period" chart empty despite a paid order in range. Local LA-10. | open |
-| BUG-063 | major | admin host, all protected routes | Unauthenticated/expired session renders inline AdminLoginPrompt (200) at same URL instead of redirecting to /auth/login. No data leaked. Prod PA-01, local LA-14. | open |
+| BUG-060 | major | admin /content/services | Save stuck on "Saving…", sheet stays open, though POST 200 and row persists. Local LA-06. | fixed, browser check partial |
+| BUG-061 | major | admin /products/[id] Publish | "Submit for approval" enabled while readiness incomplete; click is a silent no-op. Local LA-07. | fixed, browser check partial |
+| BUG-062 | major | admin /dashboard | "Revenue by period" chart empty despite a paid order in range. Local LA-10. | fixed (browser-verified local, round 6) |
+| BUG-063 | major | admin host, all protected routes | Unauthenticated/expired session renders inline AdminLoginPrompt (200) at same URL instead of redirecting to /auth/login. No data leaked. Prod PA-01, local LA-14. | fixed (browser-verified local, round 6) |
 | BUG-064 | major | /blog, /blog/* "View product" | Links to unpublished/nonexistent product slugs -> 404. Prod PC-08. | open |
-| BUG-065 | major | admin+site headers | CSP is Report-Only only, no enforced CSP; RO policy contains 'unsafe-eval' https:. Prod PA-05. | open |
+| BUG-065 | major | admin+site headers | CSP is Report-Only only, no enforced CSP; RO policy contains 'unsafe-eval' https:. Prod PA-05. | fixed in harden/round-6 |
 | BUG-066 | major | admin /customers | No create-customer action anywhere; /orders/new says "Invite the customer first" with no invite control. Feature gap. Local LA-08. | open |
 | BUG-067 | major | admin /content/blog | 404; no standalone blog editor (only per-product Blog tab). Feature gap. Local LA-09. | open |
 | BUG-068 | major | admin /settings/*, /content/logos, /finance/statements, /quotes/[id], /login | Spec routes 404 (no page.tsx); admin 404 renders customer-site chrome. Prod PA-02/03/04. | open |
 | BUG-069 | major | /auth/register (local) | Verify email never queued locally: EMAIL_ALLOWLIST skips non-allowlisted recipients, link unreachable. Env/config. Local LC-01. | open |
 | BUG-070 | major | prod content | Placeholder/typo content live on prod: FAQ "faq 1"/"qwkjkj q 2", hero "Sanket its keep", "[X] business days", testimonial "Bhaksar", "1.5million"/"30000", cover alt "dh", empty /services, placeholder /projects. Needs real copy in admin. Prod PC-03..07,12,13,20. | needs human |
-| BUG-071 | minor | GET /api/notifications | Unauth returns 500 with code UNAUTHENTICATED, should be 401. Prod PA-06. | open |
-| BUG-072 | minor | admin /auth/login, /auth/reset | Title "Sign in — CodeKraft · CodeKraft"; reset page shows customer marketing panel. Prod PA-07/08. | open |
-| BUG-073 | minor | admin host /robots.txt | Same as customer (Allow: /); admin host should disallow all. Prod PA-09. | open |
-| BUG-074 | minor | admin host favicon | Identical to customer favicon. Prod PA-10. | open |
-| BUG-075 | minor | GET /api/health | Public, exposes commit SHA and DB status. Prod PA-11. | open |
+| BUG-071 | minor | GET /api/notifications | Unauth returns 500 with code UNAUTHENTICATED, should be 401. Prod PA-06. | fixed (browser-verified local, round 6) |
+| BUG-072 | minor | admin /auth/login, /auth/reset | Title "Sign in — CodeKraft · CodeKraft"; reset page shows customer marketing panel. Prod PA-07/08. | fixed in harden/round-6 |
+| BUG-073 | minor | admin host /robots.txt | Same as customer (Allow: /); admin host should disallow all. Prod PA-09. | fixed in harden/round-6 |
+| BUG-074 | minor | admin host favicon | Identical to customer favicon. Prod PA-10. | fixed in harden/round-6 |
+| BUG-075 | minor | GET /api/health | Public, exposes commit SHA and DB status. Prod PA-11. | fixed in harden/round-6 |
 | BUG-076 | minor | /sitemap.xml, /about, /case-studies | 8/20 sitemap URLs 404; /about, /case-studies 404. Prod PC-09/10. | open |
 | BUG-077 | minor | / (home) | No blog band rendered. Prod PC-11. | open |
 | BUG-078 | minor | /products?q= (desktop) | Empty search shows "0 products" and empty grid, no empty-state message. Prod PC-14. | open |
 | BUG-079 | minor | /account/settings, /products heart | Profile save / notification toggle / wishlist toggle persist but no visible feedback on prod. Prod PC-15/16/17. | open |
 | BUG-080 | minor | /account/queries new-query dialog | Disabled Attachments control with "isn't wired up yet" copy. Prod PC-18. | open |
 | BUG-081 | minor | /products (375) | List/grid view toggle hidden on mobile; confirm intent. Prod PC-19. | open |
-| BUG-082 | minor | anon redirect | /account/wishlist, /account/settings, /checkout/* redirect with next=/account, not the requested path. Local LC-10. | open |
+| BUG-082 | minor | anon redirect | /account/wishlist, /account/settings, /checkout/* redirect with next=/account, not the requested path. Local LC-10. | fixed (browser-verified local, round 6) |
 | BUG-083 | minor | /products/[slug] wishlist | Panel shows "Add to wishlist" while item saved; cannot remove from product page. Local LC-11. | open |
-| BUG-084 | minor | /account/chat | Enter does not send; assistant claims it can't see orders. Local LC-12/17. | open |
+| BUG-084 | minor | /account/chat | Enter does not send; assistant claims it can't see orders. Local LC-12/17. | fixed (browser-verified local, round 6) |
 | BUG-085 | minor | /checkout/[offeringId] | Invalid coupon shows raw "Coupon rejected: not_found"; 375 horizontal overflow (415px); reload hides pending payment panel. Local LC-13/15/18. | open |
 | BUG-086 | minor | /account/purchases/[id] | After confirm entitlement stays provisioning_state=pending, "Key not issued yet". Local LC-14. | open |
-| BUG-087 | minor | admin host /auth/login | Valid customer creds show "Invalid email or password." (misleading, access correctly denied). Local LC-16. | open |
+| BUG-087 | minor | admin host /auth/login | Valid customer creds show "Invalid email or password." (misleading, access correctly denied). Local LC-16. | fixed (browser-verified local, round 6) |
 | BUG-088 | minor | admin /settings General | Site name input readOnly, no edit path. Local LA-05. | open |
-| BUG-089 | minor | admin /orders/new | "Create order" disabled with no visible reason (ManualOrderForm.tsx:705-716). Local LA-11. | open |
-| BUG-090 | minor | admin /leads | "Lead created" toast but list stale until reload. Local LA-12. | open |
-| BUG-091 | minor | admin /queries, /admin-users invite | Reply / Request approval succeed with no success toast. Local LA-17/18. | open |
+| BUG-089 | minor | admin /orders/new | "Create order" disabled with no visible reason (ManualOrderForm.tsx:705-716). Local LA-11. | fixed, browser check partial |
+| BUG-090 | minor | admin /leads | "Lead created" toast but list stale until reload. Local LA-12. | fixed (browser-verified local, round 6) |
+| BUG-091 | minor | admin /queries, /admin-users invite | Reply / Request approval succeed with no success toast. Local LA-17/18. | fixed, browser check partial |
 | BUG-092 | minor | admin /leads/[id] | "Send custom quote" is a plain link, lead not prefilled. Local LA-19. | open |
+
+## Round 6 retest (local, commit 6e1d01e) - see scratchpad/retest/RESULTS.md
+| BUG-093 | major | /contact, InquiryForm Send inquiry | Mouse click on Send inquiry lost: page shifts ~90px between mousedown and mouseup, click lands on DIV, no submit. Keyboard Enter submits (lead row inquiry_form). Verify headed. | open |
+| BUG-056 | major | admin /orders/[id] | RETEST FAIL: Fulfil enabled on unpaid order, click does nothing (no scroll/fulfilment focus). | open |
+| BUG-059 | major | admin /settings Tax & GSTIN | RETEST FAIL: state change + Save changes not persisted after reload. | open |
+| BUG-049 | blocker | /contact | RETEST FAIL (mouse path only): keyboard/JS submit persists lead; product InquirySheet PASS (product_cta, product_id set). | open |
