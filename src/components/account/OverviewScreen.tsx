@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { format } from "@/lib/money";
 import { Banner } from "./Banner";
+import { ResendVerificationButton } from "./ResendVerificationButton";
 import { EmptyState } from "./EmptyState";
 import { EntitlementCard } from "./EntitlementCard";
 import { formatDate, relativeTime } from "./format";
@@ -24,6 +25,8 @@ export interface OverviewAction {
 export interface OverviewScreenProps {
   firstName: string;
   emailVerified: boolean;
+  /** Signed-in email, used by the verification banner's resend button. */
+  email?: string;
   actions: OverviewAction[];
   entitlements: EntitlementSummary[];
   invoices: InvoiceSummary[];
@@ -81,9 +84,14 @@ export function OverviewScreen(props: OverviewScreenProps) {
           tone="warning"
           title="Verify your email to buy products"
           action={
-            <Button size="sm" variant="secondary">
-              Resend
-            </Button>
+            props.email ? (
+              <ResendVerificationButton
+                email={props.email}
+                label="Resend"
+                size="sm"
+                variant="secondary"
+              />
+            ) : undefined
           }
         >
           We sent a link to your inbox. Purchases and the assistant unlock once it&apos;s verified.

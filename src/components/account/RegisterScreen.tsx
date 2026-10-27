@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { AuthCard, AuthLayout } from "./AuthLayout";
 import { Banner } from "./Banner";
-import { CountdownButton } from "./CountdownButton";
+import { ResendVerificationButton } from "./ResendVerificationButton";
 import { GoogleButton } from "./GoogleButton";
 import { PasswordInput } from "./PasswordInput";
 import { PasswordRules, passwordChecks } from "./PasswordRules";
@@ -26,11 +26,14 @@ export function RegisterScreen({
   sentTo = "you@example.com",
   errorMessage,
   phoneOtpEnabled = false,
+  continueHref = "/account",
   onSubmit,
   onGoogleClick,
 }: {
   state?: RegisterState;
   sentTo?: string;
+  /** "Continue" target on the account-created panel (the new customer is already signed in). */
+  continueHref?: string;
   errorMessage?: React.ReactNode;
   phoneOtpEnabled?: boolean;
   onSubmit?: (values: { name: string; email: string; password: string }) => void;
@@ -45,16 +48,25 @@ export function RegisterScreen({
   if (state === "sent") {
     return (
       <AuthLayout>
-        <AuthCard title="Check your inbox">
+        <AuthCard title="Account created — verify your email">
           <p className="text-body text-fg-muted" aria-live="polite">
             We sent a verification link to <span className="font-medium text-fg">{sentTo}</span>. It
             expires in 24 hours.
           </p>
+          <Banner tone="info">
+            You can sign in and browse right away. Purchases, payments and the assistant unlock once
+            your email is verified.
+          </Banner>
           <div className="flex flex-wrap items-center gap-2">
-            <CountdownButton label="Resend email" initialRemaining={60} variant="secondary" />
-            <Button variant="ghost" asChild>
-              <Link href="/auth/login">Back to sign in</Link>
+            <Button asChild>
+              <Link href={continueHref}>Continue to your account</Link>
             </Button>
+            <ResendVerificationButton
+              email={sentTo}
+              label="Resend email"
+              initialRemaining={60}
+              variant="secondary"
+            />
           </div>
           <p className="text-caption text-fg-subtle">
             Didn&apos;t get it? Check spam; links expire after 24 hours.

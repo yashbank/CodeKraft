@@ -44,6 +44,8 @@ export const NOTIFICATION_TYPE_CATEGORY: Record<ModuleNotificationType, Notifica
   "product.updated": "system",
   "quote.sent": "system",
   "chat.cap_reached": "chatbot",
+  "chat.new": "chatbot",
+  "chat.handoff": "chatbot",
   "system.job_failed": "system",
   "system.fx_stale": "system",
   "finance.reconcile_failed": "system",

@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { RegisterScreen, type RegisterState } from "@/components/account/RegisterScreen";
+import { VERIFY_CALLBACK_URL } from "@/components/account/ResendVerificationButton";
 import { authClient } from "@/modules/auth/client";
 
 const ALREADY_EXISTS_MESSAGE: ReactNode = (
@@ -31,6 +32,8 @@ export default function RegisterPage() {
         email: values.email,
         password: values.password,
         name: values.name,
+        // The emailed link verifies the token, then lands on /auth/verify's "verified" state.
+        callbackURL: VERIFY_CALLBACK_URL,
       });
 
       if (error) {

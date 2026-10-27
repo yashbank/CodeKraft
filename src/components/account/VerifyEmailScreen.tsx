@@ -6,7 +6,7 @@ import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { AuthCard, AuthLayout } from "./AuthLayout";
-import { CountdownButton } from "./CountdownButton";
+import { ResendVerificationButton } from "./ResendVerificationButton";
 import { maskEmail } from "./format";
 
 export type VerifyEmailState = "verifying" | "verified" | "pending" | "expired";
@@ -86,9 +86,13 @@ export function VerifyEmailScreen({
         <AuthCard title="This link has expired" lede="Verification links work for 24 hours.">
           <MailWarningIcon aria-hidden className="size-12 text-warning" />
           <div className="flex flex-wrap gap-2">
-            <Button size="lg" disabled={!signedIn}>
-              Send a new link
-            </Button>
+            {signedIn ? (
+              <ResendVerificationButton email={email} label="Send a new link" size="lg" />
+            ) : (
+              <Button size="lg" disabled>
+                Send a new link
+              </Button>
+            )}
             <Button size="lg" variant="secondary" asChild>
               <Link href="/auth/login">Sign in</Link>
             </Button>
@@ -108,7 +112,13 @@ export function VerifyEmailScreen({
             it to unlock purchases and the assistant.
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <CountdownButton label="Resend verification email" variant="primary" size="lg" />
+            {signedIn ? (
+              <ResendVerificationButton email={email} variant="primary" size="lg" />
+            ) : (
+              <Button size="lg" asChild>
+                <Link href="/auth/login?next=/auth/verify">Sign in to resend</Link>
+              </Button>
+            )}
             <Button variant="ghost" size="lg" asChild>
               <Link href="/account/settings">Change email</Link>
             </Button>

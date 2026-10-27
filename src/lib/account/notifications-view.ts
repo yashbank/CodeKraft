@@ -48,6 +48,8 @@ const GROUP_BY_EVENT: Record<EventType, AccountNotificationType> = {
   "lead.assigned": "orders",
   "lead.overdue_digest": "orders",
   "chat.cap_reached": "orders",
+  "chat.new": "orders",
+  "chat.handoff": "orders",
   "system.job_failed": "orders",
   "system.fx_stale": "orders",
   "finance.reconcile_failed": "orders",

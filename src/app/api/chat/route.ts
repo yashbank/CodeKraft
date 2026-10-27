@@ -31,6 +31,10 @@ export async function POST(req: Request) {
       );
     }
 
+    // R8-08: server-side gate (the UI also disables the composer) -- unverified customers get a
+    // 403 EMAIL_UNVERIFIED JSON response here, before any stream or cap counter is touched.
+    await chatService.assertCanChat(authedCtx);
+
     const provider = getLLMProvider();
     const eventStream = chatService.sendMessage(authedCtx, parse.data, provider);
 

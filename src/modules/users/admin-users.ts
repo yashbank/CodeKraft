@@ -9,7 +9,18 @@ import type { RequestContext } from "@/lib/authz/context";
 import { approvalsService } from "@/modules/approvals/service";
 import { countActiveAdmins } from "@/modules/approvals/approver-set";
 import type { ApprovalPayloadMap } from "@/modules/approvals/types";
-import { sessions, twoFactor, userRoles, users } from "../../../drizzle/schema/auth";
+import { randomBytes } from "node:crypto";
+import { getEnv } from "@/lib/env";
+import { sendEmail } from "@/lib/email/transport";
+import { getLogger } from "@/lib/logger";
+import {
+  accounts,
+  sessions,
+  twoFactor,
+  userRoles,
+  users,
+  verifications,
+} from "../../../drizzle/schema/auth";
 import { partners } from "../../../drizzle/schema/users-ext";
 import { productOwnershipLines, productOwnerships } from "../../../drizzle/schema/ownership";
 import { leads } from "../../../drizzle/schema/leads";
@@ -443,6 +454,15 @@ export async function applyAdminUserChange(
         })
         .onConflictDoNothing();
     }
+
+    // R8-09: the invite used to create a password-less user and send nothing, so the invitee had
+    // no way in. Email a "set your password" link unless they can already sign in with one.
+    const [credential] = await tx
+      .select({ id: accounts.id })
+      .from(accounts)
+      .where(and(eq(accounts.userId, userId), eq(accounts.providerId, "credential")))
+      .limit(1);
+    if (!credential) await sendAdminInvite(tx, { userId, email: p.email, role: p.role });
   } else if (isChangeRole) {
     const p = payload as {
       userId: string;
@@ -476,5 +496,40 @@ export async function applyAdminUserChange(
     await tx.delete(sessions).where(eq(sessions.userId, p.userId));
 
     await tx.update(leads).set({ assignedTo: null }).where(eq(leads.assignedTo, p.userId));
+  }
+}
+
+/** Invite links stay valid for 7 days (a normal reset link is 1 h). */
+export const ADMIN_INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * Issue a Better Auth `reset-password:<token>` verification row (the same shape
+ * `/request-password-reset` writes, so `/api/auth/reset-password` consumes it and creates the
+ * credential account) and email the invitee a link to the admin host's set-password screen.
+ * Mail failures are logged, never thrown: the approval must still apply, and the invitee can use
+ * "Forgot password" on the admin login as a fallback.
+ */
+export async function sendAdminInvite(
+  tx: TxCtx,
+  invite: { userId: string; email: string; role: string },
+): Promise<void> {
+  const token = randomBytes(24).toString("base64url");
+  await tx.insert(verifications).values({
+    identifier: `reset-password:${token}`,
+    value: invite.userId,
+    expiresAt: new Date(Date.now() + ADMIN_INVITE_TTL_MS),
+  });
+  const adminUrl = getEnv().NEXT_PUBLIC_ADMIN_URL.replace(/\/$/, "");
+  const url = `${adminUrl}/auth/reset?token=${encodeURIComponent(token)}`;
+  try {
+    await sendEmail({
+      to: invite.email,
+      template: "admin-invite",
+      subject: "You've been invited to the CodeKraft admin console",
+      data: { url, role: invite.role.replace("_", " ") },
+      priority: 1,
+    });
+  } catch (err) {
+    getLogger().error({ err, to: invite.email }, "admin invite email failed");
   }
 }

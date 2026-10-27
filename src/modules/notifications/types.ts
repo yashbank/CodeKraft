@@ -41,6 +41,9 @@ export const NOTIFICATION_TYPES = [
   "quote.sent",
   "entitlement.granted_manually",
   "chat.cap_reached",
+  // R8-06: admin in-app alerts for a customer starting a chatbot conversation / asking for a human.
+  "chat.new",
+  "chat.handoff",
   "system.job_failed",
   "system.fx_stale",
   "finance.reconcile_failed",

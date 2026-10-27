@@ -1,6 +1,14 @@
 "use client";
 
-import { BotIcon, HistoryIcon, ListIcon, PlusIcon, SendIcon, SquareIcon } from "lucide-react";
+import {
+  BotIcon,
+  HeadsetIcon,
+  HistoryIcon,
+  ListIcon,
+  PlusIcon,
+  SendIcon,
+  SquareIcon,
+} from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
@@ -28,6 +36,7 @@ import {
 } from "@/modules/chat/customer-mutations";
 import type { MenuIntent, MenuNode } from "@/modules/chat/types";
 import { Banner } from "./Banner";
+import { ResendVerificationButton } from "./ResendVerificationButton";
 import { formatDate } from "./format";
 import type { ChatCard, ChatMessage, ChatTranscript } from "./types";
 
@@ -133,7 +142,8 @@ export function ChatScreen({
   transcripts,
   messagesLeft: initialMessagesLeft,
   capReached: initialCapReached = false,
-  emailUnverified = false,
+  emailUnverified: initialEmailUnverified = false,
+  email,
   streaming: forcedStreaming = false,
   connectionLost = false,
   links,
@@ -150,13 +160,18 @@ export function ChatScreen({
   capReached?: boolean;
   /** BUG-032: the real blocker is an unverified email, not the daily cap -- takes precedence over `capReached`'s copy. */
   emailUnverified?: boolean;
+  /** Signed-in email for the unverified banner's resend button. */
+  email?: string;
   streaming?: boolean;
   connectionLost?: boolean;
   links: { queries: string };
 }) {
   const [messages, setMessages] = React.useState<ChatMessage[]>(initial);
+  const [emailUnverified, setEmailUnverified] = React.useState(initialEmailUnverified);
   const [draft, setDraft] = React.useState("");
   const [escalate, setEscalate] = React.useState(false);
+  /** R8-05: this conversation was already handed to the team (one handoff per conversation). */
+  const [handedOff, setHandedOff] = React.useState(false);
   const [summary, setSummary] = React.useState("");
   const [conversationId, setConversationId] = React.useState(initialConversationId);
   const [messagesLeft, setMessagesLeft] = React.useState(initialMessagesLeft);
@@ -185,6 +200,7 @@ export function ChatScreen({
     const result = await startConversation({});
     if (result.ok) {
       setConversationId(result.data.conversationId);
+      setHandedOff(false);
       setMessagesLeft(result.data.usage.userRemaining);
       setCapReached(false);
       setMessages(buildGreeting(firstName, result.data.menu));
@@ -258,6 +274,20 @@ export function ChatScreen({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ conversationId, content: text }),
       });
+      if (res.status === 403) {
+        // R8-08: server-side verified-email gate -- swap to the verify prompt, not a retry.
+        const body = (await res.json().catch(() => null)) as {
+          error?: { code?: string; message?: string };
+        } | null;
+        if (body?.error?.code === "EMAIL_UNVERIFIED") {
+          setEmailUnverified(true);
+          patch((m) => ({
+            ...m,
+            text: body.error?.message ?? "Please verify your email before using chat.",
+          }));
+          return;
+        }
+      }
       if (!res.ok || !res.body) throw new Error(`chat request failed (${res.status})`);
 
       const reader = res.body.getReader();
@@ -345,15 +375,17 @@ export function ChatScreen({
     const result = await escalateConversation({ conversationId, summary: summary || undefined });
     if (result.ok) {
       setEscalate(false);
+      setHandedOff(true);
       push({
         role: "assistant",
+        text: "Done — I've passed this conversation to our team. A team member will reply in your support query, and you'll get a notification when they do.",
         card: {
           kind: "lead_capture",
           summary: summary || "Conversation handed over",
-          queryHref: links.queries,
+          queryHref: `${links.queries}/${result.data.queryId}`,
         },
       });
-      toast.success("Query created");
+      toast.success("Sent to our team");
       setSummary("");
     } else {
       toast.error(result.error.message);
@@ -392,6 +424,15 @@ export function ChatScreen({
           </Badge>
         )}
         <div className="ml-auto flex items-center gap-1">
+          {/* R8-05: always-visible human handoff (the chip only lives in scrolled-away menus). */}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={emailUnverified || handedOff || escalate}
+            onClick={() => setEscalate(true)}
+          >
+            <HeadsetIcon aria-hidden /> Talk to the team
+          </Button>
           <Button variant="ghost" size="sm" onClick={newConversation}>
             <PlusIcon aria-hidden /> New conversation
           </Button>
@@ -434,6 +475,11 @@ export function ChatScreen({
         <Banner tone="warning" className="mt-3">
           Verify your email address to chat with the assistant — check your inbox for the
           verification link.
+          {email ? (
+            <span className="mt-2 block">
+              <ResendVerificationButton email={email} size="sm" variant="secondary" />
+            </span>
+          ) : null}
         </Banner>
       ) : capReached ? (
         <Banner tone="warning" className="mt-3">
@@ -568,7 +614,8 @@ export function ChatScreen({
               onSubmit={handleEscalateSubmit}
             >
               <p className="text-fg">
-                I&apos;ll hand this to the team as a query. Add a short summary?
+                I&apos;ll pass this conversation to our team. A person will reply in your support
+                queries. Add a short summary?
               </p>
               <Label htmlFor="esc-summary" className="sr-only">
                 Summary
@@ -582,7 +629,7 @@ export function ChatScreen({
               />
               <div className="flex gap-2">
                 <Button type="submit" size="sm">
-                  Create query
+                  Send to the team
                 </Button>
                 <Button type="button" size="sm" variant="ghost" onClick={() => setEscalate(false)}>
                   Not now

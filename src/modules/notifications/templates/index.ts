@@ -254,6 +254,24 @@ export function renderNotification(
         emailPriority: 5,
       };
 
+    case "chat.new":
+      return {
+        title: `New chatbot conversation: ${p.customerName ?? "Customer"}`,
+        body: p.preview ? `"${p.preview}"` : "A customer started chatting with the assistant.",
+        link: "/admin/chatbot",
+        emailTemplate: null,
+        emailPriority: 5,
+      };
+
+    case "chat.handoff":
+      return {
+        title: `Customer asked for the team: ${p.subject ?? "Chat handoff"}`,
+        body: `${p.customerName ?? "A customer"} handed a chatbot conversation to the team. Reply in the query.`,
+        link: p.queryId ? `/admin/queries/${p.queryId}` : "/admin/queries",
+        emailTemplate: null,
+        emailPriority: 3,
+      };
+
     case "system.job_failed":
       return {
         title: `Scheduled Job Failed: ${p.job ?? "Cron"}`,
