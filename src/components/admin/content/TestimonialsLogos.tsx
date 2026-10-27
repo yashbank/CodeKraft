@@ -489,7 +489,9 @@ export function TestimonialsLogos({
           <SheetHeader>
             <SheetTitle>{l ? `Edit ${l.name}` : "New logo"}</SheetTitle>
             <SheetDescription>
-              SVG or PNG, transparent recommended; alt text = name.
+              Shown in the &quot;Trusted by&quot; row under the home page hero and in the clients
+              row on /projects (greyscale, colour on hover). PNG or WebP with a transparent
+              background; alt text = name.
             </SheetDescription>
           </SheetHeader>
           <form ref={lFormRef} className="space-y-4 px-4" onSubmit={(e) => e.preventDefault()}>

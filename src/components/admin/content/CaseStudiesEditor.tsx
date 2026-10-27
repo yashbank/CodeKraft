@@ -451,6 +451,14 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
               forceMount
               className="space-y-4 data-[state=inactive]:hidden"
             >
+              <div className="space-y-1">
+                <p className="text-body-sm font-medium text-fg">Cover image</p>
+                <p className="text-caption text-fg-muted">
+                  Shown on this case study&apos;s card on /projects and the home page
+                  &quot;Proof&quot; section, and as the wide banner at the top of its page
+                  (/projects/&lt;slug&gt;). Landscape, at least 1600×900.
+                </p>
+              </div>
               <input
                 ref={coverInputRef}
                 type="file"
@@ -481,6 +489,13 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
                 >
                   <UploadIcon aria-hidden /> {cover.url ? "Replace cover" : "Upload cover"}
                 </Button>
+              </div>
+              <div className="space-y-1 pt-2">
+                <p className="text-body-sm font-medium text-fg">Gallery</p>
+                <p className="text-caption text-fg-muted">
+                  Shown in the &quot;Gallery&quot; grid on this case study&apos;s page (click to
+                  enlarge). Alt text is required for each image.
+                </p>
               </div>
               <input
                 ref={galleryInputRef}

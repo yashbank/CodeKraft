@@ -1,4 +1,5 @@
 import { HeartIcon } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,19 @@ export function ProductCardCompact({
     <div
       className={cn("space-y-4 rounded-xl border border-border bg-surface p-4 shadow-1", className)}
     >
-      <MediaPlaceholder alt={p.coverAlt} tone={p.coverTone} ratio="16/10" />
+      {p.coverImageUrl ? (
+        <div className="relative aspect-[16/10] w-full overflow-hidden rounded-md border border-border">
+          <Image
+            src={p.coverImageUrl}
+            alt={p.coverAlt}
+            fill
+            sizes="(min-width: 1024px) 320px, 100vw"
+            className="object-cover"
+          />
+        </div>
+      ) : (
+        <MediaPlaceholder alt={p.coverAlt} tone={p.coverTone} ratio="16/10" />
+      )}
       <div className="space-y-1">
         <p className="text-overline tracking-wider text-fg-muted uppercase">{p.category.name}</p>
         <p className="text-h4">{p.name}</p>

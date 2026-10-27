@@ -108,8 +108,17 @@ export function WishlistScreen({
               key={item.id}
               className="relative flex gap-3 rounded-lg border border-border bg-surface p-3 shadow-1 sm:flex-col sm:p-4"
             >
-              <ProductCover name={item.productName} className="size-20 sm:hidden" />
-              <ProductCover name={item.productName} ratio="wide" className="hidden sm:flex" />
+              <ProductCover
+                name={item.productName}
+                imageUrl={item.imageUrl}
+                className="size-20 sm:hidden"
+              />
+              <ProductCover
+                name={item.productName}
+                imageUrl={item.imageUrl}
+                ratio="wide"
+                className="hidden sm:flex"
+              />
               <div className="min-w-0 flex-1 space-y-1.5">
                 <p className="text-overline font-semibold tracking-wider text-fg-muted uppercase">
                   {item.category}

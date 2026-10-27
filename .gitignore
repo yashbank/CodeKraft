@@ -25,3 +25,6 @@ tsconfig.tsbuildinfo
 *-state.json
 storageState*.json
 .auth/
+
+# Local dev media storage (src/lib/storage-local.ts)
+.local-storage/

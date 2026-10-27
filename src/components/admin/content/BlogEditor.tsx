@@ -267,6 +267,10 @@ export function BlogEditor({ posts: initial, productsWithoutBlog }: AdminBlogLis
             />
             <div className="space-y-2">
               <Label>Cover image</Label>
+              <p className="text-caption text-fg-muted">
+                Shown on this post&apos;s card on /blog and the home page blog section, and as the
+                wide banner at the top of the post. Landscape, at least 1600×900.
+              </p>
               <div className="flex items-center gap-3">
                 {cover.url ? (
                   // eslint-disable-next-line @next/next/no-img-element

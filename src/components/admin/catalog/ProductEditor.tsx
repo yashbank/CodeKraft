@@ -1444,6 +1444,11 @@ export function ProductEditor({
           </TabsContent>
 
           <TabsContent value="media" className="space-y-5">
+            <p className="text-body-sm text-fg-muted">
+              All media appears in the gallery on the product page. The first image (top of the
+              list) is the product&apos;s cover: it is also shown on product cards on the home page,
+              /products, search results, the blog, wishlists, purchases and checkout.
+            </p>
             <input
               ref={mediaFileInputRef}
               type="file"
@@ -2131,6 +2136,10 @@ export function ProductEditor({
               />
               <div className="space-y-2">
                 <Label>Cover image</Label>
+                <p className="text-caption text-fg-muted">
+                  Shown on this post&apos;s card on /blog and the home page blog section, and as the
+                  wide banner at the top of the post.
+                </p>
                 <div className="flex items-center gap-3">
                   {blogCover.url ? (
                     // eslint-disable-next-line @next/next/no-img-element

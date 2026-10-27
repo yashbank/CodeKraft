@@ -88,6 +88,8 @@ export interface EntitlementSummary {
   productName: string;
   /** Present when the product is published (header links to the product page). */
   productHref?: string;
+  /** Primary product image (R8-13); omitted = initials placeholder. */
+  productImageUrl?: string;
   offeringName: string;
   deliveryType: DeliveryType;
   status: EntitlementStatus;
@@ -300,6 +302,8 @@ export interface WishlistItem {
   productName: string;
   category: string;
   productHref: string;
+  /** Primary product image (R8-13); omitted = initials placeholder. */
+  imageUrl?: string;
   fromPrice?: Money;
   comingSoon?: boolean;
   customQuote?: boolean;
@@ -330,6 +334,8 @@ export interface QuoteView {
 
 export interface CheckoutOffering {
   productName: string;
+  /** Primary product image (R8-13); omitted = initials placeholder. */
+  productImageUrl?: string;
   offeringName: string;
   purchaseModelLine: string;
   deliveryType: DeliveryType;

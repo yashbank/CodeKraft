@@ -183,7 +183,7 @@ export function EntitlementDetailScreen({
       ) : null}
 
       <header className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-5 shadow-1 sm:flex-row sm:items-start">
-        <ProductCover name={e.productName} className="size-20" />
+        <ProductCover name={e.productName} imageUrl={e.productImageUrl} className="size-20" />
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-h2 text-fg">

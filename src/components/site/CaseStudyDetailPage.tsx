@@ -115,6 +115,8 @@ export function CaseStudyDetailPage({
         <MediaPlaceholder
           alt={s.coverAlt}
           tone={s.coverTone}
+          src={s.coverUrl}
+          sizes="(min-width: 1280px) 1200px, 100vw"
           ratio="21/9"
           className="mt-10 rounded-2xl 2xl:max-h-[720px]"
         />

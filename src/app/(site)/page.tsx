@@ -113,6 +113,7 @@ export default async function LandingRoute() {
     resultHighlight: c.resultHighlight ?? "",
     publishedAt: c.publishedAt ?? "",
     coverAlt: c.cover?.alt ?? c.title,
+    coverUrl: c.cover?.url || undefined,
     coverTone: toneFromSlug(c.slug),
   }));
 
@@ -126,7 +127,12 @@ export default async function LandingRoute() {
   }));
 
   const logoRows = logosResult.ok ? logosResult.data : [];
-  const logos: ClientLogo[] = logoRows.map((l) => ({ id: l.id, name: l.name }));
+  const logos: ClientLogo[] = logoRows.map((l) => ({
+    id: l.id,
+    name: l.name,
+    logoUrl: l.logo.url || undefined,
+    href: l.url ?? undefined,
+  }));
 
   const featuredProducts: ProductSummary[] = featuredProductsResult.ok
     ? featuredProductsResult.data.map(toProductSummary)

@@ -1,3 +1,4 @@
+import { loadProductCovers } from "@/modules/catalog/cover-images";
 import { and, desc, eq, inArray, lte, sql } from "drizzle-orm";
 import { type DbOrTx, type TxCtx, getDb, withTx } from "@/lib/db";
 import { assertPermission } from "@/lib/authz/assert";
@@ -890,6 +891,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
     const handler = this.registry.get(ent.deliveryType);
     const offeringRow = required(offering, "Offering");
     const prodRow = required(prod, "Product");
+    const cover = (await loadProductCovers(db, [prodRow.id])).get(prodRow.id);
     const handlerCtx = buildHandlerCtx(
       "customer-view",
       null,
@@ -938,6 +940,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
         name: prodRow.name,
         slug: prodRow.slug,
         published: prodRow.status === "published",
+        imageUrl: cover?.url ?? null,
       },
       offering: { id: offeringRow.id, name: offeringRow.name },
       deliveryType: ent.deliveryType,

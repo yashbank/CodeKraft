@@ -166,47 +166,47 @@ export function LandingEditor({
             position {chapters.indexOf(chapter) + 1}
           </span>
         </h2>
-        <Field
-          id="ch-poster"
-          label="Hero image"
-          optional
-          hint={
-            chapter.key === "who"
-              ? "Shown behind the opening hero text on the public site."
-              : 'Saved with this chapter, but not shown on the public page yet — only the "Who we are" hero image renders today.'
-          }
-        >
-          <input
-            ref={posterFileInputRef}
-            type="file"
-            className="sr-only"
-            accept="image/*"
-            onChange={handlePosterChosen}
-          />
-          <div className="flex items-center gap-3">
-            {(pendingPosterPreview ?? chapter.poster) ? (
-              // eslint-disable-next-line @next/next/no-img-element -- admin preview of a user-uploaded R2 URL, not a next/image-optimizable static asset
-              <img
-                src={pendingPosterPreview ?? chapter.poster}
-                alt=""
-                className="h-16 w-28 rounded-md border border-border object-cover"
-              />
-            ) : (
-              <div className="grid h-16 w-28 place-items-center rounded-md border border-dashed border-border-strong text-caption text-fg-subtle">
-                No image
-              </div>
-            )}
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              loading={uploadingPoster}
-              onClick={() => posterFileInputRef.current?.click()}
-            >
-              {chapter.poster || pendingPosterPreview ? "Replace image" : "Upload image"}
-            </Button>
-          </div>
-        </Field>
+        {/* R8-14: only the "Who we are" chapter renders an image on the public site (the home page
+            hero), so the upload is offered there only — other chapters have no image slot. */}
+        {chapter.key === "who" ? (
+          <Field
+            id="ch-poster"
+            label="Hero image"
+            optional
+            hint="Shown in the large image panel next to the headline at the top of the home page (/). Without one, the built-in illustration is used. Landscape, at least 1600×1200."
+          >
+            <input
+              ref={posterFileInputRef}
+              type="file"
+              className="sr-only"
+              accept="image/*"
+              onChange={handlePosterChosen}
+            />
+            <div className="flex items-center gap-3">
+              {(pendingPosterPreview ?? chapter.poster) ? (
+                // eslint-disable-next-line @next/next/no-img-element -- admin preview of a user-uploaded R2 URL, not a next/image-optimizable static asset
+                <img
+                  src={pendingPosterPreview ?? chapter.poster}
+                  alt=""
+                  className="h-16 w-28 rounded-md border border-border object-cover"
+                />
+              ) : (
+                <div className="grid h-16 w-28 place-items-center rounded-md border border-dashed border-border-strong text-caption text-fg-subtle">
+                  No image
+                </div>
+              )}
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                loading={uploadingPoster}
+                onClick={() => posterFileInputRef.current?.click()}
+              >
+                {chapter.poster || pendingPosterPreview ? "Replace image" : "Upload image"}
+              </Button>
+            </div>
+          </Field>
+        ) : null}
         <Field
           id="ch-eyebrow"
           label="Eyebrow"

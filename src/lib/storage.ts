@@ -19,6 +19,8 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
+import { LocalFsStorageDriver } from "./storage-local";
+
 export interface StorageDriver {
   createPresignedPut(
     bucket: string,
@@ -309,6 +311,18 @@ export function getStorageDriver(): StorageDriver {
     !process.env.R2_ACCOUNT_ID
   ) {
     activeDriver = new MemoryStorageDriver();
+    return activeDriver;
+  }
+
+  // Local development without any bucket configured: store objects on disk (.local-storage/)
+  // instead of failing every upload. Production never takes this branch.
+  if (
+    process.env.STORAGE_DRIVER === "local" ||
+    (process.env.NODE_ENV !== "production" &&
+      !process.env.STORAGE_ENDPOINT &&
+      !process.env.R2_ACCOUNT_ID)
+  ) {
+    activeDriver = new LocalFsStorageDriver();
     return activeDriver;
   }
 

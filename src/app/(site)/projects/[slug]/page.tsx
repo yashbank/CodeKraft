@@ -56,6 +56,7 @@ export default async function ProjectDetailRoute(props: { params: Promise<{ slug
     resultHighlight: s.resultHighlight ?? "",
     publishedAt: s.publishedAt ?? "",
     coverAlt: s.cover?.alt ?? s.title,
+    coverUrl: s.cover?.url || undefined,
     coverTone: toneFromSlug(s.slug),
     problemHtml: s.problemHtml,
     solutionHtml: s.solutionHtml,

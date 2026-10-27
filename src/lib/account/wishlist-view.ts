@@ -23,6 +23,7 @@ export function mapWishlistItem(card: WishlistProductCard): WishlistItem {
     productName: card.name,
     category: card.category?.name ?? "Uncategorised",
     productHref: `/products/${card.slug}`,
+    imageUrl: card.coverImage?.url,
     fromPrice: card.fromPrice ?? undefined,
     comingSoon: card.isComingSoon,
     addedAt: card.addedAt,

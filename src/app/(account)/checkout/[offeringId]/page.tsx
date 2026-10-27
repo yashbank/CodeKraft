@@ -83,11 +83,15 @@ export default async function CheckoutPage({ params }: PageProps) {
     );
   }
 
-  const offering = mapCheckoutPreviewToOffering(
-    previewResult.data,
-    razorpayAvailable,
-    manualMethodAvailability(siteSettings),
-  );
+  const { getProductCoverUrl } = await import("@/modules/catalog/cover-images");
+  const offering = {
+    ...mapCheckoutPreviewToOffering(
+      previewResult.data,
+      razorpayAvailable,
+      manualMethodAvailability(siteSettings),
+    ),
+    productImageUrl: await getProductCoverUrl(previewResult.data.product.id),
+  };
   const billing = profileResult.ok
     ? mapProfileToBilling(profileResult.data.user, profileResult.data.profile)
     : { name: session.user.name ?? "", email: session.user.email, country: "IN" };

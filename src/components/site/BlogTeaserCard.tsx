@@ -41,6 +41,7 @@ export function BlogTeaserCard({
         <MediaPlaceholder
           alt={post.coverAlt}
           tone={post.coverTone}
+          src={post.coverUrl}
           ratio={featured ? "21/9" : "16/9"}
         />
       </div>

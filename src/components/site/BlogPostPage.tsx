@@ -89,6 +89,8 @@ export function BlogPostPage({
         <MediaPlaceholder
           alt={post.coverAlt}
           tone={post.coverTone}
+          src={post.coverUrl}
+          sizes="(min-width: 1280px) 1200px, 100vw"
           ratio="21/9"
           className="mt-10 rounded-2xl"
         />

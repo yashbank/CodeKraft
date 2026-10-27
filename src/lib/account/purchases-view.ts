@@ -67,6 +67,7 @@ export function mapEntitlementSummary(e: EntitlementView): EntitlementSummary {
     id: e.entitlementId,
     productName: e.product.name,
     productHref: e.product.published ? `/products/${e.product.slug}` : undefined,
+    productImageUrl: e.product.imageUrl ?? undefined,
     offeringName: e.offering.name,
     deliveryType: e.deliveryType,
     status: e.status,
