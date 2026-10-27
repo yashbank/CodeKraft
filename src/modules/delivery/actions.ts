@@ -5,11 +5,7 @@
  * Uses defineAction (SA-07).
  */
 import { defineAction } from "@/lib/actions/envelope";
-import {
-  assignDeliveryTaskSchema,
-  completeDeliveryTaskSchema,
-  setLicenseKeySchema,
-} from "./types";
+import { assignDeliveryTaskSchema, completeDeliveryTaskSchema, setLicenseKeySchema } from "./types";
 import { deliveryService } from "./service";
 
 export const completeDeliveryTaskAction = defineAction({

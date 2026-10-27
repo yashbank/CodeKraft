@@ -76,7 +76,10 @@ export const UPI_QR_IMAGE_MAX_CHARS = 300_000;
 export const upiQrImageSchema = z
   .string()
   .max(UPI_QR_IMAGE_MAX_CHARS, "QR image is too large (max ~220 KB)")
-  .regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/, "must be a PNG, JPEG or WebP image");
+  .regex(
+    /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/,
+    "must be a PNG, JPEG or WebP image",
+  );
 
 export const retentionSchema = z.strictObject({
   chatMonths: z.number().int().min(1).max(120),

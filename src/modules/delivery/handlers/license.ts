@@ -2,11 +2,7 @@ import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import type { TxCtx } from "@/lib/db";
 import { decrypt, encrypt } from "@/lib/crypto";
-import {
-  deliveryTasks,
-  entitlements,
-  type Entitlement,
-} from "../../../../drizzle/schema/delivery";
+import { deliveryTasks, entitlements, type Entitlement } from "../../../../drizzle/schema/delivery";
 import type {
   CustomerDeliveryView,
   CustomerViewSource,
@@ -25,7 +21,7 @@ const KEY_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 export function generateLicenseKey(): string {
   const bytes = randomBytes(16);
   const chars = Array.from(bytes, (b) => KEY_ALPHABET[b % KEY_ALPHABET.length]).join("");
-  return `CK-${chars.match(/.{4}/g)!.join("-")}`;
+  return `CK-${[0, 4, 8, 12].map((i) => chars.slice(i, i + 4)).join("-")}`;
 }
 
 /** `•••• •••• •••• 4F2A` — the real last 4 of the stored key; `null` when it can't be read. */

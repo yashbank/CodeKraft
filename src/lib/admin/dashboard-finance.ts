@@ -1,0 +1,157 @@
+/**
+ * R8-04 — the money widgets of the admin dashboard, computed from the ledger (never hard-coded).
+ * All amounts are INR minor units (`ledger_entries.amount_inr_minor`), the same unit the
+ * widgets' `inr()` formatter expects. Server-only.
+ *
+ * Sign convention (finance/posting.ts): credits to company/partners are positive, refund
+ * reversals negative, so a plain SUM per party is the net figure.
+ */
+import { sql } from "drizzle-orm";
+import { can } from "@/lib/authz/assert";
+import type { RequestContext } from "@/lib/authz/context";
+import { db } from "@/lib/db";
+import type { DashboardData, QueueItem } from "@/components/admin/types";
+
+type FinanceWidgets = Pick<
+  DashboardData,
+  | "revenueByProduct"
+  | "revenueByPartner"
+  | "myShare"
+  | "outstandingPayouts"
+  | "expensesVsProfit"
+  | "paymentsAwaiting"
+>;
+
+const EMPTY: FinanceWidgets = {
+  revenueByProduct: [],
+  revenueByPartner: [],
+  myShare: { valueInr: 0, delta: "No data yet", sparkline: [] },
+  outstandingPayouts: { totalInr: 0, items: [] },
+  expensesVsProfit: [],
+  paymentsAwaiting: [],
+};
+
+const n = (v: unknown) => Number(v ?? 0);
+
+/** Net revenue (ex-tax) per product over the last `days` days. */
+export async function revenueByProduct(days = 30) {
+  const rows = await db.execute<{ label: string; value: string }>(sql`
+    select p.name as label,
+           sum(case when le.entry_type in ('sale','discount','refund_sale','refund_discount')
+                    then -le.amount_inr_minor else 0 end) as value
+    from ledger_entries le
+    join order_items oi on oi.id = le.order_item_id
+    join products p on p.id = oi.product_id
+    where le.created_at >= now() - make_interval(days => ${days})
+    group by p.name
+    having sum(case when le.entry_type in ('sale','discount','refund_sale','refund_discount')
+                    then -le.amount_inr_minor else 0 end) <> 0
+    order by value desc
+    limit 8`);
+  return [...rows].map((r) => ({ label: r.label, value: n(r.value) }));
+}
+
+export async function loadDashboardFinance(ctx: RequestContext): Promise<FinanceWidgets> {
+  const out: FinanceWidgets = structuredClone(EMPTY);
+  const readAll = can(ctx, "finance.ledger.read_all");
+
+  if (can(ctx, "payments.confirm")) {
+    const rows = await db.execute<{
+      id: string;
+      order_no: string;
+      name: string | null;
+      total_minor: string;
+      currency: string;
+      status: string;
+    }>(sql`
+      select o.id, o.order_no, o.billing_snapshot->>'name' as name, o.total_minor, o.currency,
+             p.status
+      from payments p join orders o on o.id = p.order_id
+      where p.status = 'submitted' and o.status = 'pending_payment'
+      order by p.customer_submitted_at asc nulls last
+      limit 10`);
+    out.paymentsAwaiting = [...rows].map((r): QueueItem => ({
+      label: `${r.order_no} · ${r.name ?? "Customer"}`,
+      meta: `${r.currency} ${(n(r.total_minor) / 100).toFixed(2)} · reference submitted`,
+      href: `/orders/${r.id}`,
+    }));
+  }
+
+  if (readAll) {
+    out.revenueByProduct = await revenueByProduct(30);
+
+    const partnerRows = await db.execute<{ label: string; value: string }>(sql`
+      select pa.display_name as label, sum(le.amount_inr_minor) as value
+      from ledger_entries le join partners pa on pa.id = le.partner_id
+      where le.entry_type in ('partner_allocation','refund_partner_allocation')
+        and le.created_at >= now() - interval '30 days'
+      group by pa.display_name having sum(le.amount_inr_minor) <> 0
+      order by value desc limit 8`);
+    out.revenueByPartner = [...partnerRows].map((r) => ({ label: r.label, value: n(r.value) }));
+
+    // Outstanding = allocated - refunded - paid out, per partner (all time).
+    const owed = await db.execute<{ id: string; label: string; value: string }>(sql`
+      select pa.id, pa.display_name as label, sum(le.amount_inr_minor) as value
+      from ledger_entries le join partners pa on pa.id = le.partner_id
+      where le.party_type = 'partner'
+      group by pa.id, pa.display_name having sum(le.amount_inr_minor) > 0
+      order by value desc`);
+    const owedRows = [...owed];
+    out.outstandingPayouts = {
+      totalInr: owedRows.reduce((s, r) => s + n(r.value), 0),
+      items: owedRows.slice(0, 6).map((r) => ({
+        label: r.label,
+        meta: `₹${(n(r.value) / 100).toLocaleString("en-IN", { minimumFractionDigits: 2 })} owed`,
+        href: "/finance/partners",
+      })),
+    };
+
+    // Last 6 calendar months: expenses vs company profit (company cut net of refunds).
+    const months = await db.execute<{ m: string; expenses: string; profit: string }>(sql`
+      with months as (
+        select to_char(d, 'YYYY-MM') as m
+        from generate_series(date_trunc('month', now()) - interval '5 months',
+                             date_trunc('month', now()), interval '1 month') d
+      )
+      select months.m,
+        coalesce((select sum(e.amount_minor) from expenses e
+                  where to_char(e.incurred_on::date, 'YYYY-MM') = months.m), 0) as expenses,
+        coalesce((select sum(le.amount_inr_minor) from ledger_entries le
+                  where le.entry_type in ('company_cut','refund_company_cut')
+                    and to_char(le.created_at, 'YYYY-MM') = months.m), 0) as profit
+      from months order by months.m`);
+    out.expensesVsProfit = [...months].map((r) => ({
+      label: r.m,
+      expenses: n(r.expenses),
+      profit: n(r.profit),
+    }));
+  }
+
+  if (ctx.partnerId) {
+    const weeks = await db.execute<{ w: string; value: string }>(sql`
+      with weeks as (
+        select generate_series(date_trunc('week', now()) - interval '7 weeks',
+                               date_trunc('week', now()), interval '1 week') as w
+      )
+      select weeks.w::text as w, coalesce(sum(le.amount_inr_minor), 0) as value
+      from weeks left join ledger_entries le
+        on le.partner_id = ${ctx.partnerId}
+       and le.entry_type in ('partner_allocation','refund_partner_allocation')
+       and date_trunc('week', le.created_at) = weeks.w
+      group by weeks.w order by weeks.w`);
+    const series = [...weeks].map((r) => n(r.value));
+    const thisWeek = series.at(-1) ?? 0;
+    const lastWeek = series.at(-2) ?? 0;
+    const total = series.reduce((s, v) => s + v, 0);
+    out.myShare = {
+      valueInr: total,
+      delta:
+        total === 0
+          ? "No allocations in the last 8 weeks"
+          : `This week ₹${(thisWeek / 100).toFixed(0)} vs ₹${(lastWeek / 100).toFixed(0)} last week`,
+      sparkline: series,
+    };
+  }
+
+  return out;
+}

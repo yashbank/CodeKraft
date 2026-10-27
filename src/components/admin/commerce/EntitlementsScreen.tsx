@@ -389,7 +389,8 @@ export function EntitlementsScreen({
                               { label: "Open order", href: orderHref },
                               {
                                 label: e.keyIssued ? "Replace licence key" : "Enter licence key",
-                                disabled: e.type !== "license" || e.status === "revoked" || submitting,
+                                disabled:
+                                  e.type !== "license" || e.status === "revoked" || submitting,
                                 onSelect: () => void doSetKey(e),
                               },
                               { label: "Mark provisioned", disabled: e.provisioning !== "pending" },

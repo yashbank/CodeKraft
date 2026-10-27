@@ -1,13 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  manualMethodAvailability,
-  withLiveManualDetails,
-} from "@/modules/payments/availability";
+import { manualMethodAvailability, withLiveManualDetails } from "@/modules/payments/availability";
 import type { PaymentInstructions } from "@/modules/payments/provider";
-import {
-  toCheckoutPaymentProviders,
-  unconfiguredManualMethods,
-} from "@/lib/account/checkout-view";
+import { toCheckoutPaymentProviders, unconfiguredManualMethods } from "@/lib/account/checkout-view";
 
 const bank = {
   accountName: "Acme Studio LLP",
@@ -83,10 +77,10 @@ describe("R8-01 manual payment availability", () => {
     );
     expect(bankLive).toMatchObject({ unconfigured: true, accountNo: "" });
     expect(
-      withLiveManualDetails(
-        bankLive && { ...bankLive, unconfigured: undefined },
-        { ...base, bankDetails: bank },
-      ),
+      withLiveManualDetails(bankLive && { ...bankLive, unconfigured: undefined }, {
+        ...base,
+        bankDetails: bank,
+      }),
     ).toMatchObject({ accountNo: "50200012345678", ifsc: "HDFC0000123" });
   });
 });

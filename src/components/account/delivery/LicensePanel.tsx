@@ -58,12 +58,7 @@ export function LicensePanel({
         <div className="flex items-center gap-2">
           {revealed ? (
             <>
-              <CopyButton
-                value={shownKey}
-                label="License key"
-                variant="secondary"
-                size="sm"
-              />
+              <CopyButton value={shownKey} label="License key" variant="secondary" size="sm" />
               <span className="text-caption text-fg-muted">Hides in {remaining} s</span>
             </>
           ) : (

@@ -109,9 +109,8 @@ export function PaymentInstructionsCard({
           </div>
           <p className="text-caption text-fg-muted">
             {qr ? "Scan the QR with any UPI app and pay the exact amount above. " : null}
-            Use{" "}
-            <span className="font-mono">{orderNumber}</span> as the payment note if you enter it by
-            hand.
+            Use <span className="font-mono">{orderNumber}</span> as the payment note if you enter it
+            by hand.
           </p>
         </TabsContent>
       ) : null}

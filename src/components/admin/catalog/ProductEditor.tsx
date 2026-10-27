@@ -2739,9 +2739,9 @@ function DeliveryHowItWorks({
   if (deliveryType === "download") {
     body = (
       <>
-        After payment is confirmed the customer gets a <strong>Download</strong> button on Account
-        → Purchases for the latest release file. Upload release files from the {versionsLink}{" "}
-        (add a version and attach the file).
+        After payment is confirmed the customer gets a <strong>Download</strong> button on Account →
+        Purchases for the latest release file. Upload release files from the {versionsLink} (add a
+        version and attach the file).
         {hasReleaseFile ? null : (
           <strong> No release file is uploaded yet — buyers would have nothing to download.</strong>
         )}

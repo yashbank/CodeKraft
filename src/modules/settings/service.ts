@@ -74,8 +74,10 @@ function isPlaceholderBank(b: BankDetails): boolean {
  * and the admin form starts empty, ready for the real values.
  */
 export function stripPlaceholderPayees(settings: SiteSettings): SiteSettings {
-  const vpa = settings.upiVpa && PLACEHOLDER_VPAS.has(settings.upiVpa.toLowerCase()) ? null : settings.upiVpa;
-  const bank = settings.bankDetails && isPlaceholderBank(settings.bankDetails) ? null : settings.bankDetails;
+  const vpa =
+    settings.upiVpa && PLACEHOLDER_VPAS.has(settings.upiVpa.toLowerCase()) ? null : settings.upiVpa;
+  const bank =
+    settings.bankDetails && isPlaceholderBank(settings.bankDetails) ? null : settings.bankDetails;
   if (vpa === settings.upiVpa && bank === settings.bankDetails) return settings;
   return { ...settings, upiVpa: vpa, bankDetails: bank };
 }
@@ -340,7 +342,9 @@ export class DefaultSettingsService implements SettingsService {
 
       // 2b. Bank transfer needs bank details to show the customer (R8-01: never placeholders).
       const targetBank =
-        validated.patch.bankDetails !== undefined ? validated.patch.bankDetails : before.bankDetails;
+        validated.patch.bankDetails !== undefined
+          ? validated.patch.bankDetails
+          : before.bankDetails;
       const manualBankInPatch = validated.patch.enabledPaymentMethods?.includes("manual_bank");
       const bankCleared = validated.patch.bankDetails === null;
       if (
