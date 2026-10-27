@@ -28,17 +28,17 @@
 | BUG-046 | minor | admin Content > Services, Testimonials/Logos | Confirmed: same stale-list-after-create pattern as BUG-036 — `ServicesEditor.handleSave`, `TestimonialsLogos.handleSaveTestimonial`, and `handleSaveLogo` only called `router.refresh()`, never patching local state, so a newly created row only appeared after a manual reload. Fixed the same way as BUG-036: each handler now merges the saved row (from the server response) into local state (update-in-place if editing, append if new) before calling `router.refresh()`. | fixed |
 | BUG-047 | minor | admin /admin/finance, /admin/finance/payouts, /admin/finance/invoices | Confirmed: no `page.tsx` existed at these paths, so direct navigation 404'd. `/payouts` was superseded by the combined "Partners & Payouts" screen (`/admin/finance/partners`) and `/invoices` by "Reports & Statements" (`/admin/finance/reports`); bare `/admin/finance` had no index. Added three thin redirect pages: `/admin/finance` → `/admin/finance/ledger`, `/admin/finance/payouts` → `/admin/finance/partners`, `/admin/finance/invoices` → `/admin/finance/reports`. | fixed |
 | BUG-048 | blocker | /account/orders/[id] | "I've paid - submit reference" only fires a toast, no server call; payments.customer_reference stays null (OrderStatusScreen.tsx:232). Local audit LC-03. | fixed (browser-verified local, round 6) |
-| BUG-049 | blocker | /contact, product InquirySheet | Inquiry submit uses simulateSubmit; createLead never called, leads table stays empty. Local audit LC-04. | open |
+| BUG-049 | blocker | /contact, product InquirySheet | Inquiry submit uses simulateSubmit; createLead never called, leads table stays empty. Local audit LC-04. | fixed (browser-verified local, round 6) |
 | BUG-050 | blocker | /products/[slug] "Request a quote" | Quote sheet has no onSubmit; simulated success, nothing persisted (custom_quotes 0). Local audit LC-05. | fixed, browser check partial |
 | BUG-051 | blocker | /auth/reset | "Send reset link" does nothing: onSubmit only preventDefault, no request (ResetPasswordScreen.tsx:46). Local audit LC-06. | fixed (browser-verified local, round 6) |
 | BUG-052 | major | /products/[slug] Buy now (logged out) | Links /auth/login?returnTo=..., LoginForm reads only ?next= so buyer lands on /account. Prod PC-01, local LC-02. | fixed (browser-verified local, round 6) |
 | BUG-053 | major | /account/* | No sign-out control in customer UI (mobile account sheet and elsewhere); /auth/logout 404. Prod PC-02, local LC-08. | fixed (browser-verified local, round 6) |
 | BUG-054 | major | /account/queries/[id] | "Mark resolved" has no onClick. Local LC-07 (see MANUAL #10). | fixed (browser-verified local, round 6) |
 | BUG-055 | major | /account/settings Security | Password change succeeds but e.currentTarget null after await -> pageerror, no success toast (SettingsScreen.tsx:428). Local LC-09. | fixed (browser-verified local, round 6) |
-| BUG-056 | major | admin /orders/[id] | "Fulfil" header button has no onClick (OrderDetail.tsx:204). Local LA-01. | open |
+| BUG-056 | major | admin /orders/[id] | "Fulfil" header button has no onClick (OrderDetail.tsx:204). Local LA-01. | fixed (browser-verified local, round 6) |
 | BUG-057 | major | admin /orders | Order number link / row click does not navigate to detail. Local LA-02. | fixed (browser-verified local, round 6) |
 | BUG-058 | major | admin global search | Never returns results; AdminShell searchItems defaults to [] and nothing supplies them. Local LA-03. | fixed (browser-verified local, round 6) |
-| BUG-059 | major | admin /settings | "Save changes" (all sections except Razorpay) is toast-only, nothing persists (SettingsScreen.tsx:54). Local LA-04. | open |
+| BUG-059 | major | admin /settings | "Save changes" (all sections except Razorpay) is toast-only, nothing persists (SettingsScreen.tsx:54). Local LA-04. | fixed (browser-verified local, round 6) |
 | BUG-060 | major | admin /content/services | Save stuck on "Saving…", sheet stays open, though POST 200 and row persists. Local LA-06. | fixed, browser check partial |
 | BUG-061 | major | admin /products/[id] Publish | "Submit for approval" enabled while readiness incomplete; click is a silent no-op. Local LA-07. | fixed, browser check partial |
 | BUG-062 | major | admin /dashboard | "Revenue by period" chart empty despite a paid order in range. Local LA-10. | fixed (browser-verified local, round 6) |
@@ -74,7 +74,7 @@
 | BUG-092 | minor | admin /leads/[id] | "Send custom quote" is a plain link, lead not prefilled. Local LA-19. | open |
 
 ## Round 6 retest (local, commit 6e1d01e) - see scratchpad/retest/RESULTS.md
-| BUG-093 | major | /contact, InquiryForm Send inquiry | Mouse click on Send inquiry lost: page shifts ~90px between mousedown and mouseup, click lands on DIV, no submit. Keyboard Enter submits (lead row inquiry_form). Verify headed. | open |
-| BUG-056 | major | admin /orders/[id] | RETEST FAIL: Fulfil enabled on unpaid order, click does nothing (no scroll/fulfilment focus). | open |
-| BUG-059 | major | admin /settings Tax & GSTIN | RETEST FAIL: state change + Save changes not persisted after reload. | open |
-| BUG-049 | blocker | /contact | RETEST FAIL (mouse path only): keyboard/JS submit persists lead; product InquirySheet PASS (product_cta, product_id set). | open |
+| BUG-093 | major | /contact, InquiryForm Send inquiry | Mouse click on Send inquiry lost: page shifts ~90px between mousedown and mouseup, click lands on DIV, no submit. Keyboard Enter submits (lead row inquiry_form). Verify headed. | fixed (browser-verified local, round 6) |
+| BUG-056 | major | admin /orders/[id] | RETEST FAIL: Fulfil enabled on unpaid order, click does nothing (no scroll/fulfilment focus). | fixed (browser-verified local, round 6) |
+| BUG-059 | major | admin /settings Tax & GSTIN | RETEST FAIL: state change + Save changes not persisted after reload. | fixed (browser-verified local, round 6) |
+| BUG-049 | blocker | /contact | RETEST FAIL (mouse path only): keyboard/JS submit persists lead; product InquirySheet PASS (product_cta, product_id set). | fixed (browser-verified local, round 6) |

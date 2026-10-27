@@ -5,6 +5,7 @@
  */
 import type { Currency } from "@/lib/money";
 import type { StatusValue } from "@/lib/status-tone";
+import type { SellerDetails } from "@/modules/settings/types";
 
 export interface MoneyLike {
   amountMinor: number;
@@ -895,7 +896,8 @@ export interface SettingsData {
     enabled: Currency[];
     fx: FxRateRow[];
   };
-  tax: { gstin?: string; rateBps: number; sellerState: string };
+  /** `seller` is the raw sellerDetails row; seller state is saved by patching its address. */
+  tax: { gstin?: string; rateBps: number; sellerState: string; seller: SellerDetails | null };
   payments: {
     upiEnabled: boolean;
     vpa: string;

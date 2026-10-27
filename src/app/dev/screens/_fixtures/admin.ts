@@ -3010,7 +3010,7 @@ export const SETTINGS: SettingsData = {
       { quote: "CAD", rate: "61.80000000", asOf: "2026-09-25T02:00:00Z", source: "frankfurter" },
     ],
   },
-  tax: { gstin: "27AAPFU0939F1ZV", rateBps: 1800, sellerState: "Maharashtra (27)" },
+  tax: { gstin: "27AAPFU0939F1ZV", rateBps: 1800, sellerState: "Maharashtra (27)", seller: null },
   payments: {
     upiEnabled: true,
     vpa: "codekraft@icici",

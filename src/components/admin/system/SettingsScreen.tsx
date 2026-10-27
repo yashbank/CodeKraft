@@ -301,6 +301,15 @@ export function SettingsScreen({
         gstin: gstin === "" ? null : gstin,
         taxRateBps: Math.round(Number(val("st-rate")) * 100),
       };
+      // Seller state lives in sellerDetails.address (no dedicated key) - patch it in place.
+      const seller = s.tax.seller;
+      const sellerState = val("st-state");
+      if (seller && sellerState !== (seller.address.state ?? "")) {
+        patch.sellerDetails = {
+          ...seller,
+          address: { ...seller.address, state: sellerState === "" ? undefined : sellerState },
+        };
+      }
     } else if (section === "ai") {
       patch = {
         aiDailyPlatformCap: Number(val("st-cap")),
@@ -574,8 +583,20 @@ export function SettingsScreen({
                     disabled={ro}
                   />
                 </Field>
-                <Field id="st-state" label="Seller state" hint="Decides CGST/SGST vs IGST.">
-                  <Input id="st-state" defaultValue={s.tax.sellerState} disabled={ro} />
+                <Field
+                  id="st-state"
+                  label="Seller state"
+                  hint={
+                    s.tax.seller
+                      ? "Decides CGST/SGST vs IGST."
+                      : "Add seller details (name and address) first to set the seller state."
+                  }
+                >
+                  <Input
+                    id="st-state"
+                    defaultValue={s.tax.sellerState}
+                    disabled={ro || !s.tax.seller}
+                  />
                 </Field>
               </div>
               <Banner tone="info">

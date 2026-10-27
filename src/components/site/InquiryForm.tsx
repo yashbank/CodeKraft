@@ -76,6 +76,9 @@ export function InquiryForm({
   const [values, setValues] = useState<InquiryValues>({ ...EMPTY, ...defaults });
   const [errors, setErrors] = useState<Partial<Record<keyof InquiryValues, string>>>({});
   const [touched, setTouched] = useState<Partial<Record<keyof InquiryValues, boolean>>>({});
+  // The top summary only appears after a submit attempt: showing it on blur shifted the
+  // layout mid-click and swallowed the Send button's click (BUG-093).
+  const [attempted, setAttempted] = useState(false);
   const [status, setStatus] = useState<
     "idle" | "submitting" | "success" | "error" | "turnstile_down"
   >(initialStatus);
@@ -113,6 +116,7 @@ export function InquiryForm({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    setAttempted(true);
     const next = validate(values);
     setErrors(next);
     setTouched({ name: true, email: true, message: true });
@@ -170,7 +174,7 @@ export function InquiryForm({
     );
   }
 
-  const errorEntries = Object.entries(errors).filter(([, v]) => Boolean(v));
+  const errorEntries = attempted ? Object.entries(errors).filter(([, v]) => Boolean(v)) : [];
   const turnstileDown = status === "turnstile_down";
   const busy = status === "submitting";
   const field = (k: keyof InquiryValues) => `${id}-${k}`;

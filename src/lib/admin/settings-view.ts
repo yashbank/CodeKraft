@@ -123,6 +123,7 @@ export function mapSiteSettingsToSettingsData(settings: SiteSettings): SettingsD
       gstin: settings.gstin ?? undefined,
       rateBps: settings.taxRateBps,
       sellerState: seller?.address.state ?? "",
+      seller: seller ?? null,
     },
     payments: {
       upiEnabled: settings.enabledPaymentMethods.includes("manual_upi"),
