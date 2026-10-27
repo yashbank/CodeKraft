@@ -1,6 +1,6 @@
 "use client";
 
-import { EllipsisIcon, GripVerticalIcon, RefreshCwIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, EllipsisIcon, RefreshCwIcon } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -14,9 +14,9 @@ import {
 import { cn } from "@/components/ui/_utils";
 
 /**
- * Widget card — docs/08 §6.3: 44px header (title, muted subtitle, refresh, drag handle, menu),
- * 16px body. `section aria-labelledby`. The grip is a button with keyboard instructions
- * (react-grid-layout wires the actual dragging in Phase 8).
+ * Widget card — docs/08 §6.3: 44px header (title, muted subtitle, refresh, menu), 16px body.
+ * `section aria-labelledby`. In edit mode the header shows "move earlier / later" buttons that
+ * reorder the admin's saved layout (R8-10); every control here is wired to a real handler.
  */
 export function WidgetFrame({
   id,
@@ -27,6 +27,9 @@ export function WidgetFrame({
   rowSpan = 1,
   editing = false,
   onRemove,
+  onRefresh,
+  onMoveUp,
+  onMoveDown,
   viewAllHref,
   viewAllLabel,
   children,
@@ -39,15 +42,20 @@ export function WidgetFrame({
   rowSpan?: 1 | 2;
   editing?: boolean;
   onRemove?: () => void;
+  onRefresh?: () => void;
+  /** Undefined → the widget is already first (button disabled). */
+  onMoveUp?: () => void;
+  /** Undefined → the widget is already last (button disabled). */
+  onMoveDown?: () => void;
   viewAllHref?: string;
   viewAllLabel?: string;
   children: ReactNode;
 }) {
   const headingId = `widget-${id}-title`;
-  const hintId = `widget-${id}-drag-hint`;
   return (
     <section
       aria-labelledby={headingId}
+      data-widget={id}
       className={cn(
         "flex min-h-[176px] flex-col rounded-lg border border-border bg-surface shadow-1",
         colSpan === 3 && "lg:col-span-3",
@@ -61,19 +69,26 @@ export function WidgetFrame({
     >
       <header className="flex h-11 items-center gap-2 border-b border-border px-3">
         {editing ? (
-          <>
-            <button
-              type="button"
-              aria-label={`Move ${title}`}
-              aria-describedby={hintId}
-              className="cursor-grab rounded-sm text-fg-subtle hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          <span className="flex shrink-0 items-center">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Move ${title} earlier`}
+              disabled={!onMoveUp}
+              onClick={onMoveUp}
             >
-              <GripVerticalIcon aria-hidden className="size-4" />
-            </button>
-            <span id={hintId} className="sr-only">
-              Arrow keys move by one column or row; Shift plus arrows resize; Enter confirms.
-            </span>
-          </>
+              <ArrowUpIcon aria-hidden className="size-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Move ${title} later`}
+              disabled={!onMoveDown}
+              onClick={onMoveDown}
+            >
+              <ArrowDownIcon aria-hidden className="size-4" />
+            </Button>
+          </span>
         ) : null}
         <h2 id={headingId} className="min-w-0 truncate text-body-sm font-semibold">
           {title}
@@ -87,23 +102,33 @@ export function WidgetFrame({
           </span>
         ) : null}
         <span className="ml-auto flex items-center">
-          <Button variant="ghost" size="icon-sm" aria-label={`Refresh ${title}`}>
-            <RefreshCwIcon aria-hidden className="size-4" />
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label={`${title} menu`}>
-                <EllipsisIcon aria-hidden className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>Refresh</DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
-              <DropdownMenuItem variant="destructive" onSelect={onRemove}>
-                Remove
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {onRefresh ? (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Refresh ${title}`}
+              onClick={onRefresh}
+            >
+              <RefreshCwIcon aria-hidden className="size-4" />
+            </Button>
+          ) : null}
+          {onRemove ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon-sm" aria-label={`${title} menu`}>
+                  <EllipsisIcon aria-hidden className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {onRefresh ? (
+                  <DropdownMenuItem onSelect={onRefresh}>Refresh</DropdownMenuItem>
+                ) : null}
+                <DropdownMenuItem variant="destructive" onSelect={onRemove}>
+                  Remove
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
         </span>
       </header>
       <div className="flex flex-1 flex-col p-4">{children}</div>

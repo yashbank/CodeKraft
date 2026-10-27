@@ -10,6 +10,8 @@ import { listCustomersQuery } from "@/modules/users/queries";
 import { listProductsAdminQuery } from "@/modules/catalog/queries";
 import type { DashboardData, QueueItem } from "@/components/admin/types";
 import type { ProductStatus } from "@/components/admin/types";
+import { fyFor, startOfFy } from "@/lib/dates";
+import { getAdminWidgetLayout } from "@/modules/dashboard-widgets/admin-layout";
 
 export const dynamic = "force-dynamic";
 
@@ -26,10 +28,36 @@ function approvalItem(a: {
   };
 }
 
-export default async function AdminDashboardRoute() {
-  const [ctx, session] = await Promise.all([getAdminRequestContext(), getSession()]);
+const RANGES = ["7d", "30d", "90d", "fy"] as const;
+type Range = (typeof RANGES)[number];
+
+function rangeDates(range: Range, now = new Date()) {
+  if (range === "fy") {
+    return {
+      dateFrom: startOfFy(now).toISOString().slice(0, 10),
+      dateTo: now.toISOString().slice(0, 10),
+    };
+  }
+  return lastDaysRange(range === "7d" ? 7 : range === "90d" ? 90 : 30, now);
+}
+
+export default async function AdminDashboardRoute({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string }>;
+}) {
+  const [ctx, session, sp] = await Promise.all([
+    getAdminRequestContext(),
+    getSession(),
+    searchParams,
+  ]);
+  const range: Range = (RANGES as readonly string[]).includes(sp.range ?? "")
+    ? (sp.range as Range)
+    : "30d";
   const isSuperAdmin = ctx.roles.includes("super_admin");
   const firstName = session?.user.name?.split(" ")[0] || "there";
+  // R8-10 — the admin's own saved widget selection/order (null → default layout).
+  const savedLayout = await getAdminWidgetLayout(ctx.userId).catch(() => null);
 
   const [publishRes, splitRes, queriesRes, leadsRes, customersRes, productsRes, revenueRes] =
     await Promise.all([
@@ -39,7 +67,7 @@ export default async function AdminDashboardRoute() {
       listLeadsQuery({ limit: 100 }, ctx),
       listCustomersQuery({ limit: 100 }, ctx),
       listProductsAdminQuery({ limit: 100 }, ctx),
-      getReportQuery({ report: "revenue_by_period", ...lastDaysRange(30) }, ctx).catch(() => ({
+      getReportQuery({ report: "revenue_by_period", ...rangeDates(range) }, ctx).catch(() => ({
         ok: false as const,
       })),
     ]);
@@ -65,7 +93,7 @@ export default async function AdminDashboardRoute() {
   for (const p of products) statusCounts.set(p.status, (statusCounts.get(p.status) ?? 0) + 1);
 
   const data: DashboardData = {
-    range: "30d",
+    range,
     revenueByPeriod:
       "data" in revenueRes && revenueRes.ok
         ? mapRevenueByPeriod(revenueRes.data.rows as Array<Record<string, unknown>>)
@@ -110,10 +138,17 @@ export default async function AdminDashboardRoute() {
 
   return (
     <AdminDashboard
+      key={(savedLayout ?? []).join(",")}
       data={data}
+      layout={savedLayout ?? undefined}
       isSuperAdmin={isSuperAdmin}
       greeting={`Welcome back, ${firstName}`}
-      dateLabel="FY 2026–27 · Today"
+      dateLabel={`FY ${fyFor(new Date())} · ${new Date().toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        timeZone: "Asia/Kolkata",
+      })}`}
     />
   );
 }
