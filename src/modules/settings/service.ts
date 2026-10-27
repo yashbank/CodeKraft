@@ -58,6 +58,28 @@ async function safeRevalidate(tag: string): Promise<void> {
   }
 }
 
+/** Payee values the seed used to write until real ones were entered (scripts/seed/settings.ts). */
+const PLACEHOLDER_VPAS = new Set(["codekraft@upi"]);
+function isPlaceholderBank(b: BankDetails): boolean {
+  return (
+    /^0+$/.test(b.accountNumber) ||
+    /placeholder/i.test(`${b.accountName} ${b.bankName}`) ||
+    /replace before launch/i.test(b.branch ?? "")
+  );
+}
+
+/**
+ * R8-01: databases seeded before this fix carry placeholder payee details (`codekraft@upi`,
+ * account `000000000000`). Treat them as "not configured" everywhere so checkout never shows them
+ * and the admin form starts empty, ready for the real values.
+ */
+export function stripPlaceholderPayees(settings: SiteSettings): SiteSettings {
+  const vpa = settings.upiVpa && PLACEHOLDER_VPAS.has(settings.upiVpa.toLowerCase()) ? null : settings.upiVpa;
+  const bank = settings.bankDetails && isPlaceholderBank(settings.bankDetails) ? null : settings.bankDetails;
+  if (vpa === settings.upiVpa && bank === settings.bankDetails) return settings;
+  return { ...settings, upiVpa: vpa, bankDetails: bank };
+}
+
 /**
  * Audit rows keep before/after, but never the bank account number in clear or the inline QR
  * image blob (hundreds of KB) — only enough to see that it changed.
@@ -211,7 +233,7 @@ export class DefaultSettingsService implements SettingsService {
       }
     }
 
-    return siteSettingsSchema.parse(assembled);
+    return stripPlaceholderPayees(siteSettingsSchema.parse(assembled));
   }
 
   /**

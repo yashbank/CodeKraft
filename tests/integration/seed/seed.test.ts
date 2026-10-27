@@ -234,7 +234,7 @@ describe("runSeed({ mode: 'full' })", () => {
       expect(byKey.get("tax_rate_bps")).toBe(0);
       expect(byKey.get("gstin")).toBeNull();
       expect(byKey.get("default_theme")).toBe("dark-cinematic");
-      expect(byKey.get("upi_vpa")).toBe("codekraft@upi");
+      expect(byKey.get("upi_vpa")).not.toBe("codekraft@upi"); // R8-01: seed writes no placeholder payee
       expect(byKey.get("feature_flags")).toMatchObject({
         three_hero: true,
         provider_stripe: false,

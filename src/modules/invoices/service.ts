@@ -6,6 +6,7 @@ import crypto from "node:crypto";
 import { desc, eq, sql } from "drizzle-orm";
 import type { TxCtx } from "@/lib/db";
 import { getDb, withTx } from "@/lib/db";
+import { getLogger } from "@/lib/logger";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { assertPermission } from "@/lib/authz/assert";
 import type { RequestContext } from "@/lib/authz/context";
@@ -162,8 +163,19 @@ export class DefaultInvoicesService implements InvoicesService {
       .returning();
     if (!newInvoice) throw new AppError(ErrorCode.INTERNAL, "newInvoice missing");
 
-    // Render PDF and upload
-    const { pdfMediaId } = await this.renderInvoicePdf(newInvoice.id, tx);
+    // Render PDF and upload — best effort (R8-02). The upload goes to object storage; if storage is
+    // down or misconfigured it must NOT abort payment confirmation (this runs inside the confirm
+    // transaction, so a throw here rolled back the whole "mark paid"). A savepoint keeps the outer
+    // transaction usable; the PDF is rendered lazily on first download (`getInvoicePdfUrl`).
+    let pdfMediaId: string | null = null;
+    try {
+      ({ pdfMediaId } = await tx.transaction((sp) => this.renderInvoicePdf(newInvoice.id, sp)));
+    } catch (err) {
+      getLogger().warn(
+        { err, invoiceId: newInvoice.id },
+        "invoice PDF render failed; issuing without PDF (rendered on first download)",
+      );
+    }
 
     // Customer notification
     if (order.userId) {
@@ -291,6 +303,10 @@ export class DefaultInvoicesService implements InvoicesService {
         );
       }
 
+      if (!row.invoice.pdfMediaId) {
+        // Issued while storage was unavailable (R8-02) — render it now.
+        await withTx((tx) => this.renderInvoicePdf(row.invoice.id, tx));
+      }
       objectKey = `invoices/${row.invoice.fy}/${row.invoice.invoiceNo.replace(/\//g, "-")}.pdf`;
     } else {
       const [row] = await db

@@ -62,12 +62,13 @@ export interface SeedSettingsOptions {
 export function seedSettingsValues(
   opts: Pick<SeedSettingsOptions, "upiVpa" | "bankDetails">,
 ): SiteSettings {
-  const bankDetails = opts.bankDetails ?? PLACEHOLDER_BANK_DETAILS;
+  // R8-01: no placeholder payee details — unset until the founders enter real ones in admin
+  // (checkout hides a method whose details are missing).
   return siteSettingsSchema.parse({
     ...SITE_SETTINGS_DEFAULTS,
     sellerDetails: PLACEHOLDER_SELLER_DETAILS,
-    upiVpa: opts.upiVpa ?? PLACEHOLDER_UPI_VPA,
-    bankDetails: bankDetailsSchema.parse(bankDetails),
+    upiVpa: opts.upiVpa ?? null,
+    bankDetails: opts.bankDetails ? bankDetailsSchema.parse(opts.bankDetails) : null,
   } satisfies SiteSettings);
 }
 
