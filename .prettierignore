@@ -5,3 +5,7 @@ pnpm-lock.yaml
 *.md
 drizzle/migrations
 public
+.claude/
+.scratch/
+.playwright-mcp/
+.vscode/

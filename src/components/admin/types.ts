@@ -905,8 +905,6 @@ export interface SettingsData {
     /** Admin-uploaded UPI QR image (data URL) or `null` (R8-01). */
     qrImage: string | null;
     bankEnabled: boolean;
-    /** Every enabled `site_settings.enabled_payment_methods` value (kept on save). */
-    enabledMethods?: string[];
     accountName: string;
     accountNumber: string;
     ifsc: string;

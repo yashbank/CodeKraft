@@ -64,8 +64,10 @@ describe("SettingsScreen save (BUG-059)", () => {
   it("payment methods section persists UPI + bank details", async () => {
     updateSettingsMock.mockResolvedValue({ ok: true, data: {} });
     renderAt("payment-methods");
-    fireEvent.change(screen.getByLabelText(/^VPA/), { target: { value: "shop@okbank" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    fireEvent.change(screen.getByLabelText(/^UPI ID \(VPA\)/), {
+      target: { value: "shop@okbank" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save payment details" }));
     await waitFor(() => expect(updateSettingsMock).toHaveBeenCalled());
     const patch = updateSettingsMock.mock.calls[0]![0].patch;
     expect(patch.upiVpa).toBe("shop@okbank");
