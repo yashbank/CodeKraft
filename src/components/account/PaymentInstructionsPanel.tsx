@@ -33,6 +33,7 @@ import { format, type Money } from "@/lib/money";
 import { submitPaymentReference } from "@/modules/payments/customer-mutations";
 import type { PaymentInstructions } from "@/modules/payments/provider";
 import { Banner } from "./Banner";
+import { useSiteName } from "@/components/brand/site-brand";
 
 const RAZORPAY_CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 
@@ -146,6 +147,7 @@ export function PaymentInstructionsPanel({
   expiresAt: string;
   dashboardHref: string;
 }) {
+  const siteName = useSiteName();
   const [reference, setReference] = React.useState("");
   const [submitted, setSubmitted] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
@@ -221,7 +223,7 @@ export function PaymentInstructionsPanel({
       order_id: razorpayOrderId,
       amount: amount?.amountMinor,
       currency: amount?.currency,
-      name: "CodeKraft",
+      name: siteName,
       description: orderNo,
       notes: { orderNo },
       handler: (response) => {

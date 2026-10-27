@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const description = blog.seoDescription ?? blog.excerpt ?? undefined;
 
   return {
-    title: `${title} — CodeKraft Blog`,
+    title: `${title} — Blog`,
     description,
     openGraph: { title, description },
   };

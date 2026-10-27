@@ -148,7 +148,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!product) return {};
 
   return {
-    title: `${product.name} — Software by CodeKraft`,
+    title: product.name,
     description: product.shortDescription,
     openGraph: { title: product.name, description: product.shortDescription },
   };

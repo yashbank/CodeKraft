@@ -9,8 +9,8 @@ import { listBlogPostsQuery } from "@/modules/blog/queries";
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: "Blog — CodeKraft",
-  description: "Deep dives into the architecture, design, and software we build at CodeKraft.",
+  title: "Blog",
+  description: "Deep dives into the architecture, design, and software we build.",
 };
 
 export default async function BlogPage() {

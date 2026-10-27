@@ -25,6 +25,9 @@ vi.mock("resend", () => ({
   },
 }));
 
+const siteNameMock = vi.fn(async () => "CodeKraft");
+vi.mock("@/lib/site-brand", () => ({ getSiteName: () => siteNameMock() }));
+
 async function load(transport: string) {
   vi.resetModules();
   for (const [k, v] of Object.entries({ ...base, EMAIL_TRANSPORT: transport })) process.env[k] = v;
@@ -77,6 +80,21 @@ describe("email transport (docs/12 §7)", () => {
     });
     expect(ok.id).toBe("msg_1");
     expect(sendMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("brands the subject and From name with the admin-set site name (R8-11)", async () => {
+    siteNameMock.mockResolvedValueOnce("Acme Studio");
+    const t = await load("resend");
+    await t.sendEmail({
+      to: "founder@example.com",
+      subject: "Verify your CodeKraft email",
+      template: "verify-email",
+      data: { url: "https://x/y" },
+    });
+    const sent = (sendMock.mock.calls as unknown as Array<[Record<string, string>]>)[0]![0];
+    expect(sent.subject).toBe("Verify your Acme Studio email");
+    expect(sent.from).toBe("Acme Studio <hello@codekraft.test>");
+    expect(sent.html).toContain("Acme Studio");
   });
 
   it("defers non-urgent mail past the daily soft cap but lets urgent mail through", async () => {

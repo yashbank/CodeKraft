@@ -9,7 +9,7 @@ import type { Service, ServiceOption } from "@/components/site/types";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Services — Custom Web Applications & Platform Engineering | CodeKraft",
+  title: "Services — Custom Web Applications & Platform Engineering",
   description:
     "End-to-end custom engineering, software architecture, and full-stack development. Scoped, built, and delivered.",
 };

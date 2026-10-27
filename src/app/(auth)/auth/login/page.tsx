@@ -6,7 +6,7 @@ import { hostFromHeaders } from "@/modules/auth/service";
 
 export const metadata: Metadata = {
   title: "Sign in",
-  description: "Sign in to access your CodeKraft products, licenses, and services.",
+  description: "Sign in to access your products, licenses, and services.",
 };
 
 interface PageProps {

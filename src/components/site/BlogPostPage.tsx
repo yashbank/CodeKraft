@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { SiteName } from "@/components/brand/site-brand";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -80,7 +81,8 @@ export function BlogPostPage({
           <h1 className="font-display text-display-lg text-balance">{post.title}</h1>
           <p className="text-body-lg text-fg-muted">{post.excerpt}</p>
           <p className="text-body-sm text-fg-subtle">
-            By CodeKraft · <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time> ·{" "}
+            By <SiteName /> ·{" "}
+            <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time> ·{" "}
             {post.readingMinutes} min read
           </p>
         </header>

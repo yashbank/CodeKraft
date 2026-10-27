@@ -13,9 +13,9 @@ import type { CaseStudySummary, ClientLogo, ServiceOption } from "@/components/s
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Case Studies & Projects — Delivered Engineering Work | CodeKraft",
+  title: "Case Studies & Projects",
   description:
-    "Explore case studies, client systems, and custom architectures engineered and shipped by CodeKraft.",
+    "Explore case studies, client systems, and custom architectures engineered and shipped by our team.",
 };
 
 export default async function ProjectsRoute() {
@@ -53,7 +53,7 @@ export default async function ProjectsRoute() {
       studies={studies}
       logos={logos}
       serviceOptions={serviceOptions}
-      intro="A selection of client platforms, SaaS products, and custom software systems designed and delivered by CodeKraft."
+      intro="A selection of client platforms, SaaS products, and custom software systems designed and delivered by our team."
     />
   );
 }

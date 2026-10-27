@@ -5,6 +5,7 @@ import { cn } from "@/components/ui/_utils";
 import { Banner } from "../Banner";
 import { formatDate } from "../format";
 import type { ServiceStep } from "../types";
+import { SiteName } from "@/components/brand/site-brand";
 
 /**
  * Service checklist (docs/08 §6.13, D-608): progress bar with `aria-valuenow`, 44px rows with
@@ -60,7 +61,9 @@ export function ServicePanel({ steps }: { steps: ServiceStep[] }) {
               </p>
               {s.description ? <p className="text-body-sm text-fg-muted">{s.description}</p> : null}
               {s.note ? (
-                <p className="mt-1 text-caption text-fg-muted">Note from CodeKraft: {s.note}</p>
+                <p className="mt-1 text-caption text-fg-muted">
+                  Note from <SiteName />: {s.note}
+                </p>
               ) : null}
               {s.doneAt ? (
                 <p className="text-caption text-fg-subtle">Completed {formatDate(s.doneAt)}</p>

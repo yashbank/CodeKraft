@@ -13,6 +13,7 @@ import { safeRedirectPath } from "@/lib/safe-redirect";
 import { authClient } from "@/modules/auth/client";
 import { GoogleButton } from "./GoogleButton";
 import { PasswordInput } from "./PasswordInput";
+import { SiteName } from "@/components/brand/site-brand";
 
 export interface LoginFormProps {
   defaultNext?: string;
@@ -242,7 +243,7 @@ export function LoginForm({
             </p>
           ) : null}
           <p>
-            New to CodeKraft?{" "}
+            New to <SiteName />?{" "}
             <Link href={registerHref} className="font-medium text-accent-text hover:underline">
               Create an account
             </Link>

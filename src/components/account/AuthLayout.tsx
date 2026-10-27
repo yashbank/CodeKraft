@@ -27,7 +27,7 @@ export function AuthLayout({
   return (
     <main className="grid min-h-[calc(100dvh-3rem)] bg-canvas lg:grid-cols-[45fr_55fr]">
       <aside
-        aria-label="CodeKraft"
+        aria-label="About"
         className="relative flex items-center justify-between overflow-hidden border-b border-border bg-surface px-4 py-3 lg:flex-col lg:items-start lg:justify-between lg:border-r lg:border-b-0 lg:px-12 lg:py-12"
       >
         <div
@@ -61,7 +61,7 @@ export function AuthCard({
   className,
   headingId = "auth-title",
 }: {
-  title: string;
+  title: ReactNode;
   lede?: ReactNode;
   children: ReactNode;
   className?: string;

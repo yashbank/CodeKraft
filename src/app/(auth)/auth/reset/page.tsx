@@ -6,7 +6,7 @@ import {
 
 export const metadata: Metadata = {
   title: "Reset password",
-  description: "Reset your CodeKraft account password.",
+  description: "Reset your account password.",
 };
 
 interface PageProps {

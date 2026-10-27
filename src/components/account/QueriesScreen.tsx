@@ -35,6 +35,7 @@ import { createQuery, replyToMyQuery } from "@/modules/queries/customer-mutation
 import { EmptyState } from "./EmptyState";
 import { formatDate, formatDateTime, relativeTime } from "./format";
 import type { ChatTranscript, QueryStatus, QuerySummary } from "./types";
+import { useSiteName } from "@/components/brand/site-brand";
 
 const STATUS_LABEL: Record<QueryStatus, string> = {
   open: "Open",
@@ -287,6 +288,7 @@ export function QueryThreadScreen({
   sendError?: boolean;
 }) {
   const router = useRouter();
+  const siteName = useSiteName();
   const [draft, setDraft] = React.useState(
     sendError ? "Here's the log file you asked for — attached." : "",
   );
@@ -377,7 +379,7 @@ export function QueryThreadScreen({
             <li key={m.id} className={cn("flex", mine ? "justify-end" : "justify-start")}>
               <div className={cn("max-w-[85%] space-y-1 sm:max-w-[70%]", mine && "text-right")}>
                 <p className="text-caption text-fg-muted">
-                  {mine ? "You" : `CodeKraft${m.authorName ? ` · ${m.authorName}` : ""}`} ·{" "}
+                  {mine ? "You" : `${siteName}${m.authorName ? ` · ${m.authorName}` : ""}`} ·{" "}
                   <time dateTime={m.at} title={formatDateTime(m.at)}>
                     {relativeTime(m.at, now)}
                   </time>

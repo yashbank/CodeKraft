@@ -12,6 +12,7 @@ import { Banner } from "./Banner";
 import { OtpInput } from "./OtpInput";
 import { PasswordInput } from "./PasswordInput";
 import { Wordmark } from "./Wordmark";
+import { SiteName } from "@/components/brand/site-brand";
 
 /**
  * Admin-host login (SCR-ADM-01, referenced by SCR-AUTH-01): credentials then a TOTP step, no Google.
@@ -42,7 +43,13 @@ export function AdminLoginScreen({
         <Badge tone={environment === "Production" ? "danger" : "warning"}>{environment}</Badge>
       </div>
       {step === "credentials" ? (
-        <AuthCard title="Sign in to CodeKraft admin">
+        <AuthCard
+          title={
+            <>
+              Sign in to <SiteName /> admin
+            </>
+          }
+        >
           <form
             className="space-y-4"
             method="post"
@@ -91,7 +98,11 @@ export function AdminLoginScreen({
       ) : (
         <AuthCard
           title="Enter your authenticator code"
-          lede="Open your authenticator app and enter the 6-digit code for CodeKraft admin."
+          lede={
+            <>
+              Open your authenticator app and enter the 6-digit code for <SiteName /> admin.
+            </>
+          }
         >
           <form
             className="space-y-5"

@@ -11,6 +11,7 @@ import { EmptyState } from "./EmptyState";
 import { EntitlementCard } from "./EntitlementCard";
 import { formatDate, relativeTime } from "./format";
 import type { EntitlementSummary, InvoiceSummary, QuerySummary } from "./types";
+import { SiteName } from "@/components/brand/site-brand";
 
 export interface OverviewAction {
   id: string;
@@ -107,7 +108,7 @@ export function OverviewScreen(props: OverviewScreenProps) {
       {empty ? (
         <EmptyState
           icon={PackageOpenIcon}
-          title="Welcome to CodeKraft"
+          title={<SiteName prefix="Welcome to " />}
           body="Nothing here yet. Explore products, or ask the assistant what fits your project."
           action={
             <>

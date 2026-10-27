@@ -22,6 +22,7 @@ import { InquirySheet } from "./InquirySheet";
 import { SITE_NAV } from "./nav";
 import { ThemeToggle } from "./ThemeToggle";
 import type { ServiceOption } from "./types";
+import { useSiteName } from "@/components/brand/site-brand";
 import { Wordmark } from "./Wordmark";
 
 export interface SiteHeaderProps {
@@ -50,6 +51,7 @@ export function SiteHeader({
   const { data: session } = useSession();
   const [authHref, authLabel] = session ? ["/account", "My account"] : ["/auth/login", "Sign in"];
   const active = currentPath ?? pathname;
+  const siteName = useSiteName();
   const [scrolled, setScrolled] = useState(!transparentAtTop);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [inquiryOpen, setInquiryOpen] = useState(false);
@@ -83,7 +85,7 @@ export function SiteHeader({
           <Link
             href="/"
             className="rounded-sm text-fg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
-            aria-label="CodeKraft home"
+            aria-label={`${siteName} home`}
           >
             <Wordmark className="h-5 lg:h-6 tv:h-8" />
           </Link>
