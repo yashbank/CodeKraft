@@ -9,10 +9,6 @@ import type { RequestContext } from "@/lib/authz/context";
 import { approvalsService } from "@/modules/approvals/service";
 import { countActiveAdmins } from "@/modules/approvals/approver-set";
 import type { ApprovalPayloadMap } from "@/modules/approvals/types";
-import { randomBytes } from "node:crypto";
-import { getEnv } from "@/lib/env";
-import { sendEmail } from "@/lib/email/transport";
-import { getLogger } from "@/lib/logger";
 import {
   accounts,
   sessions,
@@ -513,12 +509,18 @@ export async function sendAdminInvite(
   tx: TxCtx,
   invite: { userId: string; email: string; role: string },
 ): Promise<void> {
-  const token = randomBytes(24).toString("base64url");
+  const token = Buffer.from(crypto.getRandomValues(new Uint8Array(24))).toString("base64url");
   await tx.insert(verifications).values({
     identifier: `reset-password:${token}`,
     value: invite.userId,
     expiresAt: new Date(Date.now() + ADMIN_INVITE_TTL_MS),
   });
+  // Lazy: this module is reachable from client bundles/jsdom tests; env + mail are server-only.
+  const [{ getEnv }, { sendEmail }, { getLogger }] = await Promise.all([
+    import("@/lib/env"),
+    import("@/lib/email/transport"),
+    import("@/lib/logger"),
+  ]);
   const adminUrl = getEnv().NEXT_PUBLIC_ADMIN_URL.replace(/\/$/, "");
   const url = `${adminUrl}/auth/reset?token=${encodeURIComponent(token)}`;
   try {
