@@ -20,3 +20,8 @@ tsconfig.tsbuildinfo
 .env*
 .scratch-e2e/
 .claude/settings.local.json
+
+# Playwright login sessions (never commit)
+*-state.json
+storageState*.json
+.auth/
