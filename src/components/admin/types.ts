@@ -903,6 +903,8 @@ export interface SettingsData {
     vpa: string;
     payeeName: string;
     bankEnabled: boolean;
+    /** Every enabled `site_settings.enabled_payment_methods` value (kept on save). */
+    enabledMethods?: string[];
     accountName: string;
     accountNumber: string;
     ifsc: string;

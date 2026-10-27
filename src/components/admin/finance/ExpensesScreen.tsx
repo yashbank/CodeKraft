@@ -47,6 +47,7 @@ import { Field } from "../RichTextField";
 import { RowActions } from "../RowActions";
 import { StatTile } from "../StatTile";
 import type { ExpenseRow } from "../types";
+import { isoDate } from "@/lib/dates";
 
 const CATEGORIES = [
   "Hosting",
@@ -86,7 +87,7 @@ export function ExpensesScreen({
   const [category, setCategory] = React.useState("Hosting");
   const [currency, setCurrency] = React.useState<Currency>("INR");
   const [shared, setShared] = React.useState(true);
-  const [amount, setAmount] = React.useState("5,000.00");
+  const [amount, setAmount] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const amountMinor = (() => {
     try {
@@ -149,7 +150,7 @@ export function ExpensesScreen({
     <>
       <PageHeader
         title="Expenses"
-        description="Record costs against products (shared by that product's split) or the company so reports show profit, not just revenue (D-514)."
+        description="Record costs against products (shared by that product's split) or the company so reports show profit, not just revenue."
         actions={
           <>
             <Button variant="outline" size="sm" onClick={() => toast("Export queued")}>
@@ -174,7 +175,12 @@ export function ExpensesScreen({
               <Input id="exp-from" type="date" defaultValue="2026-06-27" className="h-8 w-40" />
             </ToolbarField>
             <ToolbarField id="exp-to" label="To">
-              <Input id="exp-to" type="date" defaultValue="2026-09-25" className="h-8 w-40" />
+              <Input
+                id="exp-to"
+                type="date"
+                defaultValue={isoDate(new Date())}
+                className="h-8 w-40"
+              />
             </ToolbarField>
             <ToolbarField id="exp-product" label="Product">
               <Select>
@@ -356,7 +362,12 @@ export function ExpensesScreen({
                 </Select>
               </Field>
               <Field id="ex-date" label="Incurred on" required>
-                <Input id="ex-date" name="incurredOn" type="date" defaultValue="2026-09-25" />
+                <Input
+                  id="ex-date"
+                  name="incurredOn"
+                  type="date"
+                  defaultValue={isoDate(new Date())}
+                />
               </Field>
               <Field id="ex-amount" label="Amount" required>
                 <Input

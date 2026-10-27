@@ -85,7 +85,7 @@ export function LedgerScreen({
             </Tooltip>
           </span>
         }
-        description="Every entry posted on payment confirmation, refund reversals, payouts, expenses and approved adjustments — in transaction currency and INR (D-515)."
+        description="Every entry posted on payment confirmation, refund reversals, payouts, expenses and approved adjustments — in transaction currency and INR."
         actions={
           <>
             <Badge tone="neutral" dot>

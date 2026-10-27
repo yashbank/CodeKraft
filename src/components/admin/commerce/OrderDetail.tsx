@@ -639,7 +639,7 @@ export function OrderDetail({
             {data.refunds.length === 0 ? (
               <p className="text-body-sm text-fg-muted">
                 No refunds. Only UPI/bank payments can be refunded; gateway payments are
-                non-refundable (D-505).
+                non-refundable.
               </p>
             ) : null}
             {data.refunds.map((r) => (
@@ -685,8 +685,8 @@ export function OrderDetail({
           <DialogHeader>
             <DialogTitle>Propose refund · {order.number}</DialogTitle>
             <DialogDescription>
-              Refunds are dual-approved (BR-09, BR-13). On approval the reversal entries post, a
-              credit note is issued and entitlements are revoked if selected.
+              Refunds are dual-approved. On approval the reversal entries post, a credit note is
+              issued and entitlements are revoked if selected.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -751,7 +751,7 @@ export function OrderDetail({
           <DialogHeader>
             <DialogTitle>Mark payment failed · {order.number}</DialogTitle>
             <DialogDescription>
-              The order stays pending_payment so the customer can retry (D-416).
+              The order stays pending_payment so the customer can retry.
             </DialogDescription>
           </DialogHeader>
           <Field id="fail-reason" label="Reason" required>
@@ -781,7 +781,7 @@ export function OrderDetail({
             <DialogTitle>Revoke access for {order.number}?</DialogTitle>
             <DialogDescription>
               Downloads and keys are revoked automatically; external SaaS accounts create a revoke
-              task for a human (D-607).
+              task for a human.
             </DialogDescription>
           </DialogHeader>
           <Field id="rv-reason" label="Reason" required>

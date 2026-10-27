@@ -3068,7 +3068,7 @@ export const SETTINGS: SettingsData = {
       key: "provider_razorpay",
       description: "Razorpay gateway",
       enabled: false,
-      dependency: "V1.1 — configure keys first",
+      dependency: "Needs Razorpay API keys configured.",
     },
     {
       key: "provider_stripe",

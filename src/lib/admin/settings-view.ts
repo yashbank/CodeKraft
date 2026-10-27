@@ -129,6 +129,7 @@ export function mapSiteSettingsToSettingsData(settings: SiteSettings): SettingsD
       vpa: settings.upiVpa ?? "",
       payeeName: "",
       bankEnabled: settings.enabledPaymentMethods.includes("manual_bank"),
+      enabledMethods: [...settings.enabledPaymentMethods],
       accountName: bank?.accountName ?? "",
       accountNumber: bank?.accountNumber ?? "",
       ifsc: bank?.ifsc ?? "",

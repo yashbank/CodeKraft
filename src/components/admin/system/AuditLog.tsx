@@ -192,7 +192,7 @@ export function AuditLog({
             <span className="sr-only">append-only</span>
           </span>
         }
-        description="Every admin action and auth event with actor, timestamp and before/after (D-1104). Sensitive values are redacted at write time."
+        description="Every admin action and auth event with actor, timestamp and before/after. Sensitive values are redacted at write time."
         actions={
           <>
             <div className="flex items-center gap-2">

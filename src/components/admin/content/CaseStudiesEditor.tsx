@@ -204,7 +204,7 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
   return (
     <ContentEditorFrame
       title="Case studies"
-      description="Project stories rendered at /projects/[slug] and in the Proof chapter. Company-brand only — no partner or team names (D-103)."
+      description="Project stories rendered at /projects/[slug] and in the Proof chapter. Company-brand only — no partner or team names."
       previewHref={editing ? `/projects/${editing.slug}?preview=draft` : undefined}
       hideSaveBar
       headerActions={

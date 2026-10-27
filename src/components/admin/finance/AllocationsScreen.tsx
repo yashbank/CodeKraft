@@ -122,7 +122,7 @@ export function AllocationsScreen({
         <StatTile
           label="Distributable"
           value={inr(sum((r) => r.distributable.amountMinor))}
-          hint="gross − discount − tax − gateway fee − bank shortfall (BR-06)"
+          hint="gross − discount − tax − gateway fee − bank shortfall"
         />
         <StatTile label="Company" value={inr(sum((r) => r.companyCut.amount.amountMinor))} />
         {partners.map((p) => (
@@ -162,7 +162,7 @@ export function AllocationsScreen({
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    gross − discount − tax − gateway fee − bank shortfall (BR-06)
+                    gross − discount − tax − gateway fee − bank shortfall
                   </TooltipContent>
                 </Tooltip>
               </TableHead>

@@ -143,7 +143,7 @@ export function ServicesEditor({ services: initial }: { services: ServiceRow[] }
   return (
     <ContentEditorFrame
       title={`Services · ${services.length}`}
-      description="Shown on /services and in the landing “What we build” chapter. Services never carry prices (BR-01)."
+      description="Shown on /services and in the landing “What we build” chapter. Services never carry prices."
       previewHref="/services?preview=draft"
       hideSaveBar
       headerActions={
@@ -282,7 +282,7 @@ export function ServicesEditor({ services: initial }: { services: ServiceRow[] }
               id="sv-summary"
               label="Summary"
               required
-              hint="No pricing — services are inquiry-only (BR-01). 300 chars."
+              hint="No pricing — services are inquiry-only. 300 chars."
             >
               <Textarea
                 id="sv-summary"

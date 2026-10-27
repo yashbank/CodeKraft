@@ -232,7 +232,7 @@ export function ProductsList({
     <TooltipProvider>
       <PageHeader
         title="Products"
-        description="Manage the catalog. Archive, delete and publish are dual-approved (BR-13)."
+        description="Manage the catalog. Archive, delete and publish are dual-approved."
         actions={
           <>
             <Button

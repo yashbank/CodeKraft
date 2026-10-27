@@ -82,14 +82,8 @@ export function AdjustmentsScreen({
   const [submitting, setSubmitting] = React.useState(false);
   const [status, setStatus] = React.useState<AdjustmentRow["status"] | null>(null);
   const [lines, setLines] = React.useState<DraftLine[]>([
-    {
-      id: 1,
-      partyType: "bank",
-      amount: "-40.00",
-      memo: "Shortfall write-off",
-      order: prefillRef ?? "CK-ORD-000009",
-    },
-    { id: 2, partyType: "company", amount: "40.00", memo: "Balancing line" },
+    { id: 1, partyType: "bank", amount: "", memo: "", order: prefillRef ?? "" },
+    { id: 2, partyType: "company", amount: "", memo: "" },
   ]);
   const [reason, setReason] = React.useState("");
   const [justify, setJustify] = React.useState(false);
@@ -144,7 +138,7 @@ export function AdjustmentsScreen({
     <>
       <PageHeader
         title={view === "list" ? "Adjustments" : "New adjustment"}
-        description="Correcting journal entries — never edits. Each adjustment is a set of signed lines that must be explained and approved by all other admins (D-517)."
+        description="Correcting journal entries — never edits. Each adjustment is a set of signed lines that must be explained and approved by all other admins."
         actions={
           view === "list" ? (
             <Button size="sm" onClick={() => setView("new")}>
@@ -158,7 +152,7 @@ export function AdjustmentsScreen({
         }
       />
       <Banner tone="warning" className="mb-4">
-        Adjustments never change existing entries; they add new ones (BR-17).
+        Adjustments never change existing entries; they add new ones.
       </Banner>
 
       {view === "list" ? (
@@ -303,7 +297,8 @@ export function AdjustmentsScreen({
             <Field id="adj-ref" label="Reference (order / entry seq)" optional>
               <Input
                 id="adj-ref"
-                defaultValue={prefillRef ?? "CK-ORD-000009"}
+                defaultValue={prefillRef ?? ""}
+                placeholder="e.g. CK-ORD-000123"
                 className="font-mono"
               />
             </Field>

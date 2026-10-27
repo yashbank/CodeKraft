@@ -205,7 +205,12 @@ export function CouponsList({
                           variant="ghost"
                           size="icon-sm"
                           aria-label={`Copy code ${c.code}`}
-                          onClick={() => toast.success(`Copied ${c.code}`)}
+                          onClick={() =>
+                            void navigator.clipboard
+                              .writeText(c.code)
+                              .then(() => toast.success(`Copied ${c.code}`))
+                              .catch(() => toast.error("Couldn't copy — select the code instead"))
+                          }
                         >
                           <CopyIcon aria-hidden className="size-3.5" />
                         </Button>

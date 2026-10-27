@@ -183,7 +183,7 @@ export function OrdersList({
         <DialogHeader>
           <DialogTitle>Mark payment failed{failing ? ` · ${failing.number}` : ""}</DialogTitle>
           <DialogDescription>
-            The order stays pending_payment so the customer can retry (D-416).
+            The order stays pending_payment so the customer can retry.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">

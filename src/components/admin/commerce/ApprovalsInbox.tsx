@@ -149,7 +149,7 @@ export function ApprovalsInbox({ approvals, currentUser, now }: ApprovalsInboxPr
     <>
       <PageHeader
         title="Approvals"
-        description="Every dual-approval action (BR-13). J/K move, Enter opens."
+        description="Every dual-approval action. J/K move, Enter opens."
         className="hidden lg:flex"
       />
       <h1 className="text-h2 lg:hidden">Approvals</h1>
