@@ -37,6 +37,8 @@ export interface BankDetails {
   ifsc: string;
   bankName: string;
   branch?: string;
+  /** Optional, for international wires. */
+  swift?: string;
 }
 
 export interface RetentionSettings {
@@ -68,6 +70,13 @@ export interface SiteSettings {
   gstin: string | null;
   sellerDetails: SellerDetails | null;
   upiVpa: string | null;
+  /** Name shown to the payer in their UPI app (`pn=`); falls back to `siteName`. */
+  upiPayeeName: string | null;
+  /**
+   * Admin-uploaded UPI QR code image as a `data:image/(png|jpeg|webp);base64,…` URL (R8-01).
+   * Stored inline (not R2) so it works without bucket CORS and renders at checkout as-is.
+   */
+  upiQrImage: string | null;
   bankDetails: BankDetails | null;
   razorpaySettings: RazorpaySettings | null;
   enabledPaymentMethods: PaymentMethodValue[];
@@ -91,6 +100,8 @@ export const SITE_SETTING_KEYS: Readonly<Record<SiteSettingField, string>> = Obj
   gstin: "gstin",
   sellerDetails: "seller_details",
   upiVpa: "upi_vpa",
+  upiPayeeName: "upi_payee_name",
+  upiQrImage: "upi_qr_image",
   bankDetails: "bank_details",
   razorpaySettings: "razorpay_settings",
   enabledPaymentMethods: "enabled_payment_methods",

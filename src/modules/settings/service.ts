@@ -1,6 +1,7 @@
 /**
  * Settings service implementation (docs/06 API-ADM-10, API-AUTH-09/10, PHASE-03 P3.3).
  */
+import crypto from "node:crypto";
 import { count, eq, sql } from "drizzle-orm";
 import type { Context, RequestContext } from "@/lib/authz/context";
 import { assertPermission } from "@/lib/authz/assert";
@@ -55,6 +56,48 @@ async function safeRevalidate(tag: string): Promise<void> {
   } catch {
     // In test environment or non-Next runtime, next/cache may throw or be absent
   }
+}
+
+/** Payee values the seed used to write until real ones were entered (scripts/seed/settings.ts). */
+const PLACEHOLDER_VPAS = new Set(["codekraft@upi"]);
+function isPlaceholderBank(b: BankDetails): boolean {
+  return (
+    /^0+$/.test(b.accountNumber) ||
+    /placeholder/i.test(`${b.accountName} ${b.bankName}`) ||
+    /replace before launch/i.test(b.branch ?? "")
+  );
+}
+
+/**
+ * R8-01: databases seeded before this fix carry placeholder payee details (`codekraft@upi`,
+ * account `000000000000`). Treat them as "not configured" everywhere so checkout never shows them
+ * and the admin form starts empty, ready for the real values.
+ */
+export function stripPlaceholderPayees(settings: SiteSettings): SiteSettings {
+  const vpa =
+    settings.upiVpa && PLACEHOLDER_VPAS.has(settings.upiVpa.toLowerCase()) ? null : settings.upiVpa;
+  const bank =
+    settings.bankDetails && isPlaceholderBank(settings.bankDetails) ? null : settings.bankDetails;
+  if (vpa === settings.upiVpa && bank === settings.bankDetails) return settings;
+  return { ...settings, upiVpa: vpa, bankDetails: bank };
+}
+
+/**
+ * Audit rows keep before/after, but never the bank account number in clear or the inline QR
+ * image blob (hundreds of KB) — only enough to see that it changed.
+ */
+export function redactSettingsForAudit(settings: SiteSettings): SiteSettings {
+  return {
+    ...settings,
+    bankDetails: settings.bankDetails ? maskBankDetails(settings.bankDetails) : null,
+    upiQrImage: settings.upiQrImage
+      ? `[image ${settings.upiQrImage.length} chars, sha256:${crypto
+          .createHash("sha256")
+          .update(settings.upiQrImage)
+          .digest("hex")
+          .slice(0, 12)}]`
+      : null,
+  };
 }
 
 function maskBankDetails(bank: BankDetails): BankDetails {
@@ -192,7 +235,7 @@ export class DefaultSettingsService implements SettingsService {
       }
     }
 
-    return siteSettingsSchema.parse(assembled);
+    return stripPlaceholderPayees(siteSettingsSchema.parse(assembled));
   }
 
   /**
@@ -297,6 +340,24 @@ export class DefaultSettingsService implements SettingsService {
         );
       }
 
+      // 2b. Bank transfer needs bank details to show the customer (R8-01: never placeholders).
+      const targetBank =
+        validated.patch.bankDetails !== undefined
+          ? validated.patch.bankDetails
+          : before.bankDetails;
+      const manualBankInPatch = validated.patch.enabledPaymentMethods?.includes("manual_bank");
+      const bankCleared = validated.patch.bankDetails === null;
+      if (
+        (manualBankInPatch || (bankCleared && targetMethods.includes("manual_bank"))) &&
+        !targetBank
+      ) {
+        throw new AppError(
+          ErrorCode.VALIDATION,
+          "Bank details are required to enable bank transfer",
+          { fieldErrors: { bankDetails: ["Bank details are required to enable bank transfer"] } },
+        );
+      }
+
       // 3. Check flag-gated gateway payment methods
       const checkGateway = (method: "razorpay" | "stripe" | "paypal", flagKey: FlagKey) => {
         if (
@@ -392,8 +453,8 @@ export class DefaultSettingsService implements SettingsService {
         ctx,
         "API-ADM-10 settings.update",
         { type: "settings", id: "site" },
-        before,
-        nextSettings,
+        redactSettingsForAudit(before),
+        redactSettingsForAudit(nextSettings),
         activeTx,
       );
 

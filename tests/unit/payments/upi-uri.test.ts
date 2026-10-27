@@ -10,7 +10,8 @@ describe("UPI URI formatting unit tests", () => {
       getUpiVpa: async () => "payments@bank",
       getBankDetails: async () => null,
       getBaseCurrency: async () => "INR",
-      renderQr: async () => "dummy-qr",
+      getUpiQrImage: async () => null,
+      getUpiPayeeName: async () => "CodeKraft",
     });
 
     const res = await provider.createIntent(

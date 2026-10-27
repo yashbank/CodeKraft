@@ -1,6 +1,8 @@
 import { and, desc, eq, gt, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { storedInstructions } from "@/modules/payments/provider";
+import { withLiveManualDetails } from "@/modules/payments/availability";
+import { settingsService } from "@/modules/settings/service";
 import { orderItems, orders, payments } from "../../../drizzle/schema/commerce";
 import type { CreateOrderResult, ManualPaymentMethod } from "./types";
 
@@ -38,7 +40,10 @@ export async function findPendingCheckoutOrder(
     )
     .orderBy(desc(payments.createdAt))
     .limit(1);
-  const instructions = storedInstructions(payment?.instructions);
+  const instructions = withLiveManualDetails(
+    storedInstructions(payment?.instructions),
+    await settingsService.load(),
+  );
   if (!payment || !instructions) return null;
 
   return {

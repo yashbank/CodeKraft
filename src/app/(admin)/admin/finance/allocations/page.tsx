@@ -60,6 +60,7 @@ export default async function AdminAllocationsPage() {
       ledgerHref="/admin/finance/ledger"
       productHref="/admin/products"
       isSuperAdmin={ctx.roles.includes("super_admin")}
+      ownPartnerName={ctx.partnerId ? (partnerNames.get(ctx.partnerId) ?? null) : null}
     />
   );
 }

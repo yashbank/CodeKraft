@@ -39,3 +39,8 @@ export async function assignDeliveryTask(raw: unknown) {
   const { assignDeliveryTaskAction } = await import("./actions");
   return withCtx(assignDeliveryTaskAction, raw);
 }
+
+export async function setLicenseKey(raw: unknown) {
+  const { setLicenseKeyAction } = await import("./actions");
+  return withCtx(setLicenseKeyAction, raw);
+}

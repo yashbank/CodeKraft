@@ -100,7 +100,9 @@ export function EntitlementDetailScreen({
           queryHref={links.newQuery}
         />
       ) : null}
-      {e.deliveryType === "license" ? <LicensePanel licenseKey={e.licenseKey} /> : null}
+      {e.deliveryType === "license" ? (
+        <LicensePanel licenseKey={e.licenseKey} entitlementId={e.id} />
+      ) : null}
       {e.deliveryType === "saas" || e.deliveryType === "hosted" ? (
         <HostedPanel
           productName={e.productName}

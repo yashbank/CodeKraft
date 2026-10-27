@@ -171,10 +171,10 @@ export function ExpensesScreen({
         filters={
           <>
             <ToolbarField id="exp-from" label="From">
-              <Input id="exp-from" type="date" defaultValue="2026-06-27" className="h-8 w-40" />
+              <Input id="exp-from" type="date" className="h-8 w-40" />
             </ToolbarField>
             <ToolbarField id="exp-to" label="To">
-              <Input id="exp-to" type="date" defaultValue="2026-09-25" className="h-8 w-40" />
+              <Input id="exp-to" type="date" className="h-8 w-40" />
             </ToolbarField>
             <ToolbarField id="exp-product" label="Product">
               <Select>
@@ -356,7 +356,12 @@ export function ExpensesScreen({
                 </Select>
               </Field>
               <Field id="ex-date" label="Incurred on" required>
-                <Input id="ex-date" name="incurredOn" type="date" defaultValue="2026-09-25" />
+                <Input
+                  id="ex-date"
+                  name="incurredOn"
+                  type="date"
+                  defaultValue={new Date().toISOString().slice(0, 10)}
+                />
               </Field>
               <Field id="ex-amount" label="Amount" required>
                 <Input

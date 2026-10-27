@@ -5,7 +5,6 @@ import { toDecimalString } from "@/lib/money";
 import type { TxCtx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { settingsService } from "@/modules/settings/service";
-import type { BankDetails as SettingsBankDetails } from "@/modules/settings/types";
 import type {
   BankDetails,
   ConfirmInput,
@@ -19,41 +18,37 @@ import type {
   RefundResult,
 } from "../provider";
 import { computeManualConfirmAmounts } from "../provider";
+import { buildUpiUri, toBankInstructionDetails, upiPayeeName } from "../availability";
+
+/**
+ * Customer-facing message when an enabled manual method has no details configured yet (R8-01).
+ * Checkout hides such methods up front (`manualMethodAvailability`); this guards direct calls.
+ */
+export const UPI_NOT_CONFIGURED_MESSAGE =
+  "UPI payment isn't set up yet. Please choose another payment method or contact us.";
+export const BANK_NOT_CONFIGURED_MESSAGE =
+  "Bank transfer isn't set up yet. Please choose another payment method or contact us.";
 
 export const defaultManualDeps: ManualProviderDeps = {
   async getUpiVpa(tx: TxCtx): Promise<string | null> {
     const settings = await settingsService.load(tx);
-    return (settings.upiVpa as string) || "codekraft@upi";
+    return settings.upiVpa?.trim() || null;
   },
   async getBankDetails(tx: TxCtx): Promise<BankDetails | null> {
     const settings = await settingsService.load(tx);
-    const b: (SettingsBankDetails & { accountNo?: string; swift?: string }) | null =
-      settings.bankDetails;
-    if (!b) {
-      return {
-        accountName: "CodeKraft Inc.",
-        accountNo: "1234567890",
-        ifsc: "HDFC0001234",
-        bankName: "HDFC Bank",
-      };
-    }
-    return {
-      accountName: b.accountName,
-      accountNo: b.accountNo || b.accountNumber || "1234567890",
-      ifsc: b.ifsc,
-      bankName: b.bankName,
-      branch: b.branch,
-      swift: b.swift,
-    };
+    return toBankInstructionDetails(settings.bankDetails);
   },
   async getBaseCurrency(tx: TxCtx): Promise<"INR"> {
     const settings = await settingsService.load(tx);
     return (settings.baseCurrency as "INR") || "INR";
   },
-  async renderQr(upiUri: string): Promise<string> {
-    // Generate inline data URL SVG representation of the QR / UPI URI
-    const encoded = encodeURIComponent(upiUri);
-    return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text x="10" y="50" font-size="10">UPI QR</text><rect width="100" height="100" fill="none" stroke="black"/><desc>${encoded}</desc></svg>`;
+  async getUpiQrImage(tx: TxCtx): Promise<string | null> {
+    const settings = await settingsService.load(tx);
+    return settings.upiQrImage || null;
+  },
+  async getUpiPayeeName(tx: TxCtx): Promise<string> {
+    const settings = await settingsService.load(tx);
+    return upiPayeeName(settings);
   },
 };
 
@@ -72,16 +67,18 @@ export class ManualProvider implements PaymentProvider {
         throw new AppError(ErrorCode.STATE_INVALID, "UPI is only available for INR payments");
       }
 
-      const vpa = (await this.deps.getUpiVpa(ctx)) || "codekraft@upi";
+      const vpa = await this.deps.getUpiVpa(ctx);
+      if (!vpa) throw new AppError(ErrorCode.STATE_INVALID, UPI_NOT_CONFIGURED_MESSAGE);
+      const payeeName = await this.deps.getUpiPayeeName(ctx);
       const dueRupees = toDecimalString(order.amountDue.amountMinor);
-      const upiUri = `upi://pay?pa=${vpa}&pn=CodeKraft&am=${dueRupees}&cu=INR&tn=${order.orderNo}`;
-      const qrDataUrl = await this.deps.renderQr(upiUri);
+      const upiUri = buildUpiUri(vpa, payeeName, dueRupees, order.orderNo);
+      const qrDataUrl = await this.deps.getUpiQrImage(ctx);
 
       return {
         instructions: {
           method: "manual_upi",
           vpa,
-          payeeName: "CodeKraft",
+          payeeName,
           amount: order.amountDue,
           note: order.orderNo,
           upiUri,
@@ -91,12 +88,8 @@ export class ManualProvider implements PaymentProvider {
     }
 
     if (method === "manual_bank") {
-      const details = (await this.deps.getBankDetails(ctx)) || {
-        accountName: "CodeKraft Inc.",
-        accountNo: "1234567890",
-        ifsc: "HDFC0001234",
-        bankName: "HDFC Bank",
-      };
+      const details = await this.deps.getBankDetails(ctx);
+      if (!details) throw new AppError(ErrorCode.STATE_INVALID, BANK_NOT_CONFIGURED_MESSAGE);
 
       return {
         instructions: {

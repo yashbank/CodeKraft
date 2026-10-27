@@ -57,6 +57,15 @@ export async function truncateAll(sql: Sql = getTestDb()): Promise<string[]> {
     await tx.unsafe(
       `TRUNCATE TABLE ${tables.map((t) => `"public"."${t}"`).join(", ")} RESTART IDENTITY CASCADE`,
     );
+    // R8-01: manual UPI/bank checkout refuses to run without real payee details, so give every
+    // test the configured state an operator would have (tests of the unconfigured path delete it).
+    if (tables.includes("site_settings")) {
+      await tx.unsafe(
+        `INSERT INTO site_settings (key, value) VALUES
+          ('upi_vpa', '"testshop@okhdfc"'::jsonb),
+          ('bank_details', '{"accountName":"Test Studio LLP","accountNumber":"50200012345678","ifsc":"HDFC0000123","bankName":"HDFC Bank"}'::jsonb)`,
+      );
+    }
   });
   return tables;
 }

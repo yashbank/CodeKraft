@@ -40,6 +40,8 @@ export interface AllocationsScreenProps {
   ledgerHref: string;
   productHref: string;
   isSuperAdmin: boolean;
+  /** The viewer's own partner display name (non-super-admins see only their own line). */
+  ownPartnerName?: string | null;
 }
 
 /** SCR-ADM-18 — per-order-item money split with dynamic partner columns and a waterfall on row expand. */
@@ -50,10 +52,12 @@ export function AllocationsScreen({
   ledgerHref,
   productHref,
   isSuperAdmin,
+  ownPartnerName = null,
 }: AllocationsScreenProps) {
   const [expanded, setExpanded] = React.useState<string | null>(null);
   const sum = (f: (r: AllocationRow) => number) => rows.reduce((s, r) => s + f(r), 0);
-  const partnerName = (n: string) => (isSuperAdmin || n === "Priya Nair" ? n : "Other partner");
+  const partnerName = (n: string) => (isSuperAdmin || n === ownPartnerName ? n : "Other partner");
+  const products = [...new Set(rows.map((r) => r.product))].sort();
 
   return (
     <TooltipProvider>
@@ -72,10 +76,10 @@ export function AllocationsScreen({
         filters={
           <>
             <ToolbarField id="alloc-from" label="From">
-              <Input id="alloc-from" type="date" defaultValue="2026-06-27" className="h-8 w-40" />
+              <Input id="alloc-from" type="date" className="h-8 w-40" />
             </ToolbarField>
             <ToolbarField id="alloc-to" label="To">
-              <Input id="alloc-to" type="date" defaultValue="2026-09-25" className="h-8 w-40" />
+              <Input id="alloc-to" type="date" className="h-8 w-40" />
             </ToolbarField>
             <ToolbarField id="alloc-product" label="Product">
               <Select>
@@ -83,9 +87,11 @@ export function AllocationsScreen({
                   <SelectValue placeholder="Any" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="fitdesk">FitDesk Pro</SelectItem>
-                  <SelectItem value="tradeflow">TradeFlow</SelectItem>
-                  <SelectItem value="shopsync">ShopSync</SelectItem>
+                  {products.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {p}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </ToolbarField>

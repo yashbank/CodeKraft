@@ -510,7 +510,12 @@ export function PartnersPayouts({
               />
             </Field>
             <Field id="po-date" label="Paid on" required>
-              <Input id="po-date" name="paidOn" type="date" defaultValue="2026-09-25" />
+              <Input
+                id="po-date"
+                name="paidOn"
+                type="date"
+                defaultValue={new Date().toISOString().slice(0, 10)}
+              />
             </Field>
             <Field id="po-ref" label="Bank reference" required>
               <Input

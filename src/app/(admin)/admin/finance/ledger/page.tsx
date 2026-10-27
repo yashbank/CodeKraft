@@ -53,6 +53,7 @@ export default async function AdminLedgerPage() {
       adjustmentsHref="/admin/finance/adjustments"
       approvalsHref="/admin/approvals"
       isSuperAdmin={ctx.roles.includes("super_admin")}
+      ownPartnerName={ctx.partnerId ? (partnerNames.get(ctx.partnerId) ?? null) : null}
     />
   );
 }

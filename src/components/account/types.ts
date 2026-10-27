@@ -160,7 +160,10 @@ export interface OrderLine {
 }
 
 export interface PaymentInstructions {
-  upi?: { vpa: string; payeeName: string };
+  /** `qrDataUrl` is the admin-uploaded QR image (null/absent → no QR, VPA + app link only). */
+  upi?: { vpa: string; payeeName: string; qrDataUrl?: string | null };
+  /** The order's method has no payee details configured in admin settings (R8-01). */
+  notConfigured?: boolean;
   bank?: {
     accountName: string;
     accountNumber: string;
@@ -334,6 +337,8 @@ export interface CheckoutOffering {
   taxLabel: string;
   tax: Money | null;
   enabledMethods: PaymentProvider[];
+  /** Accepted by the offering but not configured in admin settings yet — shown as unavailable. */
+  unavailableMethods?: PaymentProvider[];
   displayCurrency: Currency;
   /** Whole-number display-currency rate hint for the "≈" estimate (preview only). */
   displayEstimate?: Money;

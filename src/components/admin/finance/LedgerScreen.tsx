@@ -45,6 +45,8 @@ export interface LedgerScreenProps {
   adjustmentsHref: string;
   approvalsHref: string;
   isSuperAdmin: boolean;
+  /** The viewer's own partner display name (non-super-admins see only their own line). */
+  ownPartnerName?: string | null;
 }
 
 /**
@@ -60,6 +62,7 @@ export function LedgerScreen({
   adjustmentsHref,
   approvalsHref,
   isSuperAdmin,
+  ownPartnerName = null,
 }: LedgerScreenProps) {
   const [type, setType] = React.useState<string>("all");
   const [currency, setCurrency] = React.useState<"native" | "inr">("native");
@@ -108,10 +111,10 @@ export function LedgerScreen({
         filters={
           <>
             <ToolbarField id="ledger-from" label="From">
-              <Input id="ledger-from" type="date" defaultValue="2026-08-26" className="h-8 w-40" />
+              <Input id="ledger-from" type="date" className="h-8 w-40" />
             </ToolbarField>
             <ToolbarField id="ledger-to" label="To">
-              <Input id="ledger-to" type="date" defaultValue="2026-09-25" className="h-8 w-40" />
+              <Input id="ledger-to" type="date" className="h-8 w-40" />
             </ToolbarField>
             <ToolbarField id="ledger-type" label="Entry type">
               <Select value={type} onValueChange={setType}>
@@ -208,8 +211,9 @@ export function LedgerScreen({
                 const siblings = e.ref
                   ? entries.filter((s) => s.ref === e.ref && s.seq !== e.seq)
                   : [];
+                // Non-super-admins only see their own partner name (R8-04: was a fixture name).
                 const hidden =
-                  !isSuperAdmin && e.partyType === "partner" && e.party !== "Priya Nair";
+                  !isSuperAdmin && e.partyType === "partner" && e.party !== ownPartnerName;
                 return (
                   <React.Fragment key={e.seq}>
                     <TableRow>

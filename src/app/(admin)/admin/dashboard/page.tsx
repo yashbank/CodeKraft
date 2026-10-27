@@ -2,6 +2,7 @@ import { AdminDashboard } from "@/components/admin/dashboard/AdminDashboard";
 import { getAdminRequestContext } from "@/lib/authz/admin-request-context";
 import { getSession } from "@/modules/auth/service";
 import { lastDaysRange, mapRevenueByPeriod } from "@/lib/admin/dashboard-view";
+import { loadDashboardFinance } from "@/lib/admin/dashboard-finance";
 import { getReportQuery } from "@/modules/finance/queries";
 import { listApprovalsAction } from "@/modules/approvals/queries";
 import { listQueriesAdminQuery } from "@/modules/queries/queries";
@@ -44,6 +45,18 @@ export default async function AdminDashboardRoute() {
       })),
     ]);
 
+  const finance = (await loadDashboardFinance(ctx).catch((err: unknown) => {
+    console.error("[dashboard] finance widgets failed", err);
+    return null;
+  })) ?? {
+    revenueByProduct: [],
+    revenueByPartner: [],
+    myShare: { valueInr: 0, delta: "Couldn't load", sparkline: [] },
+    outstandingPayouts: { totalInr: 0, items: [] },
+    expensesVsProfit: [],
+    paymentsAwaiting: [],
+  };
+
   const publishApprovals = publishRes.ok ? publishRes.data.items.map(approvalItem) : [];
   const splitApprovals = splitRes.ok ? splitRes.data.items.map(approvalItem) : [];
 
@@ -70,12 +83,8 @@ export default async function AdminDashboardRoute() {
       "data" in revenueRes && revenueRes.ok
         ? mapRevenueByPeriod(revenueRes.data.rows as Array<Record<string, unknown>>)
         : [],
-    revenueByProduct: [],
-    revenueByPartner: [],
-    myShare: { valueInr: 0, delta: "No data yet", sparkline: [] },
-    outstandingPayouts: { totalInr: 0, items: [] },
-    expensesVsProfit: [],
-    paymentsAwaiting: [],
+    // R8-04: money widgets come from the ledger / payments tables.
+    ...finance,
     publishApprovals,
     splitApprovals,
     serviceChecklists: [],

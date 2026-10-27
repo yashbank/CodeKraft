@@ -45,14 +45,20 @@ export type Json = JsonPrimitive | Json[] | { [key: string]: Json };
 export interface UpiInstructions {
   method: "manual_upi";
   vpa: string;
-  /** Always `CodeKraft` (docs/06 §4.2). */
+  /** `upiPayeeName` setting, else the site name. */
   payeeName: string;
   amount: Money;
   /** `orderNo` — the customer's transfer note. */
   note: string;
   /** `upi://pay?pa=<vpa>&pn=CodeKraft&am=<rupees 2dp>&cu=INR&tn=<orderNo>` */
   upiUri: string;
-  qrDataUrl: string;
+  /**
+   * The admin-uploaded QR image (`upiQrImage` setting) or `null` when none is uploaded — never a
+   * generated placeholder (R8-01). The UI then shows the VPA + an "open in UPI app" link.
+   */
+  qrDataUrl: string | null;
+  /** Set on read when the admin settings no longer have UPI details (`withLiveManualDetails`). */
+  unconfigured?: boolean;
 }
 
 export interface BankInstructions {
@@ -66,6 +72,8 @@ export interface BankInstructions {
   amount: Money;
   /** `orderNo` — quoted by the customer on the transfer. */
   reference: string;
+  /** Set on read when the admin settings no longer have bank details (`withLiveManualDetails`). */
+  unconfigured?: boolean;
 }
 
 /** V1.1 gateway intents (docs/06 §4.3). */
@@ -201,8 +209,10 @@ export interface ManualProviderDeps {
   getUpiVpa(tx: TxCtx): Promise<string | null>;
   getBankDetails(tx: TxCtx): Promise<BankDetails | null>;
   getBaseCurrency(tx: TxCtx): Promise<Money["currency"]>;
-  /** `qrcode` → data URL. */
-  renderQr(upiUri: string): Promise<string>;
+  /** Admin-uploaded QR image data URL (`upiQrImage` setting), or `null`. */
+  getUpiQrImage(tx: TxCtx): Promise<string | null>;
+  /** Payee name for the UPI URI (`upiPayeeName`, else site name). */
+  getUpiPayeeName(tx: TxCtx): Promise<string>;
 }
 
 /** Amounts the manual `confirm` derives (docs/06 §4.2) — `gatewayFeeMinor` is always 0. */

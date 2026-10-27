@@ -43,6 +43,7 @@ import { emailOutbox, notifications } from "../../../drizzle/schema/notification
 import { approvalRequests } from "../../../drizzle/schema/approvals";
 import { creditNotes, invoices } from "../../../drizzle/schema/invoices";
 import { storedInstructions } from "@/modules/payments/provider";
+import { withLiveManualDetails } from "@/modules/payments/availability";
 import { nextOrderNo } from "./numbering";
 import { createManualOrder } from "./manual";
 import { applyProjectOrderSplit } from "./project-split";
@@ -334,7 +335,10 @@ export class DefaultOrdersService implements OrdersService {
           .orderBy(desc(payments.createdAt))
           .limit(1);
 
-        const openInstructions = storedInstructions(openPayment?.instructions);
+        const openInstructions = withLiveManualDetails(
+          storedInstructions(openPayment?.instructions),
+          await settingsService.load(tx),
+        );
         if (openPayment && openInstructions) {
           return {
             orderId: existingOrder.id,
@@ -737,6 +741,11 @@ export class DefaultOrdersService implements OrdersService {
       .where(eq(payments.orderId, order.id))
       .orderBy(desc(payments.createdAt));
 
+    const liveSettings = paymentRows.some(
+      (p) => p.status === "initiated" || p.status === "submitted",
+    )
+      ? await settingsService.load(db)
+      : null;
     const paymentViews: OrderPaymentView[] = paymentRows.map((p) => ({
       paymentId: p.id,
       method: p.provider,
@@ -745,7 +754,11 @@ export class DefaultOrdersService implements OrdersService {
       amountReceived: p.amountReceivedMinor
         ? money(p.amountReceivedMinor, p.currency as Currency)
         : null,
-      instructions: storedInstructions(p.instructions),
+      // Open payments show the payee details admin has configured *now* (R8-01).
+      instructions:
+        liveSettings && (p.status === "initiated" || p.status === "submitted")
+          ? withLiveManualDetails(storedInstructions(p.instructions), liveSettings)
+          : storedInstructions(p.instructions),
       customerReference: p.customerReference,
       customerSubmittedAt: p.customerSubmittedAt ? p.customerSubmittedAt.toISOString() : null,
       bankShortfall: p.bankShortfallMinor
@@ -972,6 +985,11 @@ export class DefaultOrdersService implements OrdersService {
         : [];
     const confirmedByName = new Map(confirmedByRows.map((u) => [u.id, u.name]));
 
+    const liveSettings = paymentRows.some(
+      (p) => p.status === "initiated" || p.status === "submitted",
+    )
+      ? await settingsService.load(db)
+      : null;
     const paymentViews: OrderPaymentView[] = paymentRows.map((p) => ({
       paymentId: p.id,
       method: p.provider,
@@ -980,7 +998,11 @@ export class DefaultOrdersService implements OrdersService {
       amountReceived: p.amountReceivedMinor
         ? money(p.amountReceivedMinor, p.currency as Currency)
         : null,
-      instructions: storedInstructions(p.instructions),
+      // Open payments show the payee details admin has configured *now* (R8-01).
+      instructions:
+        liveSettings && (p.status === "initiated" || p.status === "submitted")
+          ? withLiveManualDetails(storedInstructions(p.instructions), liveSettings)
+          : storedInstructions(p.instructions),
       customerReference: p.customerReference,
       customerSubmittedAt: p.customerSubmittedAt ? p.customerSubmittedAt.toISOString() : null,
       bankShortfall: p.bankShortfallMinor

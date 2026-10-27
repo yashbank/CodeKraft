@@ -1,6 +1,6 @@
 "use client";
 
-import { QrCodeIcon, SmartphoneIcon } from "lucide-react";
+import { SmartphoneIcon } from "lucide-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,8 @@ import type { PaymentInstructions, PaymentProvider } from "./types";
  * QR / payment instruction panel (docs/08 §6.15, D-501, D-516): UPI tab with a 224px QR on a white
  * tile (always white for scanner reliability — the tile uses the print-white token), VPA + copy,
  * amount, order number, "Open in UPI app" on phones; bank tab with copyable rows.
- * `qrDataUrl` is the encoded QR (absent in previews / on generation failure → text fallback).
+ * `qrDataUrl` is the admin-uploaded QR image (prop, else `instructions.upi.qrDataUrl`); with none,
+ * no QR tile is drawn at all — never a placeholder graphic a customer might try to scan (R8-01).
  */
 export function PaymentInstructionsCard({
   instructions,
@@ -32,6 +33,22 @@ export function PaymentInstructionsCard({
   orderNumber: string;
   qrDataUrl?: string;
 }) {
+  const qr = qrDataUrl ?? instructions.upi?.qrDataUrl ?? null;
+  if (instructions.notConfigured) {
+    return (
+      <div role="status" className="rounded-lg border border-border bg-surface p-4 text-body-sm">
+        <p className="font-semibold text-fg">Payment details aren&apos;t available yet</p>
+        <p className="mt-1 text-fg-muted">
+          We&apos;re still setting up this payment method. Please{" "}
+          <a href="/contact" className="text-accent-text underline">
+            contact us
+          </a>{" "}
+          with your order number <span className="font-mono">{orderNumber}</span> and we&apos;ll
+          help you pay.
+        </p>
+      </div>
+    );
+  }
   const upiLink = instructions.upi
     ? `upi://pay?pa=${encodeURIComponent(instructions.upi.vpa)}&pn=${encodeURIComponent(instructions.upi.payeeName)}&am=${(amount.amountMinor / 100).toFixed(2)}&cu=${amount.currency}&tn=${encodeURIComponent(orderNumber)}`
     : undefined;
@@ -52,22 +69,16 @@ export function PaymentInstructionsCard({
       {instructions.upi ? (
         <TabsContent value="manual_upi" className="space-y-4">
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-            <div
-              className="flex size-[256px] shrink-0 items-center justify-center rounded-md bg-[var(--ck-p-paper-50)] p-4 shadow-1"
-              aria-label={
-                qrDataUrl
-                  ? `UPI QR code for ${format(amount)}, order ${orderNumber}`
-                  : "QR code placeholder"
-              }
-              role="img"
-            >
-              {qrDataUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- data URL, sized fixed
-                <img src={qrDataUrl} alt="" width={224} height={224} />
-              ) : (
-                <QrCodeIcon aria-hidden className="size-40 text-[var(--ck-p-ink-900)]" />
-              )}
-            </div>
+            {qr ? (
+              <div
+                className="flex size-[256px] shrink-0 items-center justify-center rounded-md bg-[var(--ck-p-paper-50)] p-4 shadow-1"
+                aria-label={`UPI QR code for ${format(amount)}, order ${orderNumber}`}
+                role="img"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- data URL, sized fixed */}
+                <img src={qr} alt="" width={224} height={224} className="object-contain" />
+              </div>
+            ) : null}
             <dl className="w-full space-y-3 text-body-sm">
               <div>
                 <dt className="text-caption text-fg-muted">Pay to (VPA)</dt>
@@ -97,9 +108,9 @@ export function PaymentInstructionsCard({
             </dl>
           </div>
           <p className="text-caption text-fg-muted">
-            The QR encodes the exact amount and the order number. Use{" "}
-            <span className="font-mono">{orderNumber}</span> as the payment note if you enter it by
-            hand.
+            {qr ? "Scan the QR with any UPI app and pay the exact amount above. " : null}
+            Use <span className="font-mono">{orderNumber}</span> as the payment note if you enter it
+            by hand.
           </p>
         </TabsContent>
       ) : null}

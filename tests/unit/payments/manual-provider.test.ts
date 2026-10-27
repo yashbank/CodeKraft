@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { ManualProvider } from "@/modules/payments/providers/manual";
+import {
+  BANK_NOT_CONFIGURED_MESSAGE,
+  ManualProvider,
+  UPI_NOT_CONFIGURED_MESSAGE,
+} from "@/modules/payments/providers/manual";
 import type { TxCtx } from "@/lib/db";
 
 describe("ManualProvider unit tests", () => {
@@ -15,7 +19,8 @@ describe("ManualProvider unit tests", () => {
       getUpiVpa: async () => "testpay@upi",
       getBankDetails: async () => null,
       getBaseCurrency: async () => "INR",
-      renderQr: async (uri) => `data:image/svg+xml;test,${uri}`,
+      getUpiQrImage: async () => "data:image/png;base64,AAAA",
+      getUpiPayeeName: async () => "CodeKraft",
     });
 
     const res = await provider.createIntent(
@@ -35,7 +40,8 @@ describe("ManualProvider unit tests", () => {
       expect(res.instructions.upiUri).toBe(
         "upi://pay?pa=testpay@upi&pn=CodeKraft&am=500.00&cu=INR&tn=CK-ORD-000101",
       );
-      expect(res.instructions.qrDataUrl).toContain("data:image/svg+xml");
+      // The admin-uploaded image, verbatim — never a generated placeholder (R8-01).
+      expect(res.instructions.qrDataUrl).toBe("data:image/png;base64,AAAA");
     }
   });
 
@@ -67,7 +73,8 @@ describe("ManualProvider unit tests", () => {
         swift: "ICICINBB",
       }),
       getBaseCurrency: async () => "INR",
-      renderQr: async () => "",
+      getUpiQrImage: async () => null,
+      getUpiPayeeName: async () => "CodeKraft",
     });
 
     const res = await provider.createIntent(
@@ -87,5 +94,45 @@ describe("ManualProvider unit tests", () => {
       expect(res.instructions.reference).toBe("CK-ORD-000103");
       expect(res.instructions.bankName).toBe("ICICI Bank");
     }
+  });
+
+  // R8-01: unconfigured settings must never fall back to placeholder payee details.
+  const unconfigured = new ManualProvider({
+    getUpiVpa: async () => null,
+    getBankDetails: async () => null,
+    getBaseCurrency: async () => "INR",
+    getUpiQrImage: async () => null,
+    getUpiPayeeName: async () => "CodeKraft",
+  });
+  const inrOrder = {
+    orderId: "ord-9",
+    orderNo: "CK-ORD-000109",
+    amountDue: { amountMinor: 1000, currency: "INR" as const },
+    customer: { name: "Dee", email: "dee@example.com" },
+  };
+
+  it("refuses UPI with a customer-facing message when no VPA is configured", async () => {
+    await expect(unconfigured.createIntent(fakeTx, inrOrder, "manual_upi")).rejects.toThrow(
+      UPI_NOT_CONFIGURED_MESSAGE,
+    );
+  });
+
+  it("refuses bank transfer when no bank details are configured", async () => {
+    await expect(unconfigured.createIntent(fakeTx, inrOrder, "manual_bank")).rejects.toThrow(
+      BANK_NOT_CONFIGURED_MESSAGE,
+    );
+  });
+
+  it("returns qrDataUrl null (no fake QR) when no QR image is uploaded", async () => {
+    const p = new ManualProvider({
+      getUpiVpa: async () => "shop@okhdfc",
+      getBankDetails: async () => null,
+      getBaseCurrency: async () => "INR",
+      getUpiQrImage: async () => null,
+      getUpiPayeeName: async () => "Acme Studio",
+    });
+    const res = await p.createIntent(fakeTx, inrOrder, "manual_upi");
+    expect(res.instructions).toMatchObject({ vpa: "shop@okhdfc", qrDataUrl: null });
+    expect(JSON.stringify(res)).not.toMatch(/codekraft@upi|1234567890|HDFC0001234/);
   });
 });
