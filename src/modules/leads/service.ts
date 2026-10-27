@@ -74,18 +74,35 @@ export class DefaultLeadsService implements LeadsService {
       body: `Created from ${input.source}`,
     });
 
-    await notificationsService.emit(
-      "admins",
-      "lead.new",
-      {
-        leadId: lead.id,
-        leadName: lead.name,
-        company: lead.company,
-        message: lead.message,
-      },
-      undefined,
-      this.db,
-    );
+    // Notify admins; must never fail or block lead creation.
+    try {
+      let productName: string | null = null;
+      if (lead.productId) {
+        const [prod] = await this.db
+          .select({ name: products.name })
+          .from(products)
+          .where(eq(products.id, lead.productId))
+          .limit(1);
+        productName = prod?.name ?? null;
+      }
+      await notificationsService.emit(
+        "admins",
+        "lead.new",
+        {
+          leadId: lead.id,
+          leadName: lead.name,
+          company: lead.company,
+          message: lead.message,
+          ...(input.source === "product_cta"
+            ? { quoteRequested: true, productName: productName ?? "a product" }
+            : {}),
+        },
+        undefined,
+        this.db,
+      );
+    } catch (err) {
+      console.error("[leads] admin notification failed", { leadId: lead.id, err });
+    }
 
     return { leadId: lead.id };
   }

@@ -23,6 +23,7 @@ import { createManualOrder } from "@/modules/orders/admin-mutations";
 import { ApprovalGateNotice, Banner } from "../Banner";
 import { SplitEditor, splitSummary, type SplitValue } from "../catalog/SplitEditor";
 import { inr } from "../format";
+import { NewCustomerDialog } from "./NewCustomerDialog";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
 import type { CustomerOption, OfferingOption } from "../types";
@@ -56,7 +57,7 @@ export interface ManualOrderFormProps {
  * and cannot be invoiced or paid until the other admins approve the split (BR-05).
  */
 export function ManualOrderForm({
-  customers,
+  customers: customersProp,
   offerings,
   partners,
   approvers,
@@ -67,6 +68,15 @@ export function ManualOrderForm({
 }: ManualOrderFormProps) {
   const router = useRouter();
   const [type, setType] = React.useState<"product" | "project">(initialType);
+  const [addedCustomers, setAddedCustomers] = React.useState<CustomerOption[]>([]);
+  const [inviteOpen, setInviteOpen] = React.useState(false);
+  const customers = React.useMemo(
+    () => [
+      ...customersProp,
+      ...addedCustomers.filter((a) => !customersProp.some((c) => c.id === a.id)),
+    ],
+    [customersProp, addedCustomers],
+  );
   const [customerId, setCustomerId] = React.useState(customers[0]?.id ?? "");
   const [productLines, setProductLines] = React.useState<Array<{ id: number; offeringId: string }>>(
     [{ id: 1, offeringId: offerings[0]?.id ?? "" }],
@@ -319,9 +329,26 @@ export function ManualOrderForm({
               </Select>
               {customers.length === 0 ? (
                 <p className="mt-1 text-caption text-danger">
-                  No registered customers yet — invite one from Customers first.
+                  No registered customers yet. Invite one below.
                 </p>
               ) : null}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => setInviteOpen(true)}
+              >
+                Invite customer
+              </Button>
+              <NewCustomerDialog
+                open={inviteOpen}
+                onOpenChange={setInviteOpen}
+                onCreated={(c) => {
+                  setAddedCustomers((prev) => [...prev, c]);
+                  setCustomerId(c.id);
+                }}
+              />
             </Field>
             {type === "project" ? (
               <div className="grid gap-4 sm:grid-cols-2">

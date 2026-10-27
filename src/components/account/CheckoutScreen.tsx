@@ -262,6 +262,7 @@ export function PaymentMethodChoice({
 export function CheckoutScreen({
   offeringId,
   offering,
+  initialOrder = null,
   customerEmail,
   billing,
   state = "default",
@@ -270,6 +271,8 @@ export function CheckoutScreen({
   /** The offering being bought -- needed to call `previewCheckout`/`createOrder` for real. */
   offeringId: string;
   offering: CheckoutOffering;
+  /** An existing unexpired pending order for this offering: resume its payment panel on reload. */
+  initialOrder?: CreateOrderResult | null;
   customerEmail: string;
   billing: BillingDetails;
   state?: CheckoutPageState;
@@ -287,7 +290,7 @@ export function CheckoutScreen({
   const [consent, setConsent] = React.useState(false);
   const [summaryOpen, setSummaryOpen] = React.useState(false);
   const [placing, setPlacing] = React.useState(false);
-  const [order, setOrder] = React.useState<CreateOrderResult | null>(null);
+  const [order, setOrder] = React.useState<CreateOrderResult | null>(initialOrder);
 
   /**
    * Real server-computed totals, seeded from the `previewCheckout` the page already ran and
@@ -467,7 +470,7 @@ export function CheckoutScreen({
 
       <div className="grid gap-6 lg:grid-cols-12">
         <form
-          className="space-y-6 lg:col-span-7"
+          className="min-w-0 space-y-6 lg:col-span-7"
           aria-busy={submitting || undefined}
           onSubmit={handlePlaceOrder}
         >
@@ -529,48 +532,50 @@ export function CheckoutScreen({
                 </Button>
               )}
             </div>
-            <table className="w-full text-body-sm">
-              <caption className="sr-only">Line items</caption>
-              <thead>
-                <tr className="text-left text-overline tracking-wider text-fg-muted uppercase">
-                  <th scope="col" className="py-2 font-semibold">
-                    Item
-                  </th>
-                  <th scope="col" className="py-2 text-right font-semibold">
-                    Unit
-                  </th>
-                  <th scope="col" className="py-2 text-right font-semibold">
-                    Discount
-                  </th>
-                  <th scope="col" className="py-2 text-right font-semibold">
-                    Tax
-                  </th>
-                  <th scope="col" className="py-2 text-right font-semibold">
-                    Total
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-t border-border">
-                  <td className="py-3 text-fg">
-                    {offering.productName}
-                    <span className="block text-caption text-fg-muted">
-                      {offering.offeringName}
-                    </span>
-                  </td>
-                  <td className="py-3 text-right font-mono tnum">{format(subtotal)}</td>
-                  <td className="py-3 text-right font-mono tnum text-fg-muted">
-                    {appliedCode ? `−${format(discount)}` : "—"}
-                  </td>
-                  <td className="py-3 text-right text-fg-muted">
-                    {tax ? `${offering.taxLabel} · ${format(tax)}` : "No tax"}
-                  </td>
-                  <td className="py-3 text-right font-mono tnum font-semibold text-fg">
-                    {format(total)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-body-sm">
+                <caption className="sr-only">Line items</caption>
+                <thead>
+                  <tr className="text-left text-overline tracking-wider text-fg-muted uppercase">
+                    <th scope="col" className="py-2 font-semibold">
+                      Item
+                    </th>
+                    <th scope="col" className="py-2 text-right font-semibold">
+                      Unit
+                    </th>
+                    <th scope="col" className="py-2 text-right font-semibold">
+                      Discount
+                    </th>
+                    <th scope="col" className="py-2 text-right font-semibold">
+                      Tax
+                    </th>
+                    <th scope="col" className="py-2 text-right font-semibold">
+                      Total
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-t border-border">
+                    <td className="py-3 text-fg">
+                      {offering.productName}
+                      <span className="block text-caption text-fg-muted">
+                        {offering.offeringName}
+                      </span>
+                    </td>
+                    <td className="py-3 text-right font-mono tnum">{format(subtotal)}</td>
+                    <td className="py-3 text-right font-mono tnum text-fg-muted">
+                      {appliedCode ? `−${format(discount)}` : "—"}
+                    </td>
+                    <td className="py-3 text-right text-fg-muted">
+                      {tax ? `${offering.taxLabel} · ${format(tax)}` : "No tax"}
+                    </td>
+                    <td className="py-3 text-right font-mono tnum font-semibold text-fg">
+                      {format(total)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
             <p className="text-caption text-fg-muted">
               You&apos;ll be charged in INR. Other currencies are shown as estimates.
             </p>
@@ -630,7 +635,10 @@ export function CheckoutScreen({
 
         <aside
           id="checkout-summary"
-          className={cn("space-y-4 lg:col-span-5 lg:block", summaryOpen ? "block" : "hidden")}
+          className={cn(
+            "min-w-0 space-y-4 lg:col-span-5 lg:block",
+            summaryOpen ? "block" : "hidden",
+          )}
         >
           <div className="space-y-4 rounded-lg border border-border bg-surface p-5 shadow-1 lg:sticky lg:top-20">
             {loading ? (

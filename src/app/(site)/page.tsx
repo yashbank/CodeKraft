@@ -12,6 +12,8 @@ import {
   listTestimonialsQuery,
 } from "@/modules/content/queries";
 import { listFeaturedProductsQuery } from "@/modules/catalog/queries";
+import { listBlogTeasersQuery } from "@/modules/blog/queries";
+import { toBlogTeaser } from "@/lib/blog-view";
 import { LandingPage } from "@/components/site/landing/LandingPage";
 import type {
   BlogTeaser,
@@ -53,6 +55,7 @@ export default async function LandingRoute() {
     caseStudiesResult,
     servicesResult,
     featuredProductsResult,
+    blogTeasersResult,
   ] = await Promise.all([
     getLandingContentQuery({}, ctx),
     listClientLogosQuery({}, ctx),
@@ -60,6 +63,7 @@ export default async function LandingRoute() {
     listCaseStudiesQuery({ limit: 3 }, ctx),
     listServicesQuery({}, ctx),
     listFeaturedProductsQuery({ limit: 8, displayCurrency: "INR" }, ctx),
+    listBlogTeasersQuery({ limit: 3 }, ctx),
   ]);
 
   const chaptersByKey = new Map(
@@ -123,9 +127,10 @@ export default async function LandingRoute() {
   const featuredProducts: ProductSummary[] = featuredProductsResult.ok
     ? featuredProductsResult.data.map(toProductSummary)
     : [];
-  // Blog module isn't wired to the database yet — an empty list is the component's own
-  // documented empty state, not a placeholder hack.
-  const blogTeasers: BlogTeaser[] = [];
+  // Empty list hides the "From the blog" band (LandingPage renders it only when non-empty).
+  const blogTeasers: BlogTeaser[] = blogTeasersResult.ok
+    ? blogTeasersResult.data.map(toBlogTeaser)
+    : [];
 
   const faqRows = landingResult.ok ? landingResult.data.faqs : [];
   const faqs: FaqItem[] = faqRows.map((f) => ({

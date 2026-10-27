@@ -9,6 +9,7 @@ import {
   FilterIcon,
   MessageSquareIcon,
   ShoppingCartIcon,
+  UserPlusIcon,
   UsersIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -47,6 +48,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { reinstateCustomer, sendResetLink, suspendCustomer } from "@/modules/users/admin-mutations";
+import { NewCustomerDialog } from "./NewCustomerDialog";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
 import { formatDate, initials, inr, timeAgo } from "../format";
@@ -80,6 +82,7 @@ export function CustomersList({
   const [statusDialog, setStatusDialog] = React.useState<StatusDialogState | null>(null);
   const [reason, setReason] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
+  const [newOpen, setNewOpen] = React.useState(false);
 
   async function handleSendResetLink(c: CustomerRow) {
     const result = await sendResetLink({ userId: c.id, kind: "reset" });
@@ -122,14 +125,24 @@ export function CustomersList({
         title="Customers"
         titleAdornment={<Badge tone="neutral">{customers.length}</Badge>}
         actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => toast("Export queued — excludes deleted PII")}
-          >
-            <DownloadIcon aria-hidden /> Export CSV
-          </Button>
+          <>
+            <Button size="sm" onClick={() => setNewOpen(true)}>
+              <UserPlusIcon aria-hidden /> New customer
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => toast("Export queued — excludes deleted PII")}
+            >
+              <DownloadIcon aria-hidden /> Export CSV
+            </Button>
+          </>
         }
+      />
+      <NewCustomerDialog
+        open={newOpen}
+        onOpenChange={setNewOpen}
+        onCreated={() => router.refresh()}
       />
       <DataToolbar
         searchId="customers-search"

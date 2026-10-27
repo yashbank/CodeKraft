@@ -109,14 +109,6 @@ export function NewQuerySheet({ trigger }: { trigger: React.ReactNode }) {
             <Textarea id="nq-message" name="message" required maxLength={4000} rows={6} />
             <p className="text-caption text-fg-muted">Up to 4000 characters.</p>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="nq-files">Attachments (optional)</Label>
-            <Input id="nq-files" type="file" multiple accept="image/*,.pdf,.zip" disabled />
-            <p className="text-caption text-fg-muted">
-              Attachment upload isn&apos;t wired up yet — mention files in your message and
-              we&apos;ll ask for them.
-            </p>
-          </div>
           <Button type="submit" className="w-full" disabled={pending}>
             {pending ? "Sending…" : "Send"}
           </Button>

@@ -8,7 +8,16 @@ import type { CustomerOption } from "@/components/admin/types";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminQuotesPage() {
+export default async function AdminQuotesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const one = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : undefined);
+  const prefill = one("customerId")
+    ? { customerId: one("customerId"), title: one("title"), description: one("description") }
+    : undefined;
   const ctx = await getAdminRequestContext();
 
   const [quotesRes, customersRes] = await Promise.all([
@@ -32,6 +41,7 @@ export default async function AdminQuotesPage() {
 
   return (
     <QuotesScreen
+      prefill={prefill}
       quotes={quotes}
       customers={customerOptions}
       orderHref="/admin/orders"

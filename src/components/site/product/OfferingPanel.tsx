@@ -83,7 +83,9 @@ export function OfferingPanel({
     if (!result.ok) {
       setWishlisted(!next);
       toast.error(result.error.message);
+      return;
     }
+    toast.success(next ? "Added to wishlist" : "Removed from wishlist");
   }
 
   useEffect(() => {

@@ -13,6 +13,7 @@ import { fail } from "@/lib/actions/envelope";
 import type { Context } from "@/lib/authz/context";
 import {
   changeAdminRoleAction,
+  createCustomerAction,
   inviteAdminAction,
   markCustomerEmailVerifiedAction,
   reinstateCustomerAction,
@@ -80,4 +81,8 @@ export async function removeAdmin(raw: unknown) {
 
 export async function updatePartner(raw: unknown) {
   return withCtx(updatePartnerAction, raw);
+}
+
+export async function createCustomer(raw: unknown) {
+  return withCtx(createCustomerAction, raw);
 }

@@ -30,6 +30,7 @@ import type {
   markEmailVerifiedSchema,
   getCustomerSchema,
   sendAuthLinkSchema,
+  createCustomerSchema,
 } from "./contracts";
 import type { z } from "zod";
 import type { Currency } from "@/lib/money";
@@ -522,4 +523,77 @@ export async function sendAuthLink(
 
     return { sentTo: u.email };
   }, getOuterTx(database));
+}
+
+/**
+ * Admin creates a customer account (BUG-066). No password is set admin-side: a password-reset
+ * email is sent so the customer chooses their own. Email send failure does not roll back the
+ * account; `emailSent=false` lets the admin retry via "Send reset link".
+ */
+export async function createCustomer(
+  ctx: RequestContext,
+  input: z.infer<typeof createCustomerSchema>,
+  database: DbOrTx,
+  sendSetPasswordEmail: (email: string) => Promise<void> = defaultSendSetPasswordEmail,
+): Promise<{ userId: string; email: string; name: string; emailSent: boolean }> {
+  assertPermission(ctx, "customers.reset_link");
+  const email = input.email.trim().toLowerCase();
+
+  const { withTx } = await import("@/lib/db");
+  const created = await withTx(async (tx) => {
+    const [dup] = await tx
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+    if (dup) {
+      throw new AppError(ErrorCode.CONFLICT, "A user with this email already exists.");
+    }
+    if (input.phone) {
+      const [dupPhone] = await tx
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.phoneNumber, input.phone))
+        .limit(1);
+      if (dupPhone) {
+        throw new AppError(ErrorCode.CONFLICT, "A user with this phone number already exists.");
+      }
+    }
+    const [u] = await tx
+      .insert(users)
+      .values({
+        email,
+        name: input.name,
+        status: "active",
+        emailVerified: false,
+        ...(input.phone ? { phoneNumber: input.phone } : {}),
+      })
+      .returning();
+    if (!u) throw new AppError(ErrorCode.INTERNAL, "Failed to create customer");
+    await tx.insert(userRoles).values({ userId: u.id, roleKey: "customer" });
+    await tx.insert(customerProfiles).values({ userId: u.id, company: input.company ?? null });
+    await auditService.log(
+      ctx,
+      "API-ADM-09 customer.create",
+      { type: "user", id: u.id },
+      null,
+      { email, name: input.name },
+      tx,
+    );
+    return u;
+  }, getOuterTx(database));
+
+  let emailSent = true;
+  try {
+    await sendSetPasswordEmail(email);
+  } catch {
+    emailSent = false;
+  }
+  return { userId: created.id, email, name: created.name, emailSent };
+}
+
+async function defaultSendSetPasswordEmail(email: string): Promise<void> {
+  const { getAuth } = await import("@/modules/auth/config");
+  const auth = await getAuth("site");
+  await auth.api.requestPasswordReset({ body: { email, redirectTo: "/auth/reset" } });
 }

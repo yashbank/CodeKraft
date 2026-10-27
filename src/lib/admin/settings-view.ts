@@ -87,8 +87,7 @@ export function mapSiteSettingsToSettingsData(settings: SiteSettings): SettingsD
 
   return {
     general: {
-      // The product's own name — a fixed fact, not per-tenant settings data.
-      siteName: "CodeKraft",
+      siteName: settings.siteName,
       domain: env.NEXT_PUBLIC_SITE_URL.replace(/^https?:\/\//, ""),
       legalName: seller?.name ?? "",
       address: seller

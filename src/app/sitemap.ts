@@ -1,10 +1,27 @@
 import type { MetadataRoute } from "next";
 
-import { BLOG_POSTS, CASE_STUDIES, LEGAL_NAV, PRODUCTS } from "@/app/dev/screens/_fixtures/site";
+import { anonymousContext } from "@/lib/authz/context";
+import { listBlogPostsQuery } from "@/modules/blog/queries";
+import { listProductsQuery } from "@/modules/catalog/queries";
+import { listCaseStudiesQuery } from "@/modules/content/queries";
+import { LEGAL_NAV } from "@/app/dev/screens/_fixtures/site";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+// Only URLs that resolve: DB-backed published products / case studies / blog posts, plus static
+// routes that exist under src/app/(site). Legal pages are served from LEGAL_DOCS keyed by LEGAL_NAV.
+export const revalidate = 3600;
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://codekraft.in";
   const now = new Date();
+  const ctx = anonymousContext();
+  const [productsResult, caseStudiesResult, blogResult] = await Promise.all([
+    listProductsQuery({ limit: 100, displayCurrency: "INR" }, ctx),
+    listCaseStudiesQuery({ limit: 100 }, ctx),
+    listBlogPostsQuery({ limit: 100 }, ctx),
+  ]);
+  const products = productsResult.ok ? productsResult.data : [];
+  const caseStudies = caseStudiesResult.ok ? caseStudiesResult.data.items : [];
+  const blogPosts = blogResult.ok ? blogResult.data.items : [];
 
   const staticRoutes: MetadataRoute.Sitemap = [
     {
@@ -45,21 +62,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  const productRoutes: MetadataRoute.Sitemap = PRODUCTS.map((p) => ({
+  const productRoutes: MetadataRoute.Sitemap = products.map((p) => ({
     url: `${baseUrl}/products/${p.slug}`,
     lastModified: now,
     changeFrequency: "weekly",
     priority: 0.85,
   }));
 
-  const caseStudyRoutes: MetadataRoute.Sitemap = CASE_STUDIES.map((c) => ({
+  const caseStudyRoutes: MetadataRoute.Sitemap = caseStudies.map((c) => ({
     url: `${baseUrl}/projects/${c.slug}`,
     lastModified: now,
     changeFrequency: "monthly",
     priority: 0.75,
   }));
 
-  const blogRoutes: MetadataRoute.Sitemap = BLOG_POSTS.map((b) => ({
+  const blogRoutes: MetadataRoute.Sitemap = blogPosts.map((b) => ({
     url: `${baseUrl}/blog/${b.slug}`,
     lastModified: new Date(b.publishedAt),
     changeFrequency: "monthly",

@@ -78,6 +78,14 @@ export async function sendEmail(message: EmailMessage): Promise<EmailSendResult>
       { to: message.to, template: message.template },
       "recipient not in EMAIL_ALLOWLIST; skipped",
     );
+    if (process.env.NODE_ENV === "development") {
+      // Dev only: surface the mail (verify/reset links live in `data`) on the server console.
+      console.info("[dev-email] skipped by allowlist", {
+        to: message.to,
+        subject: message.subject,
+        data: message.data,
+      });
+    }
     return { transport: "resend", skipped: "allowlist" };
   }
   const n = bumpDaily();

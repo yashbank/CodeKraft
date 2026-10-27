@@ -34,7 +34,7 @@ export function LicensePanel({
     return (
       <EmptyState
         icon={KeyRoundIcon}
-        title="Key not issued yet — we'll notify you"
+        title="Being prepared — you'll get an email when it's ready"
         body="Keys are only ever shown here in your dashboard, never in email."
       />
     );

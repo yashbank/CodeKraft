@@ -1,55 +1,78 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { BLOG_POSTS, PRODUCTS, SERVICE_OPTIONS } from "@/app/dev/screens/_fixtures/site";
 import { BlogPostPage } from "@/components/site/BlogPostPage";
+import { toBlogPost, toBlogTeaser } from "@/lib/blog-view";
+import { anonymousContext } from "@/lib/authz/context";
+import { toProductSummary } from "@/lib/product-summary";
+import { getBlogBySlugQuery, listBlogPostsQuery } from "@/modules/blog/queries";
+import { listServicesQuery } from "@/modules/content/queries";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateStaticParams() {
-  return BLOG_POSTS.map((p) => ({ slug: p.slug }));
-}
+// ISR (API-CAT-33: 60 s); unknown slugs are rendered on demand.
+export const revalidate = 60;
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const post = BLOG_POSTS.find((p) => p.slug === slug);
-  if (!post) return {};
+  const result = await getBlogBySlugQuery({ slug, displayCurrency: "INR" }, anonymousContext());
+  if (!result.ok) return {};
+  const { blog } = result.data;
+  const title = blog.seoTitle ?? blog.title;
+  const description = blog.seoDescription ?? blog.excerpt ?? undefined;
 
   return {
-    title: `${post.title} — CodeKraft Blog`,
-    description: post.excerpt,
-    openGraph: {
-      title: post.title,
-      description: post.excerpt,
-    },
+    title: `${title} — CodeKraft Blog`,
+    description,
+    openGraph: { title, description },
   };
 }
 
 export default async function BlogPostRoute({ params }: PageProps) {
   const { slug } = await params;
-  const postIndex = BLOG_POSTS.findIndex((p) => p.slug === slug);
+  const ctx = anonymousContext();
+  const [result, listResult, servicesResult] = await Promise.all([
+    getBlogBySlugQuery({ slug, displayCurrency: "INR" }, ctx),
+    listBlogPostsQuery({ limit: 100 }, ctx),
+    listServicesQuery({}, ctx),
+  ]);
+  if (!result.ok) notFound();
 
-  if (postIndex === -1) {
-    notFound();
-  }
+  const { blog, product, html } = result.data;
+  const teasers = listResult.ok ? listResult.data.items.map(toBlogTeaser) : [];
+  const own = teasers.find((t) => t.slug === blog.slug);
+  const post = toBlogPost(
+    own ??
+      toBlogTeaser({
+        slug: blog.slug,
+        title: blog.title,
+        excerpt: blog.excerpt,
+        cover: blog.cover,
+        publishedAt: blog.publishedAt,
+        product: { slug: product.slug, name: product.name },
+        author: blog.author,
+      }),
+    html,
+  );
 
-  const post = BLOG_POSTS[postIndex];
-  if (!post) notFound();
-  const product = PRODUCTS.find((p) => p.slug === post.product.slug);
+  // List is newest-first: the next index is the older post.
+  const index = teasers.findIndex((t) => t.slug === blog.slug);
+  const newer = index > 0 ? teasers[index - 1] : undefined;
+  const older = index >= 0 ? teasers[index + 1] : undefined;
+  const prev = newer ? { title: newer.title, href: `/blog/${newer.slug}` } : undefined;
+  const next = older ? { title: older.title, href: `/blog/${older.slug}` } : undefined;
 
-  const prevPost = postIndex > 0 ? BLOG_POSTS[postIndex - 1] : undefined;
-  const nextPost = postIndex < BLOG_POSTS.length - 1 ? BLOG_POSTS[postIndex + 1] : undefined;
-
-  const prev = prevPost ? { title: prevPost.title, href: `/blog/${prevPost.slug}` } : undefined;
-  const next = nextPost ? { title: nextPost.title, href: `/blog/${nextPost.slug}` } : undefined;
+  const serviceOptions = servicesResult.ok
+    ? servicesResult.data.map((s) => ({ slug: s.slug, title: s.title }))
+    : [];
 
   return (
     <BlogPostPage
       post={post}
-      product={product}
-      serviceOptions={SERVICE_OPTIONS}
+      product={toProductSummary(product)}
+      serviceOptions={serviceOptions}
       prev={prev}
       next={next}
     />

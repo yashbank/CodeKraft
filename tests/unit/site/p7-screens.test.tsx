@@ -306,6 +306,37 @@ describe("Phase 7: Public Site & Customer UI", () => {
     expect(screen.getByRole("button", { name: /Place order/i })).toBeInTheDocument();
   });
 
+  it("resumes the payment panel for an existing pending order instead of the form (BUG-085)", () => {
+    render(
+      <CheckoutScreen
+        offeringId="off_preview"
+        offering={checkoutOffering}
+        initialOrder={{
+          orderId: "o1",
+          orderNo: "CK-ORD-000042",
+          expiresAt: new Date(Date.now() + 86400000).toISOString(),
+          payment: {
+            paymentId: "p1",
+            method: "manual_upi",
+            instructions: {
+              method: "manual_upi",
+              upiId: "pay@upi",
+              payeeName: "CodeKraft",
+              qrPayload: "upi://pay?pa=pay@upi",
+              amount: { amountMinor: 100, currency: "INR" },
+              note: "CK-ORD-000042",
+            },
+          } as never,
+        }}
+        customerEmail="pravin@iauro.com"
+        billing={customer.billing}
+        links={{ dashboard: "/account/purchases", verify: "/auth/verify" }}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: /Place order/i })).not.toBeInTheDocument();
+    expect(screen.getAllByText(/CK-ORD-000042/).length).toBeGreaterThan(0);
+  });
+
   it("shows the verify banner and no Place order button when unverified", () => {
     render(
       <CheckoutScreen

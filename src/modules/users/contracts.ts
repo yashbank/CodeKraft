@@ -146,6 +146,14 @@ export const sendAuthLinkSchema = z.strictObject({
   kind: z.enum(["reset", "magic"]),
 });
 
+/** API-ADM-09b `createCustomer`: admin creates a customer account; customer sets own password via reset link. */
+export const createCustomerSchema = z.strictObject({
+  email: z.email().max(254),
+  name: text(120),
+  phone: z.string().trim().min(5).max(20).optional(),
+  company: text(120).optional(),
+});
+
 /* --- API-ADM-11 admin users ------------------------------------------------------------------ */
 
 /** API-ADM-11 `inviteAdmin`. */
@@ -295,6 +303,12 @@ export interface UsersService {
     input: z.infer<typeof customerStatusChangeSchema>,
     tx?: DbOrTx,
   ): Promise<{ user: UserView }>;
+  /** API-ADM-09b */
+  createCustomer(
+    ctx: RequestContext,
+    input: z.infer<typeof createCustomerSchema>,
+    tx?: DbOrTx,
+  ): Promise<{ userId: string; email: string; name: string; emailSent: boolean }>;
   /** API-ADM-09 (`kind: 'reset'`). */
   sendResetLink(
     ctx: RequestContext,

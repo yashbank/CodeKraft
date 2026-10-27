@@ -42,3 +42,26 @@ export interface BlogDetail {
   html: string;
   jsonLd: Record<string, unknown>;
 }
+
+/** Admin blog list row (standalone editor); one per product blog. */
+export interface AdminBlogPost {
+  productId: string;
+  productName: string;
+  productStatus: string;
+  status: BlogStatus;
+  slug: string;
+  title: string;
+  excerpt: string;
+  bodyJson: import("../_shared/zod").RichTextDoc;
+  coverMediaId?: string;
+  coverUrl?: string;
+  seoTitle: string;
+  seoDescription: string;
+  publishedAt: string | null;
+  updatedAt: string;
+}
+
+export interface AdminBlogList {
+  posts: AdminBlogPost[];
+  productsWithoutBlog: { id: string; name: string }[];
+}

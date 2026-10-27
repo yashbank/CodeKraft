@@ -9,6 +9,7 @@ import {
   changeAdminRoleSchema,
   changeEmailRequestSchema,
   changePasswordSchema,
+  createCustomerSchema,
   customerStatusChangeSchema,
   markEmailVerifiedSchema,
   deleteAccountSchema,
@@ -108,6 +109,13 @@ export const reinstateCustomerAction = defineAction({
   input: customerStatusChangeSchema,
   permission: "customers.suspend",
   handler: (input, ctx) => usersService.reinstateCustomer(ctx, input),
+});
+
+export const createCustomerAction = defineAction({
+  name: "API-ADM-09 customer.create",
+  input: createCustomerSchema,
+  permission: "customers.reset_link",
+  handler: (input, ctx) => usersService.createCustomer(ctx, input),
 });
 
 export const sendResetLinkAction = defineAction({

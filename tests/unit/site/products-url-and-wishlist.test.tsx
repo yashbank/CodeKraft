@@ -68,4 +68,12 @@ describe("ProductsListPage — URL filter sync (BUG-025) and wishlist (BUG-015)"
 
     expect(toggleWishlistMock).toHaveBeenCalledWith({ productId: product.id, on: false });
   });
+
+  it("BUG-078: a search with no matches shows the empty state, not just an empty grid", () => {
+    searchParamsMock.current = new URLSearchParams("q=zzzznomatch");
+    render(<ProductsListPage products={PRODUCTS} categories={CATEGORY_TREE} pageSize={12} />);
+
+    expect(screen.getByText("0 products")).toBeInTheDocument();
+    expect(screen.getByText(/No products match/)).toBeInTheDocument();
+  });
 });

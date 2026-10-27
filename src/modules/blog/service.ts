@@ -39,7 +39,7 @@ import type {
   getBlogBySlugSchema,
   listBlogTeasersSchema,
 } from "./contracts";
-import type { BlogCard, BlogDetail, ProductBlog } from "./types";
+import type { AdminBlogList, BlogCard, BlogDetail, ProductBlog } from "./types";
 import type { Money } from "@/lib/money";
 import type { ImageRef, ProductCard } from "../catalog/types";
 import { z } from "zod";
@@ -310,7 +310,7 @@ export class DefaultBlogService implements BlogService {
     const limit = input.limit ?? 25;
     const isAsc = input.sort?.endsWith(":asc") ?? false;
 
-    const conditions = [eq(productBlogs.status, "published")];
+    const conditions = [eq(productBlogs.status, "published"), eq(products.status, "published")];
 
     if (input.filters?.productSlug) {
       conditions.push(eq(products.slug, input.filters.productSlug));
@@ -373,8 +373,12 @@ export class DefaultBlogService implements BlogService {
       .innerJoin(products, eq(productBlogs.productId, products.id))
       .where(
         input.filters?.productSlug
-          ? and(eq(productBlogs.status, "published"), eq(products.slug, input.filters.productSlug))
-          : eq(productBlogs.status, "published"),
+          ? and(
+              eq(productBlogs.status, "published"),
+              eq(products.status, "published"),
+              eq(products.slug, input.filters.productSlug),
+            )
+          : and(eq(productBlogs.status, "published"), eq(products.status, "published")),
       );
 
     const items: BlogCard[] = itemsRows.map((r: (typeof rows)[number]) => {
@@ -466,7 +470,7 @@ export class DefaultBlogService implements BlogService {
       }
     }
 
-    if (!row || row.blog.status !== "published") {
+    if (!row || row.blog.status !== "published" || row.product.status !== "published") {
       throw new AppError(ErrorCode.NOT_FOUND, "Blog post not found");
     }
 
@@ -623,6 +627,56 @@ export class DefaultBlogService implements BlogService {
   }
 
   /**
+   * Admin: every product blog (draft + published) plus products that have no blog yet, for the
+   * standalone /admin/content/blog editor. Blog posts are `product_blogs` rows (one per product).
+   */
+  async listBlogsAdmin(ctx: RequestContext, tx?: DbOrTx): Promise<AdminBlogList> {
+    assertPermission(ctx, "catalog.write");
+    const client = await this.getDatabase(tx);
+    const rows = await client
+      .select({
+        blog: productBlogs,
+        product: {
+          id: products.id,
+          slug: products.slug,
+          name: products.name,
+          status: products.status,
+        },
+        media: media,
+      })
+      .from(productBlogs)
+      .innerJoin(products, eq(productBlogs.productId, products.id))
+      .leftJoin(media, eq(productBlogs.coverMediaId, media.id))
+      .orderBy(desc(productBlogs.updatedAt));
+    const withBlog = new Set(rows.map((r: (typeof rows)[number]) => r.product.id));
+    const allProducts = await client
+      .select({ id: products.id, name: products.name })
+      .from(products)
+      .orderBy(asc(products.name));
+    return {
+      posts: rows.map((r: (typeof rows)[number]) => ({
+        productId: r.product.id,
+        productName: r.product.name,
+        productStatus: r.product.status,
+        status: r.blog.status,
+        slug: r.blog.slug,
+        title: r.blog.title,
+        excerpt: r.blog.excerpt ?? "",
+        bodyJson: r.blog.bodyJson as unknown as RichTextDoc,
+        coverMediaId: r.blog.coverMediaId ?? undefined,
+        coverUrl: resolveMediaUrl(r.media) ?? undefined,
+        seoTitle: r.blog.seoTitle ?? "",
+        seoDescription: r.blog.seoDescription ?? "",
+        publishedAt: r.blog.publishedAt ? new Date(r.blog.publishedAt).toISOString() : null,
+        updatedAt: new Date(r.blog.updatedAt).toISOString(),
+      })),
+      productsWithoutBlog: allProducts.filter(
+        (p: (typeof allProducts)[number]) => !withBlog.has(p.id),
+      ),
+    };
+  }
+
+  /**
    * API-CAT-34: Teaser list for landing page.
    */
   async listBlogTeasers(
@@ -649,7 +703,7 @@ export class DefaultBlogService implements BlogService {
       .innerJoin(products, eq(productBlogs.productId, products.id))
       .innerJoin(users, eq(productBlogs.authorId, users.id))
       .leftJoin(media, eq(productBlogs.coverMediaId, media.id))
-      .where(eq(productBlogs.status, "published"))
+      .where(and(eq(productBlogs.status, "published"), eq(products.status, "published")))
       .orderBy(desc(productBlogs.publishedAt), desc(productBlogs.id))
       .limit(limit);
 
@@ -693,6 +747,7 @@ export function createNotImplementedBlogService(): BlogService {
     upsertProductBlog: "async",
     publishProductBlog: "async",
     unpublishProductBlog: "async",
+    listBlogsAdmin: "async",
     listBlogPosts: "async",
     getBlogBySlug: "async",
     listBlogTeasers: "async",

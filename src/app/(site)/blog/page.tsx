@@ -1,13 +1,20 @@
 import type { Metadata } from "next";
 
-import { BLOG_POSTS } from "@/app/dev/screens/_fixtures/site";
 import { BlogIndexPage } from "@/components/site/BlogIndexPage";
+import { toBlogTeaser } from "@/lib/blog-view";
+import { anonymousContext } from "@/lib/authz/context";
+import { listBlogPostsQuery } from "@/modules/blog/queries";
+
+// ISR (API-CAT-33: 60 s). Admin blog saves call revalidatePath("/", "layout").
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Blog — CodeKraft",
   description: "Deep dives into the architecture, design, and software we build at CodeKraft.",
 };
 
-export default function BlogPage() {
-  return <BlogIndexPage posts={BLOG_POSTS} />;
+export default async function BlogPage() {
+  const result = await listBlogPostsQuery({ limit: 100 }, anonymousContext());
+  const posts = result.ok ? result.data.items.map(toBlogTeaser) : [];
+  return <BlogIndexPage posts={posts} />;
 }

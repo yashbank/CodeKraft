@@ -15,7 +15,7 @@ import {
   uuidSchema,
 } from "@/modules/_shared/zod";
 import { text } from "../catalog/contracts";
-import type { BlogCard, BlogDetail, ProductBlog } from "./types";
+import type { AdminBlogList, BlogCard, BlogDetail, ProductBlog } from "./types";
 
 /** API-CAT-10 `upsertProductBlog` (one per product; a slug change on a published blog writes `slug_redirects`). */
 export const upsertProductBlogSchema = z.strictObject({
@@ -76,6 +76,8 @@ export interface BlogService {
     input: z.infer<typeof blogPublishSchema>,
     tx?: DbOrTx,
   ): Promise<{ blog: ProductBlog }>;
+  /** Admin list for the standalone blog editor (`catalog.write`). */
+  listBlogsAdmin(ctx: RequestContext, tx?: DbOrTx): Promise<AdminBlogList>;
   /** API-CAT-33 (public query). */
   listBlogPosts(
     ctx: Context,

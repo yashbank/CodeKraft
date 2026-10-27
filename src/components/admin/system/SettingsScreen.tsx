@@ -246,7 +246,7 @@ function RazorpaySection({
 }
 
 /** Sections whose fields map onto `site_settings` keys; the rest have no backend yet (BUG-059). */
-const SAVEABLE_SECTIONS: readonly string[] = ["tax", "ai", "retention", "theme"];
+const SAVEABLE_SECTIONS: readonly string[] = ["general", "tax", "ai", "retention", "theme"];
 
 const SECTIONS = [
   ["general", "General / seller"],
@@ -270,6 +270,36 @@ export interface SettingsScreenProps {
   auditHref: string;
 }
 
+/** Maps zod dotted paths from `updateSettings` onto the General-section input ids. */
+function mapSettingsFieldErrors(fe: Record<string, string[]> | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!fe) return out;
+  const idFor = (path: string): string | undefined => {
+    if (path === "patch.siteName") return "st-site";
+    if (path === "patch.sellerDetails.name") return "st-legal";
+    if (path === "patch.sellerDetails.email") return "st-email";
+    if (path.startsWith("patch.sellerDetails.contactPhones")) return "st-phones";
+    const a = /^patch\.sellerDetails\.address\.(\w+)$/.exec(path)?.[1];
+    return a
+      ? (
+          {
+            line1: "st-addr1",
+            line2: "st-addr2",
+            city: "st-city",
+            state: "st-addr-state",
+            postalCode: "st-postal",
+            country: "st-country",
+          } as Record<string, string>
+        )[a]
+      : undefined;
+  };
+  for (const [path, msgs] of Object.entries(fe)) {
+    const id = idFor(path);
+    if (id && msgs[0] && !out[id]) out[id] = msgs[0];
+  }
+  return out;
+}
+
 /** SCR-ADM-29 — settings with a nine-section rail, 760 px forms, per-section save bar and AlertDialogs for dangerous changes. */
 export function SettingsScreen({
   settings: s,
@@ -288,6 +318,7 @@ export function SettingsScreen({
   const formRef = React.useRef<HTMLFormElement>(null);
   const [theme, setTheme] = React.useState(s.theme.defaultTheme);
   const [saving, setSaving] = React.useState(false);
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const saveable = SAVEABLE_SECTIONS.includes(section);
   const title = SECTIONS.find(([k]) => k === section)?.[1] ?? "";
 
@@ -295,7 +326,31 @@ export function SettingsScreen({
     const val = (id: string) =>
       (formRef.current?.querySelector<HTMLInputElement>(`#${id}`)?.value ?? "").trim();
     let patch: Record<string, unknown>;
-    if (section === "tax") {
+    if (section === "general") {
+      const siteName = val("st-site");
+      const seller = s.tax.seller;
+      const legal = val("st-legal");
+      const phones = val("st-phones")
+        .split(/[,\n]/)
+        .map((p) => p.trim())
+        .filter(Boolean);
+      const addr = {
+        line1: val("st-addr1"),
+        line2: val("st-addr2") || undefined,
+        city: val("st-city"),
+        state: val("st-addr-state") || undefined,
+        postalCode: val("st-postal"),
+        country: val("st-country").toUpperCase(),
+      };
+      const email = val("st-email");
+      const anySeller =
+        legal || addr.line1 || addr.city || addr.postalCode || email || phones.length;
+      patch = { siteName };
+      // All-blank seller block with no existing seller means "not set"; otherwise validate it.
+      if (anySeller || seller) {
+        patch.sellerDetails = { name: legal, address: addr, contactPhones: phones, email };
+      }
+    } else if (section === "tax") {
       const gstin = val("st-gstin").toUpperCase();
       patch = {
         gstin: gstin === "" ? null : gstin,
@@ -329,9 +384,11 @@ export function SettingsScreen({
     try {
       const res = await updateSettings({ patch });
       if (!res.ok) {
+        setFieldErrors(mapSettingsFieldErrors(res.error.fieldErrors));
         toast.error(res.error.message);
         return;
       }
+      setFieldErrors({});
       toast.success("Settings saved", { description: "View in audit log" });
       router.refresh();
     } finally {
@@ -392,31 +449,84 @@ export function SettingsScreen({
                 Why this matters: seller details appear on every invoice and email footer.
               </p>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field id="st-site" label="Site name">
-                  <Input id="st-site" readOnly value={s.general.siteName} />
+                <Field id="st-site" label="Site name" required error={fieldErrors["st-site"]}>
+                  <Input id="st-site" defaultValue={s.general.siteName} disabled={ro} />
                 </Field>
                 <Field id="st-domain" label="Domain">
                   <Input id="st-domain" defaultValue={s.general.domain} disabled={ro} />
                 </Field>
-                <Field id="st-legal" label="Legal name" required>
+                <Field id="st-legal" label="Legal name" required error={fieldErrors["st-legal"]}>
                   <Input id="st-legal" defaultValue={s.general.legalName} disabled={ro} />
                 </Field>
                 <Field
                   id="st-phones"
                   label="Contact phones"
-                  hint="Invoice-only (D-406); never shown on the site."
+                  hint="Invoice-only (D-406); never shown on the site. Comma-separated."
+                  error={fieldErrors["st-phones"]}
                 >
                   <Input id="st-phones" defaultValue={s.general.phones} disabled={ro} />
                 </Field>
-                <Field id="st-address" label="Address" required className="sm:col-span-2">
-                  <Textarea
-                    id="st-address"
-                    rows={2}
-                    defaultValue={s.general.address}
+                <Field
+                  id="st-addr1"
+                  label="Address line 1"
+                  required
+                  error={fieldErrors["st-addr1"]}
+                  className="sm:col-span-2"
+                >
+                  <Input
+                    id="st-addr1"
+                    defaultValue={s.tax.seller?.address.line1 ?? ""}
                     disabled={ro}
                   />
                 </Field>
-                <Field id="st-email" label="Email" hint="Invoice-only.">
+                <Field id="st-addr2" label="Address line 2" optional>
+                  <Input
+                    id="st-addr2"
+                    defaultValue={s.tax.seller?.address.line2 ?? ""}
+                    disabled={ro}
+                  />
+                </Field>
+                <Field id="st-city" label="City" required error={fieldErrors["st-city"]}>
+                  <Input
+                    id="st-city"
+                    defaultValue={s.tax.seller?.address.city ?? ""}
+                    disabled={ro}
+                  />
+                </Field>
+                <Field id="st-addr-state" label="State" optional>
+                  <Input
+                    id="st-addr-state"
+                    defaultValue={s.tax.seller?.address.state ?? ""}
+                    disabled={ro}
+                  />
+                </Field>
+                <Field id="st-postal" label="Postal code" required error={fieldErrors["st-postal"]}>
+                  <Input
+                    id="st-postal"
+                    defaultValue={s.tax.seller?.address.postalCode ?? ""}
+                    disabled={ro}
+                  />
+                </Field>
+                <Field
+                  id="st-country"
+                  label="Country (ISO code)"
+                  required
+                  hint="e.g. IN"
+                  error={fieldErrors["st-country"]}
+                >
+                  <Input
+                    id="st-country"
+                    defaultValue={s.tax.seller?.address.country ?? ""}
+                    disabled={ro}
+                    maxLength={2}
+                  />
+                </Field>
+                <Field
+                  id="st-email"
+                  label="Email"
+                  hint="Invoice-only."
+                  error={fieldErrors["st-email"]}
+                >
                   <Input id="st-email" defaultValue={s.general.email} disabled={ro} />
                 </Field>
                 <Field id="st-reply" label="Support reply-time copy">

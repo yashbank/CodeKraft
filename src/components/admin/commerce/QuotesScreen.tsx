@@ -41,7 +41,15 @@ import { Field, RichTextField } from "../RichTextField";
 import { RowActions } from "../RowActions";
 import type { CustomerOption, QuoteRow } from "../types";
 
+export interface QuotePrefill {
+  customerId?: string;
+  title?: string;
+  description?: string;
+}
+
 export interface QuotesScreenProps {
+  /** Opens the editor as a new quote with these fields filled (e.g. from a lead). */
+  prefill?: QuotePrefill;
   quotes: QuoteRow[];
   customers: CustomerOption[];
   orderHref: string;
@@ -55,10 +63,18 @@ function defaultExpiresOn(): string {
 }
 
 /** SCR-ADM-09 — custom quotes list with status chips, and the two-column detail/editor. */
-export function QuotesScreen({ quotes, customers, orderHref, customerHref }: QuotesScreenProps) {
+export function QuotesScreen({
+  quotes,
+  customers,
+  orderHref,
+  customerHref,
+  prefill,
+}: QuotesScreenProps) {
   const router = useRouter();
   const [status, setStatus] = React.useState<QuoteRow["status"] | null>(null);
-  const [selected, setSelected] = React.useState<QuoteRow | null>(quotes[0] ?? null);
+  const [selected, setSelected] = React.useState<QuoteRow | null>(
+    prefill ? null : (quotes[0] ?? null),
+  );
   const [pending, setPending] = React.useState(false);
   const formRef = React.useRef<HTMLFormElement>(null);
   const rows = quotes
@@ -290,7 +306,7 @@ export function QuotesScreen({ quotes, customers, orderHref, customerHref }: Quo
             <Field id="q-customer" label="Customer" required>
               <Select
                 name="customerId"
-                defaultValue={selected?.customer.id ?? customers[0]?.id}
+                defaultValue={selected?.customer.id ?? prefill?.customerId ?? customers[0]?.id}
                 key={selected?.id ?? "new"}
                 disabled={selected !== null}
               >
@@ -329,7 +345,7 @@ export function QuotesScreen({ quotes, customers, orderHref, customerHref }: Quo
               <Input
                 id="q-title"
                 name="title"
-                defaultValue={selected?.title}
+                defaultValue={selected?.title ?? prefill?.title}
                 key={`t-${selected?.id ?? "new"}`}
                 required
                 aria-required
@@ -341,7 +357,7 @@ export function QuotesScreen({ quotes, customers, orderHref, customerHref }: Quo
             id="q-desc"
             name="description"
             label="Description (what's included)"
-            defaultValue={selected?.description}
+            defaultValue={selected?.description ?? prefill?.description}
             rows={4}
           />
           <div className="grid gap-4 sm:grid-cols-3">

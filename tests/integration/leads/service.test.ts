@@ -127,3 +127,38 @@ describe("Leads Integration (P6.3 & P6.4)", () => {
     expect(outcome.detail.emailsQueued).toBeGreaterThanOrEqual(1);
   });
 });
+
+describe("Leads admin notifications", () => {
+  beforeAll(async () => {
+    await migrateTestDb();
+  });
+  beforeEach(async () => {
+    await truncateAll();
+  });
+
+  it("notifies every active admin of a product quote request", async () => {
+    const { notifications } = await import("../../../drizzle/schema/notifications");
+    const { getDb } = await import("@/lib/db");
+    const { createProduct } = await import("../../factories/catalog");
+    const product = await createProduct({ name: "Widget Pro" });
+    const a1 = await createAdmin({ email: "qa1@test.com" });
+    const a2 = await createAdmin({ email: "qa2@test.com" });
+    const res = await leadsService.createLead({ userId: null, roles: [] } as never, {
+      source: "product_cta",
+      productId: product.id,
+      name: "Buyer",
+      email: "buyer@x.com",
+      message: "Quote please",
+      turnstileToken: "test-valid-token",
+    });
+    const rows = await getDb().select().from(notifications);
+    const ids = rows.map((r) => r.userId);
+    expect(ids).toContain(a1.id);
+    expect(ids).toContain(a2.id);
+    expect(rows.length).toBeGreaterThanOrEqual(3);
+    for (const r of rows) {
+      expect(r.title).toContain("Quote requested: Widget Pro");
+      expect(r.link).toBe(`/admin/leads/${res.leadId}`);
+    }
+  });
+});

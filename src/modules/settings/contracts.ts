@@ -81,6 +81,7 @@ export const razorpaySettingsSchema = z.strictObject({
 
 /** Full typed map, used by the loader to validate the assembled rows. */
 export const siteSettingsSchema = z.strictObject({
+  siteName: text(80),
   baseCurrency: currencySchema,
   enabledCurrencies: z.array(currencySchema).min(1).max(5),
   taxRateBps: bpsSchema,
@@ -101,6 +102,7 @@ export const siteSettingsSchema = z.strictObject({
 
 /** Release-1 defaults (docs/13 §6, MASTER_SPEC §7). */
 export const SITE_SETTINGS_DEFAULTS: SiteSettings = Object.freeze({
+  siteName: "CodeKraft",
   baseCurrency: "INR",
   enabledCurrencies: ["INR", "USD", "EUR", "GBP", "CAD"],
   taxRateBps: 0,

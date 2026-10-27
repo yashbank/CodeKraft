@@ -155,7 +155,9 @@ export function renderNotification(
 
     case "lead.new":
       return {
-        title: `New Lead: ${p.leadName ?? p.name ?? "Inquiry"}`,
+        title: p.quoteRequested
+          ? `Quote requested: ${p.productName ?? "product"} (${p.leadName ?? p.name ?? "customer"})`
+          : `New Lead: ${p.leadName ?? p.name ?? "Inquiry"}`,
         body: `${p.company ? p.company + " - " : ""}${p.message ?? "New inquiry received"}`,
         link: p.leadId ? `/admin/leads/${p.leadId}` : "/admin/leads",
         emailTemplate: null, // admin in-app only

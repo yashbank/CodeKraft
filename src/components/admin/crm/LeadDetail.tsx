@@ -42,6 +42,7 @@ import { cn } from "@/components/ui/_utils";
 import { Banner } from "../Banner";
 import { daysUntil, formatDate, formatDateTime } from "../format";
 import { KeyValue } from "../KeyValue";
+import { NewCustomerDialog } from "../commerce/NewCustomerDialog";
 import { PageHeader } from "../PageHeader";
 import { RowActions } from "../RowActions";
 import type { LeadActivity, LeadDetailData, LeadStatus } from "../types";
@@ -93,6 +94,16 @@ export function LeadDetail({
   const [nextFollowUpAt, setNextFollowUpAt] = React.useState(lead.nextFollowUpAt);
   const [priority, setPriority] = React.useState(lead.priority);
   const [saving, setSaving] = React.useState(false);
+  const [createCustomerOpen, setCreateCustomerOpen] = React.useState(false);
+  /** BUG-092: open the quote editor with this lead's details prefilled. */
+  const quoteHrefFor = (customerId: string) => {
+    const q = new URLSearchParams({
+      customerId,
+      title: lead.product ? `Custom quote: ${lead.product}` : `Custom quote for ${lead.name}`,
+      description: data.message,
+    });
+    return `${quotesHref}?${q.toString()}`;
+  };
   const overdueDays = nextFollowUpAt ? -daysUntil(nextFollowUpAt, now) : 0;
 
   const addActivity = async () => {
@@ -512,17 +523,30 @@ export function LeadDetail({
             <Button asChild className="w-full">
               <Link href={newOrderHref}>Create project order</Link>
             </Button>
-            <Button
-              asChild
-              variant="secondary"
-              className="w-full"
-              disabled={!data.linkedCustomerId}
-            >
-              <Link href={quotesHref}>Send custom quote</Link>
-            </Button>
-            {!data.linkedCustomerId ? (
-              <p className="text-caption text-fg-muted">Quotes require a customer account.</p>
-            ) : null}
+            {data.linkedCustomerId ? (
+              <Button asChild variant="secondary" className="w-full">
+                <Link href={quoteHrefFor(data.linkedCustomerId)}>Send custom quote</Link>
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() => setCreateCustomerOpen(true)}
+                >
+                  Send custom quote
+                </Button>
+                <p className="text-caption text-fg-muted">
+                  Quotes require a customer account. You will be asked to create one first.
+                </p>
+                <NewCustomerDialog
+                  open={createCustomerOpen}
+                  onOpenChange={setCreateCustomerOpen}
+                  initial={{ email: data.lead.email, name: data.lead.name }}
+                  onCreated={(c) => router.push(quoteHrefFor(c.id))}
+                />
+              </>
+            )}
             <div className="flex gap-2 pt-1">
               <Button
                 variant="outline"

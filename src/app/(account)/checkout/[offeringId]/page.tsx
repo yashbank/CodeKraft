@@ -6,6 +6,7 @@ import { ErrorCode } from "@/lib/errors";
 import { getFlag } from "@/lib/feature-flags";
 import { getSession } from "@/modules/auth/service";
 import { previewCheckoutAction } from "@/modules/orders/actions";
+import { findPendingCheckoutOrder } from "@/modules/orders/resume";
 import { settingsService } from "@/modules/settings/service";
 import { getMyProfileQuery } from "@/modules/users/queries";
 
@@ -31,12 +32,14 @@ export default async function CheckoutPage({ params }: PageProps) {
   }
 
   const ctx = await getSiteRequestContext();
-  const [previewResult, profileResult, razorpayFlag, siteSettings] = await Promise.all([
-    previewCheckoutAction({ offeringId }, ctx),
-    getMyProfileQuery({}, ctx),
-    getFlag("provider_razorpay"),
-    settingsService.load(),
-  ]);
+  const [previewResult, profileResult, razorpayFlag, siteSettings, pendingOrder] =
+    await Promise.all([
+      previewCheckoutAction({ offeringId }, ctx),
+      getMyProfileQuery({}, ctx),
+      getFlag("provider_razorpay"),
+      settingsService.load(),
+      findPendingCheckoutOrder(ctx.userId, offeringId),
+    ]);
   // V1.1, D-501, TEST MODE ONLY: Razorpay is only ever a selectable checkout option when BOTH
   // the flag is on AND real keys are configured — never expose keySecret/webhookSecret to the
   // client, only this boolean (`mapCheckoutPreviewToOffering` -> `toCheckoutPaymentProviders`).
@@ -89,6 +92,7 @@ export default async function CheckoutPage({ params }: PageProps) {
       <CheckoutScreen
         offeringId={offeringId}
         offering={offering}
+        initialOrder={pendingOrder}
         customerEmail={session.user.email}
         billing={billing}
         state={session.user.emailVerified ? undefined : "unverified"}

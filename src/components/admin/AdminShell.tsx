@@ -179,6 +179,7 @@ export const ADMIN_NAV: NavGroup[] = [
           { label: "Services", route: "/content/services" },
           { label: "Case studies", route: "/content/case-studies" },
           { label: "Testimonials & logos", route: "/content/testimonials" },
+          { label: "Blog", route: "/content/blog" },
           { label: "FAQs", route: "/content/faqs" },
           { label: "Legal", route: "/content/legal" },
         ],

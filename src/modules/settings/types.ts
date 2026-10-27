@@ -61,6 +61,7 @@ export interface RazorpaySettings {
 
 /** Typed `site_settings` map (API-ADM-10 patch shape). */
 export interface SiteSettings {
+  siteName: string;
   baseCurrency: Currency;
   enabledCurrencies: Currency[];
   taxRateBps: number;
@@ -83,6 +84,7 @@ export type SiteSettingField = keyof SiteSettings;
 
 /** `SiteSettings` field → `site_settings.key` (one row per key). */
 export const SITE_SETTING_KEYS: Readonly<Record<SiteSettingField, string>> = Object.freeze({
+  siteName: "site_name",
   baseCurrency: "base_currency",
   enabledCurrencies: "enabled_currencies",
   taxRateBps: "tax_rate_bps",

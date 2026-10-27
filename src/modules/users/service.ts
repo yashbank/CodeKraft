@@ -60,6 +60,7 @@ import {
   removeAdminSchema,
   revokeSessionSchema,
   sendAuthLinkSchema,
+  createCustomerSchema,
   verifyTotpSchema,
 } from "./contracts";
 import type { z } from "zod";
@@ -69,6 +70,7 @@ import {
   markCustomerEmailVerified,
   reinstateCustomer,
   sendAuthLink,
+  createCustomer,
   suspendCustomer,
   toProfileView,
   toUserView,
@@ -106,6 +108,7 @@ export function createNotImplementedUsersService(): UsersService {
     suspendCustomer: "async",
     markCustomerEmailVerified: "async",
     reinstateCustomer: "async",
+    createCustomer: "async",
     sendResetLink: "async",
     sendMagicLink: "async",
     inviteAdmin: "async",
@@ -676,6 +679,15 @@ export class DefaultUsersService implements UsersService {
   ): Promise<{ sentTo: string }> {
     const db = await this.getDatabase(tx);
     return await sendAuthLink(ctx, { userId: input.userId, kind: "reset" }, db);
+  }
+
+  async createCustomer(
+    ctx: RequestContext,
+    input: z.infer<typeof createCustomerSchema>,
+    tx?: DbOrTx,
+  ): Promise<{ userId: string; email: string; name: string; emailSent: boolean }> {
+    const db = await this.getDatabase(tx);
+    return await createCustomer(ctx, input, db);
   }
 
   async sendMagicLink(
