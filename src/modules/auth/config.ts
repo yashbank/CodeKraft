@@ -126,7 +126,13 @@ export function createAuth(host: AuthHost, opts: { phoneOtp?: boolean } = {}) {
       defaultCookieAttributes: { sameSite: "lax", httpOnly: true, path: "/" },
       database: { generateId: "uuid" },
     },
-    rateLimit: { enabled: true, window: 60, max: 30 },
+    rateLimit: {
+      enabled: true,
+      window: 60,
+      max: 30,
+      // docs/09 §7: verification resend 3/h (the resend buttons added for R8-08 hit this).
+      customRules: { "/send-verification-email": { window: 60 * 60, max: 3 } },
+    },
     hooks: { before: beforeHook(host), after: afterHook(host) },
     plugins,
   });

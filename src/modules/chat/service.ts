@@ -2,7 +2,9 @@ import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import type { RequestContext } from "@/lib/authz/context";
 import { type Db, getDb } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
+import { getLogger } from "@/lib/logger";
 import { users } from "../../../drizzle/schema/auth";
+import { assertEmailVerified } from "@/modules/auth/verified";
 import {
   type Conversation,
   type PromptVersion,
@@ -123,7 +125,41 @@ export class DefaultChatService implements ChatService {
     };
   }
 
+  /** Best-effort admin alert: a notification failure must never break the customer's chat. */
+  private async notifyAdminsChatStarted(
+    userId: string,
+    conversationId: string,
+    firstMessage: string,
+  ): Promise<void> {
+    try {
+      const [u] = await this.db
+        .select({ name: users.name, email: users.email })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      await notificationsService.emit(
+        "admins",
+        "chat.new",
+        {
+          conversationId,
+          customerName: u?.name || u?.email || "Customer",
+          preview: firstMessage.slice(0, 140),
+        },
+        ["inapp"],
+        this.db,
+      );
+    } catch (err) {
+      getLogger().error({ err, conversationId }, "chat.new admin notification failed");
+    }
+  }
+
+  /** R8-08: the chatbot (messages, menu intents, handoff) is locked until the email is verified. */
+  async assertCanChat(ctx: RequestContext): Promise<void> {
+    await assertEmailVerified(ctx, this.db, "Please verify your email before using chat");
+  }
+
   async menuIntent(ctx: RequestContext, input: MenuIntentInput): Promise<MenuIntentResult> {
+    await this.assertCanChat(ctx);
     return await resolveMenuIntent(ctx, input);
   }
 
@@ -179,12 +215,23 @@ export class DefaultChatService implements ChatService {
       throw new AppError(ErrorCode.NOT_FOUND, "Conversation not found");
     }
 
+    const [prior] = await this.db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(chatMessages)
+      .where(and(eq(chatMessages.conversationId, conv.id), eq(chatMessages.role, "user")));
+
     // Record user message
     await this.db.insert(chatMessages).values({
       conversationId: input.conversationId,
       role: "user",
       content: input.content,
     });
+
+    // R8-06: tell admins (in-app) when a customer starts a real chat -- once per conversation,
+    // on the first user message (the page creates a conversation row on every visit).
+    if ((prior?.n ?? 0) === 0) {
+      await this.notifyAdminsChatStarted(ctx.userId, conv.id, input.content);
+    }
 
     // Send meta event
     yield {
@@ -288,6 +335,7 @@ export class DefaultChatService implements ChatService {
     ctx: RequestContext,
     input: EscalateConversationInput,
   ): Promise<EscalateConversationResult> {
+    await this.assertCanChat(ctx);
     const [conv] = await this.db
       .select()
       .from(conversations)
@@ -315,12 +363,23 @@ export class DefaultChatService implements ChatService {
       .map((m) => `${m.role}: ${m.content}`)
       .join("\n");
 
+    // R8-05: the chat UI sends the customer's note as `summary` -- it used to be dropped, so every
+    // handoff arrived as "Escalated from Chatbot" with no context. Use it as subject + preamble.
+    const summary = input.summary?.trim();
+    const subject =
+      input.subject ??
+      (summary && summary.length >= 3
+        ? summary.length > 160
+          ? `${summary.slice(0, 157)}...`
+          : summary
+        : "Escalated from Chatbot");
+
     const queryResult = await queriesService.createFromEscalation(
       {
         conversationId: conv.id,
         userId: ctx.userId,
-        subject: input.subject ?? "Escalated from Chatbot",
-        transcriptExcerpt: excerpt,
+        subject,
+        transcriptExcerpt: summary ? `Customer note: ${summary}\n\n${excerpt}` : excerpt,
       },
       this.db,
     );
@@ -340,6 +399,7 @@ export class DefaultChatService implements ChatService {
     ctx: RequestContext,
     input: ConfirmLeadCaptureInput,
   ): Promise<{ leadId: string }> {
+    await this.assertCanChat(ctx);
     const [conv] = await this.db
       .select()
       .from(conversations)

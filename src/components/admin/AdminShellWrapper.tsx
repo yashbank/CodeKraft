@@ -1,11 +1,14 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
+import { toast } from "sonner";
 
 import { AdminShell, type AdminRoute } from "./AdminShell";
 import type { AdminNotification, AdminUserRef } from "./types";
 import { searchAdmin } from "@/lib/admin/global-search";
+import { mapNotificationItem } from "@/lib/admin/notifications-view";
+import type { PollNotificationsResult } from "@/modules/notifications/types";
 import { PRIYA } from "@/app/dev/screens/_fixtures/admin";
 
 const ADMIN_ROUTE_MAP: Record<string, string> = {
@@ -93,6 +96,7 @@ export function AdminShellWrapper({
   children,
 }: AdminShellWrapperProps) {
   const pathname = usePathname();
+  const live = useLiveAdminNotifications(notifications);
 
   // Strip /admin prefix if present, or keep path
   let active: AdminRoute = "/dashboard";
@@ -112,7 +116,7 @@ export function AdminShellWrapper({
       user={user}
       environment={environment}
       pendingApprovals={pendingApprovals}
-      notifications={notifications}
+      notifications={live}
       now={new Date().toISOString()}
       title={title}
       routes={ADMIN_ROUTE_MAP}
@@ -121,4 +125,74 @@ export function AdminShellWrapper({
       {children}
     </AdminShell>
   );
+}
+
+/** Poll interval for new admin notifications (docs/09 §7 caps polling at 30/min per session). */
+export const ADMIN_NOTIFICATION_POLL_MS = 20_000;
+
+/**
+ * R8-06: the admin layout only loads unread notifications on a full server render, so a new
+ * chatbot conversation / handoff / query never surfaced until a hard reload. Poll
+ * `GET /api/notifications` while the tab is visible, prepend new items to the bell, and toast
+ * each one with an "Open" action.
+ */
+function useLiveAdminNotifications(initial: AdminNotification[]): AdminNotification[] {
+  const router = useRouter();
+  const [items, setItems] = React.useState<AdminNotification[]>(initial);
+  const sinceRef = React.useRef<string>(new Date().toISOString());
+
+  // Keyed by content, not identity: callers may pass a fresh `[]` default on every render.
+  const initialKey = initial.map((n) => `${n.id}:${n.read ? 1 : 0}`).join(",");
+  const initialRef = React.useRef(initial);
+  initialRef.current = initial;
+  React.useEffect(() => {
+    // A server re-render hands down a fresh unread list; keep unread polled extras on top.
+    const next = initialRef.current;
+    setItems((prev) => {
+      const ids = new Set(next.map((n) => n.id));
+      return [...prev.filter((n) => !ids.has(n.id) && !n.read), ...next];
+    });
+  }, [initialKey]);
+
+  React.useEffect(() => {
+    let stopped = false;
+    async function poll() {
+      if (stopped || document.visibilityState !== "visible") return;
+      try {
+        const res = await fetch(
+          `/api/notifications?since=${encodeURIComponent(sinceRef.current)}`,
+          { cache: "no-store" },
+        );
+        if (!res.ok) return;
+        const body = (await res.json()) as { ok: boolean; data?: PollNotificationsResult };
+        if (!body.ok || !body.data) return;
+        sinceRef.current = body.data.serverTime;
+        const fresh = body.data.items.map(mapNotificationItem);
+        if (fresh.length === 0) return;
+        setItems((prev) => {
+          const seen = new Set(prev.map((n) => n.id));
+          return [...fresh.filter((n) => !seen.has(n.id)), ...prev];
+        });
+        for (const n of fresh.slice(0, 3)) {
+          const href = n.href;
+          toast(n.title, {
+            description: n.body,
+            ...(href ? { action: { label: "Open", onClick: () => router.push(href) } } : {}),
+          });
+        }
+      } catch {
+        // Offline / transient failure: the next tick retries.
+      }
+    }
+    const id = window.setInterval(() => void poll(), ADMIN_NOTIFICATION_POLL_MS);
+    const onVisible = () => void poll();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      stopped = true;
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [router]);
+
+  return items;
 }

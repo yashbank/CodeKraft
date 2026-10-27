@@ -4,6 +4,8 @@ import { usePathname } from "next/navigation";
 import * as React from "react";
 
 import { AccountShell, type AccountNavKey } from "./AccountShell";
+import { Banner } from "./Banner";
+import { ResendVerificationButton } from "./ResendVerificationButton";
 import type { NotificationItem } from "./types";
 import type { Currency } from "@/lib/money";
 
@@ -11,6 +13,8 @@ interface AccountShellWrapperProps {
   user: { name: string; email: string; initials: string };
   notifications?: NotificationItem[];
   unreadCount?: number;
+  /** R8-08: false shows the "verify your email" banner (with resend) on every account page. */
+  emailVerified?: boolean;
   children: React.ReactNode;
 }
 
@@ -18,6 +22,7 @@ export function AccountShellWrapper({
   user,
   notifications = [],
   unreadCount = 0,
+  emailVerified = true,
   children,
 }: AccountShellWrapperProps) {
   const pathname = usePathname();
@@ -43,6 +48,25 @@ export function AccountShellWrapper({
       unreadCount={unreadCount}
       now={new Date().toISOString()}
     >
+      {/* The overview renders its own verification banner; chat shows an inline one. */}
+      {!emailVerified && pathname !== "/account" && !pathname.startsWith("/account/chat") ? (
+        <Banner
+          tone="warning"
+          title="Verify your email"
+          className="mb-6"
+          action={
+            <ResendVerificationButton
+              email={user.email}
+              label="Resend"
+              size="sm"
+              variant="secondary"
+            />
+          }
+        >
+          We sent a link to {user.email}. Purchases, payments and the assistant unlock once
+          it&apos;s verified.
+        </Banner>
+      ) : null}
       {children}
     </AccountShell>
   );

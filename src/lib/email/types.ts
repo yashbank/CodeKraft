@@ -15,6 +15,7 @@ export type EmailTemplate =
   | "refund-issued"
   | "admin-overdue-digest"
   | "approval-needed"
+  | "admin-invite"
   | "approval-decided"
   | "payment-confirmed";
 

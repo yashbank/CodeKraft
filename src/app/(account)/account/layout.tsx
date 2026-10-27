@@ -24,6 +24,7 @@ export default async function AccountAreaLayout({ children }: { children: React.
 
   return (
     <AccountShellWrapper
+      emailVerified={Boolean(session.user.emailVerified)}
       user={{
         name,
         email: session.user.email,

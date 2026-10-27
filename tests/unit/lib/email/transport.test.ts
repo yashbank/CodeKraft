@@ -106,3 +106,87 @@ describe("email transport (docs/12 §7)", () => {
     expect(urgent.skipped).toBeUndefined();
   });
 });
+
+describe("R8-07 verification email delivery root causes", () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    delete process.env.VERCEL_ENV;
+  });
+
+  it("a Vercel production deploy with a non-production APP_ENV still mails any customer", async () => {
+    const t = await load("resend");
+    process.env.VERCEL_ENV = "production";
+    try {
+      const r = await t.sendEmail({
+        to: "new.customer@gmail.com",
+        subject: "Verify",
+        template: "verify-email",
+        data: { url: "https://x/verify" },
+        priority: 1,
+      });
+      expect(r.skipped).toBeUndefined();
+      expect(sendMock).toHaveBeenCalledTimes(1);
+    } finally {
+      delete process.env.VERCEL_ENV;
+    }
+  });
+
+  it("outside production the allowlist still blocks non-listed recipients", async () => {
+    const t = await load("resend");
+    const r = await t.sendEmail({
+      to: "new.customer@gmail.com",
+      subject: "Verify",
+      template: "verify-email",
+      data: {},
+    });
+    expect(r.skipped).toBe("allowlist");
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it("a Resend rejection is thrown (and logged), never swallowed", async () => {
+    const t = await load("resend");
+    sendMock.mockImplementationOnce(
+      async () =>
+        ({
+          data: null,
+          error: { name: "validation_error", message: "domain is not verified" },
+        }) as never,
+    );
+    await expect(
+      t.sendEmail({ to: "founder@example.com", subject: "s", template: "verify-email", data: {} }),
+    ).rejects.toThrow(/domain is not verified/);
+  });
+
+  it("emailConfigProblems flags the misconfigurations that silently drop mail", async () => {
+    const t = await load("resend");
+    const healthy = {
+      APP_ENV: "production" as const,
+      EMAIL_TRANSPORT: "resend" as const,
+      EMAIL_FROM: "CodeKraft <no-reply@codekraft.in>",
+      RESEND_API_KEY: "re_live",
+      EMAIL_ALLOWLIST: [],
+    };
+    expect(t.emailConfigProblems(healthy, undefined)).toEqual([]);
+    // Local/preview is not a live deployment: nothing to report.
+    expect(t.emailConfigProblems({ ...healthy, APP_ENV: "local" }, undefined)).toEqual([]);
+
+    const live = t
+      .emailConfigProblems(
+        {
+          APP_ENV: "local",
+          EMAIL_TRANSPORT: "log",
+          EMAIL_FROM: "CodeKraft <onboarding@resend.dev>",
+          RESEND_API_KEY: undefined,
+          EMAIL_ALLOWLIST: [],
+        },
+        "production",
+      )
+      .join("\n");
+    expect(live).toMatch(/APP_ENV/);
+    expect(live).toMatch(/EMAIL_TRANSPORT/);
+    expect(live).toMatch(/resend\.dev/);
+    expect(
+      t.emailConfigProblems({ ...healthy, RESEND_API_KEY: undefined }, undefined).join(),
+    ).toMatch(/RESEND_API_KEY/);
+  });
+});

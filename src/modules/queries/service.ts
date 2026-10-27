@@ -219,15 +219,24 @@ export class DefaultQueriesService implements QueriesService {
       attachments: [],
     });
 
+    // R8-05/R8-06: a dedicated "customer asked for the team" alert that deep-links admins to the
+    // query thread (reply there; the customer sees it in /account/queries/<id>).
+    const [customer] = await tx
+      .select({ name: users.name, email: users.email })
+      .from(users)
+      .where(eq(users.id, input.userId))
+      .limit(1);
     await notificationsService.emit(
       "admins",
-      "query.new",
+      "chat.handoff",
       {
         queryId: query.id,
+        conversationId: input.conversationId,
         subject: query.subject,
-        preview: "Escalated from chatbot",
+        customerName: customer?.name || customer?.email || "A customer",
+        preview: "Handed off from the chatbot",
       },
-      undefined,
+      ["inapp"],
       tx,
     );
 

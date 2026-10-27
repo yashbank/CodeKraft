@@ -578,8 +578,8 @@ describe("notifications (API-NOTIF-01..04, master plan §5 emit)", () => {
     ];
     expect(docs06).toHaveLength(29);
     for (const t of docs06) expect(notifications.NOTIFICATION_TYPES).toContain(t);
-    expect(notifications.NOTIFICATION_TYPES).toHaveLength(30);
-    expect(new Set(notifications.NOTIFICATION_TYPES).size).toBe(30);
+    expect(notifications.NOTIFICATION_TYPES).toHaveLength(32);
+    expect(new Set(notifications.NOTIFICATION_TYPES).size).toBe(32);
   });
 
   it("emit input, list/poll/markRead, preferences", () => {

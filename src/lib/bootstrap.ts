@@ -2,7 +2,9 @@
 import * as Sentry from "@sentry/nextjs";
 
 import { setActionErrorReporter } from "@/lib/actions/envelope";
-import { sendEmail } from "@/lib/email/transport";
+import { emailConfigProblems, sendEmail } from "@/lib/email/transport";
+import { getEnv } from "@/lib/env";
+import { getLogger } from "@/lib/logger";
 import { setAuthMailer } from "@/modules/auth/mailer";
 
 let done = false;
@@ -10,6 +12,7 @@ let done = false;
 export function bootstrapPorts(): void {
   if (done) return;
   done = true;
+  reportEmailConfig();
   setAuthMailer(async (mail) => {
     switch (mail.kind) {
       case "verify_email":
@@ -54,4 +57,19 @@ export function bootstrapPorts(): void {
       user: report.userId ? { id: report.userId } : undefined,
     }),
   );
+}
+
+/** R8-07: surface mail misconfiguration at boot instead of only when a customer's email vanishes. */
+function reportEmailConfig(): void {
+  try {
+    const problems = emailConfigProblems(getEnv());
+    if (problems.length > 0) {
+      getLogger().error(
+        { problems },
+        "email misconfigured: verification/reset emails will not arrive",
+      );
+    }
+  } catch {
+    // getEnv() throws on an invalid environment; that failure is reported where env is used.
+  }
 }

@@ -9,6 +9,7 @@ import { offerings } from "../../../drizzle/schema/offerings";
 import { productOwnerships } from "../../../drizzle/schema/ownership";
 import { emailOutbox, notifications } from "../../../drizzle/schema/notifications";
 import { users } from "../../../drizzle/schema/auth";
+import { assertEmailVerified } from "@/modules/auth/verified";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { assertPermission } from "@/lib/authz/assert";
 import type { Context, RequestContext } from "@/lib/authz/context";
@@ -352,6 +353,9 @@ export class DefaultQuotesService implements QuotesService {
           `Cannot accept quote in status '${quote.status}'`,
         );
       }
+
+      // R8-08: accepting a quote creates an order -- same verified-email gate as checkout.
+      await assertEmailVerified(ctx, tx, "Please verify your email before accepting this quote");
 
       if (quote.expiresAt !== null && quote.expiresAt < new Date()) {
         throw new AppError(ErrorCode.ORDER_EXPIRED, "Custom quote has expired");

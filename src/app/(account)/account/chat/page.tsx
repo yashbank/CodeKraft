@@ -47,6 +47,7 @@ export default async function ChatPage() {
         transcripts={transcripts}
         messagesLeft={0}
         emailUnverified
+        {...(session?.user.email ? { email: session.user.email } : {})}
         links={{ queries: "/account/queries" }}
       />
     );

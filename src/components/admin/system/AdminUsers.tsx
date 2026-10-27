@@ -73,7 +73,8 @@ const ROLE_SUMMARY: Record<AdminRole, string> = {
   super_admin:
     "Everything: settings, all products, all partners, all leads, legal pages, admin users.",
   admin: "Own products, own share, assigned leads and queries; cannot change settings.",
-  staff: "Read-only operations (defined, not seeded in release 1).",
+  staff:
+    "Day-to-day operations: catalog, content, orders, invoices, delivery, leads, queries, customers. No settings, finance approvals or admin users.",
 };
 
 export interface AdminUsersProps {
@@ -439,7 +440,7 @@ export function AdminUsers({
                 className="grid gap-2"
               >
                 {(["super_admin", "admin", "staff"] as AdminRole[]).map((r) => (
-                  <RadioGroupCard key={r} value={r} disabled={r === "staff"}>
+                  <RadioGroupCard key={r} value={r}>
                     <span className="text-body font-semibold">{ROLE_LABEL[r]}</span>
                     <span className="text-caption text-fg-muted">{ROLE_SUMMARY[r]}</span>
                   </RadioGroupCard>
@@ -497,7 +498,7 @@ export function AdminUsers({
                 onValueChange={(v) => setConfirmRole(v as AdminRole)}
                 className="grid gap-2"
               >
-                {(["super_admin", "admin"] as AdminRole[]).map((r) => (
+                {(["super_admin", "admin", "staff"] as AdminRole[]).map((r) => (
                   <RadioGroupCard key={r} value={r}>
                     <span className="text-body font-semibold">{ROLE_LABEL[r]}</span>
                     <span className="text-caption text-fg-muted">{ROLE_SUMMARY[r]}</span>

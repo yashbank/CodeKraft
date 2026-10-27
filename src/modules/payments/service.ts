@@ -15,6 +15,7 @@ import { quotesService } from "@/modules/quotes/service";
 import { type Payment, orders, payments } from "../../../drizzle/schema/commerce";
 import { approvalRequests } from "../../../drizzle/schema/approvals";
 import { userRoles } from "../../../drizzle/schema/auth";
+import { assertEmailVerified } from "@/modules/auth/verified";
 import { emailOutbox, notifications } from "../../../drizzle/schema/notifications";
 import type { PaymentsService } from "./contracts";
 import type { PaymentInstructions, PaymentMethodKey, ProviderRegistry } from "./provider";
@@ -121,6 +122,9 @@ export class DefaultPaymentsService implements PaymentsService {
       if (row.order.userId !== ctx.userId && !isAdmin) {
         throw new AppError(ErrorCode.NOT_FOUND, "Payment not found");
       }
+
+      // R8-08: a customer can't submit a payment until their email is verified (admins exempt).
+      await assertEmailVerified(ctx, tx, "Please verify your email before submitting a payment");
 
       const now = new Date();
       if (row.order.expiresAt && row.order.expiresAt < now) {

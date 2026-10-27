@@ -36,6 +36,7 @@ export default async function AccountOverviewPage() {
     <OverviewScreen
       firstName={firstName}
       emailVerified={Boolean(session?.user.emailVerified)}
+      {...(session?.user.email ? { email: session.user.email } : {})}
       actions={[]}
       entitlements={entitlements}
       invoices={invoices}
