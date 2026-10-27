@@ -43,35 +43,35 @@
 | BUG-061 | major | admin /products/[id] Publish | "Submit for approval" enabled while readiness incomplete; click is a silent no-op. Local LA-07. | fixed, browser check partial |
 | BUG-062 | major | admin /dashboard | "Revenue by period" chart empty despite a paid order in range. Local LA-10. | fixed (browser-verified local, round 6) |
 | BUG-063 | major | admin host, all protected routes | Unauthenticated/expired session renders inline AdminLoginPrompt (200) at same URL instead of redirecting to /auth/login. No data leaked. Prod PA-01, local LA-14. | fixed (browser-verified local, round 6) |
-| BUG-064 | major | /blog, /blog/* "View product" | Links to unpublished/nonexistent product slugs -> 404. Prod PC-08. | open |
+| BUG-064 | major | /blog, /blog/* "View product" | Links to unpublished/nonexistent product slugs -> 404. Prod PC-08. | fixed (browser-verified local, round 7) |
 | BUG-065 | major | admin+site headers | CSP is Report-Only only, no enforced CSP; RO policy contains 'unsafe-eval' https:. Prod PA-05. | fixed in harden/round-6 |
-| BUG-066 | major | admin /customers | No create-customer action anywhere; /orders/new says "Invite the customer first" with no invite control. Feature gap. Local LA-08. | open |
-| BUG-067 | major | admin /content/blog | 404; no standalone blog editor (only per-product Blog tab). Feature gap. Local LA-09. | open |
+| BUG-066 | major | admin /customers | No create-customer action anywhere; /orders/new says "Invite the customer first" with no invite control. Feature gap. Local LA-08. | fixed (browser-verified local, round 7) |
+| BUG-067 | major | admin /content/blog | 404; no standalone blog editor (only per-product Blog tab). Feature gap. Local LA-09. | fixed (browser-verified local, round 7) |
 | BUG-068 | major | admin /settings/*, /content/logos, /finance/statements, /quotes/[id], /login | Spec routes 404 (no page.tsx); admin 404 renders customer-site chrome. Prod PA-02/03/04. | open |
-| BUG-069 | major | /auth/register (local) | Verify email never queued locally: EMAIL_ALLOWLIST skips non-allowlisted recipients, link unreachable. Env/config. Local LC-01. | open |
+| BUG-069 | major | /auth/register (local) | Verify email never queued locally: EMAIL_ALLOWLIST skips non-allowlisted recipients, link unreachable. Env/config. Local LC-01. | fixed (dev console transport, round 7) |
 | BUG-070 | major | prod content | Placeholder/typo content live on prod: FAQ "faq 1"/"qwkjkj q 2", hero "Sanket its keep", "[X] business days", testimonial "Bhaksar", "1.5million"/"30000", cover alt "dh", empty /services, placeholder /projects. Needs real copy in admin. Prod PC-03..07,12,13,20. | needs human |
 | BUG-071 | minor | GET /api/notifications | Unauth returns 500 with code UNAUTHENTICATED, should be 401. Prod PA-06. | fixed (browser-verified local, round 6) |
 | BUG-072 | minor | admin /auth/login, /auth/reset | Title "Sign in — CodeKraft · CodeKraft"; reset page shows customer marketing panel. Prod PA-07/08. | fixed in harden/round-6 |
 | BUG-073 | minor | admin host /robots.txt | Same as customer (Allow: /); admin host should disallow all. Prod PA-09. | fixed in harden/round-6 |
 | BUG-074 | minor | admin host favicon | Identical to customer favicon. Prod PA-10. | fixed in harden/round-6 |
 | BUG-075 | minor | GET /api/health | Public, exposes commit SHA and DB status. Prod PA-11. | fixed in harden/round-6 |
-| BUG-076 | minor | /sitemap.xml, /about, /case-studies | 8/20 sitemap URLs 404; /about, /case-studies 404. Prod PC-09/10. | open |
-| BUG-077 | minor | / (home) | No blog band rendered. Prod PC-11. | open |
-| BUG-078 | minor | /products?q= (desktop) | Empty search shows "0 products" and empty grid, no empty-state message. Prod PC-14. | open |
-| BUG-079 | minor | /account/settings, /products heart | Profile save / notification toggle / wishlist toggle persist but no visible feedback on prod. Prod PC-15/16/17. | open |
-| BUG-080 | minor | /account/queries new-query dialog | Disabled Attachments control with "isn't wired up yet" copy. Prod PC-18. | open |
-| BUG-081 | minor | /products (375) | List/grid view toggle hidden on mobile; confirm intent. Prod PC-19. | open |
+| BUG-076 | minor | /sitemap.xml, /about, /case-studies | 8/20 sitemap URLs 404; /about, /case-studies 404. Prod PC-09/10. | fixed (browser-verified local, round 7) |
+| BUG-077 | minor | / (home) | No blog band rendered. Prod PC-11. | fixed (browser-verified local, round 7) |
+| BUG-078 | minor | /products?q= (desktop) | Empty search shows "0 products" and empty grid, no empty-state message. Prod PC-14. | fixed (browser-verified local, round 7) |
+| BUG-079 | minor | /account/settings, /products heart | Profile save / notification toggle / wishlist toggle persist but no visible feedback on prod. Prod PC-15/16/17. | fixed (browser-verified local, round 7) |
+| BUG-080 | minor | /account/queries new-query dialog | Disabled Attachments control with "isn't wired up yet" copy. Prod PC-18. | fixed (browser-verified local, round 7) |
+| BUG-081 | minor | /products (375) | List/grid view toggle hidden on mobile; confirm intent. Prod PC-19. | by design (single-column below sm) |
 | BUG-082 | minor | anon redirect | /account/wishlist, /account/settings, /checkout/* redirect with next=/account, not the requested path. Local LC-10. | fixed (browser-verified local, round 6) |
-| BUG-083 | minor | /products/[slug] wishlist | Panel shows "Add to wishlist" while item saved; cannot remove from product page. Local LC-11. | open |
+| BUG-083 | minor | /products/[slug] wishlist | Panel shows "Add to wishlist" while item saved; cannot remove from product page. Local LC-11. | fixed (browser-verified local, round 7) |
 | BUG-084 | minor | /account/chat | Enter does not send; assistant claims it can't see orders. Local LC-12/17. | fixed (browser-verified local, round 6) |
-| BUG-085 | minor | /checkout/[offeringId] | Invalid coupon shows raw "Coupon rejected: not_found"; 375 horizontal overflow (415px); reload hides pending payment panel. Local LC-13/15/18. | open |
-| BUG-086 | minor | /account/purchases/[id] | After confirm entitlement stays provisioning_state=pending, "Key not issued yet". Local LC-14. | open |
+| BUG-085 | minor | /checkout/[offeringId] | Invalid coupon shows raw "Coupon rejected: not_found"; 375 horizontal overflow (415px); reload hides pending payment panel. Local LC-13/15/18. | fixed partial (round 7: 375 overflow + resume verified; coupon raw msg not re-verified, order blocks coupon form) |
+| BUG-086 | minor | /account/purchases/[id] | After confirm entitlement stays provisioning_state=pending, "Key not issued yet". Local LC-14. | fixed (browser-verified local, round 7) |
 | BUG-087 | minor | admin host /auth/login | Valid customer creds show "Invalid email or password." (misleading, access correctly denied). Local LC-16. | fixed (browser-verified local, round 6) |
-| BUG-088 | minor | admin /settings General | Site name input readOnly, no edit path. Local LA-05. | open |
+| BUG-088 | minor | admin /settings General | Site name input readOnly, no edit path. Local LA-05. | fixed (browser-verified local, round 7) |
 | BUG-089 | minor | admin /orders/new | "Create order" disabled with no visible reason (ManualOrderForm.tsx:705-716). Local LA-11. | fixed, browser check partial |
 | BUG-090 | minor | admin /leads | "Lead created" toast but list stale until reload. Local LA-12. | fixed (browser-verified local, round 6) |
 | BUG-091 | minor | admin /queries, /admin-users invite | Reply / Request approval succeed with no success toast. Local LA-17/18. | fixed, browser check partial |
-| BUG-092 | minor | admin /leads/[id] | "Send custom quote" is a plain link, lead not prefilled. Local LA-19. | open |
+| BUG-092 | minor | admin /leads/[id] | "Send custom quote" is a plain link, lead not prefilled. Local LA-19. | fixed (browser-verified local, round 7) |
 
 ## Round 6 retest (local, commit 6e1d01e) - see scratchpad/retest/RESULTS.md
 | BUG-093 | major | /contact, InquiryForm Send inquiry | Mouse click on Send inquiry lost: page shifts ~90px between mousedown and mouseup, click lands on DIV, no submit. Keyboard Enter submits (lead row inquiry_form). Verify headed. | fixed (browser-verified local, round 6) |
