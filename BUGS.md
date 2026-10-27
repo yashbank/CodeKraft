@@ -78,3 +78,8 @@
 | BUG-056 | major | admin /orders/[id] | RETEST FAIL: Fulfil enabled on unpaid order, click does nothing (no scroll/fulfilment focus). | fixed (browser-verified local, round 6) |
 | BUG-059 | major | admin /settings Tax & GSTIN | RETEST FAIL: state change + Save changes not persisted after reload. | fixed (browser-verified local, round 6) |
 | BUG-049 | blocker | /contact | RETEST FAIL (mouse path only): keyboard/JS submit persists lead; product InquirySheet PASS (product_cta, product_id set). | fixed (browser-verified local, round 6) |
+| BUG-094 | blocker | prod admin /settings Payment methods | UPI enabled with placeholder VPA "codekraft@upi" (empty payee, sample QR) and bank transfer with account 000000000000 / IFSC HDFC0000001 - shown to customers at checkout; payments could go to a stranger's VPA. Disable or enter real details. Prod admin audit PAA-01. | needs human |
+| BUG-095 | major | prod admin /settings General | Seller details still placeholders ("[PLACEHOLDER] 1 Studio Lane, Pune", +91 00000 00000, hello@codekraft.invalid) - used on invoices/emails. Same as MANUAL A-010. PAA-02. | needs human |
+| BUG-096 | major | prod admin /settings Payment methods | Razorpay enabled (test mode) but Key ID/secret/webhook secret unset. PAA-03. | needs human |
+| BUG-097 | major | prod admin notifications | 10 notifications (6 leads, 3 queries, 1 payment) point at rows removed by the round-4 demo-data wipe; lists/KPIs are empty, deep links show "not found". Data residue, not code. PAA-04..08. | needs human (cleanup approval) |
+| BUG-098 | minor | admin notifications deep links | Link to a deleted record lands on a bare "not found"; should mark notification stale / show "this item no longer exists". PAA-07/08. | open |
