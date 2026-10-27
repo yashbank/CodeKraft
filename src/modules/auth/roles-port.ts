@@ -23,6 +23,13 @@ export function loadRoles(userId: string): Promise<Role[]> {
   return loader(userId);
 }
 
+/**
+ * May this user hold an admin-host session / open the admin app? Includes `staff` (R8-09: staff
+ * invited by a super admin could not sign in to admin at all). Staff see only what their
+ * permissions allow; `ADMIN_CLASS_ROLES` (super_admin/admin) keeps its narrower meaning elsewhere.
+ */
+export const ADMIN_APP_ROLES: readonly Role[] = [...ADMIN_CLASS_ROLES, "staff"];
+
 export function hasAdminClassRole(roles: readonly Role[]): boolean {
-  return roles.some((r) => (ADMIN_CLASS_ROLES as readonly string[]).includes(r));
+  return roles.some((r) => (ADMIN_APP_ROLES as readonly string[]).includes(r));
 }
