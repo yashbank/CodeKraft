@@ -230,7 +230,7 @@ export function TestimonialsLogos({
   return (
     <ContentEditorFrame
       title="Testimonials & logos"
-      description="Curated by admins; there are no public reviews or ratings (X-007). Only publish quotes you have permission to use."
+      description="Curated by admins; there are no public reviews or ratings. Only publish quotes you have permission to use."
       wide
       hideSaveBar
     >

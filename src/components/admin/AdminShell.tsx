@@ -90,6 +90,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/components/ui/_utils";
 import { initials, timeAgo } from "./format";
 import { LaptopNotice } from "./LaptopNotice";
+import { useSiteName } from "@/components/brand/site-brand";
 import type { AdminNotification, AdminUserRef, SearchItem } from "./types";
 
 /** Admin routes (docs/07 §2.4). `routes` can remap them (the previews point at /dev/screens). */
@@ -263,6 +264,7 @@ export function AdminShell({
   const href = React.useCallback((route: AdminRoute) => routes?.[route] ?? route, [routes]);
   const [open, setOpen] = React.useState(true);
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const siteName = useSiteName();
   const [paletteOpen, setPaletteOpen] = React.useState(false);
   const [paletteQuery, setPaletteQuery] = React.useState("");
   const [remoteItems, setRemoteItems] = React.useState<SearchItem[]>([]);
@@ -336,7 +338,7 @@ export function AdminShell({
               CK
             </span>
             <span className="group-data-[collapsible=icon]:hidden">
-              CodeKraft <span className="text-fg-muted">Admin</span>
+              {siteName} <span className="text-fg-muted">Admin</span>
             </span>
           </Link>
         </SidebarHeader>
@@ -544,7 +546,7 @@ export function AdminShell({
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent side="left" className="lg:w-80">
           <SheetHeader>
-            <SheetTitle>CodeKraft Admin</SheetTitle>
+            <SheetTitle>{siteName} Admin</SheetTitle>
             <SheetDescription>
               On a phone or tablet only approvals, payment confirmation and notifications are
               available.

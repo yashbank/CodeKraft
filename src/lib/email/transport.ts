@@ -8,6 +8,7 @@ import { Resend } from "resend";
 
 import { getEnv } from "@/lib/env";
 import { getLogger } from "@/lib/logger";
+import { brandFromAddress, brandSubject } from "./branding";
 import { renderGenericEmail } from "./render";
 import type { EmailMessage, EmailOutboxPort, EmailSendResult } from "./types";
 
@@ -113,16 +114,20 @@ export async function sendEmail(message: EmailMessage): Promise<EmailSendResult>
     return { transport: "resend", skipped: "daily_cap" };
   }
   if (!env.RESEND_API_KEY) throw new Error("RESEND_API_KEY missing for EMAIL_TRANSPORT=resend");
+  const { getSiteName } = await import("@/lib/site-brand");
+  const siteName = await getSiteName();
+  const subject = brandSubject(message.subject, siteName);
   const { html, text } = await renderGenericEmail(
-    message.subject,
+    subject,
     message.data,
     env.NEXT_PUBLIC_SITE_URL,
+    siteName,
   );
   const res = await getResend(env.RESEND_API_KEY).emails.send({
-    from: env.EMAIL_FROM,
+    from: brandFromAddress(env.EMAIL_FROM, siteName),
     to: message.to,
     replyTo: env.EMAIL_REPLY_TO || undefined,
-    subject: message.subject,
+    subject,
     html,
     text,
     attachments: message.attachments?.map((a) => ({

@@ -1,22 +1,39 @@
+"use client";
+
+import { useSiteName } from "@/components/brand/site-brand";
 import { cn } from "@/components/ui/_utils";
+import { DEFAULT_SITE_NAME } from "@/lib/brand-constants";
 
 /**
  * Inline copy of /public/brand/wordmark.svg (docs/08 §3.1) so the K chevron can read the accent
  * token; ink follows `currentColor`. Min width 112 px.
+ *
+ * R8-11: the SVG spells the default product name, so once an admin renames the site in
+ * Settings → General the wordmark switches to a text mark of the configured name instead.
  */
-export function Wordmark({
-  className,
-  title = "CodeKraft",
-}: {
-  className?: string;
-  title?: string;
-}) {
+export function Wordmark({ className, title }: { className?: string; title?: string }) {
+  const siteName = useSiteName();
+  const label = title ?? siteName;
+  if (siteName !== DEFAULT_SITE_NAME) {
+    return (
+      <span
+        role="img"
+        aria-label={label}
+        className={cn(
+          "inline-flex h-6 w-auto items-center font-display text-h4 leading-none font-semibold tracking-tight whitespace-nowrap",
+          className,
+        )}
+      >
+        {siteName}
+      </span>
+    );
+  }
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 445 96"
       role="img"
-      aria-label={title}
+      aria-label={label}
       fill="currentColor"
       className={cn("h-6 w-auto min-w-[112px]", className)}
     >

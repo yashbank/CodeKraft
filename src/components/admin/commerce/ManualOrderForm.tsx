@@ -451,7 +451,7 @@ export function ManualOrderForm({
                 ))}
                 {owned ? (
                   <Banner tone="warning">
-                    This customer already owns a one-time offering in this order (BR-10).
+                    This customer already owns a one-time offering in this order.
                   </Banner>
                 ) : null}
                 <Button

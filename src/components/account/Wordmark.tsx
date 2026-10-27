@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { cn } from "@/components/ui/_utils";
+import { SiteName } from "@/components/brand/site-brand";
 
 /** Text wordmark (docs/08 §3.1 "Kraft Bracket" direction) until the logo asset lands. */
 export function Wordmark({
@@ -23,7 +24,9 @@ export function Wordmark({
       <span aria-hidden className="font-mono text-accent-text">
         {"{"}
       </span>
-      <span>CodeKraft</span>
+      <span>
+        <SiteName />
+      </span>
       <span aria-hidden className="font-mono text-accent-text">
         {"}"}
       </span>

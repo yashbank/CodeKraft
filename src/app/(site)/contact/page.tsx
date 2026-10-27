@@ -4,7 +4,7 @@ import { SERVICE_OPTIONS } from "@/app/dev/screens/_fixtures/site";
 import { ContactPage } from "@/components/site/ContactPage";
 
 export const metadata: Metadata = {
-  title: "Contact & Start a Project — CodeKraft",
+  title: "Contact & Start a Project",
   description:
     "Tell us what you're building. Fixed-scope proposals, fast turnaround, and enterprise-grade software.",
 };

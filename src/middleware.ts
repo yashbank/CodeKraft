@@ -63,6 +63,7 @@ export function buildCsp(nonce: string, themeHash: string): { header: string; po
   // Presigned browser PUT to R2 (S3 API endpoint) + public media host.
   const r2 = "https://*.r2.cloudflarestorage.com";
   const list = (...xs: (string | null | false)[]) => xs.filter(Boolean).join(" ");
+  const enforce = cspMode() === "enforce";
   const policy = [
     "default-src 'self'",
     // 'strict-dynamic' makes browsers ignore host sources; they remain as legacy fallback only.
@@ -76,13 +77,13 @@ export function buildCsp(nonce: string, themeHash: string): { header: string; po
     "base-uri 'self'",
     "form-action 'self' https://api.razorpay.com https://checkout.razorpay.com",
     "frame-ancestors 'none'",
-    "upgrade-insecure-requests",
+    // Browsers ignore (and log a console error for) this directive in a report-only policy.
+    ...(enforce ? ["upgrade-insecure-requests"] : []),
     "report-uri /api/csp-report",
     "report-to csp-endpoint",
   ].join("; ");
   return {
-    header:
-      cspMode() === "enforce" ? "Content-Security-Policy" : "Content-Security-Policy-Report-Only",
+    header: enforce ? "Content-Security-Policy" : "Content-Security-Policy-Report-Only",
     policy,
   };
 }

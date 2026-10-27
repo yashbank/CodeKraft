@@ -18,10 +18,10 @@ export async function generateMetadata(props: {
 }): Promise<Metadata> {
   const params = await props.params;
   const result = await getCaseStudyBySlugQuery({ slug: params.slug }, anonymousContext());
-  if (!result.ok) return { title: "Project Not Found | CodeKraft" };
+  if (!result.ok) return { title: "Project Not Found" };
 
   return {
-    title: `${result.data.title} — Case Study | CodeKraft`,
+    title: `${result.data.title} — Case Study`,
     description: result.data.seo.description || result.data.resultHighlight || undefined,
   };
 }

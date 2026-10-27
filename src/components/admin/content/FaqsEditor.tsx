@@ -252,8 +252,8 @@ export function FaqsEditor({ faqs: initial, products }: { faqs: FaqItem[]; produ
               />
               {lint ? (
                 <Banner tone="warning" role="status">
-                  Looks like an email or phone number — answers must not include contact details
-                  (D-808). Non-blocking.
+                  Looks like an email or phone number — answers must not include contact details.
+                  Non-blocking.
                 </Banner>
               ) : null}
             </div>

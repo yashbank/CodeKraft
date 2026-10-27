@@ -1,6 +1,18 @@
+"use server";
+
 /**
- * `dashboard-widgets` Server Actions — owned by P8 (master plan §3 ownership map). Intentionally empty in P2.8:
- * Every export must be created with `defineAction` / `definePublicAction`
- * (`tests/static/actions-use-define-action.test.ts`, SA-07).
+ * `dashboard-widgets` Server Actions. Every export is created with `defineAction` /
+ * `definePublicAction` (`tests/static/actions-use-define-action.test.ts`, SA-07).
  */
-export {};
+import { defineAction } from "@/lib/actions/envelope";
+import { saveAdminWidgetLayout, saveAdminWidgetLayoutSchema } from "./admin-layout";
+
+/** R8-10 / API-ADM-13 — saves the caller's own widget selection + order (keyed by `ctx.userId`). */
+export const saveAdminWidgetLayoutAction = defineAction({
+  name: "API-ADM-13 dashboard.saveLayout",
+  input: saveAdminWidgetLayoutSchema,
+  permission: "dashboard.admin",
+  handler: async (input, ctx) => ({
+    widgets: await saveAdminWidgetLayout(ctx.userId, input.widgets),
+  }),
+});

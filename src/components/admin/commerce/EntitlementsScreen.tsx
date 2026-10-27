@@ -12,6 +12,7 @@ import {
   resetDownloadCount,
   revokeEntitlement,
 } from "@/modules/entitlements/admin-mutations";
+import { completeDeliveryTask } from "@/modules/delivery/admin-mutations";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -613,9 +614,29 @@ export function EntitlementsScreen({
               <Button variant="ghost">Cancel</Button>
             </DialogClose>
             <Button
-              onClick={() => {
+              disabled={submitting}
+              onClick={async () => {
+                if (!doneTask) return;
+                const note = (
+                  document.getElementById("task-note") as HTMLTextAreaElement | null
+                )?.value.trim();
+                if (doneTask.kind === "revoke_external" && !note) {
+                  toast.error("Add a note confirming the external account was disabled.");
+                  return;
+                }
+                setSubmitting(true);
+                const result = await completeDeliveryTask({
+                  taskId: doneTask.id,
+                  ...(note ? { note } : {}),
+                });
+                setSubmitting(false);
+                if (!result.ok) {
+                  toast.error(result.error.message);
+                  return;
+                }
                 toast.success("Task marked done");
                 setDoneTask(null);
+                router.refresh();
               }}
             >
               Mark done

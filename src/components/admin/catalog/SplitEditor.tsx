@@ -16,6 +16,7 @@ import {
 import { cn } from "@/components/ui/_utils";
 import { percentFromBps } from "../format";
 import type { SplitLine } from "../types";
+import { useSiteName } from "@/components/brand/site-brand";
 
 export interface SplitValue {
   companyCutBps: number;
@@ -50,6 +51,7 @@ export function SplitEditor({
   compact?: boolean;
 }) {
   // Flat model: company cut + all partner shares must sum to 100 % (10 000 bps).
+  const siteName = useSiteName();
   const total = value.lines.reduce((s, l) => s + l.bps, 0);
   const grandTotal = value.companyCutBps + total;
   const ok = grandTotal === 10000;
@@ -62,7 +64,7 @@ export function SplitEditor({
       <div className="grid grid-cols-[1fr_120px_40px] items-end gap-2">
         <div className="space-y-1">
           <Label htmlFor={`${idPrefix}-company`}>Company cut</Label>
-          <Input id={`${idPrefix}-company`} readOnly value="CodeKraft (company)" />
+          <Input id={`${idPrefix}-company`} readOnly value={`${siteName} (company)`} />
         </div>
         <div className="space-y-1">
           <Label htmlFor={`${idPrefix}-company-pct`}>%</Label>

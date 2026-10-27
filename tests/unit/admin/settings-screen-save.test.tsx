@@ -17,7 +17,9 @@ vi.mock("@/modules/settings/razorpay-test-connection", () => ({ testRazorpayConn
 import { SettingsScreen } from "@/components/admin/system/SettingsScreen";
 import { SETTINGS } from "@/app/dev/screens/_fixtures/admin";
 
-function renderAt(initialSection: "tax" | "general" | "currencies") {
+function renderAt(
+  initialSection: "tax" | "general" | "currencies" | "payment-methods" | "notifications" | "flags",
+) {
   render(
     <SettingsScreen
       settings={SETTINGS}
@@ -45,13 +47,46 @@ describe("SettingsScreen save (BUG-059)", () => {
     expect(updateSettingsMock.mock.calls[0]![0].patch.taxRateBps).toBe(1800);
   });
 
-  it("sections without backend disable Save with a note", () => {
+  it("currencies section persists enabled currencies (R8-12: no dead Save)", async () => {
+    updateSettingsMock.mockResolvedValue({ ok: true, data: {} });
     renderAt("currencies");
-    expect(
-      (screen.getByRole("button", { name: "Save changes" }) as HTMLButtonElement).disabled,
-    ).toBe(true);
-    expect(screen.getByText(/not available yet/)).toBeTruthy();
-    expect(updateSettingsMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByLabelText("CAD"));
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(updateSettingsMock).toHaveBeenCalled());
+    const patch = updateSettingsMock.mock.calls[0]![0].patch;
+    expect(patch.baseCurrency).toBeUndefined();
+    expect(patch.enabledCurrencies).toContain(SETTINGS.currencies.base);
+    expect(patch.enabledCurrencies.includes("CAD")).toBe(
+      !SETTINGS.currencies.enabled.includes("CAD"),
+    );
+  });
+
+  it("payment methods section persists UPI + bank details", async () => {
+    updateSettingsMock.mockResolvedValue({ ok: true, data: {} });
+    renderAt("payment-methods");
+    fireEvent.change(screen.getByLabelText(/^VPA/), { target: { value: "shop@okbank" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(updateSettingsMock).toHaveBeenCalled());
+    const patch = updateSettingsMock.mock.calls[0]![0].patch;
+    expect(patch.upiVpa).toBe("shop@okbank");
+    expect(Array.isArray(patch.enabledPaymentMethods)).toBe(true);
+  });
+
+  it("no section shows unfinished-feature copy or a dead Save button", () => {
+    for (const sec of ["notifications", "flags"] as const) {
+      renderAt(sec);
+      expect(screen.queryByRole("button", { name: "Save changes" })).toBeNull();
+      expect(screen.queryByText(/not available yet|V1\.1|coming soon/i)).toBeNull();
+      cleanup();
+    }
+  });
+
+  it("feature flag toggles save immediately", async () => {
+    updateSettingsMock.mockResolvedValue({ ok: true, data: {} });
+    renderAt("flags");
+    fireEvent.click(screen.getByLabelText("phone_otp enabled"));
+    await waitFor(() => expect(updateSettingsMock).toHaveBeenCalled());
+    expect(updateSettingsMock.mock.calls[0]![0].patch.flags).toHaveProperty("phone_otp");
   });
 
   it("general section persists siteName and seller details (BUG-088)", async () => {

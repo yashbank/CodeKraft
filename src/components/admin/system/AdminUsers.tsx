@@ -216,7 +216,7 @@ export function AdminUsers({
     <>
       <PageHeader
         title="Admin users"
-        description="Invite admins, change roles, remove access and maintain partner records. Every change is dual-approved (BR-13)."
+        description="Invite admins, change roles, remove access and maintain partner records. Every change is dual-approved."
         actions={
           <>
             <Button variant="outline" size="sm" onClick={() => setSecurityOpen(true)}>
@@ -425,8 +425,8 @@ export function AdminUsers({
             <DialogHeader>
               <DialogTitle>Invite admin</DialogTitle>
               <DialogDescription>
-                The other admin(s) must approve before the invite is sent (BR-13). The email
-                mentions the admin host and recommends TOTP.
+                The other admin(s) must approve before the invite is sent. The email mentions the
+                admin host and recommends TOTP.
               </DialogDescription>
             </DialogHeader>
             <Field id="inv-email" label="Email" required>

@@ -29,6 +29,7 @@ import type {
 import { toPlainText } from "@/modules/content/render";
 import type { LandingChapterView } from "@/modules/content/types";
 import type { RichTextDoc } from "@/modules/_shared/zod";
+import { getSiteName } from "@/lib/site-brand";
 
 // ISR (docs/08 §10). Anonymous data only. Every admin save that changes homepage content
 // calls revalidatePath("/", "layout") (content, catalog, settings admin wrappers), so edits show
@@ -36,11 +37,14 @@ import type { RichTextDoc } from "@/modules/_shared/zod";
 // (scheduled publish job) and for anything that is not wired to a path revalidation.
 export const revalidate = 300;
 
-export const metadata: Metadata = {
-  title: "CodeKraft — Architected for scale. Crafted for production.",
-  description:
-    "We design and build bespoke software architectures, digital products, and robust enterprise solutions.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const siteName = await getSiteName();
+  return {
+    title: { absolute: `${siteName} — Architected for scale. Crafted for production.` },
+    description:
+      "We design and build bespoke software architectures, digital products, and robust enterprise solutions.",
+  };
+}
 
 function chapterCopy(c: LandingChapterView | undefined) {
   return { eyebrow: c?.eyebrow ?? "", title: c?.title ?? "", body: c?.plainBody ?? "" };

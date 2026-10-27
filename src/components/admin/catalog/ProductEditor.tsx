@@ -127,7 +127,7 @@ const FLAGS: Array<{ key: ProductFlag; label: string; hint: string }> = [
   {
     key: "tax_enabled",
     label: "Tax enabled",
-    hint: "Tax applies only once a GSTIN is configured in Settings (BR-08).",
+    hint: "Tax applies only once a GSTIN is configured in Settings.",
   },
 ];
 
@@ -1422,7 +1422,7 @@ export function ProductEditor({
                 hint={
                   flags.has("is_unlisted")
                     ? undefined
-                    : "Shown as “Try the demo” on the product page (D-805)."
+                    : "Shown as “Try the demo” on the product page."
                 }
               >
                 <Input
@@ -1934,8 +1934,8 @@ export function ProductEditor({
 
           <TabsContent value="ownership" className="space-y-5">
             <Banner tone="neutral">
-              Ownership is never visible to buyers (BR-02). Percentages shown with two decimals;
-              stored as basis points.
+              Ownership is never visible to buyers. Percentages shown with two decimals; stored as
+              basis points.
             </Banner>
             {pendingOwnership ? (
               <Banner tone="warning" title="Proposal awaiting approval">
@@ -2461,7 +2461,7 @@ export function ProductEditor({
             ) : null}
             {flags.has("tax_enabled") && !gstinConfigured ? (
               <Banner tone="warning">
-                Tax applies only once a GSTIN is configured in Settings (BR-08).
+                Tax applies only once a GSTIN is configured in Settings.
               </Banner>
             ) : null}
             <form
@@ -2476,7 +2476,7 @@ export function ProductEditor({
                 id="pub-at"
                 label="Publish at"
                 optional
-                hint="Leave empty to publish on approval (D-307)."
+                hint="Leave empty to publish on approval."
               >
                 <Input id="pub-at" name="publishAt" type="datetime-local" />
               </Field>

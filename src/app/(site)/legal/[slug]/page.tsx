@@ -107,8 +107,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!doc) return {};
 
   return {
-    title: `${doc.title} — CodeKraft Legal`,
-    description: `Official ${doc.title.toLowerCase()} for CodeKraft products and engineering services.`,
+    title: doc.title,
+    description: `Official ${doc.title.toLowerCase()} for our products and engineering services.`,
   };
 }
 

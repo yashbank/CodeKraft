@@ -39,6 +39,7 @@ import { Banner } from "./Banner";
 import { ResendVerificationButton } from "./ResendVerificationButton";
 import { formatDate } from "./format";
 import type { ChatCard, ChatMessage, ChatTranscript } from "./types";
+import { SiteName } from "@/components/brand/site-brand";
 
 function DataCard({ card }: { card: ChatCard }) {
   switch (card.kind) {
@@ -711,7 +712,7 @@ export function ChatScreen({
           )}
         </div>
         <p className="text-caption text-fg-subtle">
-          Answers are based on CodeKraft&apos;s site content.
+          Answers are based on <SiteName suffix="'s" /> site content.
         </p>
       </form>
     </div>

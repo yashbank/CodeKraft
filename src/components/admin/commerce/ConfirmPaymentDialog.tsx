@@ -79,7 +79,7 @@ export function ConfirmPaymentDialog({
           <DialogTitle>Confirm payment · {orderNumber}</DialogTitle>
           <DialogDescription>
             Amount received less than due is recorded as a bank charge on this order and deducted
-            before the split (D-516). Over-receipt is held as customer credit and never allocated to
+            before the split. Over-receipt is held as customer credit and never allocated to
             partners.
           </DialogDescription>
         </DialogHeader>

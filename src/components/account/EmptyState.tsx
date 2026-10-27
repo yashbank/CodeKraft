@@ -12,7 +12,7 @@ export function EmptyState({
   className,
 }: {
   icon: LucideIcon;
-  title: string;
+  title: ReactNode;
   body?: string;
   action?: ReactNode;
   className?: string;

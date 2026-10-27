@@ -100,6 +100,8 @@ describe("middleware host matrix (docs/04 §8, docs/09 §3.5)", () => {
       process.env.CSP_MODE = "report";
       const rb = await middleware(req("http://localhost:3000/", "localhost:3000"));
       expect(rb.headers.get(HDR)).toContain("script-src");
+      // R8-12: ignored in report-only and logs a console error on every page.
+      expect(rb.headers.get(HDR)).not.toContain("upgrade-insecure-requests");
       expect(rb.headers.get("Content-Security-Policy")).toBeNull();
     } finally {
       process.env.APP_ENV = prev.a;

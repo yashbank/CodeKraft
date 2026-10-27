@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { LockIcon, RefreshCwIcon } from "lucide-react";
+import { LockIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -43,8 +43,6 @@ import { updateRazorpaySettings, updateSettings } from "@/modules/settings/admin
 import { testRazorpayConnection } from "@/modules/settings/razorpay-test-connection";
 import { Banner } from "../Banner";
 import { ManualPaymentSettings } from "./ManualPaymentSettings";
-import { Gauge } from "../charts/Gauge";
-import { formatDateTime, plainNumber } from "../format";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
 import type { SettingsData } from "../types";
@@ -245,12 +243,31 @@ function RazorpaySection({
   );
 }
 
-/** Sections whose fields map onto `site_settings` keys; the rest have no backend yet (BUG-059). */
-const SAVEABLE_SECTIONS: readonly string[] = ["general", "tax", "ai", "retention", "theme"];
+/**
+ * Sections whose fields map onto `site_settings` keys and share the bottom save bar. Feature
+ * flags save per toggle; Notifications is read-only information.
+ */
+const SAVEABLE_SECTIONS: readonly string[] = [
+  "general",
+  "currencies",
+  "tax",
+  "ai",
+  "retention",
+  "theme",
+];
+
+/** Flags for integrations that have no provider in this build — hidden instead of teased. */
+const HIDDEN_FLAGS: ReadonlySet<string> = new Set([
+  "provider_stripe",
+  "provider_paypal",
+  "vendor_marketplace",
+  "bundles",
+  "automated_provisioning",
+]);
 
 const SECTIONS = [
   ["general", "General / seller"],
-  ["currencies", "Currencies & FX"],
+  ["currencies", "Currencies"],
   ["tax", "Tax & GSTIN"],
   ["payment-methods", "Payment methods"],
   ["theme", "Theme"],
@@ -276,6 +293,26 @@ function mapSettingsFieldErrors(fe: Record<string, string[]> | undefined): Recor
   if (!fe) return out;
   const idFor = (path: string): string | undefined => {
     if (path === "patch.siteName") return "st-site";
+    if (path === "patch.baseCurrency") return "st-base";
+    if (path === "patch.enabledCurrencies") return "st-currencies";
+    if (path === "patch.upiVpa" || path === "upiVpa") return "st-vpa";
+    if (path === "patch.taxRateBps") return "st-rate";
+    if (path === "patch.gstin") return "st-gstin";
+    if (path === "patch.aiDailyPlatformCap") return "st-cap";
+    if (path === "patch.aiDailyUserCap") return "st-user-cap";
+    if (path === "patch.chatTimeoutMs") return "st-timeout";
+    if (path.startsWith("patch.retention")) return "rt-chat";
+    const b = /^patch\.bankDetails\.(\w+)$/.exec(path)?.[1];
+    if (b) {
+      return (
+        {
+          accountName: "st-acct-name",
+          accountNumber: "st-acct-no",
+          ifsc: "st-ifsc",
+          bankName: "st-bank-name",
+        } as Record<string, string>
+      )[b];
+    }
     if (path === "patch.sellerDetails.name") return "st-legal";
     if (path === "patch.sellerDetails.email") return "st-email";
     if (path.startsWith("patch.sellerDetails.contactPhones")) return "st-phones";
@@ -311,7 +348,11 @@ export function SettingsScreen({
 }: SettingsScreenProps) {
   const [section, setSection] = React.useState<SectionKey>(initialSection);
   const [dangerous, setDangerous] = React.useState<string | null>(null);
-  const [menuOnly, setMenuOnly] = React.useState(s.ai.menuOnly);
+  const [baseCurrency, setBaseCurrency] = React.useState(s.currencies.base);
+  const [enabledCurrencies, setEnabledCurrencies] = React.useState(s.currencies.enabled);
+  const [flagValues, setFlagValues] = React.useState<Record<string, boolean>>({});
+  const [savingFlag, setSavingFlag] = React.useState<string | null>(null);
+  const [formVersion, setFormVersion] = React.useState(0);
   const ro = !isSuperAdmin;
   const router = useRouter();
   const formRef = React.useRef<HTMLFormElement>(null);
@@ -320,6 +361,32 @@ export function SettingsScreen({
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const saveable = SAVEABLE_SECTIONS.includes(section);
   const title = SECTIONS.find(([k]) => k === section)?.[1] ?? "";
+
+  /** "Discard" — controlled inputs go back to the saved values (uncontrolled ones remount). */
+  function resetSectionState() {
+    setBaseCurrency(s.currencies.base);
+    setEnabledCurrencies(s.currencies.enabled);
+    setTheme(s.theme.defaultTheme);
+  }
+
+  async function saveFlag(key: string, value: boolean) {
+    setSavingFlag(key);
+    setFlagValues((prev) => ({ ...prev, [key]: value }));
+    try {
+      const res = await updateSettings({ patch: { flags: { [key]: value } } });
+      if (!res.ok) {
+        setFlagValues((prev) => ({ ...prev, [key]: !value }));
+        toast.error(res.error.message);
+        return;
+      }
+      toast.success(`${key} ${value ? "enabled" : "disabled"}`, {
+        description: "View in audit log",
+      });
+      router.refresh();
+    } finally {
+      setSavingFlag(null);
+    }
+  }
 
   async function handleSave() {
     const val = (id: string) =>
@@ -349,6 +416,16 @@ export function SettingsScreen({
       if (anySeller || seller) {
         patch.sellerDetails = { name: legal, address: addr, contactPhones: phones, email };
       }
+    } else if (section === "currencies") {
+      patch = {
+        baseCurrency,
+        enabledCurrencies: CURRENCIES.filter(
+          (c) => c === baseCurrency || enabledCurrencies.includes(c),
+        ),
+      };
+      // Only send the base currency when it changed — the server refuses any write to it once a
+      // paid order exists, even an unchanged one.
+      if (baseCurrency === s.currencies.base) delete patch.baseCurrency;
     } else if (section === "tax") {
       const gstin = val("st-gstin").toUpperCase();
       patch = {
@@ -438,21 +515,33 @@ export function SettingsScreen({
           className="max-w-[760px] space-y-6 tv:max-w-[900px]"
           ref={formRef}
           onSubmit={(e) => e.preventDefault()}
-          key={section}
+          key={`${section}-${formVersion}`}
         >
           <h2 className="text-h3">{title}</h2>
 
           {section === "general" ? (
             <>
               <p className="text-body-sm text-fg-muted">
-                Why this matters: seller details appear on every invoice and email footer.
+                Why this matters: seller details appear on every invoice; the site name is shown in
+                the site header and footer, browser tab titles, the admin sidebar and email
+                subjects.
               </p>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field id="st-site" label="Site name" required error={fieldErrors["st-site"]}>
+                <Field
+                  id="st-site"
+                  label="Site name"
+                  required
+                  hint="Header, footer, page titles, admin sidebar and emails. Applies on save."
+                  error={fieldErrors["st-site"]}
+                >
                   <Input id="st-site" defaultValue={s.general.siteName} disabled={ro} />
                 </Field>
-                <Field id="st-domain" label="Domain">
-                  <Input id="st-domain" defaultValue={s.general.domain} disabled={ro} />
+                <Field
+                  id="st-domain"
+                  label="Domain"
+                  hint="Read-only. Set by the hosting environment (NEXT_PUBLIC_SITE_URL); used for links in emails, sitemap and canonical URLs."
+                >
+                  <Input id="st-domain" value={s.general.domain} readOnly className="font-mono" />
                 </Field>
                 <Field id="st-legal" label="Legal name" required error={fieldErrors["st-legal"]}>
                   <Input id="st-legal" defaultValue={s.general.legalName} disabled={ro} />
@@ -460,7 +549,7 @@ export function SettingsScreen({
                 <Field
                   id="st-phones"
                   label="Contact phones"
-                  hint="Invoice-only (D-406); never shown on the site. Comma-separated."
+                  hint="Invoice-only; never shown on the site. Comma-separated."
                   error={fieldErrors["st-phones"]}
                 >
                   <Input id="st-phones" defaultValue={s.general.phones} disabled={ro} />
@@ -528,23 +617,7 @@ export function SettingsScreen({
                 >
                   <Input id="st-email" defaultValue={s.general.email} disabled={ro} />
                 </Field>
-                <Field id="st-reply" label="Support reply-time copy">
-                  <Input id="st-reply" defaultValue={s.general.replyTime} disabled={ro} />
-                </Field>
               </div>
-              <fieldset className="space-y-2">
-                <legend className="text-body-sm font-semibold">
-                  Query snippets ({s.general.snippets.length} canned replies)
-                </legend>
-                {s.general.snippets.map((sn, i) => (
-                  <div key={i}>
-                    <Label htmlFor={`st-snip-${i}`} className="sr-only">
-                      Snippet {i + 1}
-                    </Label>
-                    <Input id={`st-snip-${i}`} defaultValue={sn} disabled={ro} />
-                  </div>
-                ))}
-              </fieldset>
               <p className="flex items-center gap-2 text-body-sm">
                 Environment{" "}
                 <Badge
@@ -566,31 +639,30 @@ export function SettingsScreen({
               <Field
                 id="st-base"
                 label="Base currency"
-                hint={
-                  s.currencies.locked
-                    ? "Read-only once the first paid order exists (base-currency lock)."
-                    : `Changing is refused while ${s.currencies.pendingOrders} pending orders exist.`
-                }
+                hint="Changing the base currency is refused once a paid order exists."
+                error={fieldErrors["st-base"]}
               >
-                <div className="flex items-center gap-2">
-                  <Select defaultValue={s.currencies.base} disabled={s.currencies.locked || ro}>
-                    <SelectTrigger id="st-base" className="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CURRENCIES.map((c) => (
-                        <SelectItem key={c} value={c}>
-                          {c}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {s.currencies.locked ? (
-                    <span className="inline-flex items-center gap-1 text-caption text-fg-muted">
-                      <LockIcon aria-hidden className="size-3.5" /> Locked
-                    </span>
-                  ) : null}
-                </div>
+                <Select
+                  value={baseCurrency}
+                  onValueChange={(v) => {
+                    setBaseCurrency(v as typeof baseCurrency);
+                    setEnabledCurrencies((prev) =>
+                      prev.includes(v as never) ? prev : [...prev, v as never],
+                    );
+                  }}
+                  disabled={ro}
+                >
+                  <SelectTrigger id="st-base" className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENCIES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Field>
               <fieldset className="space-y-2">
                 <legend className="text-body-sm font-semibold">Enabled display currencies</legend>
@@ -599,71 +671,30 @@ export function SettingsScreen({
                     <div key={c} className="flex items-center gap-2">
                       <Checkbox
                         id={`cur-${c}`}
-                        defaultChecked={s.currencies.enabled.includes(c)}
-                        disabled={c === s.currencies.base || ro}
+                        checked={enabledCurrencies.includes(c)}
+                        disabled={c === baseCurrency || ro}
+                        onCheckedChange={(v) =>
+                          setEnabledCurrencies((prev) =>
+                            v === true
+                              ? prev.includes(c)
+                                ? prev
+                                : [...prev, c]
+                              : prev.filter((x) => x !== c),
+                          )
+                        }
                       />
                       <Label htmlFor={`cur-${c}`}>{c}</Label>
                     </div>
                   ))}
                 </div>
+                {fieldErrors["st-currencies"] ? (
+                  <p className="text-caption text-danger">{fieldErrors["st-currencies"]}</p>
+                ) : null}
               </fieldset>
-              <div className="rounded-lg border border-border bg-surface">
-                <div className="flex items-center justify-between border-b border-border px-4 py-2">
-                  <h3 className="text-body-sm font-semibold">FX rates</h3>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={ro}
-                    onClick={() => toast.success("Rates refreshed")}
-                  >
-                    <RefreshCwIcon aria-hidden /> Refresh rates now
-                  </Button>
-                </div>
-                <Table>
-                  <TableCaption className="sr-only">FX rates to INR</TableCaption>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Quote</TableHead>
-                      <TableHead className="text-right">Rate (INR)</TableHead>
-                      <TableHead>As of</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead>Override</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {s.currencies.fx.map((r) => (
-                      <TableRow key={r.quote}>
-                        <TableCell className="font-mono">{r.quote}</TableCell>
-                        <TableCell className="text-right font-mono tnum">{r.rate}</TableCell>
-                        <TableCell className={cn("text-fg-muted", r.stale && "text-warning")}>
-                          {formatDateTime(r.asOf)}
-                          {r.stale ? " · stale > 3 days" : ""}
-                        </TableCell>
-                        <TableCell className="text-fg-muted">{r.source}</TableCell>
-                        <TableCell>
-                          <span className="flex items-center gap-1">
-                            <Label htmlFor={`fx-ov-${r.quote}`} className="sr-only">
-                              Override {r.quote}
-                            </Label>
-                            <Input
-                              id={`fx-ov-${r.quote}`}
-                              defaultValue={r.override ?? ""}
-                              placeholder="—"
-                              className="h-8 w-32 font-mono"
-                              disabled={ro}
-                            />
-                            {r.override ? (
-                              <Button variant="ghost" size="sm" disabled={ro}>
-                                Clear
-                              </Button>
-                            ) : null}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <p className="text-body-sm text-fg-muted">
+                Visitors can switch the display currency in the site header; non-INR prices use the
+                daily FX rate.
+              </p>
             </>
           ) : null}
 
@@ -671,7 +702,7 @@ export function SettingsScreen({
             <>
               <p className="text-body-sm text-fg-muted">
                 Why this matters: tax applies only to tax-enabled products and only once a GSTIN is
-                set (BR-08).
+                set.
               </p>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field id="st-gstin" label="GSTIN" hint="15 characters.">
@@ -719,19 +750,6 @@ export function SettingsScreen({
             <>
               <ManualPaymentSettings payments={s.payments} ro={ro} />
               <RazorpaySection razorpay={s.payments.razorpay} ro={ro} />
-              <div className="grid gap-3 sm:grid-cols-2">
-                {["Stripe", "PayPal"].map((g) => (
-                  <div
-                    key={g}
-                    className="rounded-lg border border-dashed border-border p-4 opacity-70"
-                  >
-                    <p className="text-body-sm font-semibold">{g}</p>
-                    <p className="text-caption text-fg-muted">
-                      Enable in Feature flags after configuring keys (V1.1)
-                    </p>
-                  </div>
-                ))}
-              </div>
               {s.payments.affectedOfferings.length > 0 ? (
                 <Banner tone="warning">
                   Disabling a method used by active offerings affects:{" "}
@@ -767,7 +785,7 @@ export function SettingsScreen({
                 <RadioGroupCard value="light-editorial" disabled={!s.theme.lightEnabled}>
                   <span className="text-body font-semibold">Light editorial</span>
                   <span className="text-caption text-fg-muted">
-                    Enable the theme_light_editorial flag first.
+                    Turn on theme_light_editorial in Feature flags to offer it.
                   </span>
                   <span
                     aria-hidden
@@ -779,38 +797,27 @@ export function SettingsScreen({
                   />
                 </RadioGroupCard>
               </RadioGroup>
-              <div className="flex items-center gap-3">
-                <Switch id="st-toggle" checked disabled />
-                <Label htmlFor="st-toggle">
-                  Allow visitor toggle{" "}
-                  <span className="text-caption font-normal text-fg-muted">(locked on, D-905)</span>
-                </Label>
-              </div>
+              <p className="text-body-sm text-fg-muted">
+                Visitors can always switch theme themselves from the site footer.
+              </p>
             </>
           ) : null}
 
           {section === "ai" ? (
             <>
               <p className="text-body-sm text-fg-muted">
-                Why this matters: caps protect cost; menu-only mode is the emergency brake.
+                Why this matters: daily caps protect cost; a cap of 0 turns AI answers off.
               </p>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field
-                  id="st-model"
-                  label="Model"
-                  hint="Pricing note: input $3 / output $15 per M tokens (estimate)."
-                >
-                  <Select defaultValue={s.ai.model} disabled={ro}>
-                    <SelectTrigger id="st-model">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="claude-sonnet-4-5">claude-sonnet-4-5</SelectItem>
-                      <SelectItem value="claude-haiku-4-5">claude-haiku-4-5</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <Field id="st-model" label="Model" hint="Configured on the server.">
+                  <Input id="st-model" value={s.ai.model} readOnly className="font-mono" />
                 </Field>
-                <Field id="st-cap" label="Platform daily message cap" required>
+                <Field
+                  id="st-cap"
+                  label="Platform daily message cap"
+                  required
+                  error={fieldErrors["st-cap"]}
+                >
                   <Input
                     id="st-cap"
                     inputMode="numeric"
@@ -822,7 +829,12 @@ export function SettingsScreen({
                     }}
                   />
                 </Field>
-                <Field id="st-user-cap" label="Per-user daily cap" required>
+                <Field
+                  id="st-user-cap"
+                  label="Per-user daily cap"
+                  required
+                  error={fieldErrors["st-user-cap"]}
+                >
                   <Input
                     id="st-user-cap"
                     inputMode="numeric"
@@ -831,7 +843,7 @@ export function SettingsScreen({
                     disabled={ro}
                   />
                 </Field>
-                <Field id="st-timeout" label="Timeout (s)">
+                <Field id="st-timeout" label="Timeout (s)" error={fieldErrors["st-timeout"]}>
                   <Input
                     id="st-timeout"
                     inputMode="numeric"
@@ -840,33 +852,7 @@ export function SettingsScreen({
                     disabled={ro}
                   />
                 </Field>
-                <Field id="st-tokens" label="Max output tokens">
-                  <Input
-                    id="st-tokens"
-                    inputMode="numeric"
-                    defaultValue={s.ai.maxTokens}
-                    className="font-mono"
-                    disabled={ro}
-                  />
-                </Field>
               </div>
-              <div className="flex items-center gap-3">
-                <Switch
-                  id="st-menu-only"
-                  checked={menuOnly}
-                  onCheckedChange={(v) =>
-                    v ? setDangerous("Switch the assistant to menu-only mode?") : setMenuOnly(false)
-                  }
-                  disabled={ro}
-                />
-                <Label htmlFor="st-menu-only">Menu-only mode (emergency)</Label>
-              </div>
-              <Gauge
-                value={s.ai.usedToday}
-                max={s.ai.platformCap}
-                label="Usage today"
-                format={plainNumber}
-              />
               <Button asChild variant="link" size="sm">
                 <a href={chatbotHref}>Chatbot › Prompts</a>
               </Button>
@@ -876,74 +862,26 @@ export function SettingsScreen({
           {section === "notifications" ? (
             <>
               <p className="text-body-sm text-fg-muted">
-                Why this matters: customers get email + in-app; admins are in-app only (D-707).
+                Customers receive notifications by email and in-app; admins receive them in-app
+                only. WhatsApp is controlled by the &ldquo;whatsapp_channel&rdquo; feature flag
+                (currently {s.notifications.whatsapp ? "on" : "off"}).
               </p>
-              <fieldset className="space-y-2">
-                <legend className="text-body-sm font-semibold">Customer channels</legend>
-                <div className="flex items-center gap-3">
-                  <Switch id="nt-email" defaultChecked={s.notifications.email} disabled={ro} />
-                  <Label htmlFor="nt-email">Email</Label>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Switch id="nt-inapp" defaultChecked={s.notifications.inApp} disabled={ro} />
-                  <Label htmlFor="nt-inapp">In-app</Label>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Switch id="nt-wa" checked={s.notifications.whatsapp} disabled />
-                  <Label htmlFor="nt-wa">
-                    WhatsApp{" "}
-                    <span className="text-caption font-normal text-fg-muted">
-                      (flag-gated; per-message cost, D-1604)
-                    </span>
-                  </Label>
-                </div>
-              </fieldset>
-              <p className="text-body-sm">
-                <span className="font-semibold">Admin channel:</span> in-app only (read-only,
-                D-707).
-              </p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="flex items-center gap-3 self-end">
-                  <Switch
-                    id="nt-digest"
-                    defaultChecked={s.notifications.digestEnabled}
-                    disabled={ro}
-                  />
-                  <Label htmlFor="nt-digest">Overdue follow-up digest email</Label>
-                </div>
-                <Field id="nt-digest-time" label="Send time">
-                  <Input
-                    id="nt-digest-time"
-                    defaultValue={s.notifications.digestTime}
-                    disabled={ro}
-                  />
-                </Field>
-                <Field id="nt-sender" label="Resend sender" hint="Set by environment.">
-                  <span className="flex gap-2">
-                    <Input
-                      id="nt-sender"
-                      readOnly
-                      value={s.notifications.sender}
-                      className="font-mono"
-                    />
-                    <Button
-                      variant="secondary"
-                      size="md"
-                      onClick={() => toast.success("Test email sent")}
-                    >
-                      Send test email
-                    </Button>
-                  </span>
-                </Field>
-              </div>
+              <Field id="nt-sender" label="Email sender" hint="Set by the hosting environment.">
+                <Input
+                  id="nt-sender"
+                  readOnly
+                  value={s.notifications.sender}
+                  className="font-mono"
+                />
+              </Field>
             </>
           ) : null}
 
           {section === "flags" ? (
             <>
               <p className="text-body-sm text-fg-muted">
-                Why this matters: flags gate features that need extra configuration or belong to a
-                later release.
+                Why this matters: flags switch optional features on or off. Changes save immediately
+                and are audited.
               </p>
               <div className="rounded-lg border border-border bg-surface">
                 <Table>
@@ -952,47 +890,47 @@ export function SettingsScreen({
                     <TableRow>
                       <TableHead>Flag</TableHead>
                       <TableHead>Description</TableHead>
-                      <TableHead>Dependency</TableHead>
                       <TableHead>Enabled</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {s.flags.map((f) => (
-                      <TableRow key={f.key}>
-                        <TableCell className="font-mono">
-                          {f.key}
-                          {f.envOverride ? (
-                            <span className="ml-2 inline-flex items-center gap-1 text-caption text-fg-muted">
-                              <LockIcon aria-hidden className="size-3" /> Set by environment
-                            </span>
-                          ) : null}
-                        </TableCell>
-                        <TableCell className="whitespace-normal">
-                          {f.description}
-                          {f.placeholder ? (
-                            <Badge tone="ghost" size="sm" className="ml-2">
-                              V1.1 / V2
-                            </Badge>
-                          ) : null}
-                        </TableCell>
-                        <TableCell className="whitespace-normal text-caption text-warning">
-                          {f.dependency ?? ""}
-                        </TableCell>
-                        <TableCell>
-                          <Switch
-                            id={`flag-${f.key}`}
-                            defaultChecked={f.enabled}
-                            disabled={ro || f.envOverride || f.placeholder}
-                            aria-label={`${f.key} enabled`}
-                            aria-disabled={f.envOverride}
-                            onCheckedChange={(v) => {
-                              if (f.key === "three_hero" && !v)
-                                setDangerous("Turn off the 3D hero?");
-                            }}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {s.flags
+                      .filter((f) => !f.placeholder && !HIDDEN_FLAGS.has(f.key))
+                      .map((f) => (
+                        <TableRow key={f.key}>
+                          <TableCell className="font-mono">
+                            {f.key}
+                            {f.envOverride ? (
+                              <span className="ml-2 inline-flex items-center gap-1 text-caption text-fg-muted">
+                                <LockIcon aria-hidden className="size-3" /> Set by environment
+                              </span>
+                            ) : null}
+                          </TableCell>
+                          <TableCell className="whitespace-normal">
+                            {f.description}
+                            {f.dependency ? (
+                              <span className="block text-caption text-fg-muted">
+                                {f.dependency}
+                              </span>
+                            ) : null}
+                          </TableCell>
+                          <TableCell>
+                            <Switch
+                              id={`flag-${f.key}`}
+                              checked={flagValues[f.key] ?? f.enabled}
+                              disabled={ro || f.envOverride || savingFlag === f.key}
+                              aria-label={`${f.key} enabled`}
+                              onCheckedChange={(v) => {
+                                if (f.key === "three_hero" && !v) {
+                                  setDangerous("Turn off the 3D hero?");
+                                  return;
+                                }
+                                void saveFlag(f.key, v);
+                              }}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
                   </TableBody>
                 </Table>
               </div>
@@ -1006,7 +944,11 @@ export function SettingsScreen({
                 are kept for statutory periods.
               </p>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field id="rt-chat" label="Chat transcripts (months)">
+                <Field
+                  id="rt-chat"
+                  label="Chat transcripts (months)"
+                  error={fieldErrors["rt-chat"]}
+                >
                   <Input
                     id="rt-chat"
                     inputMode="numeric"
@@ -1024,46 +966,36 @@ export function SettingsScreen({
                   />
                 </Field>
               </div>
-              <Banner tone="neutral">
-                Personal data is anonymised immediately when a customer deletes the account (BR-18)
-                — there is no delay setting.
-              </Banner>
               <p className="text-body-sm text-fg-muted">
-                Last run {s.retention.lastRunAt ? formatDateTime(s.retention.lastRunAt) : "—"} ·
-                next purge {s.retention.nextPurgeAt ? formatDateTime(s.retention.nextPurgeAt) : "—"}
+                Personal data is anonymised immediately when a customer deletes their account.
               </p>
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={ro}
-                onClick={() => toast.success("Retention job queued")}
-              >
-                Run retention job now
-              </Button>
             </>
           ) : null}
 
-          <div className="sticky bottom-0 -mx-4 flex items-center gap-2 border-t border-border bg-canvas px-4 py-3 lg:-mx-6 lg:px-6">
-            <span className="text-caption text-fg-muted">
-              {saveable
-                ? "Changes are audited with before/after."
-                : section === "payment-methods"
-                  ? "UPI / bank details and Razorpay each have their own save button above."
-                  : "Saving this section is not available yet."}
-            </span>
-            <span className="ml-auto flex gap-2">
-              <Button variant="ghost" size="sm" disabled={ro}>
-                Discard
-              </Button>
-              <Button
-                size="sm"
-                disabled={ro || !saveable || saving}
-                onClick={() => void handleSave()}
-              >
-                Save changes
-              </Button>
-            </span>
-          </div>
+          {saveable ? (
+            <div className="sticky bottom-0 -mx-4 flex items-center gap-2 border-t border-border bg-canvas px-4 py-3 lg:-mx-6 lg:px-6">
+              <span className="text-caption text-fg-muted">
+                Changes are audited with before/after.
+              </span>
+              <span className="ml-auto flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={ro || saving}
+                  onClick={() => {
+                    setFieldErrors({});
+                    resetSectionState();
+                    setFormVersion((n) => n + 1);
+                  }}
+                >
+                  Discard
+                </Button>
+                <Button size="sm" disabled={ro || saving} onClick={() => void handleSave()}>
+                  Save changes
+                </Button>
+              </span>
+            </div>
+          ) : null}
         </form>
       </div>
 
@@ -1086,7 +1018,8 @@ export function SettingsScreen({
             <Button
               variant="destructive"
               onClick={() => {
-                if (dangerous?.startsWith("Switch")) setMenuOnly(true);
+                if (dangerous?.startsWith("Turn off the 3D hero"))
+                  void saveFlag("three_hero", false);
                 setDangerous(null);
               }}
             >

@@ -334,11 +334,7 @@ export function LandingEditor({
                 <p className="text-body-sm text-fg-muted">No featured products yet.</p>
               ) : null}
             </ol>
-            <Field
-              id="ch-add-featured"
-              label="Add product"
-              hint="Unlisted products are excluded (D-314)."
-            >
+            <Field id="ch-add-featured" label="Add product" hint="Unlisted products are excluded.">
               <Select
                 onValueChange={(v) => {
                   if (!featuredIds.includes(v) && featuredIds.length < 8)

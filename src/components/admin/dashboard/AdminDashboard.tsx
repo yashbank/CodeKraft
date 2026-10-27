@@ -2,8 +2,10 @@
 
 import * as React from "react";
 import { CheckCircle2Icon, LayoutGridIcon, PlusIcon, XCircleIcon } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { saveDashboardWidgets } from "@/modules/dashboard-widgets/admin-mutations";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -69,10 +71,40 @@ export function AdminDashboard({
   routes,
 }: AdminDashboardProps) {
   const href = (route: string) => routes?.[route] ?? route;
+  const router = useRouter();
+  const pathname = usePathname();
   const [enabled, setEnabled] = React.useState<WidgetKey[]>(layout ?? DEFAULT_LAYOUT);
   const [editing, setEditing] = React.useState(false);
   const [libraryOpen, setLibraryOpen] = React.useState(false);
-  const [range, setRange] = React.useState<DashboardData["range"]>(data.range);
+  const range = data.range;
+  // Saves are sequenced so a slow earlier request can never overwrite a newer layout.
+  const saveChain = React.useRef<Promise<unknown>>(Promise.resolve());
+
+  /** R8-10 — every layout change is persisted to the admin's own `dashboard_layouts` row. */
+  const persist = (next: WidgetKey[]) => {
+    setEnabled(next);
+    saveChain.current = saveChain.current.then(async () => {
+      const res = await saveDashboardWidgets({ widgets: next });
+      if (!res.ok)
+        toast.error("Couldn't save your dashboard layout", { description: res.error.message });
+    });
+  };
+
+  const setRange = (next: DashboardData["range"]) => {
+    router.push(`${pathname}?range=${next}`);
+  };
+
+  const move = (key: WidgetKey, delta: -1 | 1) => {
+    const visible = definitions.map((d) => d.key);
+    const idx = visible.indexOf(key);
+    const swapWith = visible[idx + delta];
+    if (idx < 0 || !swapWith) return;
+    const next = [...enabled];
+    const a = next.indexOf(key);
+    const b = next.indexOf(swapWith);
+    [next[a], next[b]] = [next[b] as WidgetKey, next[a] as WidgetKey];
+    persist(next);
+  };
   const rangeLabel = {
     "7d": "Last 7 days",
     "30d": "Last 30 days",
@@ -81,8 +113,8 @@ export function AdminDashboard({
   }[range];
 
   const toggle = (key: WidgetKey, on: boolean) =>
-    setEnabled((prev) =>
-      on ? (prev.includes(key) ? prev : [...prev, key]) : prev.filter((k) => k !== key),
+    persist(
+      on ? (enabled.includes(key) ? enabled : [...enabled, key]) : enabled.filter((k) => k !== key),
     );
 
   const definitions = enabled
@@ -119,14 +151,11 @@ export function AdminDashboard({
               variant={editing ? "primary" : "outline"}
               size="sm"
               aria-pressed={editing}
-              onClick={() => {
-                if (editing) toast.success("Layout saved");
-                setEditing((v) => !v);
-              }}
+              onClick={() => setEditing((v) => !v)}
             >
               <LayoutGridIcon aria-hidden /> {editing ? "Done" : "Edit layout"}
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setEnabled(DEFAULT_LAYOUT)}>
+            <Button variant="ghost" size="sm" onClick={() => persist(DEFAULT_LAYOUT)}>
               Reset to default
             </Button>
           </>
@@ -143,7 +172,7 @@ export function AdminDashboard({
               <Button size="sm" onClick={() => setLibraryOpen(true)}>
                 Add widget
               </Button>
-              <Button size="sm" variant="secondary" onClick={() => setEnabled(DEFAULT_LAYOUT)}>
+              <Button size="sm" variant="secondary" onClick={() => persist(DEFAULT_LAYOUT)}>
                 Use default layout
               </Button>
             </div>
@@ -151,7 +180,7 @@ export function AdminDashboard({
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-12" aria-live="polite">
-          {definitions.map((def) => (
+          {definitions.map((def, index) => (
             <WidgetFrame
               key={def.key}
               id={def.key}
@@ -174,6 +203,9 @@ export function AdminDashboard({
               }
               editing={editing}
               onRemove={() => toggle(def.key, false)}
+              onRefresh={() => router.refresh()}
+              onMoveUp={index > 0 ? () => move(def.key, -1) : undefined}
+              onMoveDown={index < definitions.length - 1 ? () => move(def.key, 1) : undefined}
               viewAllHref={VIEW_ALL[def.key] ? href(VIEW_ALL[def.key] as string) : undefined}
             >
               <WidgetBody widget={def.key} data={data} />

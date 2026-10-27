@@ -108,7 +108,7 @@ export class DefaultInvoicesService implements InvoicesService {
       : "Bangalore, India";
 
     const sellerSnapshot: SellerSnapshot = {
-      name: sellerDetails?.name || "CodeKraft",
+      name: sellerDetails?.name || settings.siteName || "CodeKraft",
       address: sellerAddressStr,
       gst_number: settings.gstin || null,
       email: sellerDetails?.email || "billing@codekraft.dev",

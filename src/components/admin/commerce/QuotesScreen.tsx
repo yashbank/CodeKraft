@@ -40,6 +40,7 @@ import { PageHeader } from "../PageHeader";
 import { Field, RichTextField } from "../RichTextField";
 import { RowActions } from "../RowActions";
 import type { CustomerOption, QuoteRow } from "../types";
+import { SiteName } from "@/components/brand/site-brand";
 
 export interface QuotePrefill {
   customerId?: string;
@@ -491,7 +492,9 @@ export function QuotesScreen({
           <div className="rounded-lg border border-border bg-surface p-5">
             <h2 className="mb-2 text-h4">Email preview</h2>
             <div className="rounded-md border border-border bg-canvas p-3 text-body-sm">
-              <p className="font-semibold">Your quote from CodeKraft</p>
+              <p className="font-semibold">
+                Your quote from <SiteName />
+              </p>
               <p className="mt-1 text-fg-muted">
                 {selected?.title ?? "Title"} · {selected ? money(selected.amount) : "₹0.00"}
                 {selected?.taxApplies ? " + tax" : ""} · valid until{" "}

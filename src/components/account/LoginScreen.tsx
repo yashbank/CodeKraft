@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { AuthCard, AuthLayout } from "./AuthLayout";
 import { Banner, type BannerTone } from "./Banner";
 import { LoginForm, type LoginFormProps } from "./LoginForm";
+import { SiteName } from "@/components/brand/site-brand";
 
 export type LoginReason = "suspended" | "replaced" | "expired" | "verify";
 
@@ -29,7 +30,17 @@ export function LoginScreen({
   const isAdmin = form.host === "admin";
   return (
     <AuthLayout tagline={tagline} variant={isAdmin ? "admin" : "customer"}>
-      <AuthCard title={isAdmin ? "Sign in to CodeKraft admin" : "Sign in"}>
+      <AuthCard
+        title={
+          isAdmin ? (
+            <>
+              Sign in to <SiteName /> admin
+            </>
+          ) : (
+            "Sign in"
+          )
+        }
+      >
         {banner ? <Banner tone={banner.tone}>{banner.text}</Banner> : null}
         <Suspense fallback={null}>
           <LoginForm designed {...form} />

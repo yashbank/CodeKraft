@@ -163,7 +163,7 @@ export function LegalEditor({
       ) : null}
       <Banner tone="neutral" className="mb-4">
         No public contact details on the site; the privacy page may reference the inquiry form and
-        dashboard queries only (D-808).
+        dashboard queries only.
       </Banner>
       <form ref={formRef} className="space-y-4" onSubmit={(e) => e.preventDefault()} key={page.key}>
         <div className="flex items-center gap-2">

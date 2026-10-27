@@ -17,6 +17,7 @@ import {
 } from "@react-email/components";
 import { render } from "@react-email/components";
 import type { ReactNode } from "react";
+import { DEFAULT_SITE_NAME } from "@/lib/brand-constants";
 
 const INK = "#17181C";
 const MUTED = "#5D6068";
@@ -28,11 +29,14 @@ export function EmailLayout({
   title,
   children,
   siteUrl,
+  siteName = DEFAULT_SITE_NAME,
 }: {
   preview: string;
   title: string;
   children: ReactNode;
   siteUrl: string;
+  /** R8-11 — admin-editable site name; the SVG wordmark is only used for the default name. */
+  siteName?: string;
 }) {
   return (
     <Html lang="en">
@@ -47,13 +51,17 @@ export function EmailLayout({
         }}
       >
         <Container style={{ maxWidth: 560, margin: "0 auto", padding: "32px 24px" }}>
-          <Img
-            src={`${siteUrl}/brand/wordmark-mono.svg`}
-            alt="CodeKraft"
-            width={140}
-            height={30}
-            style={{ color: INK }}
-          />
+          {siteName === DEFAULT_SITE_NAME ? (
+            <Img
+              src={`${siteUrl}/brand/wordmark-mono.svg`}
+              alt={siteName}
+              width={140}
+              height={30}
+              style={{ color: INK }}
+            />
+          ) : (
+            <Text style={{ fontSize: 20, fontWeight: 700, color: INK, margin: 0 }}>{siteName}</Text>
+          )}
           <Hr style={{ borderColor: RULE, margin: "24px 0" }} />
           <Heading
             as="h1"
@@ -64,7 +72,7 @@ export function EmailLayout({
           <Section>{children}</Section>
           <Hr style={{ borderColor: RULE, margin: "32px 0 16px" }} />
           <Text style={{ fontSize: 12, lineHeight: "18px", color: MUTED, margin: 0 }}>
-            CodeKraft ·{" "}
+            {siteName} ·{" "}
             <Link href={siteUrl} style={{ color: ACCENT }}>
               {siteUrl.replace(/^https?:\/\//, "")}
             </Link>
@@ -100,11 +108,12 @@ export async function renderGenericEmail(
   subject: string,
   data: Record<string, unknown>,
   siteUrl: string,
+  siteName: string = DEFAULT_SITE_NAME,
 ): Promise<{ html: string; text: string }> {
   const url = typeof data.url === "string" ? data.url : null;
   const code = typeof data.code === "string" ? data.code : null;
   const element = (
-    <EmailLayout preview={subject} title={subject} siteUrl={siteUrl}>
+    <EmailLayout preview={subject} title={subject} siteUrl={siteUrl} siteName={siteName}>
       {url ? (
         <>
           <Text style={emailStyles.p}>

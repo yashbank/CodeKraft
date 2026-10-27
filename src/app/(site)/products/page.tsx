@@ -15,7 +15,7 @@ import type { CategoryNode as CatalogCategoryNode } from "@/modules/catalog/type
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Products & Software Solutions — CodeKraft",
+  title: "Products & Software Solutions",
   description:
     "Explore our ready-to-deploy SaaS applications, business tools, and developer platforms. Built with modern architecture and complete ownership.",
 };

@@ -49,6 +49,7 @@ import { MoneyCell } from "../MoneyCell";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
 import type { PartnerBalance, PayoutRow } from "../types";
+import { isoDate } from "@/lib/dates";
 
 export interface PartnersPayoutsProps {
   partners: PartnerBalance[];
@@ -439,8 +440,8 @@ export function PartnersPayouts({
           <DialogHeader>
             <DialogTitle>Record payout</DialogTitle>
             <DialogDescription>
-              Another admin must approve before this posts to the ledger (BR-13). The amount cannot
-              exceed the partner&rsquo;s current balance.
+              Another admin must approve before this posts to the ledger. The amount cannot exceed
+              the partner&rsquo;s current balance.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -510,12 +511,7 @@ export function PartnersPayouts({
               />
             </Field>
             <Field id="po-date" label="Paid on" required>
-              <Input
-                id="po-date"
-                name="paidOn"
-                type="date"
-                defaultValue={new Date().toISOString().slice(0, 10)}
-              />
+              <Input id="po-date" name="paidOn" type="date" defaultValue={isoDate(new Date())} />
             </Field>
             <Field id="po-ref" label="Bank reference" required>
               <Input

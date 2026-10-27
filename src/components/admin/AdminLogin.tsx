@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Banner } from "./Banner";
 import { Field } from "./RichTextField";
+import { SiteName } from "@/components/brand/site-brand";
 
 export type LoginReason = "expired" | "replaced" | "forbidden" | "locked";
 
@@ -71,16 +72,20 @@ export function AdminLogin({
               CK
             </span>
             <span className="font-display text-body-lg font-semibold">
-              CodeKraft <span className="text-fg-muted">Admin</span>
+              <SiteName /> <span className="text-fg-muted">Admin</span>
             </span>
             <Badge tone={envTone} dot className="ml-auto capitalize">
               {environment}
             </Badge>
           </div>
           <h1 ref={h1Ref} tabIndex={-1} className="text-h3 outline-none">
-            {step === "credentials"
-              ? "Sign in to CodeKraft admin"
-              : "Enter your authenticator code"}
+            {step === "credentials" ? (
+              <>
+                Sign in to <SiteName /> admin
+              </>
+            ) : (
+              "Enter your authenticator code"
+            )}
           </h1>
         </CardHeader>
         <CardContent className="space-y-4">
