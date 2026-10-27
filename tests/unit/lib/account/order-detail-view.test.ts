@@ -165,7 +165,7 @@ describe("mapOrderDetailToOrderView (SCR-ACC-11)", () => {
     const detail = baseDetail({ payments: [basePayment()] });
     const view = mapOrderDetailToOrderView(detail);
     expect(view.instructionsFor).toEqual({
-      upi: { vpa: "codekraft@upi", payeeName: "CodeKraft" },
+      upi: { vpa: "codekraft@upi", payeeName: "CodeKraft", qrDataUrl: "data:image/png;base64," },
     });
     expect(view.paymentMethod).toBe("manual_upi");
     expect(view.enabledMethods).toEqual(["manual_upi"]);

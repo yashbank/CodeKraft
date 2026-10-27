@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { ChevronDownIcon, KeyRoundIcon, TruckIcon } from "lucide-react";
 import { toast } from "sonner";
+import { setLicenseKey } from "@/modules/delivery/admin-mutations";
 
 import {
   extendAccess,
@@ -120,6 +121,31 @@ export function EntitlementsScreen({
       return;
     }
     toast.success("Access extended");
+    router.refresh();
+  };
+
+  // R8-03 / API-DEL-08: the key is shown to the customer on Account -> Purchases (Reveal key).
+  const doSetKey = async (e: EntitlementRow) => {
+    const key = window.prompt(
+      `Licence key for ${e.customer.name} · ${e.product} (min 8 characters). The customer sees it on their Purchases page.`,
+    );
+    if (key === null) return;
+    if (key.trim().length < 8) {
+      toast.error("A licence key must be at least 8 characters.");
+      return;
+    }
+    setSubmitting(true);
+    const result = await setLicenseKey({
+      entitlementId: e.id,
+      licenseKey: key.trim(),
+      notifyEmail: true,
+    });
+    setSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Licence key saved — the customer can reveal it now");
     router.refresh();
   };
 
@@ -361,7 +387,11 @@ export function EntitlementsScreen({
                             label={`Actions for ${e.customer.name} · ${e.product}`}
                             actions={[
                               { label: "Open order", href: orderHref },
-                              { label: "Enter key", disabled: e.keyIssued !== false },
+                              {
+                                label: e.keyIssued ? "Replace licence key" : "Enter licence key",
+                                disabled: e.type !== "license" || e.status === "revoked" || submitting,
+                                onSelect: () => void doSetKey(e),
+                              },
                               { label: "Mark provisioned", disabled: e.provisioning !== "pending" },
                               {
                                 label: "Reset downloads",

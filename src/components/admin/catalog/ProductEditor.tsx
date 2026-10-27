@@ -1794,6 +1794,12 @@ export function ProductEditor({
                     </span>
                   </AccordionTrigger>
                   <AccordionContent>
+                    <DeliveryHowItWorks
+                      deliveryType={o.deliveryType}
+                      provisioning={o.deliveryConfig.provisioning}
+                      hasReleaseFile={versions.some((v) => v.files > 0)}
+                      onOpenVersions={() => setTab("versions")}
+                    />
                     <form className="space-y-4" onSubmit={(e) => void saveDeliveryConfig(o, e)}>
                       <div className="grid gap-4 sm:grid-cols-2">
                         <Field id={`dl-type-${o.id}`} label="Delivery type">
@@ -2706,5 +2712,78 @@ function ProposeSplitForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+/**
+ * R8-03 — plain-language "what the customer gets after payment is confirmed" for one offering,
+ * with the exact place each piece is configured, so delivery is never a mystery to the owner.
+ */
+function DeliveryHowItWorks({
+  deliveryType,
+  provisioning,
+  hasReleaseFile,
+  onOpenVersions,
+}: {
+  deliveryType: string;
+  provisioning: "manual" | "automated";
+  hasReleaseFile: boolean;
+  onOpenVersions: () => void;
+}) {
+  const versionsLink = (
+    <button type="button" className="text-accent-text underline" onClick={onOpenVersions}>
+      Versions tab
+    </button>
+  );
+  let body: React.ReactNode = null;
+  if (deliveryType === "download") {
+    body = (
+      <>
+        After payment is confirmed the customer gets a <strong>Download</strong> button on Account
+        → Purchases for the latest release file. Upload release files from the {versionsLink}{" "}
+        (add a version and attach the file).
+        {hasReleaseFile ? null : (
+          <strong> No release file is uploaded yet — buyers would have nothing to download.</strong>
+        )}
+      </>
+    );
+  } else if (deliveryType === "license") {
+    body =
+      provisioning === "automated" ? (
+        <>
+          <strong>Automated:</strong> a unique licence key (CK-XXXX-…) is generated the moment
+          payment is confirmed. The customer reveals and copies it on Account → Purchases.
+        </>
+      ) : (
+        <>
+          <strong>Manual:</strong> after payment an open task appears in{" "}
+          <a href="/admin/entitlements" className="text-accent-text underline">
+            Entitlements
+          </a>
+          ; use the row menu → &ldquo;Enter licence key&rdquo;. The customer then reveals it on
+          Account → Purchases. Switch Provisioning to Automated to issue keys instantly.
+        </>
+      );
+  } else if (deliveryType === "saas" || deliveryType === "hosted" || deliveryType === "service") {
+    body = (
+      <>
+        After payment a provisioning task opens in{" "}
+        <a href="/admin/entitlements" className="text-accent-text underline">
+          Entitlements
+        </a>{" "}
+        → Delivery tasks. Mark it done once access is set up; the customer sees status and
+        instructions on Account → Purchases.
+      </>
+    );
+  }
+  if (!body) return null;
+  return (
+    <div
+      className="mb-4 rounded-md border border-border bg-surface p-3 text-body-sm text-fg-muted"
+      data-testid="delivery-how-it-works"
+    >
+      <p className="mb-1 font-semibold text-fg">How delivery works for this offering</p>
+      <p>{body}</p>
+    </div>
   );
 }
