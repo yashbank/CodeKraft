@@ -15,6 +15,7 @@ export default tseslint.config(
       "coverage/**",
       "playwright-report/**",
       ".scratch-e2e/**",
+      ".coord/**",
       ".scratch/**",
       ".claude/**",
       ".playwright-mcp/**",

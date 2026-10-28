@@ -28,3 +28,7 @@ storageState*.json
 
 # Local dev media storage (src/lib/storage-local.ts)
 .local-storage/
+
+# two-Mac coordination (see docs/COORDINATION.md)
+.coord/
+.claude/machine
