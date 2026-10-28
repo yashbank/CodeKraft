@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from "next";
 
 import { SiteBrandProvider } from "@/components/brand/site-brand";
 import { fontVariables } from "@/lib/fonts";
-import { getSiteName } from "@/lib/site-brand";
+import { paletteCss } from "@/lib/palettes";
+import { getSiteName, getThemeConfig } from "@/lib/site-brand";
 import { DEFAULT_THEME, inlineThemeScript, THEME_COLOR } from "@/lib/theme";
 import "./globals.css";
 
@@ -28,10 +29,20 @@ const LIGHT_ENABLED = process.env.FEATURE_THEME_LIGHT_EDITORIAL === "true";
  */
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const siteName = await getSiteName();
+  const { defaultTheme, palette } = await getThemeConfig();
+  // An admin who picks light-editorial as the default has opted in, so it needs no env flag.
+  const lightEnabled = LIGHT_ENABLED || defaultTheme === "light-editorial";
   return (
-    <html lang="en" data-theme={DEFAULT_THEME} className={fontVariables} suppressHydrationWarning>
+    <html
+      lang="en"
+      data-theme={defaultTheme}
+      data-palette={palette}
+      className={fontVariables}
+      suppressHydrationWarning
+    >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: inlineThemeScript(LIGHT_ENABLED) }} />
+        <script dangerouslySetInnerHTML={{ __html: inlineThemeScript(lightEnabled) }} />
+        <style dangerouslySetInnerHTML={{ __html: paletteCss(palette) }} />
       </head>
       <body className="min-h-screen bg-canvas text-fg antialiased">
         <SiteBrandProvider siteName={siteName}>{children}</SiteBrandProvider>

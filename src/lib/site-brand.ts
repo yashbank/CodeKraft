@@ -7,6 +7,8 @@
  * unreachable (static build, unit tests) instead of failing the page.
  */
 import { DEFAULT_SITE_NAME } from "./brand-constants";
+import { DEFAULT_PALETTE, type PaletteId } from "./palettes";
+import { DEFAULT_THEME, type ThemeName } from "./theme";
 
 export { DEFAULT_SITE_NAME };
 
@@ -24,6 +26,40 @@ async function readSiteName(): Promise<string> {
     return normaliseSiteName(settings.siteName);
   } catch {
     return DEFAULT_SITE_NAME;
+  }
+}
+
+export interface ThemeConfig {
+  defaultTheme: ThemeName;
+  themeToggle: boolean;
+  palette: PaletteId;
+}
+const THEME_FALLBACK: ThemeConfig = {
+  defaultTheme: DEFAULT_THEME,
+  themeToggle: true,
+  palette: DEFAULT_PALETTE,
+};
+
+async function readThemeConfig(): Promise<ThemeConfig> {
+  try {
+    const { settingsService } = await import("@/modules/settings/service");
+    const s = await settingsService.load();
+    return { defaultTheme: s.defaultTheme, themeToggle: s.themeToggle, palette: s.palette };
+  } catch {
+    return THEME_FALLBACK;
+  }
+}
+
+/** Admin-chosen default theme, visitor-toggle switch and accent palette (same cache as the site name). */
+export async function getThemeConfig(): Promise<ThemeConfig> {
+  try {
+    const { unstable_cache } = await import("next/cache");
+    return await unstable_cache(readThemeConfig, ["site-brand:theme"], {
+      tags: ["settings"],
+      revalidate: 300,
+    })();
+  } catch {
+    return readThemeConfig();
   }
 }
 
