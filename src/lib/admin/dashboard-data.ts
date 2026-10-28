@@ -86,7 +86,7 @@ export async function loadDashboardData(
     getReportQuery({ report: "revenue_by_period", ...rangeDates(range) }, ctx).catch(() => ({
       ok: false as const,
     })),
-    loadDashboardFinance(ctx).catch((err: unknown) => {
+    loadDashboardFinance(ctx, rangeDates(range)).catch((err: unknown) => {
       console.error("[dashboard] finance widgets failed", err);
       return null;
     }),

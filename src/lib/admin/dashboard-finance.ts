@@ -11,6 +11,8 @@ import { can } from "@/lib/authz/assert";
 import type { RequestContext } from "@/lib/authz/context";
 import { db } from "@/lib/db";
 import type { DashboardData, QueueItem } from "@/components/admin/types";
+import { rawSumsFromRow, rawSumsSql } from "@/modules/finance/metrics-core";
+import { buildMyShare } from "./dashboard-finance-core";
 
 type FinanceWidgets = Pick<
   DashboardData,
@@ -31,13 +33,18 @@ const EMPTY: FinanceWidgets = {
   paymentsAwaiting: [],
 };
 
+type DateRange = { dateFrom: string; dateTo: string };
+/** Inclusive UTC day window, identical to the finance reports / revenue tile. */
+const win = (r: DateRange) =>
+  sql`le.created_at >= ${`${r.dateFrom}T00:00:00.000Z`} and le.created_at <= ${`${r.dateTo}T23:59:59.999Z`}`;
+
 const n = (v: unknown) => Number(v ?? 0);
 
 /**
  * Net sales (gross list price - discounts/coupons, ex-tax; same definition as finance reports,
- * see modules/finance/metrics.ts) per product over the last `days` days.
+ * see modules/finance/metrics.ts) per product over the selected range.
  */
-export async function revenueByProduct(days = 30) {
+export async function revenueByProduct(range: DateRange) {
   const rows = await db.execute<{ label: string; value: string }>(sql`
     select p.name as label,
            sum(case when le.entry_type = 'sale' then abs(le.amount_inr_minor)
@@ -46,7 +53,7 @@ export async function revenueByProduct(days = 30) {
     from ledger_entries le
     join order_items oi on oi.id = le.order_item_id
     join products p on p.id = oi.product_id
-    where le.created_at >= now() - make_interval(days => ${days})
+    where ${win(range)}
     group by p.name
     having sum(case when le.entry_type = 'sale' then abs(le.amount_inr_minor)
                     when le.entry_type = 'discount' then -abs(le.amount_inr_minor)
@@ -56,7 +63,10 @@ export async function revenueByProduct(days = 30) {
   return [...rows].map((r) => ({ label: r.label, value: n(r.value) }));
 }
 
-export async function loadDashboardFinance(ctx: RequestContext): Promise<FinanceWidgets> {
+export async function loadDashboardFinance(
+  ctx: RequestContext,
+  range: DateRange,
+): Promise<FinanceWidgets> {
   const out: FinanceWidgets = structuredClone(EMPTY);
   const readAll = can(ctx, "finance.ledger.read_all");
 
@@ -83,13 +93,13 @@ export async function loadDashboardFinance(ctx: RequestContext): Promise<Finance
   }
 
   if (readAll) {
-    out.revenueByProduct = await revenueByProduct(30);
+    out.revenueByProduct = await revenueByProduct(range);
 
     const partnerRows = await db.execute<{ label: string; value: string }>(sql`
       select pa.display_name as label, sum(le.amount_inr_minor) as value
       from ledger_entries le join partners pa on pa.id = le.partner_id
       where le.entry_type in ('partner_allocation','refund_partner_allocation')
-        and le.created_at >= now() - interval '30 days'
+        and ${win(range)}
       group by pa.display_name having sum(le.amount_inr_minor) <> 0
       order by value desc limit 8`);
     out.revenueByPartner = [...partnerRows].map((r) => ({ label: r.label, value: n(r.value) }));
@@ -135,6 +145,9 @@ export async function loadDashboardFinance(ctx: RequestContext): Promise<Finance
   }
 
   if (ctx.partnerId) {
+    const sumRows = await db.execute<Record<string, unknown>>(sql`
+      select ${rawSumsSql("le")} from ledger_entries le
+      where le.partner_id = ${ctx.partnerId} and ${win(range)}`);
     const weeks = await db.execute<{ w: string; value: string }>(sql`
       with weeks as (
         select generate_series(date_trunc('week', now()) - interval '7 weeks',
@@ -146,18 +159,10 @@ export async function loadDashboardFinance(ctx: RequestContext): Promise<Finance
        and le.entry_type in ('partner_allocation','refund_partner_allocation')
        and date_trunc('week', le.created_at) = weeks.w
       group by weeks.w order by weeks.w`);
-    const series = [...weeks].map((r) => n(r.value));
-    const thisWeek = series.at(-1) ?? 0;
-    const lastWeek = series.at(-2) ?? 0;
-    const total = series.reduce((s, v) => s + v, 0);
-    out.myShare = {
-      valueInr: total,
-      delta:
-        total === 0
-          ? "No allocations in the last 8 weeks"
-          : `This week ₹${(thisWeek / 100).toFixed(0)} vs ₹${(lastWeek / 100).toFixed(0)} last week`,
-      sparkline: series,
-    };
+    out.myShare = buildMyShare(
+      rawSumsFromRow([...sumRows][0] ?? {}),
+      [...weeks].map((r) => n(r.value)),
+    );
   }
 
   return out;
