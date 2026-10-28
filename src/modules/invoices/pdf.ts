@@ -301,6 +301,11 @@ export async function fetchLogo(url: string | null | undefined): Promise<PdfImag
   try {
     const u = new URL(url, process.env.NEXT_PUBLIC_SITE_URL);
     if (u.protocol !== "https:" && u.protocol !== "http:") return null;
+    // Server-side fetch: only our own site/media origins, never an arbitrary host.
+    const allowed = [process.env.NEXT_PUBLIC_SITE_URL, process.env.NEXT_PUBLIC_MEDIA_BASE_URL]
+      .filter((o): o is string => Boolean(o))
+      .map((o) => new URL(o).origin);
+    if (!allowed.includes(u.origin)) return null;
     const res = await fetch(u, { signal: AbortSignal.timeout(4000) });
     if (!res.ok) return null;
     return parseLogo(Buffer.from(await res.arrayBuffer()));

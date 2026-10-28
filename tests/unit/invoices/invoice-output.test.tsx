@@ -129,10 +129,22 @@ describe("invoice PDF", () => {
   it("embeds a JPEG logo", async () => {
     // minimal SOI + SOF0 (1x1, 3 comps) header is enough for dimension parsing
     const jpg = Buffer.from("ffd8ffc0001108000100010301002100ffd9", "hex");
+    vi.stubEnv("NEXT_PUBLIC_MEDIA_BASE_URL", "https://cdn.example");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(jpg)));
     const img = await fetchLogo(seller.logo_url);
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
     expect(img?.filter).toBe("DCTDecode");
     expect(buildInvoicePdf(base, img).toString("latin1")).toContain("/Subtype /Image");
+  });
+
+  it("never fetches a logo from a foreign origin", async () => {
+    vi.stubEnv("NEXT_PUBLIC_MEDIA_BASE_URL", "https://cdn.example");
+    const f = vi.fn();
+    vi.stubGlobal("fetch", f);
+    expect(await fetchLogo("http://169.254.169.254/latest/meta-data")).toBeNull();
+    expect(f).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
   });
 });
