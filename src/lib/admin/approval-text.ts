@@ -4,6 +4,7 @@
  * Never emits UUIDs, enum codes or JSON.
  */
 import { format as formatMoney, type Currency } from "@/lib/money";
+import { RESET_CATEGORY_LABELS, type ResetCategory } from "@/modules/settings/site-reset-plan";
 import type { ApprovalType } from "@/modules/approvals/types";
 
 export interface ApprovalFacts {
@@ -54,6 +55,13 @@ export function describeApproval(type: ApprovalType, p: Payload, f: ApprovalFact
     case "ledger.adjustment": {
       const n = Array.isArray(p.lines) ? p.lines.length : 0;
       return `Ledger adjustment${n ? ` (${n} line${n === 1 ? "" : "s"})` : ""}`;
+    }
+    case "site.reset": {
+      const cats = Array.isArray(p.categories) ? p.categories : [];
+      const names = cats.map(
+        (c) => RESET_CATEGORY_LABELS[c as ResetCategory]?.toLowerCase() ?? words(String(c)),
+      );
+      return `Reset site data${names.length ? `: ${names.join(", ")}` : ""}`;
     }
     case "admin.user_change": {
       const who = f.userEmail ?? str(p.email) ?? "an admin user";

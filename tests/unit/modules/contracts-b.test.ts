@@ -925,8 +925,8 @@ describe("computeAllocationReference (docs/06 §4.2)", () => {
 // ---------------------------------------------------------------------------------------------
 
 describe("approvals", () => {
-  it("nine types, matching drizzle/schema/approvals, each with a payload schema", () => {
-    expect(approvals.APPROVAL_TYPES).toHaveLength(9);
+  it("ten types, matching drizzle/schema/approvals, each with a payload schema", () => {
+    expect(approvals.APPROVAL_TYPES).toHaveLength(10);
     expect([...approvals.APPROVAL_TYPES]).toEqual([...approvalTypeEnum.enumValues]);
     for (const t of approvals.APPROVAL_TYPES) {
       expect(isZod(approvals.approvalPayloadSchemas[t])).toBe(true);
@@ -965,6 +965,7 @@ describe("approvals", () => {
       partner: { displayName: "New Partner" },
     },
     "project_order.split": { orderId: U1 },
+    "site.reset": { categories: ["leads"] },
   };
 
   const invalidPayloads: Record<approvals.ApprovalType, unknown> = {
@@ -983,6 +984,7 @@ describe("approvals", () => {
     "product.delete": { productId: U1, reason: "" },
     "admin.user_change": { kind: "invite", email: "not-an-email", role: "admin" },
     "project_order.split": { orderId: 5 },
+    "site.reset": { categories: [] },
   };
 
   for (const t of approvals.APPROVAL_TYPES) {

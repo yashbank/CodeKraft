@@ -32,6 +32,7 @@ const TYPE_LABEL: Record<ApprovalType, string> = {
   "product.archive": "Archive",
   "product.delete": "Delete",
   "admin.user_change": "Admin user change",
+  "site.reset": "Reset site data",
 };
 const MONEY_TYPES: ApprovalType[] = [
   "ledger.adjustment",

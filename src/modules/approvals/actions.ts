@@ -30,6 +30,7 @@ import "@/modules/finance/adjustments";
 import "@/modules/finance/payouts";
 import "@/modules/payments/refunds";
 import "@/modules/orders/project-split";
+import "@/modules/settings/site-reset-handler";
 
 export const approveRequestAction = defineAction({
   name: "API-ADM-02 approval.approve",

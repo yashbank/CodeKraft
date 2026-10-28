@@ -43,6 +43,13 @@
       "when": 1791730800000,
       "tag": "0005_quote_lifecycle",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791817200000,
+      "tag": "0006_site_reset_approval",
+      "breakpoints": true
     }
   ]
 }
