@@ -1,6 +1,7 @@
 import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { EMAIL_TEMPLATES } from "@/emails";
+import { getLogger } from "@/lib/logger";
 import { sendEmail } from "@/lib/email/transport";
 import type { EmailTemplate } from "@/lib/email/types";
 import { emailOutbox } from "../../drizzle/schema/notifications";
@@ -83,6 +84,10 @@ export const emailOutboxRetryJob = {
           sentCount++;
         } catch (err) {
           const nextAttempts = row.attempts + 1;
+          getLogger().error(
+            { err, outboxId: row.id, template: row.template, attempts: nextAttempts },
+            "outbox email send failed",
+          );
           await db
             .update(emailOutbox)
             .set({

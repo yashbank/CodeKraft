@@ -7,6 +7,8 @@ import { AdminShellWrapper } from "@/components/admin/AdminShellWrapper";
 import { listApprovalsAction } from "@/modules/approvals/queries";
 import { listNotificationsQuery } from "@/modules/notifications/queries";
 import { mapNotificationItem } from "@/lib/admin/notifications-view";
+import { Banner } from "@/components/admin/Banner";
+import { emailSenderProblem } from "@/lib/email/transport";
 import { getEnv } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +43,9 @@ export default async function AdminAppLayout({ children }: { children: React.Rea
     ? notificationsRes.data.items.map(mapNotificationItem)
     : [];
 
-  const appEnv = getEnv().APP_ENV;
+  const env = getEnv();
+  const emailProblem = emailSenderProblem(env);
+  const appEnv = env.APP_ENV;
   const environment =
     appEnv === "production" ? "production" : appEnv === "staging" ? "staging" : "development";
 
@@ -53,6 +57,11 @@ export default async function AdminAppLayout({ children }: { children: React.Rea
       unreadCount={notificationsRes.ok ? notificationsRes.data.unreadCount : 0}
       environment={environment}
     >
+      {emailProblem ? (
+        <Banner tone="danger" role="alert" title="Email sender not configured" className="mb-4">
+          {emailProblem}. Verification, invite, quote and invoice emails will not reach customers.
+        </Banner>
+      ) : null}
       {children}
     </AdminShellWrapper>
   );
