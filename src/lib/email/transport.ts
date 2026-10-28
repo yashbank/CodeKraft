@@ -73,6 +73,8 @@ export async function sendEmail(message: EmailMessage): Promise<EmailSendResult>
 export function emailSenderProblem(
   env: Pick<ReturnType<typeof getEnv>, "EMAIL_TRANSPORT" | "EMAIL_FROM" | "RESEND_API_KEY">,
 ): string | null {
+  if (env.EMAIL_TRANSPORT !== "resend")
+    return `EMAIL_TRANSPORT is "${env.EMAIL_TRANSPORT}", not "resend"`;
   if (!env.RESEND_API_KEY) return "RESEND_API_KEY is not set";
   if (!env.EMAIL_FROM) return "EMAIL_FROM is not set";
   if (/@(?:[^>\s]*\.invalid|resend\.dev)>?\s*$/i.test(env.EMAIL_FROM)) {

@@ -236,6 +236,7 @@ describe("P1-05 email failure visibility", () => {
       RESEND_API_KEY: "re_live",
     };
     expect(t.emailSenderProblem(ok)).toBeNull();
+    expect(t.emailSenderProblem({ ...ok, EMAIL_TRANSPORT: "log" })).toMatch(/EMAIL_TRANSPORT/);
     expect(t.emailSenderProblem({ ...ok, RESEND_API_KEY: undefined })).toMatch(/RESEND_API_KEY/);
     expect(t.emailSenderProblem({ ...ok, EMAIL_FROM: "" })).toMatch(/EMAIL_FROM/);
     expect(t.emailSenderProblem({ ...ok, EMAIL_FROM: "CK <a@example.invalid>" })).toMatch(
