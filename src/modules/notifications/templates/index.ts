@@ -231,7 +231,7 @@ export function renderNotification(
       return {
         title: `Custom Quote Received: ${p.title ?? "Quote"}`,
         body: `A custom quote for ${p.amount ?? ""} has been prepared for your review.`,
-        link: p.token ? `/quotes/${p.token}` : "/account",
+        link: p.token ? `/quote/${p.token}` : "/account/quotes",
         emailTemplate: null,
         emailPriority: 1,
       };

@@ -36,6 +36,13 @@
       "when": 1791644400000,
       "tag": "0004_flat_ownership_sum",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791730800000,
+      "tag": "0005_quote_lifecycle",
+      "breakpoints": true
     }
   ]
 }

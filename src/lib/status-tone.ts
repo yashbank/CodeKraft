@@ -46,7 +46,16 @@ export const STATUS_ENUMS = {
   "product_ownerships.status": ["pending", "active", "superseded"],
   "coupons.kind": ["percent", "fixed"],
   "coupons.state": ["active", "scheduled", "expired", "exhausted", "inactive"],
-  "custom_quotes.status": ["draft", "sent", "accepted", "paid", "expired", "cancelled"],
+  "custom_quotes.status": [
+    "draft",
+    "sent",
+    "viewed",
+    "accepted",
+    "rejected",
+    "paid",
+    "expired",
+    "cancelled",
+  ],
   "orders.status": [
     "pending_payment",
     "paid",
@@ -181,7 +190,9 @@ export const STATUS_TONES: StatusToneMap = {
   "custom_quotes.status": {
     draft: { tone: "neutral", label: "Draft" },
     sent: { tone: "info", label: "Sent" },
+    viewed: { tone: "info", label: "Viewed" },
     accepted: { tone: "accent", label: "Accepted" },
+    rejected: { tone: "danger", label: "Rejected" },
     paid: { tone: "success", label: "Paid" },
     expired: { tone: "ghost", label: "Expired" },
     cancelled: { tone: "danger", label: "Cancelled" },

@@ -441,6 +441,16 @@ export interface QuoteRow {
   internalNote?: string;
   timeline: TimelineEvent[];
   payLink: string;
+  /** Tax added on top of `amount`, basis points. */
+  taxBps?: number;
+  offeringId?: string;
+  lineItems?: Array<{ description: string; quantity: number; unitMinor: number }>;
+}
+
+export interface QuoteOfferingOption {
+  id: string;
+  label: string;
+  price: MoneyLike;
 }
 
 export interface CustomerRow {

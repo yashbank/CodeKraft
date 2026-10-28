@@ -51,3 +51,7 @@ export async function sendQuote(raw: unknown) {
 export async function cancelQuote(raw: unknown) {
   return withCtx((a) => a.cancelCustomQuoteAction, raw);
 }
+
+export async function searchQuoteCustomers(raw: unknown) {
+  return withCtx((a) => a.searchQuoteCustomersAction, raw);
+}

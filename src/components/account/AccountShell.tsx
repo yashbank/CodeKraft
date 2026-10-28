@@ -11,6 +11,7 @@ import {
   MenuIcon,
   MessageSquareIcon,
   PackageIcon,
+  FileTextIcon,
   ReceiptTextIcon,
   SettingsIcon,
   type LucideIcon,
@@ -49,6 +50,7 @@ export type AccountNavKey =
   | "purchases"
   | "invoices"
   | "queries"
+  | "quotes"
   | "chat"
   | "wishlist"
   | "notifications"
@@ -70,6 +72,7 @@ export const ACCOUNT_NAV: { key: AccountNavKey; label: string; href: string; Ico
       Icon: ReceiptTextIcon,
     },
     { key: "queries", label: "Queries", href: "/account/queries", Icon: MessageSquareIcon },
+    { key: "quotes", label: "Quotes", href: "/account/quotes", Icon: FileTextIcon },
     { key: "chat", label: "Chat", href: "/account/chat", Icon: BotIcon },
     { key: "wishlist", label: "Wishlist", href: "/account/wishlist", Icon: HeartIcon },
     {

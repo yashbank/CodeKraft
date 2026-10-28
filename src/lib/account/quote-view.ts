@@ -38,9 +38,15 @@ export function mapQuoteView(
     status: q.status,
     description: q.description ? [q.description] : [],
     amount: { amountMinor: q.amountMinor, currency: assertCurrency(q.currency) },
-    tax: null,
-    taxLabel: "GST",
-    includes: [],
+    tax:
+      q.taxBps > 0
+        ? {
+            amountMinor: Math.round((q.amountMinor * q.taxBps) / 10000),
+            currency: assertCurrency(q.currency),
+          }
+        : null,
+    taxLabel: `Tax (${q.taxBps / 100}%)`,
+    includes: (q.lineItems ?? []).map((l) => `${l.quantity} x ${l.description}`),
     paymentMethods: ["manual_upi", "manual_bank"],
     orderHref: q.orderId ? "/account/purchases" : undefined,
     entitlementHref: q.status === "paid" ? "/account/purchases" : undefined,

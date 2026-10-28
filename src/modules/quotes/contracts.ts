@@ -12,6 +12,8 @@ import type {
   GetQuoteInput,
   ListQuotesInput,
   QuoteView,
+  RejectCustomQuoteInput,
+  SearchCustomersInput,
   SendCustomQuoteInput,
 } from "./types";
 
@@ -51,6 +53,20 @@ export interface QuotesService {
     input: AcceptCustomQuoteInput,
     tx?: TxCtx,
   ): Promise<CreateOrderResult>;
+
+  /** Customer rejects a sent/viewed quote (`FORBIDDEN` for a different account). */
+  rejectCustomQuote(
+    ctx: RequestContext,
+    input: RejectCustomQuoteInput,
+    tx?: TxCtx,
+  ): Promise<{ quote: CustomQuote }>;
+  /** Account > Quotes: the session user's non-draft quotes, newest first. */
+  listMyQuotes(ctx: RequestContext): Promise<CustomQuote[]>;
+  /** Admin: find existing customers by name/email for the quote editor. */
+  searchCustomers(
+    ctx: RequestContext,
+    input: SearchCustomersInput,
+  ): Promise<Array<{ id: string; name: string; email: string }>>;
 
   // -- internal --------------------------------------------------------------------------------
 

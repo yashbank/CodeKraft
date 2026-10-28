@@ -307,7 +307,11 @@ export function CustomerDetail({
             <RowActions
               label="More customer actions"
               actions={[
-                { label: "New quote", href: quotesHref, disabled: deleted },
+                {
+                  label: "New quote",
+                  href: `${quotesHref}?${new URLSearchParams({ customerId: c.id, title: `Custom quote for ${c.name}` }).toString()}`,
+                  disabled: deleted,
+                },
                 { label: "New manual order", href: newOrderHref, disabled: deleted },
                 {
                   label: "New lead",

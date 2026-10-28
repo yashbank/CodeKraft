@@ -21,14 +21,18 @@ export const QUOTE_STATUSES = [
   "paid",
   "expired",
   "cancelled",
+  "viewed",
+  "rejected",
 ] as const satisfies readonly QuoteStatus[];
 
 export const QUOTE_STATUS_TRANSITIONS: Readonly<Record<QuoteStatus, readonly QuoteStatus[]>> =
   Object.freeze({
     draft: ["sent", "cancelled"],
-    sent: ["accepted", "expired", "cancelled"],
+    sent: ["viewed", "accepted", "rejected", "expired", "cancelled"],
+    viewed: ["accepted", "rejected", "expired", "cancelled"],
     accepted: ["paid", "expired", "cancelled"],
     paid: [],
+    rejected: [],
     expired: [],
     cancelled: [],
   });
@@ -40,22 +44,49 @@ export const zQuoteToken = z.string().regex(/^[A-Za-z0-9_-]{20,128}$/, "quote to
 // API-COM-09 createCustomQuote / sendCustomQuote / cancelCustomQuote — `orders.manual.write`
 // ---------------------------------------------------------------------------------------------
 
+export const quoteLineItemInput = z
+  .object({
+    description: zTrimmed(1, 300),
+    quantity: z.number().int().positive().max(100000),
+    unitMinor: zPositiveMinor,
+  })
+  .strict();
+
 export const createCustomQuoteInput = z
   .object({
     customerId: zUuid,
     offeringId: zUuid.optional(),
     title: zTrimmed(1, 200),
     description: zTrimmed(0, 4000).optional(),
-    /** Base currency only in release 1 (D-502). */
     currency: zCurrency,
-    amountMinor: zPositiveMinor,
+    /** Required unless `lineItems` is given (then it must equal their sum, or be omitted). */
+    amountMinor: zPositiveMinor.optional(),
+    lineItems: z.array(quoteLineItemInput).min(1).max(50).optional(),
+    /** Tax added on top of the amount, basis points (1800 = 18%). */
+    taxBps: z.number().int().min(0).max(10000).optional(),
+    internalNote: zTrimmed(0, 2000).optional(),
     expiresAt: zIsoTimestamp.optional(),
   })
-  .strict();
+  .strict()
+  .refine((v) => v.amountMinor !== undefined || v.lineItems !== undefined, {
+    message: "Enter an amount or add at least one line item",
+    path: ["amountMinor"],
+  });
 export type CreateCustomQuoteInput = z.infer<typeof createCustomQuoteInput>;
 
-export const sendCustomQuoteInput = z.object({ quoteId: zUuid }).strict();
+/** `expiresAt` optionally sets a new validity date (needed to resend an already expired quote). */
+export const sendCustomQuoteInput = z
+  .object({ quoteId: zUuid, expiresAt: zIsoTimestamp.optional() })
+  .strict();
 export type SendCustomQuoteInput = z.infer<typeof sendCustomQuoteInput>;
+
+export const rejectCustomQuoteInput = z
+  .object({ token: zQuoteToken, reason: zTrimmed(0, 500).optional() })
+  .strict();
+export type RejectCustomQuoteInput = z.infer<typeof rejectCustomQuoteInput>;
+
+export const searchCustomersInput = z.object({ q: zTrimmed(0, 100) }).strict();
+export type SearchCustomersInput = z.infer<typeof searchCustomersInput>;
 
 export const cancelCustomQuoteInput = z
   .object({ quoteId: zUuid, reason: zTrimmed(0, 500).optional() })
@@ -91,7 +122,16 @@ export type AcceptCustomQuoteInput = z.infer<typeof acceptCustomQuoteInput>;
 export interface QuoteView {
   quote: Pick<
     CustomQuote,
-    "id" | "title" | "description" | "currency" | "amountMinor" | "status" | "expiresAt" | "orderId"
+    | "id"
+    | "title"
+    | "description"
+    | "currency"
+    | "amountMinor"
+    | "status"
+    | "expiresAt"
+    | "orderId"
+    | "taxBps"
+    | "lineItems"
   >;
   canAccept: boolean;
 }

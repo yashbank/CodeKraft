@@ -50,6 +50,8 @@ export const quoteStatus = pgEnum("quote_status", [
   "paid",
   "expired",
   "cancelled",
+  "viewed",
+  "rejected",
 ]);
 
 export const orderType = pgEnum("order_type", ["product", "project"]);
@@ -209,6 +211,12 @@ export const couponRedemptions = pgTable(
 // Custom quotes (T-custom_quotes, D-520)
 // ---------------------------------------------------------------------------------------------
 
+export interface QuoteLineItem {
+  description: string;
+  quantity: number;
+  unitMinor: number;
+}
+
 export const customQuotes = pgTable(
   "custom_quotes",
   {
@@ -230,6 +238,15 @@ export const customQuotes = pgTable(
     orderId: uuid("order_id").references((): AnyPgColumn => orders.id, { onDelete: "set null" }),
     createdBy: uuid("created_by").references(() => users.id),
     createdAt: ts("created_at").notNull().defaultNow(),
+    /** Tax added on top of the amount at accept time (basis points; 0 = tax-exclusive/no tax). */
+    taxBps: integer("tax_bps").notNull().default(0),
+    /** Optional itemised lines; when present `amount_minor` is their sum. */
+    lineItems: jsonb("line_items").$type<QuoteLineItem[]>(),
+    internalNote: text("internal_note"),
+    sentAt: ts("sent_at"),
+    viewedAt: ts("viewed_at"),
+    acceptedAt: ts("accepted_at"),
+    rejectedAt: ts("rejected_at"),
   },
   (t) => [
     index("custom_quotes_customer_idx").on(t.customerId, t.createdAt),

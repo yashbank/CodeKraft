@@ -17,7 +17,8 @@ export type EmailTemplate =
   | "approval-needed"
   | "admin-invite"
   | "approval-decided"
-  | "payment-confirmed";
+  | "payment-confirmed"
+  | "custom-quote";
 
 export interface EmailMessage {
   to: string;
