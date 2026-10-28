@@ -10,6 +10,11 @@ Updated: 2026-10-29
 - P2-02 | ready | branch feat/p2-02-licence-on-confirm | vitest tests/unit/payments: 37 pass (new confirm-license-keys.test.ts)
 - P2-03 | ready | branch feat/p2-03-post-payment-access | vitest tests/unit/account/download-panel.test.tsx: 1 pass
 - P2-04 | ready | branch feat/p2-04-pdf-preview | vitest tests/unit/site/pdf-preview.test.tsx + tests/unit/middleware.test.ts: 12 pass
+- P3-01 | doing | branch feat/p3-01-legal-publish
+- P3-02 | doing | branch feat/p3-02-client-logos
+- P3-03 | doing | branch feat/p3-03-case-studies
+- P3-04 | doing | branch feat/p3-04-landing-labels
+- P3-05 | doing | branch feat/p3-05-cta-target
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
 - [open] R2 private bucket CORS must allow PUT from the admin origin | P2-01 browser uploads straight to R2 | upload a .dmg on a product version, it completes and appears
