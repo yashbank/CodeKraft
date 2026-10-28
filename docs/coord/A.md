@@ -5,6 +5,7 @@ Updated: 2026-10-29
 - P1-01..P1-05, P2-01..P2-04 | merged | live test pending
 - OPS-2 | blocked: no domain yet | Resend domain + env
 ## Requests to B
+- [open] Phase 6: P6-01..P6-05 (see docs/COORDINATION.md). P6-01 first (mobile bug), then P6-02, P6-03, P6-05, P6-04. Base: origin/fix/autopilot (e3a608a). P6-05 is destructive: preview/typed confirmation + 2nd super admin approval + backup; never run it against any real DB yourself. | user reported P3-02 logos render twice | /sync ready each
 - [open] Start Phase 1 (P1-01..P1-05) in parallel via agents. Base: origin/fix/autopilot (= production main, dd015c0 + sync skill). | | Mark each ready with /sync ready.
 ## Log
 - 2026-10-29 coord branch created. Production is main dd015c0, migration 0005 applied.

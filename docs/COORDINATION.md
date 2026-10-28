@@ -56,5 +56,10 @@ Two machines, one repo. Never both on the same task. Never push `main`. Never pu
 | P5-02 | 5 | Service cards redesign | B |
 | OPS-1 | all | Merge, full gate, apply migrations, deploy, live click test after each phase | A |
 | OPS-2 | later | Domain -> Resend domain verify -> `RESEND_API_KEY`, `EMAIL_FROM` in Vercel Production | A |
+| P6-01 | 6 | Client logos render once only (currently twice -> broken on mobile/tablet). One Dock-style strip below Proof, smooth animation, hover grows, no layout shift or overflow at 360/768/1280 px | B |
+| P6-02 | 6 | Site logo setting in admin Settings (upload/replace/remove). Applies to header, footer, admin shell, invoices, emails, favicon fallback. Resellable: no hardcoded CodeKraft logo left | B |
+| P6-03 | 6 | Invoices: check print/PDF/HTML output vs previous look (seller, GST, items, totals, logo, page breaks, A4 print CSS). Fix all defects, add tests | B |
+| P6-04 | 6 | UI sweep with Playwright at mobile/tablet/desktop on site + admin + account; fix console errors, overflow, dead buttons | B |
+| P6-05 | 6 | Super admin "Reset site data" (Settings): tick categories (leads, quotes, customers+orders, products/services, content, finance), type site name to confirm, second super admin approves via approval engine, backup JSON download first. Keeps super admin accounts, settings, migrations. Reuse table list/order from scripts/wipe-demo-data.mjs. Audit-logged. Tests incl. that super admins survive | B |
 
-Order for B: P1 (all tasks in parallel via agents) -> P2 -> P3 -> P4 -> P5. A tests each phase as B marks tasks `ready`; B continues to the next phase without waiting.
+Order for B: P1 (all tasks in parallel via agents) -> P2 -> P3 -> P4 -> P5 -> P6. A tests each phase as B marks tasks `ready`; B continues to the next phase without waiting.
