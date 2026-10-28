@@ -30,15 +30,17 @@ function money(minor: unknown, currency: unknown): string | undefined {
 /** One line, e.g. "Refund ₹4,000 on order CK-ORD-000012". */
 export function describeApproval(type: ApprovalType, p: Payload, f: ApprovalFacts = {}): string {
   const product = f.productName ? `"${f.productName}"` : "a product";
+  const productAction = (verb: string) =>
+    f.productName ? `${verb} product ${product}` : `${verb} ${product}`;
   switch (type) {
     case "product.publish":
-      return `Publish product ${product}`;
+      return productAction("Publish");
     case "ownership.change":
       return `Change the ownership split of ${product}`;
     case "product.archive":
-      return `Archive product ${product}`;
+      return productAction("Archive");
     case "product.delete":
-      return `Delete product ${product}`;
+      return productAction("Delete");
     case "refund.issue": {
       const amt = f.refundMinor !== undefined ? money(f.refundMinor, f.currency) : undefined;
       return `Refund${amt ? ` ${amt}` : ""} on ${f.orderNo ? `order ${f.orderNo}` : "an order"}`;
