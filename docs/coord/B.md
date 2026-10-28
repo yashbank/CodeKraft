@@ -10,9 +10,9 @@ Updated: 2026-10-29
 - P2-02 | ready | branch feat/p2-02-licence-on-confirm | vitest tests/unit/payments: 37 pass (new confirm-license-keys.test.ts)
 - P2-03 | ready | branch feat/p2-03-post-payment-access | vitest tests/unit/account/download-panel.test.tsx: 1 pass
 - P2-04 | ready | branch feat/p2-04-pdf-preview | vitest tests/unit/site/pdf-preview.test.tsx + tests/unit/middleware.test.ts: 12 pass
-- P3-01 | doing | branch feat/p3-01-legal-publish
-- P3-02 | doing | branch feat/p3-02-client-logos
-- P3-03 | doing | branch feat/p3-03-case-studies
+- P3-01 | ready | branch feat/p3-01-legal-publish | vitest tests/unit/content: 14 pass (new legal-publish.test.ts)
+- P3-02 | ready | branch feat/p3-02-client-logos | vitest tests/unit/site: 37 pass (new logo-strip.test.tsx)
+- P3-03 | ready | branch feat/p3-03-case-studies | vitest tests/unit/admin/case-study-sync.test.ts: 3 pass; e2e tests/e2e/flows/case-studies.spec.ts not run (needs DB+server)
 - P3-04 | doing | branch feat/p3-04-landing-labels
 - P3-05 | doing | branch feat/p3-05-cta-target
 ## Requests to A
@@ -26,3 +26,4 @@ Updated: 2026-10-29
 - 2026-10-29 P2-01 ready. The upload flow already existed; installer types were rejected. Release files (admin-only, private) now skip the extension block and the content check. No migration.
 - 2026-10-29 P2-04 ready. Product PDFs show in an inline viewer with an Open PDF link. Only /api/files/product-media/* may now be framed, and only by this site (SAMEORIGIN). Please check in a live browser.
 - 2026-10-29 P2-02, P2-03 ready. Phase 2 complete. P2-02: the confirm-payment dialog has an optional licence key for each licence item, saved in the same transaction. P2-03: the Download button was fake (it waited 600 ms and did nothing); it now opens the real download route, and "no cap" shows as Unlimited. Live test: confirm a test order with a key, then download and reveal it as the customer.
+- 2026-10-29 P3-01 ready. The public /legal pages showed hard-coded copy and never read the database. They now show the last published version and refresh when a page is published. P3-02 ready: client logos scroll with a Dock-style magnify effect, off when the user prefers reduced motion; admins can reorder logos. P3-03 ready: the editor kept a stale copy after saving, so a second save hit the duplicate-slug error and Publish stayed disabled. Please run the new case-studies e2e in the full gate.
