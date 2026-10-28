@@ -28,6 +28,7 @@ export function WidgetFrame({
   editing = false,
   onRemove,
   onRefresh,
+  refreshing = false,
   onMoveUp,
   onMoveDown,
   viewAllHref,
@@ -43,6 +44,8 @@ export function WidgetFrame({
   editing?: boolean;
   onRemove?: () => void;
   onRefresh?: () => void;
+  /** True while the refresh is in flight: spinner on the icon, button disabled. */
+  refreshing?: boolean;
   /** Undefined → the widget is already first (button disabled). */
   onMoveUp?: () => void;
   /** Undefined → the widget is already last (button disabled). */
@@ -107,9 +110,11 @@ export function WidgetFrame({
               variant="ghost"
               size="icon-sm"
               aria-label={`Refresh ${title}`}
+              aria-busy={refreshing}
+              disabled={refreshing}
               onClick={onRefresh}
             >
-              <RefreshCwIcon aria-hidden className="size-4" />
+              <RefreshCwIcon aria-hidden className={cn("size-4", refreshing && "animate-spin")} />
             </Button>
           ) : null}
           {onRemove ? (
@@ -121,7 +126,9 @@ export function WidgetFrame({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {onRefresh ? (
-                  <DropdownMenuItem onSelect={onRefresh}>Refresh</DropdownMenuItem>
+                  <DropdownMenuItem disabled={refreshing} onSelect={onRefresh}>
+                    Refresh
+                  </DropdownMenuItem>
                 ) : null}
                 <DropdownMenuItem variant="destructive" onSelect={onRemove}>
                   Remove

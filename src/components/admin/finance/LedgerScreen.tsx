@@ -35,6 +35,7 @@ import { MoneyCell } from "../MoneyCell";
 import { PageHeader } from "../PageHeader";
 import { RowActions } from "../RowActions";
 import { StatTile } from "../StatTile";
+import type { FinanceSummary as FinanceSummaryView } from "@/modules/finance/metrics";
 import type { LedgerEntry } from "../types";
 
 export interface LedgerScreenProps {
@@ -47,6 +48,8 @@ export interface LedgerScreenProps {
   isSuperAdmin: boolean;
   /** The viewer's own partner display name (non-super-admins see only their own line). */
   ownPartnerName?: string | null;
+  /** All-time labelled finance metrics (modules/finance/metrics.ts); omitted without reports access. */
+  summary?: FinanceSummaryView | null;
 }
 
 /**
@@ -63,6 +66,7 @@ export function LedgerScreen({
   approvalsHref,
   isSuperAdmin,
   ownPartnerName = null,
+  summary = null,
 }: LedgerScreenProps) {
   const [type, setType] = React.useState<string>("all");
   const [currency, setCurrency] = React.useState<"native" | "inr">("native");
@@ -172,6 +176,29 @@ export function LedgerScreen({
           </>
         }
       />
+      {summary ? (
+        <div
+          className="mb-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-4"
+          aria-label="Finance summary (all time)"
+        >
+          <StatTile label="Gross sales (list price)" value={inr(summary.grossSalesMinor)} />
+          <StatTile label="Discounts / coupons" value={inr(summary.discountsMinor)} />
+          <StatTile label="Net sales" value={inr(summary.netSalesMinor)} hint="gross − discounts" />
+          <StatTile label="Tax collected" value={inr(summary.taxCollectedMinor)} />
+          <StatTile label="Collected" value={inr(summary.collectedMinor)} hint="net sales + tax" />
+          <StatTile label="Outstanding (unpaid orders)" value={inr(summary.outstandingMinor)} />
+          <StatTile label="Refunds" value={inr(summary.refundsMinor)} />
+          <StatTile label="Gateway fees / bank shortfall" value={inr(summary.feesMinor)} />
+          <StatTile label="Company share" value={inr(summary.companyShareMinor)} />
+          <StatTile label="Partner shares" value={inr(summary.partnerSharesMinor)} />
+          <StatTile label="Expenses" value={inr(summary.expensesMinor)} />
+          <StatTile
+            label="Profit"
+            value={inr(summary.profitMinor)}
+            hint="company + partner shares − expenses"
+          />
+        </div>
+      ) : null}
       <div className="mb-4 grid gap-3 sm:grid-cols-4">
         <StatTile label="Σ credits" value={inr(credits)} />
         <StatTile label="Σ debits" value={inr(debits)} deltaTone="danger" />
