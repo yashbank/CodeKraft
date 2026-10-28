@@ -1,20 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { PlusIcon, icons } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -29,11 +22,12 @@ import { Badge } from "@/components/ui/badge";
 import { Field, RichTextField } from "../RichTextField";
 import { RowActions } from "../RowActions";
 import type { ServiceRow } from "../types";
+import { ServiceIcon } from "@/components/site/ServiceIcon";
+import { toServiceIcon } from "@/components/site/service-icons";
+import { ServiceIconPicker } from "./ServiceIconPicker";
 import { ContentEditorFrame, moveItem, SortableRow } from "./ContentEditorFrame";
 import { fromPlainText } from "@/modules/content/render";
 import { removeService, reorderServicesList, saveService } from "@/modules/content/admin-mutations";
-
-const ICONS = ["code", "plug", "move", "rocket", "palette", "shield", "chart", "cloud"];
 
 function slugify(v: string): string {
   return v
@@ -51,7 +45,7 @@ export function ServicesEditor({ services: initial }: { services: ServiceRow[] }
   const [services, setServices] = React.useState<Row[]>(initial);
   const [editing, setEditing] = React.useState<Row | "new" | null>(null);
   const [preview, setPreview] = React.useState({ title: "", summary: "" });
-  const [icon, setIcon] = React.useState("code");
+  const [icon, setIcon] = React.useState<string>("sparkles");
   const [published, setPublished] = React.useState(false);
   const [delCount, setDelCount] = React.useState(2);
   const [saving, setSaving] = React.useState(false);
@@ -62,7 +56,7 @@ export function ServicesEditor({ services: initial }: { services: ServiceRow[] }
     setEditing(s);
     const row = s === "new" ? null : s;
     setPreview({ title: row?.title ?? "", summary: row?.summary ?? "" });
-    setIcon(row?.icon ?? "code");
+    setIcon(toServiceIcon(row?.icon ?? null));
     setPublished(row?.published ?? false);
     setDelCount(Math.max(row?.deliverables.length ?? 2, 2));
   }
@@ -103,7 +97,7 @@ export function ServicesEditor({ services: initial }: { services: ServiceRow[] }
         slug: svc.slug,
         title: svc.title,
         summary: svc.summary ?? "",
-        icon: svc.icon ?? "code",
+        icon: svc.icon ?? "sparkles",
         deliverables: svc.deliverables ?? [],
         published: svc.published,
         position: svc.position,
@@ -165,20 +159,7 @@ export function ServicesEditor({ services: initial }: { services: ServiceRow[] }
             onMove={(f, t) => persistOrder(moveItem(services, f, t))}
           >
             <div className="flex items-center gap-3">
-              <span
-                aria-hidden
-                className="grid size-9 place-items-center rounded-sm bg-elevated text-fg-muted"
-              >
-                {(() => {
-                  const key = s.icon.charAt(0).toUpperCase() + s.icon.slice(1);
-                  const Icon = icons[key as keyof typeof icons];
-                  return Icon ? (
-                    <Icon className="size-5" />
-                  ) : (
-                    <span className="font-mono text-caption">{s.icon}</span>
-                  );
-                })()}
-              </span>
+              <ServiceIcon name={toServiceIcon(s.icon)} className="size-9 [&>svg]:size-5" />
               <div className="min-w-0 flex-1">
                 <p className="text-body-sm font-semibold">
                   {s.title}{" "}
@@ -265,18 +246,7 @@ export function ServicesEditor({ services: initial }: { services: ServiceRow[] }
               <Input id="sv-slug" name="slug" defaultValue={current?.slug} className="font-mono" />
             </Field>
             <Field id="sv-icon" label="Icon">
-              <Select value={icon} onValueChange={setIcon}>
-                <SelectTrigger id="sv-icon">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ICONS.map((i) => (
-                    <SelectItem key={i} value={i}>
-                      {i}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ServiceIconPicker id="sv-icon" value={icon} onChange={setIcon} />
             </Field>
             <Field
               id="sv-summary"
