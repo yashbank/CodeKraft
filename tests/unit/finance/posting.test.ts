@@ -88,6 +88,13 @@ describe("posting plan builder (docs/06 §4.2, FI-01, FI-02, FI-04, FI-11)", () 
     expect(sumInr).toBe(0);
   });
 
+  it("posts a sale with 100 % company cut and no partner lines", () => {
+    const plan = buildItemPostingPlan({ ...baseInput, companyCutBps: 10000, lines: [] });
+    expect(plan.allocation.lines).toEqual([]);
+    expect(plan.allocation.companyMinor).toBe(plan.allocation.distributableMinor);
+    expect(plan.entries.length).toBeGreaterThan(0);
+  });
+
   it("omits discount and bank shortfall entries when they are 0, preserving FI-04", () => {
     const plan = buildItemPostingPlan({
       ...baseInput,

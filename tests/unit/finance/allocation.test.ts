@@ -29,6 +29,21 @@ describe("allocation math (docs/06 §4.2, BR-06, BR-07, FI-01, FI-02)", () => {
     expect(res.companyMinor + res.lines[0]!.amount_minor + res.lines[1]!.amount_minor).toBe(10000);
   });
 
+  it("100 % company cut with no partner lines (no partners yet)", () => {
+    const res = computeAllocation({
+      currency: "INR",
+      grossMinor: 10000,
+      discountMinor: 0,
+      taxMinor: 0,
+      gatewayFeeMinor: 0,
+      bankShortfallMinor: 0,
+      companyCutBps: 10000,
+      lines: [],
+    });
+    expect(res.companyMinor).toBe(10000);
+    expect(res.lines).toHaveLength(0);
+  });
+
   it("100 % single partner with zero company cut", () => {
     const res = computeAllocation({
       currency: "INR",

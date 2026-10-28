@@ -399,7 +399,7 @@ export const computeAllocationInput = z
     gatewayFeeMinor: zMinor,
     bankShortfallMinor: zMinor,
     companyCutBps: zBps,
-    lines: z.array(zSplitLine).min(1).max(20),
+    lines: z.array(zSplitLine).max(20),
   })
   .strict()
   .superRefine((a, ctx) => {
