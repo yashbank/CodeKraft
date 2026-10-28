@@ -16,7 +16,7 @@ export async function uploadMediaFile(file: File, purpose: string): Promise<Uplo
   const intentResult = await createMediaUploadIntent({
     purpose,
     filename: file.name,
-    mime: file.type,
+    mime: file.type || "application/octet-stream", // .AppImage/.pkg often report ""
     sizeBytes: file.size,
   });
   if (!intentResult.ok) throw new Error(intentResult.error.message);

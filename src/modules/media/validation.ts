@@ -54,7 +54,8 @@ export function validateUploadIntent(input: CreateUploadIntentInput): void {
 
   // 2. Disallow forbidden file extensions
   const ext = getFileExtension(input.filename);
-  if (FORBIDDEN_EXTENSIONS.has(ext)) {
+  // release_file is admin-only, private and never served inline: installers (.exe) are its purpose.
+  if (FORBIDDEN_EXTENSIONS.has(ext) && input.purpose !== "release_file") {
     throw new AppError(
       ErrorCode.VALIDATION,
       `File extension .${ext} is forbidden for security reasons`,
