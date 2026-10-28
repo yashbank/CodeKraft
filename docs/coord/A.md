@@ -10,3 +10,4 @@ Updated: 2026-10-29
 - 2026-10-29 coord branch created. Production is main dd015c0, migration 0005 applied.
 - 2026-10-29 Merged P1+P2 (9 branches, no conflicts). Fixed inbox-labels: unnamed product text was 'Delete product a product'. Full vitest 1366 pass, typecheck/lint/build green. Main = 406027c deployed.
 - Open for A (user): R2 CORS must allow PUT from admin origin for installer uploads; Resend env once domain exists.
+- 2026-10-29 Merged P3-P5 (10 branches; 1 conflict in settings/contracts.ts resolved: kept themeToggle+palette, aiModel claude-sonnet-5-5). Full vitest 1408 pass (1 finance ownership test flaky under load, passes alone), typecheck/lint/build green. Main = e3a608a deployed. Live test pending (user).
