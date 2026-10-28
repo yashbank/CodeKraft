@@ -54,9 +54,9 @@ export function buildSellerSnapshot(
     name: d?.name || settings.siteName || "CodeKraft",
     address: d?.address
       ? `${d.address.line1}, ${d.address.city}, ${d.address.postalCode}`
-      : "Bangalore, India",
+      : "Address not set",
     gst_number: settings.gstin || null,
-    email: d?.email || "billing@codekraft.dev",
+    email: d?.email || "",
     state_code: sellerState ?? "KA",
   };
 }

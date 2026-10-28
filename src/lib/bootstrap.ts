@@ -14,12 +14,14 @@ export function bootstrapPorts(): void {
   done = true;
   reportEmailConfig();
   setAuthMailer(async (mail) => {
+    const { getSiteName } = await import("@/lib/site-brand");
+    const siteName = await getSiteName();
     switch (mail.kind) {
       case "verify_email":
         await sendEmail({
           to: mail.to,
           template: "verify-email",
-          subject: "Verify your CodeKraft email",
+          subject: `Verify your ${siteName} email`,
           data: { url: mail.url },
         });
         break;
@@ -27,7 +29,7 @@ export function bootstrapPorts(): void {
         await sendEmail({
           to: mail.to,
           template: "reset-password",
-          subject: "Reset your CodeKraft password",
+          subject: `Reset your ${siteName} password`,
           data: { url: mail.url },
         });
         break;
@@ -35,7 +37,7 @@ export function bootstrapPorts(): void {
         await sendEmail({
           to: mail.to,
           template: "change-email",
-          subject: "Confirm your new CodeKraft email",
+          subject: `Confirm your new ${siteName} email`,
           data: { url: mail.url },
         });
         break;
@@ -44,7 +46,7 @@ export function bootstrapPorts(): void {
         await sendEmail({
           to: mail.to,
           template: "phone-otp",
-          subject: "Your CodeKraft code",
+          subject: `Your ${siteName} code`,
           data: { code: mail.code },
         });
         break;
