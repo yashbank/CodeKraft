@@ -762,11 +762,13 @@ export interface ReportDefinition {
   title: string;
   description: string;
   formula: string;
-  tiles: Array<{ label: string; valueInr: number; delta?: string }>;
+  tiles: Array<{ label: string; valueInr: number; delta?: string; isCount?: boolean }>;
   series: Array<{ label: string; value: number }>;
   columns: string[];
   rows: Array<Array<string | number>>;
   totals?: Array<string | number>;
+  /** Set when the report query failed, so the screen says so instead of rendering blank. */
+  error?: string;
 }
 
 export interface CustomerCreditRow {

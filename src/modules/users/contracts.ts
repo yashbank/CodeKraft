@@ -212,6 +212,19 @@ export const updatePartnerSchema = z
   );
 export type UpdatePartnerInput = z.infer<typeof updatePartnerSchema>;
 
+/** API-ADM-12 `createPartner`: link an existing admin user (by id or email) as a partner. */
+export const createPartnerSchema = z
+  .strictObject({
+    userId: uuidSchema.optional(),
+    email: z.string().trim().toLowerCase().email().max(254).optional(),
+    displayName: text(120).optional(),
+  })
+  .refine((p) => p.userId !== undefined || p.email !== undefined, "pick a user or enter an email");
+export type CreatePartnerInput = z.infer<typeof createPartnerSchema>;
+
+/** API-ADM-12 `ensureSuperAdminPartners`: idempotent, no input. */
+export const ensureSuperAdminPartnersSchema = z.strictObject({});
+
 /* --- Service ---------------------------------------------------------------------------------- */
 
 export interface UsersService {
@@ -359,6 +372,22 @@ export interface UsersService {
     input: UpdatePartnerInput,
     tx?: DbOrTx,
   ): Promise<{ partner: PartnerView }>;
+  /** API-ADM-12 */
+  createPartner(
+    ctx: RequestContext,
+    input: CreatePartnerInput,
+    tx?: DbOrTx,
+  ): Promise<{ partner: PartnerView }>;
+  /** API-ADM-12 (super_admin only): a partner row for every super admin lacking one. */
+  ensureSuperAdminPartners(
+    ctx: RequestContext,
+    tx?: DbOrTx,
+  ): Promise<{ created: PartnerView[]; existing: number }>;
+  /** API-ADM-12 (query): admin-class users with no partner row, for the "Add partner" picker. */
+  listPartnerCandidates(
+    ctx: RequestContext,
+    tx?: DbOrTx,
+  ): Promise<{ items: { userId: string; name: string; email: string }[] }>;
   /** API-DASH-01 (customer query, D-1001). */
   getDashboardOverview(ctx: RequestContext, tx?: DbOrTx): Promise<DashboardOverview>;
   /** API-DASH-02 (customer query). */

@@ -192,6 +192,14 @@ export function ReportsScreen({
                   </Button>
                 </div>
               </div>
+              {report.error ? (
+                <p
+                  role="alert"
+                  className="rounded-md bg-elevated px-3 py-2 text-body-sm text-danger"
+                >
+                  {report.error}
+                </p>
+              ) : null}
               <div className="flex flex-wrap items-end gap-3">
                 <div role="group" aria-label="Date range presets" className="flex flex-wrap gap-1">
                   {PRESETS.map((p) => (
@@ -268,7 +276,7 @@ export function ReportsScreen({
                     key={t.label}
                     label={t.label}
                     value={
-                      t.label === "Products sold" || t.label === "Credit notes"
+                      t.isCount || t.label === "Products sold" || t.label === "Credit notes"
                         ? t.valueInr
                         : inr(t.valueInr)
                     }
@@ -302,6 +310,16 @@ export function ReportsScreen({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
+                    {report.rows.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={Math.max(1, report.columns.length)}
+                          className="py-8 text-center text-fg-muted"
+                        >
+                          No data for this period yet.
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
                     {report.rows.map((row, ri) => (
                       <TableRow key={ri}>
                         {row.map((cell, ci) => (

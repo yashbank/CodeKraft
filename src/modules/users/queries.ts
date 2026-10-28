@@ -85,3 +85,10 @@ export const getSecurityOverviewQuery = defineAction({
   permission: "account.self",
   handler: (_input, ctx) => usersService.getSecurityOverview(ctx),
 });
+
+export const listPartnerCandidatesQuery = defineAction({
+  name: "API-ADM-12 partner.candidates",
+  input: z.strictObject({}),
+  permission: "users.admin.manage",
+  handler: (_input, ctx) => usersService.listPartnerCandidates(ctx),
+});

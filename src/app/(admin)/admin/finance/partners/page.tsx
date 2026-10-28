@@ -15,7 +15,7 @@ import {
   listPayoutsQuery,
 } from "@/modules/finance/queries";
 import { listApprovalsAction } from "@/modules/approvals/queries";
-import { listPartnersQuery } from "@/modules/users/queries";
+import { listPartnerCandidatesQuery, listPartnersQuery } from "@/modules/users/queries";
 import type { PayoutRow } from "@/components/admin/types";
 
 export const dynamic = "force-dynamic";
@@ -24,15 +24,19 @@ export default async function AdminPartnersPayoutsPage() {
   const ctx = await getAdminRequestContext();
   const isSuperAdmin = ctx.roles.includes("super_admin");
 
-  const [partnersResult, balancesResult, payoutsResult, payoutApprovalsResult] = await Promise.all([
-    listPartnersQuery({ limit: 100 }, ctx).catch(() => ({ ok: false as const })),
-    getPartnerBalancesQuery({}, ctx).catch(() => ({ ok: false as const })),
-    listPayoutsQuery({ limit: 100 }, ctx),
-    listApprovalsAction({ filters: { type: "payout.record" }, limit: 100 }, ctx),
-    // `listLedgerEntries` for the applied-payout -> ledger-seq lookup is fetched below, once we
-    // know which payouts came back.
-  ]);
+  const [partnersResult, balancesResult, payoutsResult, payoutApprovalsResult, candidatesResult] =
+    await Promise.all([
+      listPartnersQuery({ limit: 100 }, ctx).catch(() => ({ ok: false as const })),
+      getPartnerBalancesQuery({}, ctx).catch(() => ({ ok: false as const })),
+      listPayoutsQuery({ limit: 100 }, ctx),
+      listApprovalsAction({ filters: { type: "payout.record" }, limit: 100 }, ctx),
+      listPartnerCandidatesQuery({}, ctx).catch(() => ({ ok: false as const })),
+      // `listLedgerEntries` for the applied-payout -> ledger-seq lookup is fetched below, once we
+      // know which payouts came back.
+    ]);
 
+  const candidates =
+    "data" in candidatesResult && candidatesResult.ok ? candidatesResult.data.items : [];
   const partnerViews =
     "data" in partnersResult && partnersResult.ok ? partnersResult.data.items : [];
   const { byPartnerId: partnerNames, byUserId: userNames } = buildPartnerNameMaps(partnerViews);
@@ -117,6 +121,7 @@ export default async function AdminPartnersPayoutsPage() {
       payouts={payoutRows}
       approvers={partnerViews.map((p) => p.displayName)}
       isSuperAdmin={isSuperAdmin}
+      candidates={candidates}
       statementsHref="/admin/finance/reports"
       ledgerHref="/admin/finance/ledger"
       approvalsHref="/admin/approvals"

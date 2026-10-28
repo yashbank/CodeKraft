@@ -45,6 +45,7 @@ import {
   type UpdateAccountSettingsInput,
   type UpdateCustomerNotesInput,
   type UpdatePartnerInput,
+  type CreatePartnerInput,
   type UpdateProfileInput,
   type UsersService,
   changeAdminRoleSchema,
@@ -84,6 +85,7 @@ import {
   removeAdmin,
 } from "./admin-users";
 import { listPartners, updatePartner } from "./partners";
+import { createPartner, ensureSuperAdminPartners, listPartnerCandidates } from "./partner-create";
 import type { Currency } from "@/lib/money";
 import type { ThemeName } from "@/lib/theme";
 
@@ -118,6 +120,9 @@ export function createNotImplementedUsersService(): UsersService {
     listAdminUsers: "async",
     listPartners: "async",
     updatePartner: "async",
+    createPartner: "async",
+    ensureSuperAdminPartners: "async",
+    listPartnerCandidates: "async",
     getDashboardOverview: "async",
     getPaymentHistory: "async",
     getSecurityOverview: "async",
@@ -757,6 +762,31 @@ export class DefaultUsersService implements UsersService {
   ): Promise<{ partner: PartnerView }> {
     const db = await this.getDatabase(tx);
     return await updatePartner(ctx, input, db);
+  }
+
+  async createPartner(
+    ctx: RequestContext,
+    input: CreatePartnerInput,
+    tx?: DbOrTx,
+  ): Promise<{ partner: PartnerView }> {
+    const db = await this.getDatabase(tx);
+    return await createPartner(ctx, input, db);
+  }
+
+  async ensureSuperAdminPartners(
+    ctx: RequestContext,
+    tx?: DbOrTx,
+  ): Promise<{ created: PartnerView[]; existing: number }> {
+    const db = await this.getDatabase(tx);
+    return await ensureSuperAdminPartners(ctx, db);
+  }
+
+  async listPartnerCandidates(
+    ctx: RequestContext,
+    tx?: DbOrTx,
+  ): Promise<{ items: { userId: string; name: string; email: string }[] }> {
+    const db = await this.getDatabase(tx);
+    return await listPartnerCandidates(ctx, db);
   }
 
   /* --- API-DASH-01..03 ----------------------------------------------------------------------- */

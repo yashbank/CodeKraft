@@ -22,6 +22,8 @@ import {
   updateAccountSettingsSchema,
   updateCustomerNotesSchema,
   updatePartnerSchema,
+  createPartnerSchema,
+  ensureSuperAdminPartnersSchema,
   updateProfileSchema,
   verifyTotpSchema,
 } from "./contracts";
@@ -165,4 +167,19 @@ export const updatePartnerAction = defineAction({
   input: updatePartnerSchema,
   permission: "users.admin.manage",
   handler: (input, ctx) => usersService.updatePartner(ctx, input),
+});
+
+export const createPartnerAction = defineAction({
+  name: "API-ADM-12 partner.create",
+  input: createPartnerSchema,
+  permission: "users.admin.manage",
+  handler: (input, ctx) => usersService.createPartner(ctx, input),
+});
+
+/** Super admins only: the service re-checks the role, `users.admin.manage` alone is not enough. */
+export const ensureSuperAdminPartnersAction = defineAction({
+  name: "API-ADM-12 partner.ensure_super_admins",
+  input: ensureSuperAdminPartnersSchema,
+  permission: "users.admin.manage",
+  handler: (_input, ctx) => usersService.ensureSuperAdminPartners(ctx),
 });
