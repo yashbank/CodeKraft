@@ -22,7 +22,7 @@ async function withCtx<T>(
     const { getAdminRequestContext } = await import("@/lib/authz/admin-request-context");
     const ctx = await getAdminRequestContext();
     const result = await action(raw, ctx);
-    if (result.ok) revalidatePath("/admin/notifications");
+    if (result.ok) revalidatePath("/admin", "layout");
     return result;
   } catch (err) {
     return fail(err);

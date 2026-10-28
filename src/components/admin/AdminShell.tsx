@@ -88,6 +88,7 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/components/ui/_utils";
+import { applyRead, countUnread } from "@/lib/notifications/read-state";
 import { initials, timeAgo } from "./format";
 import { LaptopNotice } from "./LaptopNotice";
 import { useSiteName } from "@/components/brand/site-brand";
@@ -219,6 +220,11 @@ export interface AdminShellProps {
   environment: "development" | "staging" | "production";
   pendingApprovals: number;
   notifications: AdminNotification[];
+  /** Server-side unread total (the list is capped); falls back to counting the list. */
+  unreadCount?: number;
+  /** Persist read state server-side; the shell re-renders from the server afterwards. */
+  onMarkAllRead?: () => void;
+  onMarkRead?: (id: string) => void;
   /** ISO timestamp used for relative times (deterministic SSR). */
   now: string;
   /** Screen title for the phone top bar and the "Open on a laptop" notice. */
@@ -250,6 +256,9 @@ export function AdminShell({
   environment,
   pendingApprovals,
   notifications,
+  unreadCount,
+  onMarkAllRead,
+  onMarkRead,
   now,
   title,
   summary,
@@ -291,7 +300,7 @@ export function AdminShell({
     };
   }, [paletteQuery, onSearch]);
   const [readIds, setReadIds] = React.useState<ReadonlySet<string>>(() => new Set());
-  const unread = notifications.filter((n) => !n.read && !readIds.has(n.id)).length;
+  const unread = unreadCount ?? countUnread(applyRead(notifications, readIds));
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -484,8 +493,14 @@ export function AdminShell({
             readIds={readIds}
             now={now}
             unread={unread}
-            onMarkAll={() => setReadIds(new Set(notifications.map((n) => n.id)))}
-            onRead={(id) => setReadIds((s) => new Set([...s, id]))}
+            onMarkAll={() => {
+              setReadIds(new Set(notifications.map((n) => n.id)));
+              onMarkAllRead?.();
+            }}
+            onRead={(id) => {
+              setReadIds((s) => new Set([...s, id]));
+              onMarkRead?.(id);
+            }}
             viewAllHref={href("/notifications")}
           />
           <DropdownMenu>

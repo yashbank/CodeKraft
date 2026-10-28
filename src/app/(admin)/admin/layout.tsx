@@ -50,6 +50,7 @@ export default async function AdminAppLayout({ children }: { children: React.Rea
       user={user}
       pendingApprovals={pendingApprovals}
       notifications={notifications}
+      unreadCount={notificationsRes.ok ? notificationsRes.data.unreadCount : 0}
       environment={environment}
     >
       {children}

@@ -23,6 +23,7 @@ import {
   markAllNotificationsRead,
   markNotificationsRead,
 } from "@/modules/notifications/admin-mutations";
+import { applyRead, countUnread } from "@/lib/notifications/read-state";
 import { EmptyState } from "../EmptyState";
 import { FilterChips } from "../FilterChips";
 import { formatDate, hoursSince, timeAgo } from "../format";
@@ -55,7 +56,7 @@ export function NotificationsInbox({
   const [readIds, setReadIds] = React.useState<ReadonlySet<string>>(new Set());
   const [selected, setSelected] = React.useState<ReadonlySet<string>>(new Set());
   const isRead = (n: AdminNotification) => n.read || readIds.has(n.id);
-  const unread = notifications.filter((n) => !isRead(n)).length;
+  const unread = countUnread(applyRead(notifications, readIds));
   const list = notifications
     .filter((n) => (tab === "unread" ? !isRead(n) : true))
     .filter((n) => (type ? n.type === type : true));

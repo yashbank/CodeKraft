@@ -21,6 +21,7 @@ import {
   markAllMyNotificationsRead,
   markMyNotificationRead,
 } from "@/modules/notifications/site-mutations";
+import { applyRead, countUnread } from "@/lib/notifications/read-state";
 import { EmptyState } from "./EmptyState";
 import { dayLabel, formatDateTime, relativeTime } from "./format";
 import type { NotificationItem, NotificationType } from "./types";
@@ -48,7 +49,9 @@ export function NotificationsScreen({
   const [items, setItems] = React.useState(initial);
   const [tab, setTab] = React.useState<"all" | "unread">("all");
   const [type, setType] = React.useState<NotificationType | null>(null);
-  const unread = items.filter((n) => !n.read).length;
+  // Server refreshes (poll, bell mark-read) hand down fresh items: adopt them.
+  React.useEffect(() => setItems(initial), [initial]);
+  const unread = countUnread(items);
   const rows = items.filter((n) => (tab === "all" || !n.read) && (!type || n.type === type));
   const groups = rows.reduce<{ label: string; items: NotificationItem[] }[]>((acc, n) => {
     const label = dayLabel(n.at, now);
@@ -59,7 +62,7 @@ export function NotificationsScreen({
   }, []);
 
   function markRead(id: string) {
-    setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    setItems((prev) => applyRead(prev, new Set([id])));
     void markMyNotificationRead({ notificationIds: [id] }).then((result) => {
       if (!result.ok) toast.error(result.error.message);
     });
@@ -77,7 +80,7 @@ export function NotificationsScreen({
           size="sm"
           disabled={unread === 0}
           onClick={async () => {
-            setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+            setItems((prev) => applyRead(prev));
             const result = await markAllMyNotificationsRead();
             if (result.ok) toast.success("All notifications marked as read");
             else toast.error(result.error.message);

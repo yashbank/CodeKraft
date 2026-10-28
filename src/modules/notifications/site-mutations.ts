@@ -15,14 +15,14 @@ import { markAllReadAction, markReadAction, updateNotificationPreferencesAction 
 async function withSiteCtx<T>(
   action: (raw: unknown, ctx: Context) => Promise<ActionResult<T>>,
   raw: unknown,
-  path: string = "/account/notifications",
+  path: string = "/account",
 ): Promise<ActionResult<T>> {
   try {
     // Lazy import -- see `catalog/site-mutations.ts` for why.
     const { getSiteRequestContext } = await import("@/lib/authz/site-request-context");
     const ctx = await getSiteRequestContext();
     const result = await action(raw, ctx);
-    if (result.ok) revalidatePath(path);
+    if (result.ok) revalidatePath(path, "layout");
     return result;
   } catch (err) {
     return fail(err);
