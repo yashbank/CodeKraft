@@ -28,6 +28,7 @@ import { Field, RichTextField } from "../RichTextField";
 import { RowActions } from "../RowActions";
 import type { CaseStudyRow } from "../types";
 import { ContentEditorFrame } from "./ContentEditorFrame";
+import { resolveEditing } from "./case-study-sync";
 import { fromPlainText } from "@/modules/content/render";
 import {
   publishCaseStudyById,
@@ -65,6 +66,24 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
   const galleryInputRef = React.useRef<HTMLInputElement>(null);
   const coverInputRef = React.useRef<HTMLInputElement>(null);
   const formRef = React.useRef<HTMLFormElement>(null);
+  const savedSlug = React.useRef<string | null>(null);
+  const editingRef = React.useRef(editing);
+  editingRef.current = editing;
+
+  // router.refresh() delivers new props; local state must follow or add -> edit -> publish goes stale.
+  React.useEffect(() => {
+    setCaseStudies(initial);
+    const cur = editingRef.current;
+    const next = resolveEditing(initial, cur, savedSlug.current);
+    savedSlug.current = null;
+    setEditing(next);
+    if (!cur && next) {
+      setTech(next.tech);
+      setCover({ mediaId: next.coverMediaId, url: next.coverUrl });
+      setGallery(next.gallery ?? []);
+    }
+  }, [initial]);
+
   const rows = caseStudies.filter((c) => (status ? c.status === status : true));
 
   function openEdit(c: CaseStudyRow | null) {
@@ -168,6 +187,7 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
       return;
     }
     toast.success("Case study saved");
+    savedSlug.current = slug;
     router.refresh();
   }
 
