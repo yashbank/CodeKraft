@@ -3033,7 +3033,7 @@ export const SETTINGS: SettingsData = {
       webhookUrl: "https://codekraft.example/api/webhooks/razorpay",
     },
   },
-  theme: { defaultTheme: "dark-cinematic", lightEnabled: false },
+  theme: { defaultTheme: "dark-cinematic", toggle: true, palette: "violet", lightEnabled: false },
   ai: {
     model: "claude-sonnet-4-5",
     platformCap: 2000,

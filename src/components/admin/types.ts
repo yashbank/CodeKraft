@@ -943,7 +943,7 @@ export interface SettingsData {
       webhookUrl: string;
     };
   };
-  theme: { defaultTheme: string; lightEnabled: boolean };
+  theme: { defaultTheme: string; toggle: boolean; palette: string; lightEnabled: boolean };
   ai: {
     model: string;
     platformCap: number;

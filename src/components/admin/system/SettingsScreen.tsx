@@ -39,12 +39,14 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/components/ui/_utils";
 import { CURRENCIES } from "@/lib/money";
+import { PALETTES } from "@/lib/palettes";
 import { updateRazorpaySettings, updateSettings } from "@/modules/settings/admin-mutations";
 import { testRazorpayConnection } from "@/modules/settings/razorpay-test-connection";
 import { Banner } from "../Banner";
 import { ManualPaymentSettings } from "./ManualPaymentSettings";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
+import type { SiteSettings } from "@/modules/settings/types";
 import type { SettingsData } from "../types";
 
 /**
@@ -357,6 +359,8 @@ export function SettingsScreen({
   const router = useRouter();
   const formRef = React.useRef<HTMLFormElement>(null);
   const [theme, setTheme] = React.useState(s.theme.defaultTheme);
+  const [themeToggle, setThemeToggle] = React.useState(s.theme.toggle);
+  const [palette, setPalette] = React.useState(s.theme.palette);
   const [saving, setSaving] = React.useState(false);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const saveable = SAVEABLE_SECTIONS.includes(section);
@@ -367,6 +371,8 @@ export function SettingsScreen({
     setBaseCurrency(s.currencies.base);
     setEnabledCurrencies(s.currencies.enabled);
     setTheme(s.theme.defaultTheme);
+    setThemeToggle(s.theme.toggle);
+    setPalette(s.theme.palette);
   }
 
   async function saveFlag(key: string, value: boolean) {
@@ -452,7 +458,11 @@ export function SettingsScreen({
         retention: { chatMonths: Number(val("rt-chat")), recordsYears: s.retention.recordYears },
       };
     } else if (section === "theme") {
-      patch = { defaultTheme: theme };
+      patch = {
+        defaultTheme: theme as SiteSettings["defaultTheme"],
+        themeToggle,
+        palette: palette as SiteSettings["palette"],
+      };
     } else {
       return;
     }
@@ -782,11 +792,9 @@ export function SettingsScreen({
                     }}
                   />
                 </RadioGroupCard>
-                <RadioGroupCard value="light-editorial" disabled={!s.theme.lightEnabled}>
+                <RadioGroupCard value="light-editorial">
                   <span className="text-body font-semibold">Light editorial</span>
-                  <span className="text-caption text-fg-muted">
-                    Turn on theme_light_editorial in Feature flags to offer it.
-                  </span>
+                  <span className="text-caption text-fg-muted">Warm paper, dark text.</span>
                   <span
                     aria-hidden
                     className="mt-2 block h-16 rounded-sm border border-border"
@@ -797,8 +805,40 @@ export function SettingsScreen({
                   />
                 </RadioGroupCard>
               </RadioGroup>
+              <div className="flex items-center gap-3">
+                <Switch
+                  id="st-theme-toggle"
+                  checked={themeToggle}
+                  onCheckedChange={setThemeToggle}
+                  disabled={ro}
+                />
+                <Label htmlFor="st-theme-toggle">
+                  Let visitors switch theme from the site footer
+                </Label>
+              </div>
+              <RadioGroup
+                value={palette}
+                onValueChange={setPalette}
+                className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+                disabled={ro}
+                aria-label="Accent palette"
+              >
+                {PALETTES.map((p) => (
+                  <RadioGroupCard key={p.id} value={p.id}>
+                    <span className="text-body font-semibold">{p.label}</span>
+                    <span
+                      aria-hidden
+                      className="mt-2 flex h-8 overflow-hidden rounded-sm border border-border"
+                    >
+                      <span className="flex-1" style={{ background: p.dark }} />
+                      <span className="flex-1" style={{ background: p.light }} />
+                    </span>
+                  </RadioGroupCard>
+                ))}
+              </RadioGroup>
               <p className="text-body-sm text-fg-muted">
-                Visitors can always switch theme themselves from the site footer.
+                Accent palette applies across the site, account and admin. Left swatch is used on
+                dark, right on light.
               </p>
             </>
           ) : null}

@@ -166,6 +166,8 @@ export function mapSiteSettingsToSettingsData(settings: SiteSettings): SettingsD
     },
     theme: {
       defaultTheme: settings.defaultTheme,
+      toggle: settings.themeToggle,
+      palette: settings.palette,
       lightEnabled: settings.flags.theme_light_editorial,
     },
     ai: {

@@ -7,6 +7,7 @@
  */
 import type { Currency } from "@/lib/money";
 import type { FlagKey } from "@/lib/feature-flags";
+import type { PaletteId } from "@/lib/palettes";
 import type { ThemeName } from "@/lib/theme";
 import type { PaymentMethodValue } from "../offerings/types";
 
@@ -81,6 +82,9 @@ export interface SiteSettings {
   razorpaySettings: RazorpaySettings | null;
   enabledPaymentMethods: PaymentMethodValue[];
   defaultTheme: ThemeName;
+  /** Show visitors the theme toggle. */
+  themeToggle: boolean;
+  palette: PaletteId;
   aiModel: string;
   aiDailyPlatformCap: number;
   aiDailyUserCap: number;
@@ -106,6 +110,8 @@ export const SITE_SETTING_KEYS: Readonly<Record<SiteSettingField, string>> = Obj
   razorpaySettings: "razorpay_settings",
   enabledPaymentMethods: "enabled_payment_methods",
   defaultTheme: "default_theme",
+  themeToggle: "theme_toggle",
+  palette: "theme_palette",
   aiModel: "ai_model",
   aiDailyPlatformCap: "ai_daily_platform_cap",
   aiDailyUserCap: "ai_daily_user_cap",
