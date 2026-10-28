@@ -19,6 +19,53 @@ export function normaliseSiteName(raw: unknown): string {
   return trimmed.length > 0 ? trimmed : DEFAULT_SITE_NAME;
 }
 
+export interface SiteContact {
+  legalName: string | null;
+  address: string | null;
+  email: string | null;
+  phones: string | null;
+}
+
+/** Pure: public contact block from the saved seller details; every field null when unset. */
+export function contactFromSeller(
+  s: {
+    name: string;
+    email: string;
+    contactPhones: string[];
+    address: { line1: string; line2?: string; city: string; state?: string; postalCode: string };
+  } | null,
+): SiteContact {
+  if (!s) return { legalName: null, address: null, email: null, phones: null };
+  const a = s.address;
+  return {
+    legalName: s.name || null,
+    address: [a.line1, a.line2, a.city, a.state, a.postalCode].filter(Boolean).join(", ") || null,
+    email: s.email || null,
+    phones: s.contactPhones.join(", ") || null,
+  };
+}
+
+async function readSiteContact(): Promise<SiteContact> {
+  try {
+    const { settingsService } = await import("@/modules/settings/service");
+    return contactFromSeller((await settingsService.load()).sellerDetails);
+  } catch {
+    return contactFromSeller(null);
+  }
+}
+
+export async function getSiteContact(): Promise<SiteContact> {
+  try {
+    const { unstable_cache } = await import("next/cache");
+    return await unstable_cache(readSiteContact, ["site-brand:contact"], {
+      tags: ["settings"],
+      revalidate: 300,
+    })();
+  } catch {
+    return readSiteContact();
+  }
+}
+
 async function readSiteName(): Promise<string> {
   try {
     const { settingsService } = await import("@/modules/settings/service");

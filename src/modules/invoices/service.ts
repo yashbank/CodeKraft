@@ -11,6 +11,7 @@ import { AppError, ErrorCode } from "@/lib/errors";
 import { assertPermission } from "@/lib/authz/assert";
 import type { RequestContext } from "@/lib/authz/context";
 import { settingsService } from "@/modules/settings/service";
+import type { SiteSettings } from "@/modules/settings/types";
 import { auditService } from "@/modules/audit/service";
 import { getDocumentsBucketName, getStorageDriver } from "@/lib/storage";
 import {
@@ -42,6 +43,23 @@ import { computeFy, nextCreditNoteNumber, nextInvoiceNumber } from "./numbering"
 import { computeGstBreakdown } from "./gst";
 import { buildPdfBuffer, uploadDocumentPdf } from "./pdf";
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
+
+/** Seller block for a NEW invoice, from current settings; issued invoices keep their stored snapshot. */
+export function buildSellerSnapshot(
+  settings: Pick<SiteSettings, "sellerDetails" | "siteName" | "gstin">,
+  sellerState?: string | null,
+): SellerSnapshot {
+  const d = settings.sellerDetails;
+  return {
+    name: d?.name || settings.siteName || "CodeKraft",
+    address: d?.address
+      ? `${d.address.line1}, ${d.address.city}, ${d.address.postalCode}`
+      : "Address not set",
+    gst_number: settings.gstin || null,
+    email: d?.email || "",
+    state_code: sellerState ?? "KA",
+  };
+}
 
 export class DefaultInvoicesService implements InvoicesService {
   private readonly fallback = createNotImplementedInvoicesService();
@@ -102,18 +120,7 @@ export class DefaultInvoicesService implements InvoicesService {
     const fy = computeFy(paidDate);
     const seqAlloc = await nextInvoiceNumber(fy, tx);
 
-    const sellerDetails = settings.sellerDetails;
-    const sellerAddressStr = sellerDetails?.address
-      ? `${sellerDetails.address.line1}, ${sellerDetails.address.city}, ${sellerDetails.address.postalCode}`
-      : "Bangalore, India";
-
-    const sellerSnapshot: SellerSnapshot = {
-      name: sellerDetails?.name || settings.siteName || "CodeKraft",
-      address: sellerAddressStr,
-      gst_number: settings.gstin || null,
-      email: sellerDetails?.email || "billing@codekraft.dev",
-      state_code: order.taxSnapshot?.seller_state ?? "KA",
-    };
+    const sellerSnapshot = buildSellerSnapshot(settings, order.taxSnapshot?.seller_state);
 
     const buyerSnapshot: BuyerSnapshot = {
       name: order.billingSnapshot.name || "Customer",

@@ -529,6 +529,12 @@ export function SettingsScreen({
         >
           <h2 className="text-h3">{title}</h2>
 
+          {ro ? (
+            <p role="status" className="text-body-sm text-fg-muted">
+              Read-only: only a super admin can change settings.
+            </p>
+          ) : null}
+
           {section === "general" ? (
             <>
               <p className="text-body-sm text-fg-muted">

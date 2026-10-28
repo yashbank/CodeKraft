@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { useSiteName } from "@/components/brand/site-brand";
 import { useSession } from "@/modules/auth/client";
+import type { SiteContact } from "@/lib/site-brand";
 import { Container } from "./Container";
 import { LEGAL_LINKS, SITE_NAV } from "./nav";
 import { ThemeToggle } from "./ThemeToggle";
@@ -15,7 +16,13 @@ import { Wordmark } from "./Wordmark";
  * like `SiteHeader`) · Legal. No email, phone, WhatsApp, social icons or newsletter box (D-808).
  * Governing law line (D-1504).
  */
-export function SiteFooter({ themeToggleEnabled = false }: { themeToggleEnabled?: boolean }) {
+export function SiteFooter({
+  themeToggleEnabled = false,
+  contact,
+}: {
+  themeToggleEnabled?: boolean;
+  contact?: SiteContact;
+}) {
   const { data: session } = useSession();
   const [authHref, authLabel] = session ? ["/account", "My account"] : ["/auth/login", "Sign in"];
   const year = new Date().getUTCFullYear();
@@ -47,6 +54,16 @@ export function SiteFooter({ themeToggleEnabled = false }: { themeToggleEnabled?
             © {year} {siteName}. All rights reserved.
           </p>
           <p>Governed by the laws of India.</p>
+        </div>
+        <div className="mt-4 space-y-1 text-caption text-fg-subtle">
+          {contact?.legalName ? <p>{contact.legalName}</p> : null}
+          {contact?.address ? <p>{contact.address}</p> : null}
+          {contact?.email ? (
+            <p>
+              <a href={`mailto:${contact.email}`}>{contact.email}</a>
+            </p>
+          ) : null}
+          {contact?.phones ? <p>{contact.phones}</p> : null}
         </div>
       </Container>
     </footer>

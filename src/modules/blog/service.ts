@@ -43,6 +43,7 @@ import type { AdminBlogList, BlogCard, BlogDetail, ProductBlog } from "./types";
 import type { Money } from "@/lib/money";
 import type { ImageRef, ProductCard } from "../catalog/types";
 import { z } from "zod";
+import { getSiteName } from "@/lib/site-brand";
 
 function encodeCursor(createdAt: Date, id: string): string {
   return Buffer.from(`${createdAt.getTime()}#${id}`).toString("base64url");
@@ -307,6 +308,7 @@ export class DefaultBlogService implements BlogService {
     tx?: DbOrTx,
   ): Promise<ListResult<BlogCard>> {
     const client = await this.getDatabase(tx);
+    const siteName = await getSiteName();
     const limit = input.limit ?? 25;
     const isAsc = input.sort?.endsWith(":asc") ?? false;
 
@@ -403,7 +405,7 @@ export class DefaultBlogService implements BlogService {
           ? new Date(r.blog.publishedAt).toISOString()
           : new Date().toISOString(),
         product: r.product,
-        author: { name: r.author.name ?? "CodeKraft" },
+        author: { name: r.author.name ?? siteName },
       };
     });
 
@@ -430,6 +432,7 @@ export class DefaultBlogService implements BlogService {
     tx?: DbOrTx,
   ): Promise<BlogDetail> {
     const client = await this.getDatabase(tx);
+    const siteName = await getSiteName();
 
     let [row] = await client
       .select({
@@ -618,7 +621,7 @@ export class DefaultBlogService implements BlogService {
           : new Date().toISOString(),
         seoTitle: row.blog.seoTitle,
         seoDescription: row.blog.seoDescription,
-        author: { name: row.author.name ?? "CodeKraft" },
+        author: { name: row.author.name ?? siteName },
       },
       product: productCard,
       html,
@@ -685,6 +688,7 @@ export class DefaultBlogService implements BlogService {
     tx?: DbOrTx,
   ): Promise<BlogCard[]> {
     const client = await this.getDatabase(tx);
+    const siteName = await getSiteName();
     const limit = input.limit ?? 3;
 
     const rows = await client
@@ -729,7 +733,7 @@ export class DefaultBlogService implements BlogService {
           ? new Date(r.blog.publishedAt).toISOString()
           : new Date().toISOString(),
         product: r.product,
-        author: { name: r.author.name ?? "CodeKraft" },
+        author: { name: r.author.name ?? siteName },
       };
     });
   }

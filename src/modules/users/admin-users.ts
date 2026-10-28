@@ -523,11 +523,12 @@ export async function sendAdminInvite(
   ]);
   const adminUrl = getEnv().NEXT_PUBLIC_ADMIN_URL.replace(/\/$/, "");
   const url = `${adminUrl}/auth/reset?token=${encodeURIComponent(token)}`;
+  const { getSiteName } = await import("@/lib/site-brand");
   try {
     await sendEmail({
       to: invite.email,
       template: "admin-invite",
-      subject: "You've been invited to the CodeKraft admin console",
+      subject: `You've been invited to the ${await getSiteName()} admin console`,
       data: { url, role: invite.role.replace("_", " ") },
       priority: 1,
     });

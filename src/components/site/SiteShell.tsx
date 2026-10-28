@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import type { SiteContact } from "@/lib/site-brand";
 import { SiteFooter } from "./SiteFooter";
 import { SiteHeader, type SiteHeaderProps } from "./SiteHeader";
 
@@ -10,15 +11,16 @@ import { SiteHeader, type SiteHeaderProps } from "./SiteHeader";
 export function SiteShell({
   children,
   themeToggleEnabled = false,
+  contact,
   ...header
-}: SiteHeaderProps & { children: ReactNode }) {
+}: SiteHeaderProps & { children: ReactNode; contact?: SiteContact }) {
   return (
     <div data-app="site" className="flex min-h-screen flex-col bg-canvas text-fg">
       <SiteHeader {...header} themeToggleEnabled={themeToggleEnabled} />
       <main id="main" className="flex-1 overflow-x-hidden">
         {children}
       </main>
-      <SiteFooter themeToggleEnabled={themeToggleEnabled} />
+      <SiteFooter themeToggleEnabled={themeToggleEnabled} contact={contact} />
     </div>
   );
 }

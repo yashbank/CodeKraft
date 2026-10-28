@@ -917,22 +917,23 @@ export class DefaultContentService implements ContentService {
       ? new URL(process.env.NEXT_PUBLIC_APP_URL).host
       : "codekraft.dev";
 
+    const { getSiteName } = await import("@/lib/site-brand");
+    const siteName = await getSiteName();
     const jsonLd = {
       "@context": "https://schema.org",
       "@graph": [
         {
           "@type": "Organization",
           "@id": `https://${domain}/#organization`,
-          name: "CodeKraft",
+          name: siteName,
           url: `https://${domain}/`,
-          description:
-            "CodeKraft builds software, websites and products for clients and sells its own digital products.",
+          description: `${siteName} builds software, websites and products for clients and sells its own digital products.`,
         },
         {
           "@type": "WebSite",
           "@id": `https://${domain}/#website`,
           url: `https://${domain}/`,
-          name: "CodeKraft",
+          name: siteName,
           publisher: { "@id": `https://${domain}/#organization` },
         },
       ],
