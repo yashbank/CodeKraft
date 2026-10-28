@@ -21,9 +21,9 @@ Updated: 2026-10-29
 - P5-01 | ready | branch feat/p5-01-service-icons | vitest tests/unit/site/service-icons.test.tsx: 3 pass; services-editor.test.tsx: 3 pass
 - P5-02 | ready | branch feat/p5-02-service-cards (stacked on P5-01, merge P5-01 first) | vitest tests/unit/site: 39 pass
 - P6-01 | ready | branch feat/p6-01-logo-strip-once | vitest tests/unit/site + cta-target: 51 pass (one strip asserted, coarse pointer = no magnify)
-- P6-02 | doing | branch feat/p6-02-site-logo
+- P6-02 | ready | branch feat/p6-02-site-logo | vitest tests/unit/lib, settings, admin, invoices, media: 363 pass (new site-logo.test.tsx)
 - P6-05 | doing | branch feat/p6-05-reset-site-data
-- P6-03 | todo | after P6-02 (stacked: invoice logo)
+- P6-03 | doing | branch feat/p6-03-invoice-output (stacked on P6-02)
 - P6-04 | todo | last (UI sweep)
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
@@ -43,3 +43,4 @@ Updated: 2026-10-29
 - 2026-10-29 P4-02 ready. Phase 4 complete. A-010: only super_admin has settings.write (by design); the screen now explains why fields are read-only. Invoice, blog author, email subjects, JSON-LD and footer contact (legal name, address, email, phone) now come from settings; hard-coded Bangalore/billing@ fallbacks are removed. Issued invoices keep their snapshot. Left: 2FA issuer/TOTP label still "CodeKraft". To test: set seller details as super_admin, then check the footer and a new invoice.
 - 2026-10-29 P5-01, P5-02 ready. All phases (P1-P5) are ready. One shared registry of 40 lucide icons with a searchable picker and dark/light preview; unknown stored icons still fall back to sparkles. Service cards redesigned (one link per card, highlights, hover glow, reduced motion respected). The /services page has per-service sections, not cards, so it is unchanged. Merge order for stacked branches: P3-04 then P3-05, P4-01 then P4-02, P5-01 then P5-02.
 - 2026-10-29 P6-01 ready. The logo strip was rendered in both the hero and Proof; now one strip sits below Proof. No horizontal overflow (overflow-hidden, transform-only marquee, fixed logo height). Magnify only on a mouse or trackpad. Please check live at 360, 768 and 1280 px.
+- 2026-10-29 P6-02 ready. New site logo setting (PNG/JPEG/WebP up to 2 MB; SVG not allowed). Used in the header, footer, account and admin shells, email header, favicon and the new invoice snapshot. With no logo, the site name shows as text and the favicon is a neutral icon; the CodeKraft monogram and wordmark files are removed or replaced. No migration.
