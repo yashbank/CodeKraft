@@ -426,3 +426,9 @@
   transition-duration: min(var(--ck-motion-duration-md), var(--ck-motion-crossfade-max)) !important;
   transition-timing-function: linear !important;
 }
+
+@keyframes ck-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
