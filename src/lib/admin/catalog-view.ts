@@ -127,6 +127,7 @@ export function mapProductGraphToEditorData(
     alt: m.alt,
     sizeKb: 0,
     url: m.url || undefined,
+    mediaId: m.mediaId ?? undefined,
   }));
 
   const offerings: OfferingRow[] = graph.offerings.map((o) => ({

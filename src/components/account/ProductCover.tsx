@@ -42,14 +42,17 @@ export function ProductCover({
     .toUpperCase();
   return (
     <div
-      aria-hidden
+      data-testid="product-cover-fallback"
       className={cn(
         "flex shrink-0 items-center justify-center rounded-md bg-[image:var(--ck-gradient-brand)] font-display text-h4 font-semibold text-inverse-fg",
         box,
         className,
       )}
     >
-      {initials}
+      <div className="flex flex-col items-center gap-0.5 text-center">
+        <span aria-hidden>{initials}</span>
+        <span className="text-[9px] font-normal leading-none opacity-90">No image yet</span>
+      </div>
     </div>
   );
 }

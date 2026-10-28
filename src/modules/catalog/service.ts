@@ -2,6 +2,7 @@
  * Catalog service implementation (docs/05 §2, docs/06 §2.2 API-CAT-*, PHASE-03 P3.6).
  * Full implementation satisfying CatalogService contracts.
  */
+import { buildProductMediaUrl } from "./media-access";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
 import type { DbOrTx, TxCtx } from "@/lib/db";
@@ -1253,13 +1254,7 @@ export class DefaultCatalogService implements CatalogService {
         id: r.pm.id,
         kind: r.pm.kind,
         mediaId: r.pm.mediaId,
-        url:
-          r.pm.embedUrl ??
-          (r.m && r.m.visibility === "public"
-            ? `${getPublicMediaBaseUrl().replace(/\/+$/, "")}/${r.m.objectKey}`
-            : r.m
-              ? `/api/files/private/${r.m.id}`
-              : ""),
+        url: buildProductMediaUrl(r.pm, r.m, getPublicMediaBaseUrl()),
         embedUrl: r.pm.embedUrl,
         title: r.pm.title,
         alt: r.pm.alt,
@@ -1576,13 +1571,7 @@ export class DefaultCatalogService implements CatalogService {
         id: r.pm.id,
         kind: r.pm.kind,
         mediaId: r.pm.mediaId,
-        url:
-          r.pm.embedUrl ??
-          (r.m && r.m.visibility === "public"
-            ? `${getPublicMediaBaseUrl().replace(/\/+$/, "")}/${r.m.objectKey}`
-            : r.m
-              ? `/api/files/private/${r.m.id}`
-              : ""),
+        url: buildProductMediaUrl(r.pm, r.m, getPublicMediaBaseUrl()),
         embedUrl: r.pm.embedUrl,
         title: r.pm.title,
         alt: r.pm.alt,

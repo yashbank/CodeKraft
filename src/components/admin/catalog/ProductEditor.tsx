@@ -11,6 +11,7 @@ import {
   GripVerticalIcon,
   PlusIcon,
   UploadIcon,
+  PlayIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -1511,27 +1512,54 @@ export function ProductEditor({
                   className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-surface p-3"
                 >
                   <GripVerticalIcon aria-hidden className="size-4 shrink-0 text-fg-subtle" />
-                  <span
-                    aria-hidden
-                    className="grid size-12 place-items-center rounded-sm bg-elevated text-caption text-fg-subtle overflow-hidden"
-                  >
-                    {m.kind === "video_embed" ? (
-                      "▶"
-                    ) : m.kind === "presentation" ? (
-                      "PDF"
-                    ) : m.url ? (
+                  {m.kind === "image" || m.kind === "screenshot" || m.kind === "gallery" ? (
+                    m.url ? (
                       <img
                         src={m.url}
                         alt={m.alt ?? ""}
-                        className="size-12 rounded-sm object-cover"
+                        data-testid="media-preview-image"
+                        className="size-12 rounded-sm bg-elevated object-cover"
                       />
                     ) : (
-                      "IMG"
-                    )}
-                  </span>
+                      <span className="grid size-12 place-items-center rounded-sm bg-elevated text-caption text-fg-subtle">
+                        No image
+                      </span>
+                    )
+                  ) : m.kind === "video_embed" || m.kind === "video_file" ? (
+                    <a
+                      href={m.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Open video ${m.fileName}`}
+                      className="grid size-12 place-items-center rounded-sm bg-elevated text-fg-subtle hover:text-fg"
+                    >
+                      <PlayIcon aria-hidden className="size-5" />
+                    </a>
+                  ) : (
+                    <a
+                      href={
+                        m.kind === "presentation" ? `/api/files/product-media/${m.mediaId}` : m.url
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Open ${m.fileName}`}
+                      className="grid size-12 place-items-center rounded-sm bg-elevated text-caption font-medium text-accent hover:underline"
+                    >
+                      {m.kind === "presentation" ? "PDF" : "File"}
+                    </a>
+                  )}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-mono text-body-sm">{m.fileName}</span>
-                    <span className="block text-caption text-fg-muted">{m.kind}</span>
+                    <span className="block text-caption text-fg-muted">
+                      {m.kind === "image" || m.kind === "screenshot" || m.kind === "gallery"
+                        ? "Image"
+                        : m.kind === "video_embed" || m.kind === "video_file"
+                          ? "Video"
+                          : m.kind === "presentation"
+                            ? "PDF"
+                            : "Attachment"}{" "}
+                      ({m.kind})
+                    </span>
                   </span>
                   {m.alt ? (
                     <span className="w-64 truncate text-caption text-fg-muted">Alt: {m.alt}</span>

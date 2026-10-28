@@ -1,6 +1,7 @@
 import { ProductsList } from "@/components/admin/catalog/ProductsList";
 import { getAdminRequestContext } from "@/lib/authz/admin-request-context";
 import { mapCategoryNode, mapProductRow } from "@/lib/admin/catalog-view";
+import { loadProductCovers } from "@/modules/catalog/cover-images";
 import { listCategoriesQuery, listProductsAdminQuery } from "@/modules/catalog/queries";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +13,19 @@ export default async function AdminProductsPage() {
     listCategoriesQuery({}, ctx),
   ]);
 
-  const products = productsResult.ok ? productsResult.data.items.map(mapProductRow) : [];
+  const baseProducts = productsResult.ok ? productsResult.data.items.map(mapProductRow) : [];
+  const covers = await (async () => {
+    try {
+      const { getDb } = await import("@/lib/db");
+      return await loadProductCovers(
+        getDb(),
+        baseProducts.map((p) => p.id),
+      );
+    } catch {
+      return new Map<string, { url: string }>();
+    }
+  })();
+  const products = baseProducts.map((p) => ({ ...p, coverUrl: covers.get(p.id)?.url }));
   const categories = categoriesResult.ok ? categoriesResult.data.map(mapCategoryNode) : [];
 
   // No `listTags` query exists in `modules/catalog` (only per-product tags via `getProductAdmin`

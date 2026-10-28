@@ -67,7 +67,15 @@ export interface ProductSummary {
   popularity: number;
 }
 
-export type MediaKind = "image" | "screenshot" | "gallery" | "video_embed" | "presentation";
+export type MediaKind =
+  | "image"
+  | "screenshot"
+  | "gallery"
+  | "video_embed"
+  | "video_file"
+  | "presentation"
+  | "attachment"
+  | "og";
 
 export interface MediaItem {
   id: string;
@@ -75,6 +83,7 @@ export interface MediaItem {
   alt: string;
   caption?: string;
   url?: string;
+  mime?: string;
 }
 
 export interface FaqItem {

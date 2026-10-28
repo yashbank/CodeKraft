@@ -62,6 +62,8 @@ export interface ProductRow {
   updatedBy: string;
   awaitingApprovalId?: string;
   orderCount: number;
+  /** Primary image URL, when the product has one. */
+  coverUrl?: string;
 }
 
 export interface CategoryNode {
@@ -151,6 +153,7 @@ export interface MediaItem {
   alt?: string;
   sizeKb: number;
   url?: string;
+  mediaId?: string;
 }
 
 export interface ProductVersionRow {

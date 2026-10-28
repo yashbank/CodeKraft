@@ -35,7 +35,7 @@ export function ProductCardCompact({
           />
         </div>
       ) : (
-        <MediaPlaceholder alt={p.coverAlt} tone={p.coverTone} ratio="16/10" />
+        <MediaPlaceholder alt={p.coverAlt} label="No image yet" tone={p.coverTone} ratio="16/10" />
       )}
       <div className="space-y-1">
         <p className="text-overline tracking-wider text-fg-muted uppercase">{p.category.name}</p>

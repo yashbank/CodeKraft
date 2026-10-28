@@ -65,7 +65,12 @@ export function ProductCard({
             />
           </div>
         ) : (
-          <MediaPlaceholder alt={p.coverAlt} tone={p.coverTone} ratio="16/10" />
+          <MediaPlaceholder
+            alt={p.coverAlt}
+            label="No image yet"
+            tone={p.coverTone}
+            ratio="16/10"
+          />
         )}
         {p.isComingSoon ? (
           <Badge tone="warning" className="absolute top-5 left-5">

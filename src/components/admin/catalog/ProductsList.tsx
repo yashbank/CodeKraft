@@ -391,12 +391,23 @@ export function ProductsList({
                       </TableCell>
                       <TableCell>
                         <span className="flex items-center gap-3">
-                          <span
-                            aria-hidden
-                            className="grid size-9 shrink-0 place-items-center rounded-sm bg-elevated text-fg-subtle"
-                          >
-                            <PackageIcon className="size-4" />
-                          </span>
+                          {p.coverUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element -- admin thumbnail, tiny
+                            <img
+                              src={p.coverUrl}
+                              alt=""
+                              data-testid="product-row-thumb"
+                              className="size-9 shrink-0 rounded-sm bg-elevated object-cover"
+                            />
+                          ) : (
+                            <span
+                              data-testid="product-row-no-image"
+                              className="grid size-9 shrink-0 place-items-center rounded-sm bg-elevated text-fg-subtle"
+                            >
+                              <PackageIcon aria-hidden className="size-3.5" />
+                              <span className="text-[8px] leading-none">No image</span>
+                            </span>
+                          )}
                           <span className="min-w-0">
                             <Link
                               href={productHref(p.id)}

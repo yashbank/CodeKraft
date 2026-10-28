@@ -80,6 +80,7 @@ async function loadProduct(slug: string): Promise<ProductDetail | null> {
     alt: m.alt,
     caption: m.title ?? undefined,
     url: m.url || undefined,
+    mime: m.mime ?? undefined,
   }));
 
   const faqs: FaqItem[] = p.faqs.map((f) => ({
