@@ -111,3 +111,16 @@ describe("middleware host matrix (docs/04 §8, docs/09 §3.5)", () => {
     }
   });
 });
+
+describe("PDF preview framing (P2-04)", () => {
+  it("allows same-origin framing only for the product-media route", async () => {
+    const pdf = await middleware(
+      req("http://localhost:3000/api/files/product-media/abc", "localhost:3000"),
+    );
+    expect(pdf.headers.get("X-Frame-Options")).toBe("SAMEORIGIN");
+    expect(pdf.headers.get(HDR)).toContain("frame-ancestors 'self'");
+    const other = await middleware(req("http://localhost:3000/", "localhost:3000"));
+    expect(other.headers.get("X-Frame-Options")).toBe("DENY");
+    expect(other.headers.get(HDR)).toContain("frame-ancestors 'none'");
+  });
+});

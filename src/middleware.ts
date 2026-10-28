@@ -52,7 +52,11 @@ export function cspMode(): "enforce" | "report" {
   return process.env.CSP_MODE === "enforce" ? "enforce" : "report";
 }
 
-export function buildCsp(nonce: string, themeHash: string): { header: string; policy: string } {
+export function buildCsp(
+  nonce: string,
+  themeHash: string,
+  frameAncestors = "'none'",
+): { header: string; policy: string } {
   const dev = process.env.NODE_ENV !== "production";
   const media = originOf(process.env.NEXT_PUBLIC_MEDIA_BASE_URL);
   const umami = originOf(process.env.NEXT_PUBLIC_UMAMI_SRC);
@@ -72,11 +76,11 @@ export function buildCsp(nonce: string, themeHash: string): { header: string; po
     "font-src 'self' https://fonts.gstatic.com data:",
     `img-src ${list("'self'", "data:", "blob:", media, r2, "https://*.razorpay.com")}`,
     `connect-src ${list("'self'", turnstile, ...razorpayApi, "https://lumberjack.razorpay.com", media, r2, umami, sentry, "https://*.ingest.sentry.io", "https://*.ingest.us.sentry.io", dev && "ws:", dev && "wss:")}`,
-    `frame-src ${list("'self'", turnstile, ...razorpayApi)}`,
+    `frame-src ${list("'self'", turnstile, ...razorpayApi, media)}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self' https://api.razorpay.com https://checkout.razorpay.com",
-    "frame-ancestors 'none'",
+    `frame-ancestors ${frameAncestors}`,
     // Browsers ignore (and log a console error for) this directive in a report-only policy.
     ...(enforce ? ["upgrade-insecure-requests"] : []),
     "report-uri /api/csp-report",
@@ -106,7 +110,9 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   }
 
   const nonce = makeNonce();
-  const csp = buildCsp(nonce, await getThemeScriptHash());
+  // The inline PDF preview iframes this same-origin route from product pages.
+  const framable = pathname.startsWith("/api/files/product-media/");
+  const csp = buildCsp(nonce, await getThemeScriptHash(), framable ? "'self'" : "'none'");
   const reqHeaders = new Headers(req.headers);
   // Next.js reads the nonce from the request CSP header to stamp its own inline scripts.
   reqHeaders.set(csp.header, csp.policy);
@@ -146,7 +152,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
 
   // Security Headers (docs/09 §9, P9.1)
   res.headers.set("X-Content-Type-Options", "nosniff");
-  res.headers.set("X-Frame-Options", "DENY");
+  res.headers.set("X-Frame-Options", framable ? "SAMEORIGIN" : "DENY");
   res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   res.headers.set(
     "Permissions-Policy",

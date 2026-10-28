@@ -148,6 +148,8 @@ export interface ProductDetail extends ProductSummary {
   changelog: ChangelogEntry[];
   testimonials: Testimonial[];
   hasPresentation: boolean;
+  /** product_media.media_id of the presentation PDF (served by /api/files/product-media). */
+  presentationMediaId?: string;
   liveDemoUrl?: string;
   blog?: BlogTeaser;
 }
