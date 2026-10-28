@@ -261,12 +261,11 @@ export interface ApprovalItem {
   id: string;
   type: ApprovalType;
   subject: string;
-  /** Full subject id, shown in the detail pane. */
-  subjectId?: string;
   subjectHref?: string;
   requestedBy: AdminUserRef;
   requestedAt: string;
-  comment: string;
+  /** The requesting admin's reason, when they gave one. */
+  comment?: string;
   status: ApprovalStatus;
   /** Approver ids who have already recorded an approve decision (server truth). */
   approvedByIds?: string[];
