@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { LogoStrip, magnifyScale } from "@/components/site/LogoStrip";
@@ -8,9 +8,9 @@ const logos = [
   { id: "2", name: "Globex" },
 ];
 
-function mockMotion(reduce: boolean) {
+function mockMotion(reduce: boolean, fine = true) {
   window.matchMedia = vi.fn().mockImplementation((q: string) => ({
-    matches: reduce && q.includes("reduce"),
+    matches: q.includes("reduce") ? reduce : q.includes("pointer: fine") ? fine : false,
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
   })) as never;
@@ -33,6 +33,19 @@ describe("LogoStrip", () => {
     expect(screen.getAllByAltText("Acme").length).toBeGreaterThan(0);
     expect(container.innerHTML).toContain("ck-marquee");
     expect(container.querySelector("a")?.tabIndex).toBe(0);
+  });
+
+  it("magnifies on hover for fine pointers only", async () => {
+    for (const fine of [true, false]) {
+      mockMotion(false, fine);
+      const { container, unmount } = render(<LogoStrip logos={logos} />);
+      const li = container.querySelector<HTMLElement>("[data-logo]")!;
+      await vi.waitFor(() => {
+        fireEvent.pointerMove(container.firstElementChild!, { clientX: 0 });
+        expect(li.style.transform !== "").toBe(fine);
+      });
+      unmount();
+    }
   });
 
   it("reduced motion: no marquee, no duplicate copy", async () => {

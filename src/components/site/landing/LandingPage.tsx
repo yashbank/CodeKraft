@@ -71,7 +71,7 @@ export function LandingPage({
   return (
     <>
       <StoryRail chapters={CHAPTERS} />
-      <LandingHero content={content.who} logos={logos} serviceOptions={serviceOptions} />
+      <LandingHero content={content.who} serviceOptions={serviceOptions} />
 
       <Chapter
         id="build"
@@ -143,9 +143,6 @@ export function LandingPage({
         body={content.proof.body}
       >
         <div className="space-y-12">
-          <Reveal>
-            <LogoStrip logos={logos} />
-          </Reveal>
           {content.proof.stats.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-3">
               {content.proof.stats.map((s, i) => (
@@ -181,6 +178,12 @@ export function LandingPage({
           <ChapterCtas cta={content.proof.cta} className="" />
         </div>
       </Chapter>
+
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
+        <Reveal>
+          <LogoStrip logos={logos} />
+        </Reveal>
+      </div>
 
       <Chapter
         id="talk"

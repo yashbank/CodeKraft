@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button";
 
 import { Container } from "../Container";
 import { InquirySheet } from "../InquirySheet";
-import { LogoStrip } from "../LogoStrip";
-import type { ClientLogo, LandingContent, ServiceOption } from "../types";
+import type { LandingContent, ServiceOption } from "../types";
 import { HeroPoster } from "./HeroPoster";
 
 /** Stored CTA target that opens the inquiry sheet instead of navigating. */
@@ -18,16 +17,14 @@ const INQUIRY_HREF = "/contact#inquiry";
 /**
  * Hero / chapter 01 "Who we are" (docs/08 §6.5): overline, display-xl h1 with gradient on the
  * last two words, lede, `primary xl` "Start a project" (opens the InquirySheet) + `secondary xl`
- * "Explore products", trust logos, scroll cue. Text sits on solid canvas; the poster/scene never
+ * "Explore products", scroll cue. Text sits on solid canvas; the poster/scene never
  * carries contrast.
  */
 export function LandingHero({
   content,
-  logos,
   serviceOptions,
 }: {
   content: LandingContent["who"];
-  logos: ClientLogo[];
   serviceOptions: ServiceOption[];
 }) {
   const [open, setOpen] = useState(false);
@@ -80,11 +77,6 @@ export function LandingHero({
               </Button>
             ) : null}
           </div>
-          <LogoStrip
-            logos={logos.slice(0, 4)}
-            label="Trusted by"
-            className="justify-start gap-x-6 pt-4 sm:justify-start"
-          />
         </div>
         <div className="lg:col-span-6 lg:h-[min(70svh,720px)]">
           <HeroPoster src={content.poster?.url} alt={content.poster?.alt} />

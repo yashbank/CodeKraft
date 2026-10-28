@@ -17,6 +17,19 @@ export function magnifyScale(distance: number, max = MAX_SCALE, radius = RADIUS)
   return 1 + (max - 1) * ((1 + Math.cos((Math.PI * d) / radius)) / 2);
 }
 
+/** Magnify only where a real hover pointer exists; touch/coarse devices never magnify. */
+function useFinePointer(): boolean {
+  const [fine, setFine] = React.useState(false);
+  React.useEffect(() => {
+    const mq = window.matchMedia("(hover: hover) and (pointer: fine)");
+    const sync = () => setFine(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  return fine;
+}
+
 function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = React.useState(false);
   React.useEffect(() => {
@@ -46,6 +59,7 @@ export function LogoStrip({
   className?: string;
 }) {
   const reduced = usePrefersReducedMotion();
+  const finePointer = useFinePointer();
   const trackRef = React.useRef<HTMLDivElement>(null);
   if (logos.length === 0) return null;
 
@@ -56,7 +70,7 @@ export function LogoStrip({
         <li
           key={`${copy}-${l.id}`}
           data-logo
-          className="group origin-center font-display text-body-lg font-semibold tracking-tight text-fg-subtle opacity-70 transition-[color,opacity,transform] duration-(--ck-motion-duration-sm) hover:text-fg hover:opacity-100"
+          className="group flex h-8 shrink-0 origin-center items-center whitespace-nowrap font-display text-body-lg font-semibold tracking-tight text-fg-subtle opacity-70 transition-[color,opacity,transform] duration-(--ck-motion-duration-sm) hover:text-fg hover:opacity-100"
         >
           {l.href ? (
             <a href={l.href} target="_blank" rel="noopener noreferrer" tabIndex={copy ? -1 : 0}>
@@ -97,19 +111,22 @@ export function LogoStrip({
 
   return (
     <div
-      className={cn("overflow-hidden py-6", className)}
-      onPointerMove={magnify}
-      onPointerLeave={reset}
+      className={cn("w-full max-w-full overflow-hidden py-6", className)}
+      onPointerMove={finePointer ? magnify : undefined}
+      onPointerLeave={finePointer ? reset : undefined}
     >
       <div
         ref={trackRef}
-        className="flex w-max animate-[ck-marquee_40s_linear_infinite] hover:[animation-play-state:paused] focus-within:[animation-play-state:paused]"
+        className="flex w-max will-change-transform animate-[ck-marquee_40s_linear_infinite] hover:[animation-play-state:paused] focus-within:[animation-play-state:paused]"
       >
-        <ul aria-label={label} className="flex shrink-0 items-center gap-x-12 pr-12">
+        <ul
+          aria-label={label}
+          className="flex shrink-0 items-center gap-x-8 pr-8 md:gap-x-12 md:pr-12"
+        >
           {items(0)}
         </ul>
         {/* Second copy makes the -50% loop seamless; hidden from AT and the tab order. */}
-        <ul aria-hidden className="flex shrink-0 items-center gap-x-12 pr-12">
+        <ul aria-hidden className="flex shrink-0 items-center gap-x-8 pr-8 md:gap-x-12 md:pr-12">
           {items(1)}
         </ul>
       </div>

@@ -36,7 +36,6 @@ describe("LandingHero stored CTA", () => {
             secondary: { label: "Read more", href: "https://x.y" },
           },
         }}
-        logos={[]}
         serviceOptions={[]}
       />,
     );
@@ -46,7 +45,7 @@ describe("LandingHero stored CTA", () => {
     expect(html).toContain("Read more");
   });
   it("falls back to defaults when nothing is stored", () => {
-    const html = renderToStaticMarkup(<LandingHero content={who} logos={[]} serviceOptions={[]} />);
+    const html = renderToStaticMarkup(<LandingHero content={who} serviceOptions={[]} />);
     expect(html).toContain("Start a project");
     expect(html).toContain('href="/products"');
   });
@@ -57,7 +56,6 @@ describe("secondary CTA and chapter CTAs", () => {
     const html = renderToStaticMarkup(
       <LandingHero
         content={{ ...who, cta: { primary: { label: "Go", href: "/services" } } }}
-        logos={[]}
         serviceOptions={[]}
       />,
     );

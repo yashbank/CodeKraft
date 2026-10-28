@@ -99,6 +99,30 @@ describe("Phase 7: Public Site & Customer UI", () => {
     expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
   });
 
+  it("renders exactly one logo strip, below Proof, none in the hero", () => {
+    const { container } = render(
+      <LandingPage
+        content={LANDING}
+        services={SERVICES}
+        serviceOptions={SERVICE_OPTIONS}
+        featuredProducts={FEATURED_PRODUCTS}
+        caseStudies={CASE_STUDIES}
+        testimonials={TESTIMONIALS}
+        logos={CLIENT_LOGOS}
+        blogTeasers={BLOG_POSTS}
+        faqs={[]}
+      />,
+    );
+    const visible = screen.getAllByRole("list", { name: "Clients" });
+    expect(visible).toHaveLength(1);
+    expect(visible[0]!.querySelectorAll("[data-logo]")).toHaveLength(CLIENT_LOGOS.length);
+    expect(screen.queryByRole("list", { name: "Trusted by" })).not.toBeInTheDocument();
+    // aria-hidden duplicate is the marquee loop copy, not a second strip
+    expect(container.querySelectorAll("[data-logo]")).toHaveLength(CLIENT_LOGOS.length * 2);
+    expect(container.querySelector("#who [data-logo]")).toBeNull();
+    expect(container.querySelector("#proof [data-logo]")).toBeNull();
+  });
+
   it("renders the FAQ accordion when faqs exist, and omits it when empty (BUG-037)", () => {
     const base = {
       content: LANDING,
