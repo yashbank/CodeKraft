@@ -96,6 +96,7 @@ export interface AccountShellProps {
   onCurrencyChange?: (c: Currency) => void;
   notifications: NotificationItem[];
   unreadCount: number;
+  onMarkAllRead?: () => void;
   now: string;
   /** Checkout / quote: sidebar and tab bar hidden, "Back to …" link in the top bar. */
   minimal?: { backHref: string; backLabel: string };
@@ -118,6 +119,7 @@ export function AccountShell({
   onCurrencyChange,
   notifications,
   unreadCount,
+  onMarkAllRead,
   now,
   minimal,
   links,
@@ -282,6 +284,7 @@ export function AccountShell({
             <NotificationBell
               items={notifications}
               unreadCount={unreadCount}
+              onMarkAllRead={onMarkAllRead}
               now={now}
               viewAllHref={links?.notifications ?? "/account/notifications"}
             />

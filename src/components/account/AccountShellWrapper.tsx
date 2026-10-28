@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 
 import { AccountShell, type AccountNavKey } from "./AccountShell";
@@ -8,6 +8,10 @@ import { Banner } from "./Banner";
 import { ResendVerificationButton } from "./ResendVerificationButton";
 import type { NotificationItem } from "./types";
 import type { Currency } from "@/lib/money";
+import { markAllMyNotificationsRead } from "@/modules/notifications/site-mutations";
+
+/** Re-fetch server state (bell, badge, inbox share it) while the tab is visible. */
+const NOTIFICATION_POLL_MS = 30_000;
 
 interface AccountShellWrapperProps {
   user: { name: string; email: string; initials: string };
@@ -26,6 +30,13 @@ export function AccountShellWrapper({
   children,
 }: AccountShellWrapperProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  React.useEffect(() => {
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") router.refresh();
+    }, NOTIFICATION_POLL_MS);
+    return () => window.clearInterval(id);
+  }, [router]);
   const [currency, setCurrency] = React.useState<Currency>("INR");
 
   let active: AccountNavKey = "overview";
@@ -48,6 +59,7 @@ export function AccountShellWrapper({
       onCurrencyChange={setCurrency}
       notifications={notifications}
       unreadCount={unreadCount}
+      onMarkAllRead={() => void markAllMyNotificationsRead()}
       now={new Date().toISOString()}
     >
       {/* The overview renders its own verification banner; chat shows an inline one. */}

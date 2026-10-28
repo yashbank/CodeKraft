@@ -8,6 +8,10 @@ import { AdminShell, type AdminRoute } from "./AdminShell";
 import type { AdminNotification, AdminUserRef } from "./types";
 import { searchAdmin } from "@/lib/admin/global-search";
 import { mapNotificationItem } from "@/lib/admin/notifications-view";
+import {
+  markAllNotificationsRead,
+  markNotificationsRead,
+} from "@/modules/notifications/admin-mutations";
 import type { PollNotificationsResult } from "@/modules/notifications/types";
 import { PRIYA } from "@/app/dev/screens/_fixtures/admin";
 
@@ -84,6 +88,7 @@ interface AdminShellWrapperProps {
   user?: AdminUserRef;
   pendingApprovals?: number;
   notifications?: AdminNotification[];
+  unreadCount?: number;
   environment?: "development" | "staging" | "production";
   children: React.ReactNode;
 }
@@ -92,11 +97,12 @@ export function AdminShellWrapper({
   user = PRIYA,
   pendingApprovals = 0,
   notifications = [],
+  unreadCount,
   environment = "development",
   children,
 }: AdminShellWrapperProps) {
   const pathname = usePathname();
-  const live = useLiveAdminNotifications(notifications);
+  useLiveAdminNotifications(unreadCount ?? 0);
 
   // Strip /admin prefix if present, or keep path
   let active: AdminRoute = "/dashboard";
@@ -116,7 +122,10 @@ export function AdminShellWrapper({
       user={user}
       environment={environment}
       pendingApprovals={pendingApprovals}
-      notifications={live}
+      notifications={notifications}
+      unreadCount={unreadCount}
+      onMarkAllRead={() => void markAllNotificationsRead()}
+      onMarkRead={(id) => void markNotificationsRead({ notificationIds: [id] })}
       now={new Date().toISOString()}
       title={title}
       routes={ADMIN_ROUTE_MAP}
@@ -136,23 +145,11 @@ export const ADMIN_NOTIFICATION_POLL_MS = 20_000;
  * `GET /api/notifications` while the tab is visible, prepend new items to the bell, and toast
  * each one with an "Open" action.
  */
-function useLiveAdminNotifications(initial: AdminNotification[]): AdminNotification[] {
+function useLiveAdminNotifications(unreadCount: number): void {
   const router = useRouter();
-  const [items, setItems] = React.useState<AdminNotification[]>(initial);
   const sinceRef = React.useRef<string>(new Date().toISOString());
-
-  // Keyed by content, not identity: callers may pass a fresh `[]` default on every render.
-  const initialKey = initial.map((n) => `${n.id}:${n.read ? 1 : 0}`).join(",");
-  const initialRef = React.useRef(initial);
-  initialRef.current = initial;
-  React.useEffect(() => {
-    // A server re-render hands down a fresh unread list; keep unread polled extras on top.
-    const next = initialRef.current;
-    setItems((prev) => {
-      const ids = new Set(next.map((n) => n.id));
-      return [...prev.filter((n) => !ids.has(n.id) && !n.read), ...next];
-    });
-  }, [initialKey]);
+  const countRef = React.useRef(unreadCount);
+  countRef.current = unreadCount;
 
   React.useEffect(() => {
     let stopped = false;
@@ -168,11 +165,8 @@ function useLiveAdminNotifications(initial: AdminNotification[]): AdminNotificat
         if (!body.ok || !body.data) return;
         sinceRef.current = body.data.serverTime;
         const fresh = body.data.items.map(mapNotificationItem);
-        if (fresh.length === 0) return;
-        setItems((prev) => {
-          const seen = new Set(prev.map((n) => n.id));
-          return [...fresh.filter((n) => !seen.has(n.id)), ...prev];
-        });
+        // Layout is the single source of bell list + badge: re-render it on new items or count drift.
+        if (fresh.length > 0 || body.data.unreadCount !== countRef.current) router.refresh();
         for (const n of fresh.slice(0, 3)) {
           const href = n.href;
           toast(n.title, {
@@ -193,6 +187,4 @@ function useLiveAdminNotifications(initial: AdminNotification[]): AdminNotificat
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [router]);
-
-  return items;
 }
