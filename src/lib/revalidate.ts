@@ -3,7 +3,7 @@
  * Wraps Next.js `revalidateTag` so it never crashes outside a request context
  * (e.g. background jobs, CLI scripts, or Vitest runs).
  */
-import { revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 export const CATALOG_TAGS = {
   catalog: "catalog",
@@ -69,5 +69,14 @@ export function revalidateTagSafe(tag: string): void {
 export function revalidateTagsSafe(tags: readonly string[]): void {
   for (const tag of tags) {
     revalidateTagSafe(tag);
+  }
+}
+
+/** Revalidates a route path safely (same no-op semantics as the tag helpers). */
+export function revalidatePathSafe(path: string): void {
+  try {
+    revalidatePath(path);
+  } catch {
+    // Outside a Next request lifecycle; ignore.
   }
 }

@@ -17,7 +17,7 @@ import type { Context, RequestContext } from "@/lib/authz/context";
 import { assertPermission } from "@/lib/authz/assert";
 import type { DbOrTx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
-import { revalidateTagsSafe } from "@/lib/revalidate";
+import { revalidatePathSafe, revalidateTagsSafe } from "@/lib/revalidate";
 import { triggerReindexSafe } from "@/modules/search/indexer";
 import { getPublicMediaBaseUrl } from "@/lib/storage";
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
@@ -844,6 +844,7 @@ export class DefaultContentService implements ContentService {
       throw new AppError(ErrorCode.INTERNAL, "Failed to snapshot legal page version");
 
     revalidateTagsSafe(["content"]);
+    revalidatePathSafe(`/legal/${input.key}`);
     await triggerReindexSafe("legal", existing.id, client);
     return { page: updatedPage, version: versionRow };
   }
@@ -1323,10 +1324,18 @@ export class DefaultContentService implements ContentService {
       throw new AppError(ErrorCode.NOT_FOUND, `Legal page '${input.key}' not found`);
     }
 
+    // Public readers get the last published snapshot, never the unpublished working draft.
+    const [latest] = await client
+      .select()
+      .from(legalPageVersions)
+      .where(eq(legalPageVersions.legalPageId, page.id))
+      .orderBy(desc(legalPageVersions.version))
+      .limit(1);
+
     return {
       key: page.key,
       title: page.title,
-      html: renderToHtml(page.bodyJson as unknown as RichTextDoc),
+      html: renderToHtml((latest?.bodyJson ?? page.bodyJson) as unknown as RichTextDoc),
       version: page.version,
       publishedAt: page.publishedAt ? page.publishedAt.toISOString() : null,
     };
