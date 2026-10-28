@@ -30,7 +30,7 @@ import { cn } from "@/components/ui/_utils";
 import { STATUS_ENUMS } from "@/lib/status-tone";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
-import { formatDateTime, inr, timeAgo } from "../format";
+import { drCr, formatDateTime, inr, ledgerTotals, money, timeAgo } from "../format";
 import { MoneyCell } from "../MoneyCell";
 import { PageHeader } from "../PageHeader";
 import { RowActions } from "../RowActions";
@@ -72,8 +72,7 @@ export function LedgerScreen({
   const [currency, setCurrency] = React.useState<"native" | "inr">("native");
   const [expanded, setExpanded] = React.useState<number | null>(null);
   const rows = entries.filter((e) => (type === "all" ? true : e.type === type));
-  const credits = rows.filter((e) => e.amountInr > 0).reduce((s, e) => s + e.amountInr, 0);
-  const debits = rows.filter((e) => e.amountInr < 0).reduce((s, e) => s + e.amountInr, 0);
+  const { credits, debits, net } = ledgerTotals(rows.map((e) => e.amountInr));
 
   return (
     <TooltipProvider>
@@ -202,7 +201,7 @@ export function LedgerScreen({
       <div className="mb-4 grid gap-3 sm:grid-cols-4">
         <StatTile label="Σ credits" value={inr(credits)} />
         <StatTile label="Σ debits" value={inr(debits)} deltaTone="danger" />
-        <StatTile label="Net" value={inr(credits + debits)} />
+        <StatTile label="Net" value={inr(net)} />
         <StatTile label="Entries" value={rows.length} />
       </div>
       {rows.length === 0 ? (
@@ -220,10 +219,11 @@ export function LedgerScreen({
                 <TableHead>Type</TableHead>
                 <TableHead>Party</TableHead>
                 <TableHead>Order</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="text-right">Debit</TableHead>
+                <TableHead className="text-right">Credit</TableHead>
                 <TableHead>Ccy</TableHead>
                 <TableHead className="text-right">FX</TableHead>
-                <TableHead className="text-right">Amount INR</TableHead>
+                <TableHead className="text-right">Amount INR (Dr/Cr)</TableHead>
                 <TableHead>Memo</TableHead>
                 <TableHead>Ref</TableHead>
                 <TableHead>Created by</TableHead>
@@ -269,22 +269,33 @@ export function LedgerScreen({
                           <span className="text-fg-subtle">—</span>
                         )}
                       </TableCell>
-                      <TableCell>
-                        <MoneyCell
-                          value={
-                            currency === "inr"
-                              ? { amountMinor: e.amountInr, currency: "INR" }
-                              : e.amount
-                          }
-                          signed
-                        />
-                      </TableCell>
+                      {(() => {
+                        const shown =
+                          currency === "inr"
+                            ? { amountMinor: e.amountInr, currency: "INR" }
+                            : e.amount;
+                        const { debit, credit } = drCr(shown.amountMinor);
+                        const cell = (n: number, tone?: string) => (
+                          <TableCell className={cn("text-right font-mono tnum", tone)}>
+                            {n ? money({ amountMinor: n, currency: shown.currency }) : "—"}
+                          </TableCell>
+                        );
+                        return (
+                          <>
+                            {cell(debit, "text-danger")}
+                            {cell(credit)}
+                          </>
+                        );
+                      })()}
                       <TableCell className="font-mono text-fg-muted">{e.amount.currency}</TableCell>
                       <TableCell className="text-right font-mono text-caption text-fg-muted">
                         {e.fxRate ?? "—"}
                       </TableCell>
                       <TableCell>
-                        <MoneyCell value={{ amountMinor: e.amountInr, currency: "INR" }} signed />
+                        <MoneyCell
+                          value={{ amountMinor: Math.abs(e.amountInr), currency: "INR" }}
+                          className={e.amountInr < 0 ? "text-danger" : undefined}
+                        />
                       </TableCell>
                       <TableCell className="max-w-56 text-fg-muted">
                         <span className="block truncate" title={e.memo ?? undefined}>
@@ -328,7 +339,7 @@ export function LedgerScreen({
                     </TableRow>
                     {open ? (
                       <TableRow id={`posting-${e.seq}`}>
-                        <TableCell colSpan={13} className="bg-canvas whitespace-normal">
+                        <TableCell colSpan={14} className="bg-canvas whitespace-normal">
                           <p className="mb-2 text-body-sm font-semibold">
                             Posting {e.ref} · {siblings.length + 1} entries
                           </p>
@@ -352,7 +363,13 @@ export function LedgerScreen({
                                     />
                                     <span className="text-fg-muted">{s.party}</span>
                                   </span>
-                                  <MoneyCell value={s.amount} signed />
+                                  <MoneyCell
+                                    value={{
+                                      ...s.amount,
+                                      amountMinor: Math.abs(s.amount.amountMinor),
+                                    }}
+                                    className={s.amount.amountMinor < 0 ? "text-danger" : undefined}
+                                  />
                                 </li>
                               ))}
                           </ul>

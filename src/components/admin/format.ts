@@ -27,6 +27,22 @@ export function signedMoney(m: MoneyLike): { text: string; label: string; negati
   };
 }
 
+/** Ledger sign convention: negative = debit, positive = credit; both shown as positive amounts. */
+export function drCr(amountMinor: number): { debit: number; credit: number } {
+  return { debit: amountMinor < 0 ? -amountMinor : 0, credit: amountMinor > 0 ? amountMinor : 0 };
+}
+
+/** Σ debits (positive), Σ credits, net = credits − debits over signed minor amounts. */
+export function ledgerTotals(amountsMinor: number[]): {
+  debits: number;
+  credits: number;
+  net: number;
+} {
+  const debits = amountsMinor.reduce((s, a) => s + drCr(a).debit, 0);
+  const credits = amountsMinor.reduce((s, a) => s + drCr(a).credit, 0);
+  return { debits, credits, net: credits - debits };
+}
+
 /** `""` / malformed input (e.g. a never-run index timestamp) renders "—" instead of throwing RangeError. */
 const isValidDate = (iso: string) => !Number.isNaN(new Date(iso).getTime());
 
