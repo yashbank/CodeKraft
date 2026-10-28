@@ -154,8 +154,8 @@ export interface ProductDetail extends ProductSummary {
   blog?: BlogTeaser;
 }
 
-export type ServiceIconName =
-  "layout" | "smartphone" | "cloud" | "globe" | "pen-tool" | "sparkles" | "wrench" | "compass";
+export type { ServiceIconName } from "./service-icons";
+import type { ServiceIconName } from "./service-icons";
 
 export interface Service {
   slug: string;
