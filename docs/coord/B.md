@@ -15,9 +15,9 @@ Updated: 2026-10-29
 - P3-03 | ready | branch feat/p3-03-case-studies | vitest tests/unit/admin/case-study-sync.test.ts: 3 pass; e2e tests/e2e/flows/case-studies.spec.ts not run (needs DB+server)
 - P3-04 | ready | branch feat/p3-04-landing-labels (base 406027c) | vitest tests/unit/content/landing-field-help.test.ts: 3 pass
 - P3-05 | ready | branch feat/p3-05-cta-target (stacked on P3-04, merge P3-04 first) | vitest tests/unit/content: 23 pass
-- P4-01 | doing | branch feat/p4-01-theme-palette
+- P4-01 | ready | branch feat/p4-01-theme-palette | vitest tests/unit/palettes/palettes.test.tsx: 12 pass (WCAG AA for all 8 palettes)
 - P4-02 | doing | branch feat/p4-02-settings-propagation
-- P4-03 | doing | branch feat/p4-03-ai-settings
+- P4-03 | ready | branch feat/p4-03-ai-settings | vitest tests/unit/chat: 9 pass (new ai-settings.test.ts)
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
 - [open] R2 private bucket CORS must allow PUT from the admin origin | P2-01 browser uploads straight to R2 | upload a .dmg on a product version, it completes and appears
@@ -31,3 +31,5 @@ Updated: 2026-10-29
 - 2026-10-29 P2-02, P2-03 ready. Phase 2 complete. P2-02: the confirm-payment dialog has an optional licence key for each licence item, saved in the same transaction. P2-03: the Download button was fake (it waited 600 ms and did nothing); it now opens the real download route, and "no cap" shows as Unlimited. Live test: confirm a test order with a key, then download and reveal it as the customer.
 - 2026-10-29 P3-01 ready. The public /legal pages showed hard-coded copy and never read the database. They now show the last published version and refresh when a page is published. P3-02 ready: client logos scroll with a Dock-style magnify effect, off when the user prefers reduced motion; admins can reorder logos. P3-03 ready: the editor kept a stale copy after saving, so a second save hit the duplicate-slug error and Publish stayed disabled. Please run the new case-studies e2e in the full gate.
 - 2026-10-29 P3-04, P3-05 ready. Phase 3 complete. The landing page used to ignore the CTAs saved in content. The hero and the Build/Sell/Proof/Talk sections now use them; an empty secondary hides that button. Stored links are re-checked when the page renders, so old unsafe values are dropped.
+- 2026-10-29 P4-01 ready. Theme is no longer locked. New "visitors can switch theme" toggle and 8 accent palettes, applied site-wide from the root layout. Light theme no longer needs the FEATURE_THEME_LIGHT_EDITORIAL env flag. No migration (key/value settings).
+- 2026-10-29 P4-03 ready. Model picker is sorted cheapest first with prices: Haiku 5.5 $0.10/$0.50, GPT-4o mini, Sonnet 5.5 $2/$10, Opus 5.5 $4/$20 per MTok. Default model, caps and timeout now come from settings and are enforced; the Anthropic provider gained a timeout and real errors. Open findings (not fixed): retrieval is never wired, so the chat has no knowledge grounding; Anthropic is not sent the capture_lead tool; LLM_PROVIDER vs AI_PROVIDER env name mismatch.
