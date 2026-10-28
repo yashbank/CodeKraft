@@ -41,7 +41,7 @@ import type {
 import { INVOICE_PDF_URL_TTL_SECONDS } from "./types";
 import { computeFy, nextCreditNoteNumber, nextInvoiceNumber } from "./numbering";
 import { computeGstBreakdown } from "./gst";
-import { buildPdfBuffer, uploadDocumentPdf } from "./pdf";
+import { buildInvoicePdf, buildPdfBuffer, fetchLogo, uploadDocumentPdf } from "./pdf";
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
 
 /** Seller block for a NEW invoice, from current settings; issued invoices keep their stored snapshot. */
@@ -466,14 +466,29 @@ export class DefaultInvoicesService implements InvoicesService {
     }
 
     const objectKey = `invoices/${invoice.fy}/${invoice.invoiceNo.replace(/\//g, "-")}.pdf`;
-    const lines = [
-      `Invoice Number: ${invoice.invoiceNo}`,
-      `Date: ${invoice.issuedAt.toISOString()}`,
-      `Seller: ${invoice.sellerSnapshot.name}`,
-      `Buyer: ${invoice.buyerSnapshot.name}`,
-      `Total: ${invoice.currency} ${toDecimalString(invoice.totalMinor)}`,
-    ];
-    const pdfBuf = buildPdfBuffer(`Tax Invoice - ${invoice.invoiceNo}`, lines);
+    const [order] = await tx
+      .select({ orderNo: orders.orderNo })
+      .from(orders)
+      .where(eq(orders.id, invoice.orderId))
+      .limit(1);
+    // Renders from the stored snapshot, never current settings.
+    const pdfBuf = buildInvoicePdf(
+      {
+        invoiceNo: invoice.invoiceNo,
+        issuedAt: invoice.issuedAt.toISOString().slice(0, 10),
+        orderNo: order?.orderNo,
+        seller: invoice.sellerSnapshot,
+        buyer: invoice.buyerSnapshot,
+        lines: invoice.lines,
+        subtotalMinor: invoice.subtotalMinor,
+        discountMinor: invoice.discountMinor,
+        taxMinor: invoice.taxMinor,
+        totalMinor: invoice.totalMinor,
+        currency: invoice.currency,
+        gstBreakdown: invoice.gstBreakdown,
+      },
+      await fetchLogo(invoice.sellerSnapshot.logo_url),
+    );
 
     await uploadDocumentPdf(objectKey, pdfBuf);
 
