@@ -139,6 +139,7 @@ async function loadProduct(slug: string): Promise<ProductDetail | null> {
     changelog,
     testimonials,
     hasPresentation: p.media.some((m) => m.kind === "presentation"),
+    presentationMediaId: p.media.find((m) => m.kind === "presentation")?.mediaId ?? undefined,
     liveDemoUrl: p.liveDemoUrl ?? undefined,
   };
 }

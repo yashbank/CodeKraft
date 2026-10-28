@@ -1,7 +1,5 @@
 "use client";
 
-import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, MaximizeIcon } from "lucide-react";
-
 import {
   Accordion,
   AccordionContent,
@@ -9,7 +7,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { formatDate } from "../_format";
@@ -136,7 +133,9 @@ export function ProductTabs({ product }: { product: ProductDetail }) {
     tabs.push({
       id: "presentation",
       label: "Presentation",
-      content: <PresentationViewer title={`${p.name} overview deck`} />,
+      content: (
+        <PresentationViewer title={`${p.name} overview deck`} mediaId={p.presentationMediaId} />
+      ),
     });
   }
 
@@ -197,32 +196,35 @@ function ChipBlock({ title, items }: { title: string; items: string[] }) {
   );
 }
 
-/** pdf.js viewer placeholder (D-805): real page controls, "Download PDF" always available. */
-function PresentationViewer({ title }: { title: string }) {
+/** Inline PDF preview via the browser's native viewer; "Open PDF" is the fallback. */
+export function PresentationViewer({ title, mediaId }: { title: string; mediaId?: string }) {
+  const src = mediaId ? `/api/files/product-media/${mediaId}` : undefined;
   return (
     <figure className="overflow-hidden rounded-lg border border-border bg-surface">
-      <div
-        role="img"
-        aria-label={`${title} — page 1 of 12`}
-        className="flex aspect-[16/9] items-center justify-center bg-[image:var(--ck-gradient-brand-muted)] text-body-sm text-fg-muted"
-      >
-        Presentation viewer (pdf.js, P7) — page 1 / 12
-      </div>
-      <figcaption className="flex flex-wrap items-center gap-2 border-t border-border p-3">
-        <Button type="button" variant="ghost" size="icon-sm" aria-label="Previous page" disabled>
-          <ChevronLeftIcon aria-hidden />
-        </Button>
-        <span className="text-body-sm text-fg-muted tnum">1 / 12</span>
-        <Button type="button" variant="ghost" size="icon-sm" aria-label="Next page">
-          <ChevronRightIcon aria-hidden />
-        </Button>
-        <Button type="button" variant="ghost" size="icon-sm" aria-label="Full screen">
-          <MaximizeIcon aria-hidden />
-        </Button>
-        <Button type="button" variant="secondary" size="sm" className="ml-auto">
-          <DownloadIcon aria-hidden /> Download PDF
-        </Button>
-      </figcaption>
+      {src ? (
+        <iframe
+          src={src}
+          title={title}
+          data-testid="pdf-preview"
+          className="aspect-[16/9] w-full bg-elevated"
+        />
+      ) : (
+        <div className="flex aspect-[16/9] items-center justify-center bg-elevated text-body-sm text-fg-muted">
+          Preview unavailable
+        </div>
+      )}
+      {src ? (
+        <figcaption className="flex items-center border-t border-border p-3">
+          <a
+            href={src}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto text-body-sm font-medium text-accent hover:underline"
+          >
+            Open PDF
+          </a>
+        </figcaption>
+      ) : null}
     </figure>
   );
 }

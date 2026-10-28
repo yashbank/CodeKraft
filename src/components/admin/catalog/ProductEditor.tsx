@@ -1535,17 +1535,33 @@ export function ProductEditor({
                     >
                       <PlayIcon aria-hidden className="size-5" />
                     </a>
+                  ) : m.kind === "presentation" ? (
+                    <>
+                      <iframe
+                        src={`/api/files/product-media/${m.mediaId}`}
+                        title={`PDF preview: ${m.fileName}`}
+                        data-testid="media-preview-pdf"
+                        className="h-24 w-32 rounded-sm bg-elevated"
+                      />
+                      <a
+                        href={`/api/files/product-media/${m.mediaId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Open ${m.fileName}`}
+                        className="text-caption font-medium text-accent hover:underline"
+                      >
+                        Open PDF
+                      </a>
+                    </>
                   ) : (
                     <a
-                      href={
-                        m.kind === "presentation" ? `/api/files/product-media/${m.mediaId}` : m.url
-                      }
+                      href={m.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={`Open ${m.fileName}`}
                       className="grid size-12 place-items-center rounded-sm bg-elevated text-caption font-medium text-accent hover:underline"
                     >
-                      {m.kind === "presentation" ? "PDF" : "File"}
+                      File
                     </a>
                   )}
                   <span className="min-w-0 flex-1">
