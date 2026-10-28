@@ -20,6 +20,11 @@ Updated: 2026-10-29
 - P4-03 | ready | branch feat/p4-03-ai-settings | vitest tests/unit/chat: 9 pass (new ai-settings.test.ts)
 - P5-01 | ready | branch feat/p5-01-service-icons | vitest tests/unit/site/service-icons.test.tsx: 3 pass; services-editor.test.tsx: 3 pass
 - P5-02 | ready | branch feat/p5-02-service-cards (stacked on P5-01, merge P5-01 first) | vitest tests/unit/site: 39 pass
+- P6-01 | doing | branch feat/p6-01-logo-strip-once
+- P6-02 | doing | branch feat/p6-02-site-logo
+- P6-05 | doing | branch feat/p6-05-reset-site-data
+- P6-03 | todo | after P6-02 (stacked: invoice logo)
+- P6-04 | todo | last (UI sweep)
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
 - [open] R2 private bucket CORS must allow PUT from the admin origin | P2-01 browser uploads straight to R2 | upload a .dmg on a product version, it completes and appears
