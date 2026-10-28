@@ -32,7 +32,12 @@ export function LandingHero({
 }) {
   const [open, setOpen] = useState(false);
   const primary = content.cta?.primary ?? { label: "Start a project", href: INQUIRY_HREF };
-  const secondary = content.cta?.secondary ?? { label: "Explore products", href: "/products" };
+  // Never-set content shows the default; once saved, an empty secondary hides the button.
+  const secondary = content.cta
+    ? content.cta.secondary?.label && content.cta.secondary.href
+      ? content.cta.secondary
+      : null
+    : { label: "Explore products", href: "/products" };
   const words = content.title.split(" ");
   const head = words.slice(0, -2).join(" ");
   const tail = words.slice(-2).join(" ");
@@ -69,9 +74,11 @@ export function LandingHero({
                 <Link href={primary.href}>{primary.label}</Link>
               </Button>
             )}
-            <Button asChild variant="secondary" size="xl" className="w-full sm:w-auto">
-              <Link href={secondary.href}>{secondary.label}</Link>
-            </Button>
+            {secondary ? (
+              <Button asChild variant="secondary" size="xl" className="w-full sm:w-auto">
+                <Link href={secondary.href}>{secondary.label}</Link>
+              </Button>
+            ) : null}
           </div>
           <LogoStrip
             logos={logos.slice(0, 4)}

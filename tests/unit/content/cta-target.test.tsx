@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { resolveCtaHref } from "@/components/admin/content/cta-targets";
+import { ChapterCtas } from "@/components/site/landing/ChapterCtas";
 import { LandingHero } from "@/components/site/landing/LandingHero";
 import { hrefSchema } from "@/modules/content/contracts";
 
@@ -48,5 +49,38 @@ describe("LandingHero stored CTA", () => {
     const html = renderToStaticMarkup(<LandingHero content={who} logos={[]} serviceOptions={[]} />);
     expect(html).toContain("Start a project");
     expect(html).toContain('href="/products"');
+  });
+});
+
+describe("secondary CTA and chapter CTAs", () => {
+  it("hides the hero secondary when its label is cleared", () => {
+    const html = renderToStaticMarkup(
+      <LandingHero
+        content={{ ...who, cta: { primary: { label: "Go", href: "/services" } } }}
+        logos={[]}
+        serviceOptions={[]}
+      />,
+    );
+    expect(html).not.toContain("Explore products");
+  });
+  it("renders stored chapter CTAs, hides empty secondary, uses fallback only when unset", () => {
+    const stored = renderToStaticMarkup(
+      <ChapterCtas
+        cta={{
+          primary: { label: "Talk now", href: "/contact" },
+          secondary: { label: "", href: "/blog" },
+        }}
+        fallback={[{ label: "Default", href: "/x" }]}
+      />,
+    );
+    expect(stored).toContain("Talk now");
+    expect(stored).toContain('href="/contact"');
+    expect(stored).not.toContain("/blog");
+    expect(stored).not.toContain("Default");
+    const unset = renderToStaticMarkup(
+      <ChapterCtas cta={undefined} fallback={[{ label: "Default", href: "/x" }]} />,
+    );
+    expect(unset).toContain("Default");
+    expect(renderToStaticMarkup(<ChapterCtas cta={undefined} />)).toBe("");
   });
 });
