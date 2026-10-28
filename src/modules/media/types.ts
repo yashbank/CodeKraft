@@ -66,6 +66,20 @@ export const ARCHIVE_MIMES = [
   "application/x-tar",
   "application/x-7z-compressed",
 ] as const;
+/** Installer MIMEs browsers report for .exe/.msi/.dmg/.pkg/.deb/.rpm/.AppImage; octet-stream is the fallback for empty types. */
+export const INSTALLER_MIMES = [
+  "application/octet-stream",
+  "application/x-msdownload",
+  "application/vnd.microsoft.portable-executable",
+  "application/x-dosexec",
+  "application/x-msi",
+  "application/x-apple-diskimage",
+  "application/x-newton-compatible-pkg",
+  "application/vnd.debian.binary-package",
+  "application/x-debian-package",
+  "application/x-rpm",
+  "application/x-iso9660-image",
+] as const;
 export const ATTACHMENT_MIMES = [
   ...IMAGE_MIMES,
   ...PDF_MIMES,
@@ -87,7 +101,11 @@ export const UPLOAD_RULES: Readonly<Record<UploadPurpose, UploadRule>> = Object.
   product_video: { mimes: VIDEO_MIMES, maxBytes: 200 * MB, visibility: "public" },
   product_presentation: { mimes: PDF_MIMES, maxBytes: 25 * MB, visibility: "private" },
   product_attachment: { mimes: ATTACHMENT_MIMES, maxBytes: 20 * MB, visibility: "private" },
-  release_file: { mimes: ARCHIVE_MIMES, maxBytes: 2048 * MB, visibility: "private" },
+  release_file: {
+    mimes: [...ARCHIVE_MIMES, ...INSTALLER_MIMES],
+    maxBytes: 2048 * MB,
+    visibility: "private",
+  },
   content_media: {
     mimes: [...IMAGE_MIMES, ...VIDEO_MIMES],
     maxBytes: 200 * MB,

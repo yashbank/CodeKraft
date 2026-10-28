@@ -188,7 +188,11 @@ export class DefaultMediaService implements MediaService {
       Math.min(head.contentLength - 1, 511),
     );
 
-    const sniffResult = verifyMagicBytes(sniffBytes, intent.mime);
+    // Installers (PE/Mach-O/ELF/deb/dmg) are legitimately "dangerous" to the sniffer.
+    const sniffResult =
+      purpose === "release_file"
+        ? { ok: true as const, reason: undefined }
+        : verifyMagicBytes(sniffBytes, intent.mime);
     if (!sniffResult.ok) {
       throw new AppError(
         ErrorCode.VALIDATION,
