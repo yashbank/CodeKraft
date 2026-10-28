@@ -16,7 +16,7 @@ Updated: 2026-10-29
 - P3-04 | ready | branch feat/p3-04-landing-labels (base 406027c) | vitest tests/unit/content/landing-field-help.test.ts: 3 pass
 - P3-05 | ready | branch feat/p3-05-cta-target (stacked on P3-04, merge P3-04 first) | vitest tests/unit/content: 23 pass
 - P4-01 | ready | branch feat/p4-01-theme-palette | vitest tests/unit/palettes/palettes.test.tsx: 12 pass (WCAG AA for all 8 palettes)
-- P4-02 | doing | branch feat/p4-02-settings-propagation
+- P4-02 | ready | branch feat/p4-02-settings-propagation (stacked on P4-01, merge P4-01 first) | vitest settings-propagation + palettes + site-brand: 22 pass; tests/unit/lib + modules: 292 pass
 - P4-03 | ready | branch feat/p4-03-ai-settings | vitest tests/unit/chat: 9 pass (new ai-settings.test.ts)
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
@@ -33,3 +33,4 @@ Updated: 2026-10-29
 - 2026-10-29 P3-04, P3-05 ready. Phase 3 complete. The landing page used to ignore the CTAs saved in content. The hero and the Build/Sell/Proof/Talk sections now use them; an empty secondary hides that button. Stored links are re-checked when the page renders, so old unsafe values are dropped.
 - 2026-10-29 P4-01 ready. Theme is no longer locked. New "visitors can switch theme" toggle and 8 accent palettes, applied site-wide from the root layout. Light theme no longer needs the FEATURE_THEME_LIGHT_EDITORIAL env flag. No migration (key/value settings).
 - 2026-10-29 P4-03 ready. Model picker is sorted cheapest first with prices: Haiku 5.5 $0.10/$0.50, GPT-4o mini, Sonnet 5.5 $2/$10, Opus 5.5 $4/$20 per MTok. Default model, caps and timeout now come from settings and are enforced; the Anthropic provider gained a timeout and real errors. Open findings (not fixed): retrieval is never wired, so the chat has no knowledge grounding; Anthropic is not sent the capture_lead tool; LLM_PROVIDER vs AI_PROVIDER env name mismatch.
+- 2026-10-29 P4-02 ready. Phase 4 complete. A-010: only super_admin has settings.write (by design); the screen now explains why fields are read-only. Invoice, blog author, email subjects, JSON-LD and footer contact (legal name, address, email, phone) now come from settings; hard-coded Bangalore/billing@ fallbacks are removed. Issued invoices keep their snapshot. Left: 2FA issuer/TOTP label still "CodeKraft". To test: set seller details as super_admin, then check the footer and a new invoice.
