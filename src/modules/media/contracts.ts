@@ -31,7 +31,7 @@ export const embedUrlSchema = z
     message: "embed host must be youtube or vimeo",
   });
 
-/** `alt` is mandatory (1..125) for image kinds; optional otherwise. */
+/** `alt` is optional (0..125) for every kind. */
 export const altTextSchema = z.string().trim().max(125);
 
 /** API-CAT-06 `attachProductMedia`. */
@@ -54,11 +54,7 @@ export const attachProductMediaSchema = z
       message: "video_embed needs embedUrl; every other kind needs mediaId",
       path: ["mediaId"],
     },
-  )
-  .refine((m) => !IMAGE_MEDIA_KINDS.includes(m.kind) || m.alt.length >= 1, {
-    message: "alt text is required for image kinds",
-    path: ["alt"],
-  });
+  );
 export type AttachProductMediaInput = z.infer<typeof attachProductMediaSchema>;
 
 /** API-CAT-06 `reorderProductMedia` — full ordered list of `product_media.id`. */

@@ -1,3 +1,4 @@
+/* global process, console */
 /**
  * One-shot demo/test data wipe. Keeps ONLY the 2 super admin users (+ their
  * accounts, roles, 2FA, profile, layout, sessions) and reference/config tables.

@@ -253,7 +253,7 @@ describe("offerings", () => {
 });
 
 describe("media", () => {
-  it("API-CAT-06 alt required for image kinds; embed host allow-list", () => {
+  it("API-CAT-06 alt optional for every kind; embed host allow-list", () => {
     ok(media.attachProductMediaSchema, {
       productId: ID,
       kind: "image",
@@ -261,7 +261,7 @@ describe("media", () => {
       alt: "Hero",
       position: 0,
     });
-    bad(media.attachProductMediaSchema, {
+    ok(media.attachProductMediaSchema, {
       productId: ID,
       kind: "image",
       mediaId: ID2,

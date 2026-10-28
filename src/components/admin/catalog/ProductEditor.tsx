@@ -285,7 +285,7 @@ export function ProductEditor({
   const complete: Record<TabKey, boolean> = {
     basics: true,
     content: product.description.length > 0,
-    media: product.media.some((m) => m.kind === "image"),
+    media: product.media.length > 0,
     offerings: product.offerings.length > 0,
     delivery: product.offerings.length > 0,
     ownership: Boolean(active),
@@ -597,7 +597,7 @@ export function ProductEditor({
   /** Required readiness items still missing (SEO is optional). BUG-061. */
   const missingReadiness = [
     ...(complete.offerings ? [] : ["Offering with base price and payment method"]),
-    ...(complete.media ? [] : ["At least one image with alt text"]),
+    ...(complete.media ? [] : ["At least one media file (image, video or PDF)"]),
     ...(complete.ownership ? [] : ["Ownership active or pending"]),
   ];
 
@@ -853,10 +853,6 @@ export function ProductEditor({
     const file = pendingMediaFile;
     if (!file) return;
     const kind = mediaKindFor(file.type);
-    if (kind === "image" && pendingMediaAlt.trim().length === 0) {
-      toast.error("Alt text is required for images.");
-      return;
-    }
     setUploadingMedia(true);
     try {
       const { uploadMediaFile } = await import("@/lib/admin/media-upload");
@@ -1474,7 +1470,7 @@ export function ProductEditor({
               <div className="flex flex-wrap items-end gap-3 rounded-md border border-border bg-surface p-3">
                 <span className="font-mono text-body-sm">{pendingMediaFile.name}</span>
                 {mediaKindFor(pendingMediaFile.type) === "image" ? (
-                  <Field id="pending-alt" label="Alt text" className="min-w-48 flex-1">
+                  <Field id="pending-alt" label="Alt text (optional)" className="min-w-48 flex-1">
                     <Input
                       id="pending-alt"
                       value={pendingMediaAlt}
@@ -2444,7 +2440,7 @@ export function ProductEditor({
               <ul className="space-y-2 text-body-sm">
                 {[
                   ["Offering with base price and payment method", complete.offerings],
-                  ["At least one image with alt text", complete.media],
+                  ["At least one media file (image, video or PDF)", complete.media],
                   ["Ownership active or pending", complete.ownership],
                   ["SEO title (optional)", complete.seo],
                 ].map(([label, ok]) => (

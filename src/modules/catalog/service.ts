@@ -744,7 +744,7 @@ export class DefaultCatalogService implements CatalogService {
         .select()
         .from(productMedia)
         .where(eq(productMedia.productId, p.id));
-      const hasImage = mediaItems.some((m) => m.kind === "image" || m.kind === "screenshot");
+      const hasImage = mediaItems.length > 0;
 
       // Readiness Check 3: Active or pending ownership summing to 10,000 bps
       const ownerships = await actionTx
@@ -778,7 +778,7 @@ export class DefaultCatalogService implements CatalogService {
         );
       }
       if (!hasImage) {
-        failures.push("Product must have at least one cover or screenshot image");
+        failures.push("Product must have at least one media file (image, video or PDF)");
       }
       if (!hasValidOwnership) {
         failures.push(

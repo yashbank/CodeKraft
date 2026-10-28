@@ -68,18 +68,7 @@ describe("product media attachments & visibility rules (API-CAT-06, PHASE-03 P3.
       }),
     ).rejects.toThrow(AppError);
 
-    // Attaching public image without alt text must fail
-    await expect(
-      mediaService.attachProductMedia(adminCtx, {
-        productId: prodRes.productId,
-        mediaId: publicImage!.id,
-        kind: "image",
-        alt: "   ",
-        position: 0,
-      }),
-    ).rejects.toThrow(AppError);
-
-    // Attaching public image with alt text succeeds
+    // Attaching public image (alt text optional) succeeds
     const attachImageRes = await mediaService.attachProductMedia(adminCtx, {
       productId: prodRes.productId,
       mediaId: publicImage!.id,

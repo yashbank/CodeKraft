@@ -355,9 +355,6 @@ export class DefaultMediaService implements MediaService {
         if (mediaRow.visibility !== "public") {
           throw new AppError(ErrorCode.VALIDATION, "Image media must be public");
         }
-        if (!input.alt || input.alt.trim().length === 0) {
-          throw new AppError(ErrorCode.VALIDATION, "alt text is required for image kinds");
-        }
       }
 
       if (input.kind === "presentation" && mediaRow.mime !== "application/pdf") {
