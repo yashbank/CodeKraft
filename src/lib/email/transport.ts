@@ -54,7 +54,34 @@ function getResend(apiKey: string): Resend {
   return resendClient;
 }
 
+/** The single send path for every email kind. A failure is logged here, then rethrown (never swallowed). */
 export async function sendEmail(message: EmailMessage): Promise<EmailSendResult> {
+  try {
+    return await deliver(message);
+  } catch (err) {
+    getLogger()
+      .child({ module: "email" })
+      .error({ err, to: message.to, template: message.template }, "email send failed");
+    throw err;
+  }
+}
+
+/**
+ * Admin-banner check: why the sender cannot deliver real mail (null when fine). Only meaningful
+ * for the resend transport; log/outbox transports are reported as not delivering.
+ */
+export function emailSenderProblem(
+  env: Pick<ReturnType<typeof getEnv>, "EMAIL_TRANSPORT" | "EMAIL_FROM" | "RESEND_API_KEY">,
+): string | null {
+  if (!env.RESEND_API_KEY) return "RESEND_API_KEY is not set";
+  if (!env.EMAIL_FROM) return "EMAIL_FROM is not set";
+  if (/@(?:[^>\s]*\.invalid|resend\.dev)>?\s*$/i.test(env.EMAIL_FROM)) {
+    return `EMAIL_FROM (${env.EMAIL_FROM}) is a placeholder or unverified sender domain`;
+  }
+  return null;
+}
+
+async function deliver(message: EmailMessage): Promise<EmailSendResult> {
   const env = getEnv();
   const log = getLogger().child({ module: "email" });
   const transport = env.EMAIL_TRANSPORT;

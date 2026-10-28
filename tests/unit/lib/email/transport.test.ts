@@ -208,3 +208,49 @@ describe("R8-07 verification email delivery root causes", () => {
     ).toMatch(/RESEND_API_KEY/);
   });
 });
+
+describe("P1-05 email failure visibility", () => {
+  it("logs and rethrows an SDK throw (network etc.), never swallowed", async () => {
+    const t = await load("resend");
+    const spy = vi.spyOn((await import("@/lib/logger")).getLogger(), "child");
+    const error = vi.fn();
+    spy.mockReturnValue({ error, info: vi.fn(), warn: vi.fn() } as never);
+    sendMock.mockImplementationOnce(async () => {
+      throw new Error("network down");
+    });
+    await expect(
+      t.sendEmail({ to: "founder@example.com", subject: "s", template: "custom-quote", data: {} }),
+    ).rejects.toThrow(/network down/);
+    expect(error).toHaveBeenCalledWith(
+      expect.objectContaining({ template: "custom-quote" }),
+      "email send failed",
+    );
+    spy.mockRestore();
+  });
+
+  it("emailSenderProblem reports missing key/from and placeholder domains", async () => {
+    const t = await load("resend");
+    const ok = {
+      EMAIL_TRANSPORT: "resend" as const,
+      EMAIL_FROM: "CodeKraft <no-reply@codekraft.in>",
+      RESEND_API_KEY: "re_live",
+    };
+    expect(t.emailSenderProblem(ok)).toBeNull();
+    expect(t.emailSenderProblem({ ...ok, RESEND_API_KEY: undefined })).toMatch(/RESEND_API_KEY/);
+    expect(t.emailSenderProblem({ ...ok, EMAIL_FROM: "" })).toMatch(/EMAIL_FROM/);
+    expect(t.emailSenderProblem({ ...ok, EMAIL_FROM: "CK <a@example.invalid>" })).toMatch(
+      /placeholder/,
+    );
+    expect(t.emailSenderProblem({ ...ok, EMAIL_FROM: "onboarding@resend.dev" })).toMatch(
+      /placeholder/,
+    );
+  });
+
+  it("only the transport talks to Resend (verify, invite, quote, invoice share sendEmail)", async () => {
+    const { execSync } = await import("node:child_process");
+    const out = execSync('grep -rlE "from .resend.|emails\\.send" src || true', {
+      encoding: "utf8",
+    });
+    expect(out.split("\n").filter(Boolean)).toEqual(["src/lib/email/transport.ts"]);
+  });
+});
