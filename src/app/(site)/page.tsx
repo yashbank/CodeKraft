@@ -47,7 +47,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 function chapterCopy(c: LandingChapterView | undefined) {
-  return { eyebrow: c?.eyebrow ?? "", title: c?.title ?? "", body: c?.plainBody ?? "" };
+  return {
+    eyebrow: c?.eyebrow ?? "",
+    title: c?.title ?? "",
+    body: c?.plainBody ?? "",
+    cta: c?.cta ?? undefined,
+  };
 }
 
 export default async function LandingRoute() {

@@ -20,6 +20,7 @@ import { Field, RichTextField } from "../RichTextField";
 import type { LandingChapter, ServiceRow } from "../types";
 import { ContentEditorFrame, moveItem, SortableRow } from "./ContentEditorFrame";
 import { landingFieldHelp as help } from "./landing-field-help";
+import { CTA_NONE, CTA_OTHER, CTA_ROUTES, ctaSelectValue, resolveCtaHref } from "./cta-targets";
 import { fromPlainText } from "@/modules/content/render";
 import { saveFeaturedProducts, saveLandingChapter } from "@/modules/content/admin-mutations";
 
@@ -30,7 +31,6 @@ const CHAPTER_LABEL: Record<LandingChapter["key"], string> = {
   proof: "Proof",
   talk: "Talk to us",
 };
-const TARGETS = ["/products", "/services", "/projects", "/contact", "inquiry", "URL…"];
 
 export interface LandingEditorProps {
   chapters: LandingChapter[];
@@ -100,6 +100,15 @@ export function LandingEditor({
     const form = formRef.current;
     if (!form) return;
     const data = new FormData(form);
+    const str = (k: string) => String(data.get(k) ?? "").trim();
+    const href1 = resolveCtaHref(str("cta1-target"), str("cta1-url"));
+    const href2 = resolveCtaHref(str("cta2-target"), str("cta2-url"));
+    if (!href1 || href2 === null) {
+      toast.error("CTA target must be a path starting with / or an http(s) URL");
+      return;
+    }
+    const primary = { label: str("cta1") || "Start a project", href: href1 };
+    const secondary = str("cta2") && href2 ? { label: str("cta2"), href: href2 } : undefined;
     const result = await saveLandingChapter({
       key: chapter.key,
       eyebrow: String(data.get("eyebrow") ?? "").trim() || undefined,
@@ -107,21 +116,7 @@ export function LandingEditor({
       subtitle: String(data.get("subtitle") ?? "").trim() || undefined,
       bodyJson: fromPlainText(String(data.get("body") ?? "")),
       media: { posterMediaId: pendingPosterMediaId ?? chapter.posterMediaId },
-      cta: {
-        primary: {
-          label: String(data.get("cta1") ?? "").trim() || "Start a project",
-          href: normalizeTarget(String(data.get("cta1-target") ?? "inquiry")),
-        },
-        ...(String(data.get("cta2") ?? "").trim() &&
-        String(data.get("cta2-target") ?? "none") !== "none"
-          ? {
-              secondary: {
-                label: String(data.get("cta2") ?? "").trim(),
-                href: normalizeTarget(String(data.get("cta2-target") ?? "none")),
-              },
-            }
-          : {}),
-      },
+      cta: { primary, ...(secondary ? { secondary } : {}) },
       position: chapters.indexOf(chapter),
       published: canPublish ? published : chapter.published,
     });
@@ -256,18 +251,12 @@ export function LandingEditor({
             label="Primary CTA target"
             hint={help(chapter.key, "cta1-target")}
           >
-            <Select name="cta1-target" defaultValue={chapter.ctaPrimary?.target ?? "inquiry"}>
-              <SelectTrigger id="ch-cta1-target" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent position="popper">
-                {TARGETS.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {t === "inquiry" ? "Project inquiry sheet" : t}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CtaTargetPicker
+              id="ch-cta1-target"
+              name="cta1"
+              defaultHref={chapter.ctaPrimary?.target}
+              allowNone={false}
+            />
           </Field>
           <Field id="ch-cta2" label="Secondary CTA label" optional hint={help(chapter.key, "cta2")}>
             <Input id="ch-cta2" name="cta2" defaultValue={chapter.ctaSecondary?.label ?? ""} />
@@ -278,19 +267,12 @@ export function LandingEditor({
             optional
             hint={help(chapter.key, "cta2-target")}
           >
-            <Select name="cta2-target" defaultValue={chapter.ctaSecondary?.target ?? "none"}>
-              <SelectTrigger id="ch-cta2-target" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent position="popper">
-                <SelectItem value="none">None (no link)</SelectItem>
-                {TARGETS.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {t === "inquiry" ? "Project inquiry sheet" : t}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CtaTargetPicker
+              id="ch-cta2-target"
+              name="cta2"
+              defaultHref={chapter.ctaSecondary?.target}
+              allowNone={true}
+            />
           </Field>
         </div>
         {chapter.key === "build" ? (
@@ -389,9 +371,45 @@ export function LandingEditor({
   );
 }
 
-function normalizeTarget(v: string): string {
-  if (v === "none") return "";
-  if (v === "inquiry") return "/contact#inquiry";
-  if (v === "URL…") return "/";
-  return v;
+/** Route picker + free-text "Other URL" input (revealed only for "Other"). */
+function CtaTargetPicker({
+  id,
+  name,
+  defaultHref,
+  allowNone,
+}: {
+  id: string;
+  name: string;
+  defaultHref?: string;
+  allowNone: boolean;
+}) {
+  const [sel, setSel] = React.useState(
+    defaultHref === undefined && !allowNone ? "/contact#inquiry" : ctaSelectValue(defaultHref),
+  );
+  return (
+    <div className="space-y-2">
+      <Select name={`${name}-target`} value={sel} onValueChange={setSel}>
+        <SelectTrigger id={id} className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent position="popper">
+          {allowNone ? <SelectItem value={CTA_NONE}>None (no link)</SelectItem> : null}
+          {CTA_ROUTES.map((r) => (
+            <SelectItem key={r.href} value={r.href}>
+              {r.label}
+            </SelectItem>
+          ))}
+          <SelectItem value={CTA_OTHER}>Other URL</SelectItem>
+        </SelectContent>
+      </Select>
+      {sel === CTA_OTHER ? (
+        <Input
+          name={`${name}-url`}
+          aria-label="Other URL"
+          placeholder="/path or https://example.com"
+          defaultValue={defaultHref && ctaSelectValue(defaultHref) === CTA_OTHER ? defaultHref : ""}
+        />
+      ) : null}
+    </div>
+  );
 }
