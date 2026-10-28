@@ -161,7 +161,11 @@ export function mapEntitlementDetail(e: EntitlementView): EntitlementDetail {
           .split(/\s{2,}|\n+/)
           .map((p) => p.trim())
           .filter(Boolean)
-      : [],
+      : // Admin's "Mark delivered" note/link for custom deliveries.
+        (e.custom?.statusNote ?? "")
+          .split(/\n+/)
+          .map((p) => p.trim())
+          .filter(Boolean),
   };
 }
 

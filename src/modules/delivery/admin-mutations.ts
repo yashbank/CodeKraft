@@ -49,3 +49,13 @@ export async function markServiceStep(raw: unknown) {
   const { markServiceStepAction } = await import("./actions");
   return withCtx(markServiceStepAction, raw);
 }
+
+export async function markDelivered(raw: unknown) {
+  const { markDeliveredAction } = await import("./actions");
+  return withCtx(markDeliveredAction, raw);
+}
+
+export async function createDeliveryTask(raw: unknown) {
+  const { createDeliveryTaskAction } = await import("./actions");
+  return withCtx(createDeliveryTaskAction, raw);
+}

@@ -8,6 +8,8 @@ import { defineAction } from "@/lib/actions/envelope";
 import {
   assignDeliveryTaskSchema,
   completeDeliveryTaskSchema,
+  createDeliveryTaskSchema,
+  markDeliveredSchema,
   markServiceStepSchema,
   setLicenseKeySchema,
 } from "./types";
@@ -41,4 +43,18 @@ export const markServiceStepAction = defineAction({
   input: markServiceStepSchema,
   permission: "delivery.tasks.write",
   handler: (input, ctx) => deliveryService.markServiceStep(ctx, input),
+});
+
+export const markDeliveredAction = defineAction({
+  name: "API-DEL-15 entitlement.markDelivered",
+  input: markDeliveredSchema,
+  permission: "delivery.tasks.write",
+  handler: (input, ctx) => deliveryService.markDelivered(ctx, input),
+});
+
+export const createDeliveryTaskAction = defineAction({
+  name: "API-DEL-16 delivery_task.create",
+  input: createDeliveryTaskSchema,
+  permission: "delivery.tasks.write",
+  handler: (input, ctx) => deliveryService.createDeliveryTask(ctx, input),
 });

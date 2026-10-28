@@ -41,7 +41,7 @@ import { KeyValue } from "../KeyValue";
 import { MoneyCell } from "../MoneyCell";
 import { Field } from "../RichTextField";
 import { RowActions } from "../RowActions";
-import type { OrderDetailData } from "../types";
+import type { DeliveryTaskRow, OrderDetailData } from "../types";
 import { ConfirmPaymentDialog } from "./ConfirmPaymentDialog";
 
 export interface OrderDetailProps {
@@ -52,6 +52,8 @@ export interface OrderDetailProps {
   ledgerHref: string;
   approvalsHref: string;
   queriesHref: string;
+  /** Delivery tasks raised against this order's entitlements. */
+  deliveryTasks?: DeliveryTaskRow[];
 }
 
 /**
@@ -68,6 +70,7 @@ export function OrderDetail({
   ledgerHref,
   approvalsHref,
   queriesHref,
+  deliveryTasks = [],
 }: OrderDetailProps) {
   const router = useRouter();
   const { order, payment, splitApproval } = data;
@@ -446,6 +449,29 @@ export function OrderDetail({
                 Entitlements are created when the payment is confirmed.
               </p>
             )}
+            {deliveryTasks.length > 0 ? (
+              <div className="mt-4 rounded-md border border-border bg-canvas p-4">
+                <p className="mb-2 text-body-sm font-semibold">Delivery tasks</p>
+                <ul className="space-y-1 text-body-sm">
+                  {deliveryTasks.map((t) => (
+                    <li key={t.id} className="flex flex-wrap items-center gap-2">
+                      <StatusBadge kind="delivery_tasks.kind" value={t.kind} size="sm" />
+                      <span>{t.product}</span>
+                      <span className="text-fg-muted">
+                        {t.status === "done" ? "done" : "open"}
+                        {t.assignedTo ? ` · ${t.assignedTo}` : " · unassigned"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/admin/entitlements"
+                  className="mt-2 inline-block text-caption text-accent-text hover:underline"
+                >
+                  Fulfil or manage in Entitlements
+                </Link>
+              </div>
+            ) : null}
           </Card>
 
           {/* Ledger & invoice */}

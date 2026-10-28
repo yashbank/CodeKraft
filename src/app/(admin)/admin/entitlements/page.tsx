@@ -1,6 +1,8 @@
 import { EntitlementsScreen } from "@/components/admin/commerce/EntitlementsScreen";
 import { getAdminRequestContext } from "@/lib/authz/admin-request-context";
 import { mapEntitlementRow } from "@/lib/admin/entitlements-view";
+import { mapDeliveryTaskRow } from "@/lib/admin/delivery-view";
+import { listDeliveryTasksQuery } from "@/modules/delivery/queries";
 import { listEntitlementsAdminQuery } from "@/modules/entitlements/queries";
 import { listAssignableAdminsQuery } from "@/modules/leads/queries";
 
@@ -9,10 +11,12 @@ export const dynamic = "force-dynamic";
 export default async function AdminEntitlementsPage() {
   const ctx = await getAdminRequestContext();
 
-  const [entitlementsResult, adminsResult] = await Promise.all([
+  const [entitlementsResult, adminsResult, tasksResult] = await Promise.all([
     listEntitlementsAdminQuery({ limit: 100 }, ctx),
     listAssignableAdminsQuery({}, ctx).catch(() => ({ ok: false as const })),
+    listDeliveryTasksQuery({ limit: 100, filters: {} }, ctx),
   ]);
+  const tasks = tasksResult.ok ? tasksResult.data.items.map(mapDeliveryTaskRow) : [];
 
   const entitlements = entitlementsResult.ok
     ? entitlementsResult.data.items.map(mapEntitlementRow)
@@ -22,10 +26,7 @@ export default async function AdminEntitlementsPage() {
   return (
     <EntitlementsScreen
       entitlements={entitlements}
-      // The delivery-task queue is a separate module (`modules/delivery`, owned by P5) whose
-      // query/action wrappers are still P2.8 stubs — see `lib/admin/entitlements-view.ts`'s file
-      // header. Left empty rather than faking task rows; the tab's own empty state covers it.
-      tasks={[]}
+      tasks={tasks}
       admins={admins}
       now={new Date().toISOString()}
       orderHref="/admin/orders"

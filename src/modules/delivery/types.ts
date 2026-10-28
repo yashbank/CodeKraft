@@ -61,12 +61,39 @@ export const markServiceStepSchema = z
   .strict();
 export type MarkServiceStepInput = z.infer<typeof markServiceStepSchema>;
 
+/**
+ * `markDelivered` — admin fulfils any non-licence/non-checklist entitlement (custom, download,
+ * saas, hosted, subscription-backed, service without steps): pending -> active, provisioning done,
+ * open provision task closed, customer notified, order re-evaluated. Optional note + link.
+ */
+export const markDeliveredSchema = z
+  .object({
+    entitlementId: uuid,
+    note: z.string().trim().max(2000).optional(),
+    link: z.url().max(2000).optional(),
+  })
+  .strict();
+export type MarkDeliveredInput = z.infer<typeof markDeliveredSchema>;
+
+/** Admin raises a delivery task against one entitlement (hence its order item, order, customer). */
+export const createDeliveryTaskSchema = z
+  .object({
+    entitlementId: uuid,
+    kind: z.enum(DELIVERY_TASK_KINDS).default("provision"),
+    assignedTo: uuid.nullable().optional(),
+    note: z.string().trim().max(2000).optional(),
+  })
+  .strict();
+export type CreateDeliveryTaskInput = z.input<typeof createDeliveryTaskSchema>;
+
 /** API-DEL-10 `listDeliveryTasks`. */
 export const listDeliveryTasksSchema = listParams(["createdAt", "status", "kind"], {
   kind: z.enum(DELIVERY_TASK_KINDS).optional(),
   status: z.enum(DELIVERY_TASK_STATUSES).optional(),
   /** `'me'` = the caller. */
   assignedTo: z.union([z.literal("me"), uuid]).optional(),
+  orderId: uuid.optional(),
+  entitlementId: uuid.optional(),
 });
 export type ListDeliveryTasksInput = z.infer<typeof listDeliveryTasksSchema>;
 

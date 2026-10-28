@@ -12,7 +12,13 @@ import {
   resetDownloadCount,
   revokeEntitlement,
 } from "@/modules/entitlements/admin-mutations";
-import { completeDeliveryTask, markServiceStep } from "@/modules/delivery/admin-mutations";
+import {
+  assignDeliveryTask,
+  completeDeliveryTask,
+  createDeliveryTask,
+  markDelivered,
+  markServiceStep,
+} from "@/modules/delivery/admin-mutations";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -90,6 +97,20 @@ export function EntitlementsScreen({
   const router = useRouter();
   const [stepsFor, setStepsFor] = React.useState<EntitlementRow | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const [deliverFor, setDeliverFor] = React.useState<EntitlementRow | null>(null);
+  const [taskFor, setTaskFor] = React.useState<EntitlementRow | null>(null);
+
+  const doAssign = async (taskId: string, adminId: string | null) => {
+    setSubmitting(true);
+    const result = await assignDeliveryTask({ taskId, assignedTo: adminId });
+    setSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(adminId ? "Task assigned" : "Task unassigned");
+    router.refresh();
+  };
 
   const doResetDownloads = async (e: EntitlementRow) => {
     setSubmitting(true);
@@ -418,30 +439,60 @@ export function EntitlementsScreen({
                             label={`Actions for ${e.customer.name} · ${e.product}`}
                             actions={[
                               { label: "Open order", href: orderHref },
-                              {
-                                label: e.keyIssued ? "Replace licence key" : "Enter licence key",
-                                disabled:
-                                  e.type !== "license" || e.status === "revoked" || submitting,
-                                onSelect: () => void doSetKey(e),
-                              },
-                              {
-                                label: "Service steps",
-                                disabled:
-                                  e.type !== "service" || e.status === "revoked" || submitting,
-                                onSelect: () => setStepsFor(e),
-                              },
-                              { label: "Mark provisioned", disabled: e.provisioning !== "pending" },
-                              {
-                                label: "Reset downloads",
-                                disabled: !e.downloadCap || submitting,
-                                onSelect: () => void doResetDownloads(e),
-                              },
+                              ...(e.type === "license" && e.status !== "revoked"
+                                ? [
+                                    {
+                                      label: e.keyIssued
+                                        ? "Replace licence key"
+                                        : "Enter licence key",
+                                      disabled: submitting,
+                                      onSelect: () => void doSetKey(e),
+                                    },
+                                  ]
+                                : []),
+                              ...(e.type === "service" && (e.serviceSteps?.length ?? 0) > 0
+                                ? [
+                                    {
+                                      label: "Service steps",
+                                      disabled: e.status === "revoked" || submitting,
+                                      onSelect: () => setStepsFor(e),
+                                    },
+                                  ]
+                                : []),
+                              ...(e.type !== "license" &&
+                              e.status !== "revoked" &&
+                              !(e.type === "service" && (e.serviceSteps?.length ?? 0) > 0)
+                                ? [
+                                    {
+                                      label: "Mark delivered",
+                                      disabled: submitting,
+                                      onSelect: () => setDeliverFor(e),
+                                    },
+                                  ]
+                                : []),
+                              ...(e.status !== "revoked"
+                                ? [
+                                    {
+                                      label: "Create delivery task",
+                                      disabled: submitting,
+                                      onSelect: () => setTaskFor(e),
+                                    },
+                                  ]
+                                : []),
+                              ...(e.downloadCap
+                                ? [
+                                    {
+                                      label: "Reset downloads",
+                                      disabled: submitting,
+                                      onSelect: () => void doResetDownloads(e),
+                                    },
+                                  ]
+                                : []),
                               {
                                 label: "Extend",
-                                disabled: submitting,
+                                disabled: e.status === "revoked" || submitting,
                                 onSelect: () => void doExtend(e),
                               },
-                              { label: "Cancel subscription", disabled: !e.subscription },
                               {
                                 label: "Revoke",
                                 destructive: true,
@@ -571,14 +622,20 @@ export function EntitlementsScreen({
                             <Label htmlFor={`assign-${t.id}`} className="sr-only">
                               Assign task
                             </Label>
-                            <Select defaultValue={t.assignedTo ?? "none"}>
+                            <Select
+                              defaultValue={
+                                admins.find((a) => a.name === t.assignedTo)?.id ?? "none"
+                              }
+                              disabled={submitting || t.status === "done"}
+                              onValueChange={(v) => void doAssign(t.id, v === "none" ? null : v)}
+                            >
                               <SelectTrigger id={`assign-${t.id}`} size="sm" className="w-36">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="none">Unassigned</SelectItem>
                                 {admins.map((a) => (
-                                  <SelectItem key={a.id} value={a.name}>
+                                  <SelectItem key={a.id} value={a.id}>
                                     {a.name}
                                   </SelectItem>
                                 ))}
@@ -631,6 +688,136 @@ export function EntitlementsScreen({
           )}
         </>
       )}
+
+      <Dialog open={deliverFor !== null} onOpenChange={(o) => !o && setDeliverFor(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark delivered</DialogTitle>
+            <DialogDescription>
+              {deliverFor ? `${deliverFor.customer.name} · ${deliverFor.product}. ` : ""}
+              Marks this item fulfilled and notifies the customer. Note and link are optional and
+              shown to the customer.
+            </DialogDescription>
+          </DialogHeader>
+          <Field id="deliver-note" label="Note to customer">
+            <Textarea id="deliver-note" rows={2} />
+          </Field>
+          <Field id="deliver-link" label="Link (optional)">
+            <Input id="deliver-link" type="url" placeholder="https://" />
+          </Field>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="ghost">Cancel</Button>
+            </DialogClose>
+            <Button
+              disabled={submitting}
+              onClick={async () => {
+                if (!deliverFor) return;
+                const note = (
+                  document.getElementById("deliver-note") as HTMLTextAreaElement | null
+                )?.value.trim();
+                const link = (
+                  document.getElementById("deliver-link") as HTMLInputElement | null
+                )?.value.trim();
+                setSubmitting(true);
+                const result = await markDelivered({
+                  entitlementId: deliverFor.id,
+                  ...(note ? { note } : {}),
+                  ...(link ? { link } : {}),
+                });
+                setSubmitting(false);
+                if (!result.ok) {
+                  toast.error(result.error.message);
+                  return;
+                }
+                toast.success("Marked delivered. Customer notified.");
+                setDeliverFor(null);
+                router.refresh();
+              }}
+            >
+              Mark delivered
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={taskFor !== null} onOpenChange={(o) => !o && setTaskFor(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create delivery task</DialogTitle>
+            <DialogDescription>
+              {taskFor
+                ? `${taskFor.customer.name} · ${taskFor.product} · order ${taskFor.orderNumber}. `
+                : ""}
+              The task is linked to this order item and customer. Completing a provision task
+              fulfils the item.
+            </DialogDescription>
+          </DialogHeader>
+          <Field id="newtask-kind" label="Kind">
+            <select
+              id="newtask-kind"
+              defaultValue="provision"
+              className="h-9 w-full rounded-md border border-border bg-surface px-2 text-body-sm"
+            >
+              <option value="provision">Provision</option>
+              <option value="revoke_external">Revoke external</option>
+            </select>
+          </Field>
+          <Field id="newtask-assignee" label="Assign to">
+            <select
+              id="newtask-assignee"
+              defaultValue=""
+              className="h-9 w-full rounded-md border border-border bg-surface px-2 text-body-sm"
+            >
+              <option value="">Unassigned</option>
+              {admins.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field id="newtask-note" label="Note">
+            <Textarea id="newtask-note" rows={2} />
+          </Field>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="ghost">Cancel</Button>
+            </DialogClose>
+            <Button
+              disabled={submitting}
+              onClick={async () => {
+                if (!taskFor) return;
+                const val = (id: string) =>
+                  (
+                    document.getElementById(id) as
+                      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null
+                  )?.value.trim() ?? "";
+                const note = val("newtask-note");
+                const assignee = val("newtask-assignee");
+                setSubmitting(true);
+                const result = await createDeliveryTask({
+                  entitlementId: taskFor.id,
+                  kind: val("newtask-kind") || "provision",
+                  ...(assignee ? { assignedTo: assignee } : {}),
+                  ...(note ? { note } : {}),
+                });
+                setSubmitting(false);
+                if (!result.ok) {
+                  toast.error(result.error.message);
+                  return;
+                }
+                toast.success("Delivery task created");
+                setTaskFor(null);
+                setView("tasks");
+                router.refresh();
+              }}
+            >
+              Create task
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={stepsFor !== null} onOpenChange={(o) => !o && setStepsFor(null)}>
         <DialogContent>
@@ -710,7 +897,7 @@ export function EntitlementsScreen({
                   toast.error(result.error.message);
                   return;
                 }
-                toast.success("Task marked done");
+                toast.success("Task marked done. Item fulfilled and customer notified.");
                 setDoneTask(null);
                 router.refresh();
               }}

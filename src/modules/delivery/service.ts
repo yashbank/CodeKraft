@@ -19,15 +19,19 @@ import {
   type AssignDeliveryTaskInput,
   type CompleteDeliveryTaskInput,
   type CompleteProvisioningInput,
+  type CreateDeliveryTaskInput,
   type DeliveryTaskRow,
   type ListDeliveryTasksInput,
+  type MarkDeliveredInput,
   type MarkServiceStepInput,
   type MarkServiceStepResult,
   type SetLicenseKeyInput,
   assignDeliveryTaskSchema,
   completeDeliveryTaskSchema,
   completeProvisioningSchema,
+  createDeliveryTaskSchema,
   listDeliveryTasksSchema,
+  markDeliveredSchema,
   markServiceStepSchema,
   setLicenseKeySchema,
 } from "./types";
@@ -320,6 +324,13 @@ export class DefaultDeliveryService implements DeliveryService {
       }
     }
 
+    if (input.filters?.entitlementId) {
+      conditions.push(eq(deliveryTasks.entitlementId, input.filters.entitlementId));
+    }
+    if (input.filters?.orderId) {
+      conditions.push(eq(orders.id, input.filters.orderId));
+    }
+
     const assignee = alias(users, "assignee");
     const rows = await db
       .select({
@@ -413,6 +424,20 @@ export class DefaultDeliveryService implements DeliveryService {
             updatedAt: now,
           })
           .where(eq(entitlements.id, task.entitlementId));
+      }
+
+      // A finished provision task fulfils its entitlement (licence keys close via setLicenseKey).
+      if (task.kind === "provision") {
+        const [target] = await tx
+          .select()
+          .from(entitlements)
+          .where(eq(entitlements.id, task.entitlementId))
+          .for("update");
+        if (target && target.deliveryType !== "license") {
+          await this.deliverEntitlement(ctx, tx, target, {
+            ...(input.note ? { note: input.note } : {}),
+          });
+        }
       }
 
       await auditService.log(
@@ -512,6 +537,196 @@ export class DefaultDeliveryService implements DeliveryService {
         doneAt: updatedTask.doneAt ? updatedTask.doneAt.toISOString() : null,
       };
     });
+  }
+
+  async markDelivered(
+    ctx: RequestContext,
+    rawInput: MarkDeliveredInput,
+  ): Promise<EntitlementAdminRow> {
+    assertPermission(ctx, "delivery.tasks.write");
+    const input = markDeliveredSchema.parse(rawInput);
+
+    return await withTx(async (tx) => {
+      const [ent] = await tx
+        .select()
+        .from(entitlements)
+        .where(eq(entitlements.id, input.entitlementId))
+        .for("update");
+      if (!ent) throw new AppError(ErrorCode.NOT_FOUND, "Entitlement not found");
+      if (ent.status === "revoked") {
+        throw new AppError(ErrorCode.STATE_INVALID, "This entitlement is revoked");
+      }
+      if (ent.deliveryType === "license") {
+        throw new AppError(
+          ErrorCode.STATE_INVALID,
+          "Licence entitlements are fulfilled by issuing the key",
+        );
+      }
+      const updated = await this.deliverEntitlement(ctx, tx, ent, {
+        ...(input.note ? { note: input.note } : {}),
+        ...(input.link ? { link: input.link } : {}),
+      });
+      return await this.buildAdminRow(updated, tx);
+    });
+  }
+
+  async createDeliveryTask(
+    ctx: RequestContext,
+    rawInput: CreateDeliveryTaskInput,
+  ): Promise<DeliveryTaskRow> {
+    assertPermission(ctx, "delivery.tasks.write");
+    const input = createDeliveryTaskSchema.parse(rawInput);
+
+    return await withTx(async (tx) => {
+      const [ent] = await tx
+        .select()
+        .from(entitlements)
+        .where(eq(entitlements.id, input.entitlementId))
+        .for("update");
+      if (!ent) throw new AppError(ErrorCode.NOT_FOUND, "Entitlement not found");
+      if (input.kind === "provision" && ent.status === "revoked") {
+        throw new AppError(
+          ErrorCode.STATE_INVALID,
+          "Cannot raise a provision task for a revoked entitlement",
+        );
+      }
+      const [dupe] = await tx
+        .select({ id: deliveryTasks.id })
+        .from(deliveryTasks)
+        .where(
+          and(
+            eq(deliveryTasks.entitlementId, ent.id),
+            eq(deliveryTasks.kind, input.kind),
+            eq(deliveryTasks.status, "open"),
+          ),
+        );
+      if (dupe) {
+        throw new AppError(
+          ErrorCode.STATE_INVALID,
+          "An open task of this kind already exists for this entitlement",
+        );
+      }
+      const [created] = await tx
+        .insert(deliveryTasks)
+        .values({
+          entitlementId: ent.id,
+          kind: input.kind,
+          status: "open",
+          assignedTo: input.assignedTo ?? null,
+          note: input.note ?? null,
+        })
+        .returning();
+      if (!created) throw new AppError(ErrorCode.INTERNAL, "task insert failed");
+
+      await auditService.log(
+        ctx,
+        "delivery_task.created",
+        { type: "delivery_task", id: created.id },
+        null,
+        { entitlementId: ent.id, kind: created.kind, assignedTo: created.assignedTo },
+        tx,
+      );
+
+      const [prod] = await tx.select().from(products).where(eq(products.id, ent.productId));
+      const [cust] = await tx.select().from(users).where(eq(users.id, ent.userId));
+      if (!prod || !cust) throw new AppError(ErrorCode.INTERNAL, "task context missing");
+      const extras = await hydrateTaskExtras(tx, ent, created.assignedTo);
+      return {
+        taskId: created.id,
+        kind: created.kind,
+        status: created.status,
+        entitlementId: created.entitlementId,
+        entitlementStatus: ent.status,
+        product: { id: prod.id, name: prod.name },
+        offeringName: extras.offeringName,
+        order: extras.order,
+        customer: { id: cust.id, email: cust.email, name: cust.name },
+        assignedTo: created.assignedTo
+          ? { id: created.assignedTo, name: extras.assigneeName }
+          : null,
+        note: created.note,
+        createdAt: created.createdAt.toISOString(),
+        doneAt: null,
+      };
+    });
+  }
+
+  /**
+   * Shared fulfilment step: pending -> active, provisioning done, merge note/link, close open
+   * provision tasks, re-evaluate the order, tell the customer (in-app). Idempotent on a row that
+   * is already active+done.
+   */
+  private async deliverEntitlement(
+    ctx: RequestContext,
+    tx: TxCtx,
+    ent: typeof entitlements.$inferSelect,
+    extra: { note?: string; link?: string },
+  ): Promise<typeof entitlements.$inferSelect> {
+    if (ent.status === "revoked") return ent;
+    const now = new Date();
+    const prevNotes = (ent.provisioningNotes ?? {}) as Record<string, unknown>;
+    const notes = {
+      ...prevNotes,
+      ...(extra.note ? { message: extra.note } : {}),
+      ...(extra.link ? { loginUrl: extra.link } : {}),
+    };
+    const [updated] = await tx
+      .update(entitlements)
+      .set({
+        status: ent.status === "pending" ? "active" : ent.status,
+        provisioningState: ent.provisioningState === "n/a" ? "n/a" : "done",
+        ...(Object.keys(notes).length > 0 ? { provisioningNotes: notes } : {}),
+        updatedAt: now,
+      })
+      .where(eq(entitlements.id, ent.id))
+      .returning();
+    if (!updated) throw new AppError(ErrorCode.INTERNAL, "entitlement update failed");
+
+    await tx
+      .update(deliveryTasks)
+      .set({ status: "done", doneAt: now, updatedAt: now })
+      .where(
+        and(
+          eq(deliveryTasks.entitlementId, ent.id),
+          eq(deliveryTasks.kind, "provision"),
+          eq(deliveryTasks.status, "open"),
+        ),
+      );
+
+    await auditService.log(
+      ctx,
+      "entitlement.delivered",
+      { type: "entitlement", id: ent.id },
+      { status: ent.status, provisioningState: ent.provisioningState },
+      { status: updated.status, provisioningState: updated.provisioningState },
+      tx,
+    );
+
+    if (ent.orderItemId) {
+      const [oi] = await tx
+        .select({ orderId: orderItems.orderId })
+        .from(orderItems)
+        .where(eq(orderItems.id, ent.orderItemId));
+      if (oi?.orderId) await this.evaluateOrderFulfilment(oi.orderId, tx);
+    }
+
+    const [off] = await tx
+      .select({ name: offerings.name })
+      .from(offerings)
+      .where(eq(offerings.id, ent.offeringId));
+    await notificationsService.emit(
+      ent.userId,
+      "service.progress",
+      {
+        entitlementId: ent.id,
+        serviceName: off?.name ?? "your order",
+        stepTitle: "Your order has been delivered",
+        notes: extra.note ?? "Your order is ready. Open your purchases to access it.",
+      },
+      ["inapp"],
+      tx,
+    );
+    return updated;
   }
 
   async evaluateOrderFulfilment(orderId: string, tx: TxCtx): Promise<boolean> {
@@ -662,6 +877,8 @@ export function createNotImplementedDeliveryService(): DeliveryService {
     markServiceStep: "async",
     listDeliveryTasks: "async",
     completeDeliveryTask: "async",
+    markDelivered: "async",
+    createDeliveryTask: "async",
     assignDeliveryTask: "async",
     evaluateOrderFulfilment: "async",
   });

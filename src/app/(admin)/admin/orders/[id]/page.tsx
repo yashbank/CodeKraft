@@ -4,6 +4,8 @@ import { getAdminRequestContext } from "@/lib/authz/admin-request-context";
 import { mapOrderDetailToOrderDetailData } from "@/lib/admin/orders-view";
 import { listAuditLogsAction } from "@/modules/audit/queries";
 import { getOrderAllocationQuery, listLedgerEntriesQuery } from "@/modules/finance/queries";
+import { mapDeliveryTaskRow } from "@/lib/admin/delivery-view";
+import { listDeliveryTasksQuery } from "@/modules/delivery/queries";
 import { getOrderAdminQuery } from "@/modules/orders/queries";
 import { listPartnersQuery } from "@/modules/users/queries";
 
@@ -33,16 +35,22 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
     ...detail.refunds.map((r) => ({ subjectType: "refund", subjectId: r.refundId })),
   ];
 
-  const [ledgerResult, allocationResult, timelineResults, partnersResult] = await Promise.all([
-    listLedgerEntriesQuery({ filters: { orderNo: detail.order.orderNo }, limit: 100 }, ctx),
-    ALLOCATED_STATUSES.has(detail.order.status)
-      ? getOrderAllocationQuery({ orderId: detail.order.id }, ctx)
-      : Promise.resolve(null),
-    Promise.all(timelineSubjects.map((s) => listAuditLogsAction({ filters: s, limit: 50 }, ctx))),
-    // `listPartners` needs `finance.ledger.read_all` or `users.admin.manage`; an admin without
-    // either still gets the page, just with short partner ids instead of names (see orders-view).
-    listPartnersQuery({ limit: 100 }, ctx).catch(() => ({ ok: false as const })),
-  ]);
+  const [ledgerResult, allocationResult, timelineResults, partnersResult, tasksResult] =
+    await Promise.all([
+      listLedgerEntriesQuery({ filters: { orderNo: detail.order.orderNo }, limit: 100 }, ctx),
+      ALLOCATED_STATUSES.has(detail.order.status)
+        ? getOrderAllocationQuery({ orderId: detail.order.id }, ctx)
+        : Promise.resolve(null),
+      Promise.all(timelineSubjects.map((s) => listAuditLogsAction({ filters: s, limit: 50 }, ctx))),
+      // `listPartners` needs `finance.ledger.read_all` or `users.admin.manage`; an admin without
+      // either still gets the page, just with short partner ids instead of names (see orders-view).
+      listPartnersQuery({ limit: 100 }, ctx).catch(() => ({ ok: false as const })),
+      listDeliveryTasksQuery({ limit: 50, filters: { orderId: detail.order.id } }, ctx).catch(
+        () => ({ ok: false as const }),
+      ),
+    ]);
+  const deliveryTasks =
+    "data" in tasksResult && tasksResult.ok ? tasksResult.data.items.map(mapDeliveryTaskRow) : [];
 
   const ledger = ledgerResult.ok ? ledgerResult.data.items : [];
   const allocation = allocationResult && allocationResult.ok ? allocationResult.data : null;
@@ -64,6 +72,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
   return (
     <OrderDetail
       data={data}
+      deliveryTasks={deliveryTasks}
       approvers={["Priya Nair", "Arjun Patel"]}
       isSuperAdmin={ctx.roles.includes("super_admin")}
       customerHref="/admin/customers"

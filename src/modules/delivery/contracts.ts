@@ -11,8 +11,10 @@ import type {
   AssignDeliveryTaskInput,
   CompleteDeliveryTaskInput,
   CompleteProvisioningInput,
+  CreateDeliveryTaskInput,
   DeliveryTaskRow,
   ListDeliveryTasksInput,
+  MarkDeliveredInput,
   MarkServiceStepInput,
   MarkServiceStepResult,
   SetLicenseKeyInput,
@@ -44,6 +46,12 @@ export interface DeliveryService {
     ctx: RequestContext,
     input: CompleteDeliveryTaskInput,
   ): Promise<DeliveryTaskRow>;
+
+  /** Admin fulfils an entitlement of any non-licence type; notifies the customer. */
+  markDelivered(ctx: RequestContext, input: MarkDeliveredInput): Promise<EntitlementAdminRow>;
+
+  /** Admin raises a delivery task for an entitlement (and so its order/customer). */
+  createDeliveryTask(ctx: RequestContext, input: CreateDeliveryTaskInput): Promise<DeliveryTaskRow>;
 
   /** Part of API-DEL-10: assign / claim / unassign a task. */
   assignDeliveryTask(ctx: RequestContext, input: AssignDeliveryTaskInput): Promise<DeliveryTaskRow>;

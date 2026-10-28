@@ -38,12 +38,17 @@ export class CustomDeliveryHandler implements DeliveryHandler<"custom"> {
     };
   }
 
-  customerView(_source: CustomerViewSource): CustomerDeliveryView {
+  customerView(source: CustomerViewSource): CustomerDeliveryView {
+    const notes = source.entitlement.provisioningNotes as {
+      message?: string;
+      loginUrl?: string;
+    } | null;
+    const statusNote = [notes?.message, notes?.loginUrl].filter(Boolean).join("\n") || null;
     return {
       type: "custom",
       custom: {
         attachments: [],
-        statusNote: null,
+        statusNote,
       },
     };
   }
