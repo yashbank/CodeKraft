@@ -46,7 +46,7 @@ import { createNotImplemented } from "@/modules/_shared/not-implemented";
 
 /** Seller block for a NEW invoice, from current settings; issued invoices keep their stored snapshot. */
 export function buildSellerSnapshot(
-  settings: Pick<SiteSettings, "sellerDetails" | "siteName" | "gstin">,
+  settings: Pick<SiteSettings, "sellerDetails" | "siteName" | "gstin" | "siteLogo">,
   sellerState?: string | null,
 ): SellerSnapshot {
   const d = settings.sellerDetails;
@@ -58,6 +58,7 @@ export function buildSellerSnapshot(
     gst_number: settings.gstin || null,
     email: d?.email || "",
     state_code: sellerState ?? "KA",
+    logo_url: settings.siteLogo ?? null,
   };
 }
 

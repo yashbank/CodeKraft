@@ -5,12 +5,15 @@ import { audit } from "@/lib/audit-port";
 import { hasAdminClassRole, loadRoles } from "@/modules/auth/roles-port";
 import { getSession, hostFromHeaders } from "@/modules/auth/service";
 import { AdminForbidden } from "@/components/admin/AdminForbidden";
+import { getSiteLogo } from "@/lib/site-brand";
 import { redirectToLogin } from "@/lib/authz/login-redirect";
 
 export const dynamic = "force-dynamic";
 
 /** BUG-074: tinted favicon so admin tabs are distinguishable from the storefront. */
-export const metadata = { icons: { icon: "/brand/admin-icon.svg" } };
+export async function generateMetadata() {
+  return { icons: { icon: (await getSiteLogo()) ?? "/brand/admin-icon.svg" } };
+}
 
 /**
  * Admin area: only reachable through the admin host (middleware rewrite) and only for

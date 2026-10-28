@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 import { cn } from "@/components/ui/_utils";
-import { SiteName } from "@/components/brand/site-brand";
+import { SiteLogo } from "@/components/brand/site-brand";
 
-/** Text wordmark (docs/08 §3.1 "Kraft Bracket" direction) until the logo asset lands. */
+/** Account/admin-login brand mark: uploaded logo, else the site name as text. */
 export function Wordmark({
   href = "/",
   className,
@@ -16,20 +16,9 @@ export function Wordmark({
   return (
     <Link
       href={href}
-      className={cn(
-        "inline-flex items-center gap-2 font-display text-h4 font-semibold tracking-tight text-fg",
-        className,
-      )}
+      className={cn("inline-flex items-center gap-2 font-display text-fg", className)}
     >
-      <span aria-hidden className="font-mono text-accent-text">
-        {"{"}
-      </span>
-      <span>
-        <SiteName />
-      </span>
-      <span aria-hidden className="font-mono text-accent-text">
-        {"}"}
-      </span>
+      <SiteLogo />
       {tag ? (
         <span className="rounded-full bg-elevated px-2 py-0.5 text-caption font-semibold text-fg-muted">
           {tag}

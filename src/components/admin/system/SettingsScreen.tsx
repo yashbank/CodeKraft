@@ -41,6 +41,7 @@ import { cn } from "@/components/ui/_utils";
 import { CHAT_MODELS, chatModelOptionLabel } from "@/modules/chat/models";
 import { CURRENCIES } from "@/lib/money";
 import { PALETTES } from "@/lib/palettes";
+import { uploadMediaFile } from "@/lib/admin/media-upload";
 import { updateRazorpaySettings, updateSettings } from "@/modules/settings/admin-mutations";
 import { testRazorpayConnection } from "@/modules/settings/razorpay-test-connection";
 import { Banner } from "../Banner";
@@ -49,6 +50,88 @@ import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
 import type { SiteSettings } from "@/modules/settings/types";
 import type { SettingsData } from "../types";
+
+/**
+ * Site logo: upload / replace / remove. Saves immediately (like the feature flags) through the
+ * same `settings.write`-gated `updateSettings` action; `ro` hides the controls for other roles.
+ */
+function SiteLogoField({ logo, ro }: { logo: string | null; ro: boolean }) {
+  const router = useRouter();
+  const [busy, setBusy] = React.useState(false);
+
+  async function save(next: string | null, ok: string) {
+    const res = await updateSettings({ patch: { siteLogo: next } });
+    if (!res.ok) throw new Error(res.error.message);
+    toast.success(ok);
+    router.refresh();
+  }
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setBusy(true);
+    try {
+      const up = await uploadMediaFile(file, "site_logo");
+      if (!up.url) throw new Error("Upload finished without a public URL");
+      await save(up.url, "Logo updated");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Logo upload failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function onRemove() {
+    setBusy(true);
+    try {
+      await save(null, "Logo removed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not remove logo");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="st-logo">Site logo</Label>
+      <div className="flex flex-wrap items-center gap-3">
+        {logo ? (
+          // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded URL
+          <img
+            src={logo}
+            alt="Current site logo"
+            className="h-10 w-auto rounded-sm border border-border bg-surface p-1"
+          />
+        ) : (
+          <span className="text-body-sm text-fg-muted">
+            No logo set: the site name is shown as text.
+          </span>
+        )}
+        {!ro ? (
+          <>
+            <Input
+              id="st-logo"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={onFile}
+              disabled={busy}
+              className="max-w-64"
+            />
+            {logo ? (
+              <Button type="button" variant="outline" size="sm" onClick={onRemove} disabled={busy}>
+                Remove
+              </Button>
+            ) : null}
+          </>
+        ) : null}
+      </div>
+      <p className="text-body-sm text-fg-muted">
+        PNG, JPEG or WebP, up to 2 MB. Used in the header, footer, admin, emails, invoices and
+        browser tab icon.
+      </p>
+    </div>
+  );
+}
 
 /**
  * Razorpay config card (V1.1, D-501, TEST MODE ONLY) inside the "Payment methods" section. Unlike
@@ -544,6 +627,7 @@ export function SettingsScreen({
                 the site header and footer, browser tab titles, the admin sidebar and email
                 subjects.
               </p>
+              <SiteLogoField logo={s.general.siteLogo} ro={ro} />
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field
                   id="st-site"

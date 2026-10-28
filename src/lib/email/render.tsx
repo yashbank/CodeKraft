@@ -30,13 +30,16 @@ export function EmailLayout({
   children,
   siteUrl,
   siteName = DEFAULT_SITE_NAME,
+  logoUrl = null,
 }: {
   preview: string;
   title: string;
   children: ReactNode;
   siteUrl: string;
-  /** R8-11 — admin-editable site name; the SVG wordmark is only used for the default name. */
+  /** R8-11 — admin-editable site name; shown as a text wordmark when no logo is set. */
   siteName?: string;
+  /** Admin-uploaded site logo (absolute https URL). */
+  logoUrl?: string | null;
 }) {
   return (
     <Html lang="en">
@@ -51,13 +54,12 @@ export function EmailLayout({
         }}
       >
         <Container style={{ maxWidth: 560, margin: "0 auto", padding: "32px 24px" }}>
-          {siteName === DEFAULT_SITE_NAME ? (
+          {logoUrl ? (
             <Img
-              src={`${siteUrl}/brand/wordmark-mono.svg`}
+              src={logoUrl.startsWith("/") ? `${siteUrl}${logoUrl}` : logoUrl}
               alt={siteName}
-              width={140}
               height={30}
-              style={{ color: INK }}
+              style={{ height: 30, width: "auto" }}
             />
           ) : (
             <Text style={{ fontSize: 20, fontWeight: 700, color: INK, margin: 0 }}>{siteName}</Text>
@@ -109,11 +111,18 @@ export async function renderGenericEmail(
   data: Record<string, unknown>,
   siteUrl: string,
   siteName: string = DEFAULT_SITE_NAME,
+  logoUrl: string | null = null,
 ): Promise<{ html: string; text: string }> {
   const url = typeof data.url === "string" ? data.url : null;
   const code = typeof data.code === "string" ? data.code : null;
   const element = (
-    <EmailLayout preview={subject} title={subject} siteUrl={siteUrl} siteName={siteName}>
+    <EmailLayout
+      preview={subject}
+      title={subject}
+      siteUrl={siteUrl}
+      siteName={siteName}
+      logoUrl={logoUrl}
+    >
       {url ? (
         <>
           <Text style={emailStyles.p}>
