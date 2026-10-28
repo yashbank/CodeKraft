@@ -15,7 +15,7 @@ describe("approvals inbox subject labels", () => {
     await migrateTestDb();
   });
 
-  it("labels product and user subjects by name, falls back to short id", async () => {
+  it("describes product and user requests in plain words, no ids", async () => {
     await truncateAll(sql);
     const requester = await createUser({ role: "super_admin" });
     const target = await createUser({ role: "admin" });
@@ -58,8 +58,12 @@ describe("approvals inbox subject labels", () => {
     );
 
     expect(subjects.map((s) => s.subject).sort()).toEqual(
-      ["Label Widget", `Admin change: ${target.email}`, `product ${ghostId.slice(0, 8)}`].sort(),
+      [
+        `Archive product "Label Widget"`,
+        `Remove admin access for ${target.email}`,
+        "Delete a product",
+      ].sort(),
     );
-    expect(subjects.find((s) => s.subject === "Label Widget")?.subjectId).toBe(product.id);
+    expect(subjects.some((s) => s.subject.includes(product.id))).toBe(false);
   });
 });

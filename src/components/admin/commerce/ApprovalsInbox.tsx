@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { approveRequest, cancelRequest, rejectRequest } from "@/modules/approvals/admin-mutations";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -101,9 +100,9 @@ export function ApprovalsInbox({ approvals, currentUser, now }: ApprovalsInboxPr
     setComment("");
     const r = result.data;
     if (decision === "reject") {
-      toast.success(`Rejected — ${a.subject}`);
+      toast.success(`Rejected: ${a.subject}`);
     } else if (r.status === "applied") {
-      toast.success(`Approved and applied — ${TYPE_LABEL[a.type].toLowerCase()} of ${a.subject}`);
+      toast.success(`Approved and applied: ${a.subject}`);
     } else if (r.status === "pending") {
       const n = r.waitingFor ?? 0;
       toast.success(
@@ -317,15 +316,17 @@ function ApprovalDetail({
             a.subject
           )}
         </h2>
-        {a.subjectId ? <p className="font-mono text-caption text-fg-muted">{a.subjectId}</p> : null}
         <p className="text-body-sm text-fg-muted">
-          Requested by {a.requestedBy.name} ·{" "}
+          Requested by {a.requestedBy.name}
+          {a.requestedBy.email ? ` (${a.requestedBy.email})` : ""} ·{" "}
           <time dateTime={a.requestedAt}>{formatDateTime(a.requestedAt)}</time> (
           {timeAgo(a.requestedAt, now)})
         </p>
-        <blockquote className="border-l-2 border-accent pl-3 text-body italic">
-          {a.comment}
-        </blockquote>
+        {a.comment ? (
+          <blockquote className="border-l-2 border-accent pl-3 text-body italic">
+            {a.comment}
+          </blockquote>
+        ) : null}
       </header>
 
       {a.note ? <Banner tone="warning">{a.note}</Banner> : null}
@@ -333,41 +334,43 @@ function ApprovalDetail({
         <Banner tone="info">You requested this — another admin must approve.</Banner>
       ) : null}
 
-      <table className="w-full text-body-sm">
-        <caption className="mb-2 text-left text-overline tracking-wider text-fg-muted uppercase">
-          What will change
-        </caption>
-        <thead>
-          <tr className="border-b border-border text-left text-caption text-fg-muted">
-            <th scope="col" className="py-1.5 pr-3 font-medium">
-              Field
-            </th>
-            {a.diff.some((d) => d.before !== undefined) ? (
+      {a.diff.length > 0 ? (
+        <table className="w-full text-body-sm">
+          <caption className="mb-2 text-left text-overline tracking-wider text-fg-muted uppercase">
+            What will change
+          </caption>
+          <thead>
+            <tr className="border-b border-border text-left text-caption text-fg-muted">
               <th scope="col" className="py-1.5 pr-3 font-medium">
-                Before
+                Field
               </th>
-            ) : null}
-            <th scope="col" className="py-1.5 font-medium">
-              After
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {a.diff.map((d) => (
-            <tr key={d.label} className="border-b border-border last:border-0">
-              <th scope="row" className="py-2 pr-3 text-left font-medium">
-                {d.label}
-              </th>
-              {a.diff.some((x) => x.before !== undefined) ? (
-                <td className="py-2 pr-3 text-fg-muted line-through decoration-danger/60">
-                  {d.before ?? "—"}
-                </td>
+              {a.diff.some((d) => d.before !== undefined) ? (
+                <th scope="col" className="py-1.5 pr-3 font-medium">
+                  Before
+                </th>
               ) : null}
-              <td className="py-2 font-mono tnum">{d.after ?? "—"}</td>
+              <th scope="col" className="py-1.5 font-medium">
+                After
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {a.diff.map((d) => (
+              <tr key={d.label} className="border-b border-border last:border-0">
+                <th scope="row" className="py-2 pr-3 text-left font-medium">
+                  {d.label}
+                </th>
+                {a.diff.some((x) => x.before !== undefined) ? (
+                  <td className="py-2 pr-3 text-fg-muted line-through decoration-danger/60">
+                    {d.before ?? "—"}
+                  </td>
+                ) : null}
+                <td className="py-2 font-mono tnum">{d.after ?? "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : null}
 
       {a.decision ? (
         <Banner
@@ -380,7 +383,9 @@ function ApprovalDetail({
             <>
               {a.decision.by} · {formatDateTime(a.decision.at)}
               {a.decision.comment ? (
-                <span className="mt-1 block font-medium">“{a.decision.comment}”</span>
+                <span className="mt-1 block font-medium">
+                  Note from {a.decision.by}: “{a.decision.comment}”
+                </span>
               ) : null}
               {a.appliedAt ? (
                 <span className="mt-1 block text-caption text-fg-muted">
@@ -429,7 +434,7 @@ function ApprovalDetail({
             <Button
               onClick={() => onDecide("approve")}
               disabled={submitting}
-              aria-label={`Approve ${TYPE_LABEL[a.type].toLowerCase()} of ${a.subject}`}
+              aria-label={`Approve: ${a.subject}`}
             >
               Approve
             </Button>
@@ -437,7 +442,7 @@ function ApprovalDetail({
               variant="destructive"
               onClick={() => onDecide("reject")}
               disabled={submitting}
-              aria-label={`Reject ${TYPE_LABEL[a.type].toLowerCase()} of ${a.subject}`}
+              aria-label={`Reject: ${a.subject}`}
             >
               Reject
             </Button>
@@ -449,11 +454,6 @@ function ApprovalDetail({
           Cancel request
         </Button>
       ) : null}
-      <p className="text-caption text-fg-subtle">
-        <Badge tone="ghost" size="sm">
-          {a.id}
-        </Badge>
-      </p>
     </div>
   );
 }
