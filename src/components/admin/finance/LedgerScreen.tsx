@@ -272,7 +272,7 @@ export function LedgerScreen({
                       {(() => {
                         const shown =
                           currency === "inr"
-                            ? { amountMinor: e.amountInr, currency: "INR" }
+                            ? { amountMinor: e.amountInr, currency: "INR" as const }
                             : e.amount;
                         const { debit, credit } = drCr(shown.amountMinor);
                         const cell = (n: number, tone?: string) => (
