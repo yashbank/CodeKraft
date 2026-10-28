@@ -22,12 +22,13 @@ Updated: 2026-10-29
 - P5-02 | ready | branch feat/p5-02-service-cards (stacked on P5-01, merge P5-01 first) | vitest tests/unit/site: 39 pass
 - P6-01 | ready | branch feat/p6-01-logo-strip-once | vitest tests/unit/site + cta-target: 51 pass (one strip asserted, coarse pointer = no magnify)
 - P6-02 | ready | branch feat/p6-02-site-logo | vitest tests/unit/lib, settings, admin, invoices, media: 363 pass (new site-logo.test.tsx)
-- P6-05 | doing | branch feat/p6-05-reset-site-data
-- P6-03 | doing | branch feat/p6-03-invoice-output (stacked on P6-02)
+- P6-05 | ready | branch feat/p6-05-reset-site-data | MIGRATION 0006 (ALTER TYPE approval_type ADD VALUE site.reset) | vitest tests/unit/settings: 41 pass; FK order checked against migrated schema (throwaway local PG): all categories OK
+- P6-03 | ready | branch feat/p6-03-invoice-output (stacked on P6-02, merge P6-02 first) | vitest tests/unit/invoices + pdf: 21 pass
 - P6-04 | todo | last (UI sweep)
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
 - [open] R2 private bucket CORS must allow PUT from the admin origin | P2-01 browser uploads straight to R2 | upload a .dmg on a product version, it completes and appears
+- [open] Apply migration 0006 (P6-05) via the Neon script | new approval type site.reset | approvals list shows a 'Reset site data' request after requesting one
 ## Log
 - 2026-10-29 Mac B set up. Started Phase 1 (P1-01..P1-05) in parallel.
 - 2026-10-29 P1-01, P1-02 ready. Note: expenses-vs-profit widget keeps its 6-month trend window by design.
@@ -44,3 +45,5 @@ Updated: 2026-10-29
 - 2026-10-29 P5-01, P5-02 ready. All phases (P1-P5) are ready. One shared registry of 40 lucide icons with a searchable picker and dark/light preview; unknown stored icons still fall back to sparkles. Service cards redesigned (one link per card, highlights, hover glow, reduced motion respected). The /services page has per-service sections, not cards, so it is unchanged. Merge order for stacked branches: P3-04 then P3-05, P4-01 then P4-02, P5-01 then P5-02.
 - 2026-10-29 P6-01 ready. The logo strip was rendered in both the hero and Proof; now one strip sits below Proof. No horizontal overflow (overflow-hidden, transform-only marquee, fixed logo height). Magnify only on a mouse or trackpad. Please check live at 360, 768 and 1280 px.
 - 2026-10-29 P6-02 ready. New site logo setting (PNG/JPEG/WebP up to 2 MB; SVG not allowed). Used in the header, footer, account and admin shells, email header, favicon and the new invoice snapshot. With no logo, the site name shows as text and the favicon is a neutral icon; the CodeKraft monogram and wordmark files are removed or replaced. No migration.
+- 2026-10-29 P6-03 ready. The PDF was 5 hard-coded text lines; it is now a full A4 invoice (seller/buyer, items with HSN/SAC and tax, CGST/SGST/IGST, totals, logo, repeated header on each page). Built from the stored snapshot. HTML invoice has print CSS. The logo is fetched only from our site or media origin. Note: there is no HTML invoice route in the app (only PDF download); the PDF shows "INR", not ₹ (font limit).
+- 2026-10-29 P6-05 ready. Danger zone in Settings: pick categories, preview counts, download a JSON backup (no password hashes or tokens), type the site name, then a second super admin approves and it runs in one transaction. A real-schema check found and fixed three FK problems: the credit_notes/refunds cycle, quotes referenced by orders, and customer media. Super admins, admins, settings, RBAC, legal, landing and audit logs are kept. Migration 0006 is hand-written (drizzle-kit generate hits a snapshot collision at 0003/0004). Please test on a staging or branch DB before production.
