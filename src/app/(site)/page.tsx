@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { safeCta } from "@/components/admin/content/cta-targets";
+
 import { anonymousContext } from "@/lib/authz/context";
 import { toneFromSlug } from "@/lib/media-tone";
 import { toServiceIcon } from "@/lib/service-icon";
@@ -47,7 +49,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 function chapterCopy(c: LandingChapterView | undefined) {
-  return { eyebrow: c?.eyebrow ?? "", title: c?.title ?? "", body: c?.plainBody ?? "" };
+  return {
+    eyebrow: c?.eyebrow ?? "",
+    title: c?.title ?? "",
+    body: c?.plainBody ?? "",
+    cta: safeCta(c?.cta),
+  };
 }
 
 export default async function LandingRoute() {

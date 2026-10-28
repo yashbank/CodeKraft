@@ -49,7 +49,7 @@ export const hrefSchema = z
   .trim()
   .min(1)
   .max(2048)
-  .regex(/^(\/(?!\/)|https?:\/\/)/, "href must be a relative path or an http(s) URL");
+  .regex(/^(\/(?![/\\])|https?:\/\/)/, "href must be a relative path or an http(s) URL");
 
 export const ctaLinkSchema = z.strictObject({ label: text(60), href: hrefSchema });
 

@@ -217,6 +217,8 @@ export interface LandingChapterCopy {
   eyebrow: string;
   title: string;
   body: string;
+  /** Admin-stored CTA (Landing editor); the hero renders it, falling back to its defaults. */
+  cta?: { primary: { label: string; href: string }; secondary?: { label: string; href: string } };
 }
 
 export interface LandingContent {

@@ -12,6 +12,9 @@ import { LogoStrip } from "../LogoStrip";
 import type { ClientLogo, LandingContent, ServiceOption } from "../types";
 import { HeroPoster } from "./HeroPoster";
 
+/** Stored CTA target that opens the inquiry sheet instead of navigating. */
+const INQUIRY_HREF = "/contact#inquiry";
+
 /**
  * Hero / chapter 01 "Who we are" (docs/08 §6.5): overline, display-xl h1 with gradient on the
  * last two words, lede, `primary xl` "Start a project" (opens the InquirySheet) + `secondary xl`
@@ -28,6 +31,13 @@ export function LandingHero({
   serviceOptions: ServiceOption[];
 }) {
   const [open, setOpen] = useState(false);
+  const primary = content.cta?.primary ?? { label: "Start a project", href: INQUIRY_HREF };
+  // Never-set content shows the default; once saved, an empty secondary hides the button.
+  const secondary = content.cta
+    ? content.cta.secondary?.label && content.cta.secondary.href
+      ? content.cta.secondary
+      : null
+    : { label: "Explore products", href: "/products" };
   const words = content.title.split(" ");
   const head = words.slice(0, -2).join(" ");
   const tail = words.slice(-2).join(" ");
@@ -50,17 +60,25 @@ export function LandingHero({
           </h1>
           <p className="max-w-[55ch] text-body-lg text-fg-muted">{content.subtitle}</p>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button
-              type="button"
-              size="xl"
-              className="w-full sm:w-auto"
-              onClick={() => setOpen(true)}
-            >
-              Start a project
-            </Button>
-            <Button asChild variant="secondary" size="xl" className="w-full sm:w-auto">
-              <Link href="/products">Explore products</Link>
-            </Button>
+            {primary.href === INQUIRY_HREF ? (
+              <Button
+                type="button"
+                size="xl"
+                className="w-full sm:w-auto"
+                onClick={() => setOpen(true)}
+              >
+                {primary.label}
+              </Button>
+            ) : (
+              <Button asChild size="xl" className="w-full sm:w-auto">
+                <Link href={primary.href}>{primary.label}</Link>
+              </Button>
+            )}
+            {secondary ? (
+              <Button asChild variant="secondary" size="xl" className="w-full sm:w-auto">
+                <Link href={secondary.href}>{secondary.label}</Link>
+              </Button>
+            ) : null}
           </div>
           <LogoStrip
             logos={logos.slice(0, 4)}

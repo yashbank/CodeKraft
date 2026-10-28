@@ -35,6 +35,7 @@ const SECTION: Record<LandingChapterKey, string> = {
 export function landingFieldHelp(chapter: LandingChapterKey, field: LandingFieldKey): string {
   const s = SECTION[chapter];
   const hero = chapter === "who";
+  const where = hero ? "in the hero" : `under the headline of the ${s}`;
   switch (field) {
     case "poster":
       return hero
@@ -53,16 +54,12 @@ export function landingFieldHelp(chapter: LandingChapterKey, field: LandingField
         ? "Not shown in the hero."
         : `Shown as the paragraph under the headline of the ${s}.`;
     case "cta1":
-      return hero ? "Shown as the label of the main button in the hero." : `Not shown in the ${s}.`;
+      return `Shown as the label of the main button ${where}.`;
     case "cta1-target":
-      return hero ? "Where the main hero button goes." : `Not used: the ${s} has no stored button.`;
+      return `Where the main button ${where} goes.`;
     case "cta2":
-      return hero
-        ? "Shown as the label of the second button in the hero."
-        : `Not shown in the ${s}.`;
+      return `Shown as the label of the second button ${where}. Leave empty to hide it.`;
     case "cta2-target":
-      return hero
-        ? "Where the second hero button goes."
-        : `Not used: the ${s} has no stored button.`;
+      return `Where the second button ${where} goes.`;
   }
 }

@@ -26,6 +26,7 @@ import type {
   Testimonial,
 } from "../types";
 import { Chapter } from "./Chapter";
+import { ChapterCtas } from "./ChapterCtas";
 import { FaqSection } from "./FaqSection";
 import { LandingHero } from "./LandingHero";
 import { StoryRail } from "./StoryRail";
@@ -86,11 +87,10 @@ export function LandingPage({
             </Reveal>
           ))}
         </ul>
-        <Button asChild variant="link" className="mt-6">
-          <Link href="/services">
-            See all services <ArrowRightIcon aria-hidden />
-          </Link>
-        </Button>
+        <ChapterCtas
+          cta={content.build.cta}
+          fallback={[{ label: "See all services", href: "/services" }]}
+        />
       </Chapter>
 
       <Chapter
@@ -114,11 +114,6 @@ export function LandingPage({
                 </Reveal>
               ))}
             </ul>
-            <Button asChild variant="link" className="mt-6">
-              <Link href="/products">
-                Explore all products <ArrowRightIcon aria-hidden />
-              </Link>
-            </Button>
           </>
         ) : (
           <div className="rounded-lg border border-dashed border-border px-6 py-12 text-center">
@@ -131,6 +126,14 @@ export function LandingPage({
             </Button>
           </div>
         )}
+        <ChapterCtas
+          cta={content.sell.cta}
+          fallback={
+            featuredProducts.length > 0
+              ? [{ label: "Explore all products", href: "/products" }]
+              : []
+          }
+        />
       </Chapter>
 
       <Chapter
@@ -175,6 +178,7 @@ export function LandingPage({
               ))}
             </ul>
           ) : null}
+          <ChapterCtas cta={content.proof.cta} className="" />
         </div>
       </Chapter>
 
@@ -188,11 +192,11 @@ export function LandingPage({
         <Reveal className="rounded-xl border border-border bg-surface p-6 shadow-1 lg:p-8">
           <InquiryForm variant="compact" serviceOptions={serviceOptions} />
           <div className="mt-4 border-t border-border pt-4">
-            <Button asChild variant="link">
-              <Link href="/products">
-                Explore products <ArrowRightIcon aria-hidden />
-              </Link>
-            </Button>
+            <ChapterCtas
+              cta={content.talk.cta}
+              fallback={[{ label: "Explore products", href: "/products" }]}
+              className=""
+            />
           </div>
         </Reveal>
       </Chapter>
