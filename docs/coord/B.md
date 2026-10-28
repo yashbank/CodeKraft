@@ -15,6 +15,9 @@ Updated: 2026-10-29
 - P3-03 | ready | branch feat/p3-03-case-studies | vitest tests/unit/admin/case-study-sync.test.ts: 3 pass; e2e tests/e2e/flows/case-studies.spec.ts not run (needs DB+server)
 - P3-04 | doing | branch feat/p3-04-landing-labels
 - P3-05 | doing | branch feat/p3-05-cta-target
+- P4-01 | doing | branch feat/p4-01-theme-palette
+- P4-02 | doing | branch feat/p4-02-settings-propagation
+- P4-03 | doing | branch feat/p4-03-ai-settings
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
 - [open] R2 private bucket CORS must allow PUT from the admin origin | P2-01 browser uploads straight to R2 | upload a .dmg on a product version, it completes and appears
