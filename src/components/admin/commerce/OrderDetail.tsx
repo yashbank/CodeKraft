@@ -95,6 +95,7 @@ export function OrderDetail({
     reference: string;
     note: string;
     receivedOn: string;
+    licenseKeys: Array<{ orderItemId: string; licenseKey: string }>;
   }) {
     if (!payment.paymentId) {
       toast.error("No payment record to confirm on this order yet.");
@@ -107,6 +108,7 @@ export function OrderDetail({
       reference: result.reference,
       receivedOn: result.receivedOn,
       note: result.note || undefined,
+      licenseKeys: result.licenseKeys.length > 0 ? result.licenseKeys : undefined,
     });
     setConfirmBusy(false);
     if (!res.ok) {
@@ -698,6 +700,9 @@ export function OrderDetail({
         due={payment.due}
         customerReference={payment.customerReference}
         busy={confirmBusy}
+        licenseItems={data.items
+          .filter((it) => it.deliveryType === "license")
+          .map((it) => ({ id: it.id, product: it.product }))}
         blockedReason={
           splitBlocked
             ? "Project order: the split must be approved before payment can be confirmed."

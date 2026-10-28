@@ -30,7 +30,11 @@ export interface DeliveryService {
   ): Promise<EntitlementAdminRow>;
 
   /** API-DEL-08 `setLicenseKey` — encrypts and stores; notifications carry a dashboard link only. */
-  setLicenseKey(ctx: RequestContext, input: SetLicenseKeyInput): Promise<EntitlementAdminRow>;
+  setLicenseKey(
+    ctx: RequestContext,
+    input: SetLicenseKeyInput,
+    tx?: TxCtx,
+  ): Promise<EntitlementAdminRow>;
 
   /** API-DEL-09 `markServiceStep` — `NOT_FOUND` for an unknown `stepKey`; `N: service.progress` + `E: service-progress`. */
   markServiceStep(ctx: RequestContext, input: MarkServiceStepInput): Promise<MarkServiceStepResult>;

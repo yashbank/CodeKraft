@@ -86,6 +86,10 @@ export const confirmPaymentInput = z
     note: zTrimmed(0, 500).optional(),
     /** Confirm an `ORDER_EXPIRED` order anyway (audited). */
     overrideExpiry: z.boolean().default(false),
+    /** Optional licence keys typed in the confirm dialog, applied to the granted `license` entitlements. */
+    licenseKeys: z
+      .array(z.object({ orderItemId: zUuid, licenseKey: z.string().trim().min(8).max(512) }))
+      .optional(),
     /** Drop exhausted coupon and reprice without coupon (audited). */
     dropCoupon: z.boolean().default(false),
   })

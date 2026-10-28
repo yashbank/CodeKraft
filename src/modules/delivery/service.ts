@@ -126,11 +126,12 @@ export class DefaultDeliveryService implements DeliveryService {
   async setLicenseKey(
     ctx: RequestContext,
     rawInput: SetLicenseKeyInput,
+    outerTx?: TxCtx,
   ): Promise<EntitlementAdminRow> {
     assertPermission(ctx, "delivery.tasks.write");
     const input = setLicenseKeySchema.parse(rawInput);
 
-    return await withTx(async (tx) => {
+    const run = async (tx: TxCtx) => {
       const [entitlement] = await tx
         .select()
         .from(entitlements)
@@ -197,7 +198,8 @@ export class DefaultDeliveryService implements DeliveryService {
       }
 
       return await this.buildAdminRow(updated, tx);
-    });
+    };
+    return outerTx ? run(outerTx) : withTx(run);
   }
 
   async markServiceStep(
