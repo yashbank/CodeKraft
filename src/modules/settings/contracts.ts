@@ -133,7 +133,7 @@ export const SITE_SETTINGS_DEFAULTS: SiteSettings = Object.freeze({
   razorpaySettings: null,
   enabledPaymentMethods: ["manual_upi", "manual_bank"],
   defaultTheme: "dark-cinematic",
-  aiModel: "claude-opus-5",
+  aiModel: "claude-sonnet-5-5",
   aiDailyPlatformCap: 2000,
   aiDailyUserCap: 30,
   chatTimeoutMs: 30_000,

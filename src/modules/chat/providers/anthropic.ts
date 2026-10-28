@@ -1,3 +1,4 @@
+import { AppError, ErrorCode } from "@/lib/errors";
 import type {
   AnthropicProviderConfig,
   LLMEvent,
@@ -19,6 +20,9 @@ export class AnthropicProvider implements LLMProvider {
     messages: readonly LLMMessage[],
     opts: LLMStreamOptions,
   ): AsyncIterable<LLMEvent> {
+    const timeout = new AbortController();
+    const timer = setTimeout(() => timeout.abort(), opts.timeoutMs);
+    const signal = opts.signal ? AbortSignal.any([opts.signal, timeout.signal]) : timeout.signal;
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -34,23 +38,17 @@ export class AnthropicProvider implements LLMProvider {
           messages: messages.map((m) => ({ role: m.role, content: m.content })),
           stream: true,
         }),
-        signal: opts.signal,
+        signal,
       });
 
       if (!res.ok || !res.body) {
-        yield { type: "text", text: "AI assistant response from CodeKraft." };
-        yield {
-          type: "done",
-          stopReason: "end_turn",
-          usage: { inputTokens: 50, outputTokens: 10 },
-          model: opts.model || this.model,
-        };
-        return;
+        throw new AppError(ErrorCode.UPSTREAM_UNAVAILABLE);
       }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      const usage = { inputTokens: 0, outputTokens: 0 };
 
       while (true) {
         const { done, value } = await reader.read();
@@ -66,6 +64,11 @@ export class AnthropicProvider implements LLMProvider {
             if (dataStr === "[DONE]") break;
             try {
               const data = JSON.parse(dataStr);
+              if (data.type === "message_start" && data.message?.usage) {
+                usage.inputTokens = data.message.usage.input_tokens ?? 0;
+              } else if (data.type === "message_delta" && data.usage) {
+                usage.outputTokens = data.usage.output_tokens ?? 0;
+              }
               if (data.type === "content_block_delta" && data.delta?.text) {
                 yield { type: "text", text: data.delta.text };
               }
@@ -79,16 +82,19 @@ export class AnthropicProvider implements LLMProvider {
       yield {
         type: "done",
         stopReason: "end_turn",
-        usage: { inputTokens: 50, outputTokens: 10 },
+        usage,
         model: opts.model || this.model,
       };
-    } catch {
+    } catch (err) {
+      if (err instanceof AppError) throw err;
       yield {
         type: "done",
-        stopReason: "error",
+        stopReason: timeout.signal.aborted ? "timeout" : "error",
         usage: { inputTokens: 0, outputTokens: 0 },
         model: opts.model || this.model,
       };
+    } finally {
+      clearTimeout(timer);
     }
   }
 }

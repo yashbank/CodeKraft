@@ -1,24 +1,31 @@
 import { and, eq, sql } from "drizzle-orm";
 import { type DbOrTx, getDb } from "@/lib/db";
+import { settingsService } from "@/modules/settings/service";
 import { chatUsageDaily } from "../../../drizzle/schema/chat";
 import type { ChatCapGuard } from "./contracts";
 import type { CapCheck, ChatCaps } from "./types";
 
 export class DefaultChatCapGuard implements ChatCapGuard {
+  /** Explicit caps override; otherwise the admin-set `site_settings` caps apply. */
   constructor(
-    private readonly userCap = 30,
-    private readonly platformCap = 500,
+    private readonly userCap?: number,
+    private readonly platformCap?: number,
   ) {}
 
   async caps(): Promise<ChatCaps> {
+    if (this.userCap !== undefined && this.platformCap !== undefined) {
+      return { userDaily: this.userCap, platformDaily: this.platformCap };
+    }
+    const s = await settingsService.load();
     return {
-      userDaily: this.userCap,
-      platformDaily: this.platformCap,
+      userDaily: this.userCap ?? s.aiDailyUserCap,
+      platformDaily: this.platformCap ?? s.aiDailyPlatformCap,
     };
   }
 
   async check(userId: string, day: string): Promise<CapCheck> {
     const db = getDb();
+    const { userDaily: userCap, platformDaily: platformCap } = await this.caps();
 
     const rows = await db
       .select()
@@ -30,10 +37,10 @@ export class DefaultChatCapGuard implements ChatCapGuard {
     const userCount = rows.find((r) => r.scope === userId)?.count ?? 0;
     const platformCount = rows.find((r) => r.scope === "platform")?.count ?? 0;
 
-    const remainingUser = Math.max(0, this.userCap - userCount);
-    const remainingPlatform = Math.max(0, this.platformCap - platformCount);
+    const remainingUser = Math.max(0, userCap - userCount);
+    const remainingPlatform = Math.max(0, platformCap - platformCount);
 
-    if (userCount >= this.userCap) {
+    if (userCount >= userCap) {
       return {
         allowed: false,
         exceeded: "user",
@@ -41,7 +48,7 @@ export class DefaultChatCapGuard implements ChatCapGuard {
       };
     }
 
-    if (platformCount >= this.platformCap) {
+    if (platformCount >= platformCap) {
       return {
         allowed: false,
         exceeded: "platform",

@@ -18,6 +18,7 @@ import { notificationsService } from "@/modules/notifications/service";
 import { queriesService } from "@/modules/queries/service";
 import type { JobContext, JobOutcome } from "@/modules/analytics/types";
 import type { ListResult } from "@/modules/_shared/zod";
+import { settingsService } from "@/modules/settings/service";
 import { chatCapGuard } from "./caps";
 import type { ChatService, LLMEvent, LLMProvider } from "./contracts";
 import { ROOT_MENU_NODES, resolveMenuIntent } from "./menus";
@@ -108,7 +109,7 @@ export class DefaultChatService implements ChatService {
       .insert(conversations)
       .values({
         userId: ctx.userId,
-        model: "claude-3-5-sonnet-20241022",
+        model: (await settingsService.load()).aiModel,
         promptVersionId: activePrompt.id,
         purgeAfter,
       })
@@ -246,6 +247,7 @@ export class DefaultChatService implements ChatService {
     };
 
     const { systemPrompt, tools } = await buildChatPrompt([], conv.promptVersionId);
+    const { chatTimeoutMs } = await settingsService.load();
 
     let fullAssistantText = "";
     let tokensIn = 0;
@@ -256,7 +258,7 @@ export class DefaultChatService implements ChatService {
       const stream = provider.stream(systemPrompt, [{ role: "user", content: input.content }], {
         model: conv.model,
         maxTokens: 600,
-        timeoutMs: 20000,
+        timeoutMs: chatTimeoutMs,
         tools,
       });
 
@@ -301,6 +303,16 @@ export class DefaultChatService implements ChatService {
           tokensIn,
           tokensOut,
         });
+      }
+
+      if (stopReason === "timeout" || stopReason === "error") {
+        yield {
+          event: "fallback",
+          data: {
+            menu: ROOT_MENU_NODES,
+            reason: stopReason === "timeout" ? "timeout" : "unavailable",
+          },
+        };
       }
 
       yield {
@@ -589,6 +601,7 @@ export class DefaultChatService implements ChatService {
       .where(eq(chatMessages.conversationId, conv.id))
       .orderBy(desc(chatMessages.createdAt));
 
+    const caps = await chatCapGuard.caps();
     return {
       conversation: {
         conversationId: conv.id,
@@ -613,9 +626,9 @@ export class DefaultChatService implements ChatService {
       })),
       usage: {
         userToday: 1,
-        userCap: 30,
+        userCap: caps.userDaily,
         platformToday: 1,
-        platformCap: 500,
+        platformCap: caps.platformDaily,
       },
     };
   }
@@ -775,11 +788,12 @@ export class DefaultChatService implements ChatService {
     const { systemPrompt } = await buildChatPrompt();
     // Lazy import: the provider factory pulls the Anthropic SDK; FakeProvider is used without a key.
     const { getLLMProvider } = await import("./providers");
+    const { aiModel, chatTimeoutMs } = await settingsService.load();
     let answer = "";
     for await (const ev of getLLMProvider().stream(
       systemPrompt,
       [{ role: "user", content: input.message }],
-      { model: process.env.AI_MODEL || "", maxTokens: 600, timeoutMs: 20000 },
+      { model: aiModel, maxTokens: 600, timeoutMs: chatTimeoutMs },
     )) {
       if (ev.type === "text") answer += ev.text;
     }
