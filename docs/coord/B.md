@@ -18,6 +18,8 @@ Updated: 2026-10-29
 - P4-01 | ready | branch feat/p4-01-theme-palette | vitest tests/unit/palettes/palettes.test.tsx: 12 pass (WCAG AA for all 8 palettes)
 - P4-02 | ready | branch feat/p4-02-settings-propagation (stacked on P4-01, merge P4-01 first) | vitest settings-propagation + palettes + site-brand: 22 pass; tests/unit/lib + modules: 292 pass
 - P4-03 | ready | branch feat/p4-03-ai-settings | vitest tests/unit/chat: 9 pass (new ai-settings.test.ts)
+- P5-01 | doing | branch feat/p5-01-service-icons
+- P5-02 | doing | branch feat/p5-02-service-cards (stacked on P5-01)
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
 - [open] R2 private bucket CORS must allow PUT from the admin origin | P2-01 browser uploads straight to R2 | upload a .dmg on a product version, it completes and appears
