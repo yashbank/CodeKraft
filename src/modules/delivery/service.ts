@@ -6,6 +6,7 @@ import type { RequestContext } from "@/lib/authz/context";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { encrypt } from "@/lib/crypto";
 import { auditService } from "@/modules/audit/service";
+import { notificationsService } from "@/modules/notifications/service";
 import { deliveryTasks, entitlements, serviceProgress } from "../../../drizzle/schema/delivery";
 import { orders, orderItems } from "../../../drizzle/schema/commerce";
 import { offerings } from "../../../drizzle/schema/offerings";
@@ -249,6 +250,30 @@ export class DefaultDeliveryService implements DeliveryService {
         if (oi?.orderId) {
           await this.evaluateOrderFulfilment(oi.orderId, tx);
         }
+      }
+
+      // Tell the customer (in-app) about the update, scoped to this tx so it rolls back with it.
+      if (entitlement && input.done) {
+        const [off] = await tx
+          .select({ name: offerings.name, serviceSteps: offerings.serviceSteps })
+          .from(offerings)
+          .where(eq(offerings.id, entitlement.offeringId));
+        const stepTitle =
+          off?.serviceSteps?.find((st) => st.key === input.stepKey)?.title ?? input.stepKey;
+        await notificationsService.emit(
+          entitlement.userId,
+          "service.progress",
+          {
+            entitlementId: entitlement.id,
+            serviceName: off?.name ?? "your service",
+            stepTitle: allDone ? "Your service is complete" : `${stepTitle} done`,
+            notes: allDone
+              ? "All steps are done. Your service has been delivered."
+              : (input.note ?? `Step "${stepTitle}" has been completed.`),
+          },
+          ["inapp"],
+          tx,
+        );
       }
 
       await auditService.log(

@@ -985,6 +985,20 @@ export class DefaultEntitlementsService implements EntitlementsService {
 
     const handler = this.registry.get(ent.deliveryType);
     const actions = handler.adminActions(ent, openTasks);
+    let serviceSteps: EntitlementAdminRow["serviceSteps"];
+    if (ent.deliveryType === "service") {
+      const progress = await tx
+        .select()
+        .from(serviceProgress)
+        .where(eq(serviceProgress.entitlementId, ent.id));
+      const byKey = new Map(progress.map((p) => [p.stepKey, p]));
+      serviceSteps = (offering?.serviceSteps ?? []).map((st) => ({
+        key: st.key,
+        title: st.title,
+        doneAt: byKey.get(st.key)?.doneAt?.toISOString() ?? null,
+        note: byKey.get(st.key)?.note ?? null,
+      }));
+    }
     const userRow = required(user, "User");
     const prodRow = required(prod, "Product");
     const offeringRow = required(offering, "Offering");
@@ -1004,6 +1018,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
       grantedManuallyBy: ent.grantedManuallyBy,
       openTasks: openTasks.length,
       adminActions: actions,
+      ...(serviceSteps ? { serviceSteps } : {}),
       createdAt: ent.createdAt.toISOString(),
     };
   }

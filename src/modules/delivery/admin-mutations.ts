@@ -44,3 +44,8 @@ export async function setLicenseKey(raw: unknown) {
   const { setLicenseKeyAction } = await import("./actions");
   return withCtx(setLicenseKeyAction, raw);
 }
+
+export async function markServiceStep(raw: unknown) {
+  const { markServiceStepAction } = await import("./actions");
+  return withCtx(markServiceStepAction, raw);
+}

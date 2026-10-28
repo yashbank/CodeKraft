@@ -5,7 +5,12 @@
  * Uses defineAction (SA-07).
  */
 import { defineAction } from "@/lib/actions/envelope";
-import { assignDeliveryTaskSchema, completeDeliveryTaskSchema, setLicenseKeySchema } from "./types";
+import {
+  assignDeliveryTaskSchema,
+  completeDeliveryTaskSchema,
+  markServiceStepSchema,
+  setLicenseKeySchema,
+} from "./types";
 import { deliveryService } from "./service";
 
 export const completeDeliveryTaskAction = defineAction({
@@ -28,4 +33,12 @@ export const setLicenseKeyAction = defineAction({
   input: setLicenseKeySchema,
   permission: "delivery.tasks.write",
   handler: (input, ctx) => deliveryService.setLicenseKey(ctx, input),
+});
+
+/** API-DEL-09 `markServiceStep` — admin ticks a service step done; all done fulfils the order. */
+export const markServiceStepAction = defineAction({
+  name: "API-DEL-09 service_step.mark",
+  input: markServiceStepSchema,
+  permission: "delivery.tasks.write",
+  handler: (input, ctx) => deliveryService.markServiceStep(ctx, input),
 });

@@ -39,5 +39,10 @@ export function mapEntitlementRow(e: EntitlementAdminRow): EntitlementRow {
     orderNumber: e.orderNo ?? "—",
     orderId: e.orderNo ?? "",
     grantedManually: e.grantedManuallyBy !== null,
+    serviceSteps: e.serviceSteps?.map((st) => ({
+      key: st.key,
+      title: st.title,
+      done: st.doneAt !== null,
+    })),
   };
 }

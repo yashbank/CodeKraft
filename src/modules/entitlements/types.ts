@@ -310,6 +310,8 @@ export interface EntitlementAdminRow {
   grantedManuallyBy: string | null;
   openTasks: number;
   adminActions: EntitlementAdminAction[];
+  /** Service entitlements only: each offering step with its done state (admin "Service steps"). */
+  serviceSteps?: Array<{ key: string; title: string; doneAt: string | null; note: string | null }>;
   createdAt: string;
 }
 

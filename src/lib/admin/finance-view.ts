@@ -27,7 +27,7 @@
  *  - `AdjustmentRow.createdAt` is derived from the approval's `ageHours` (`ApprovalView` has no
  *    exact timestamp field), so it is accurate to the hour, not the second.
  */
-import type { Currency } from "@/lib/money";
+import { format as formatMoney, type Currency } from "@/lib/money";
 import type {
   Expense,
   LedgerEntryView,
@@ -472,12 +472,16 @@ function formatCell(
   kind: "text" | "money" | "count" | "date",
 ): string | number {
   if (value === null || value === undefined) return kind === "money" || kind === "count" ? 0 : "—";
-  if (kind === "money") return typeof value === "number" ? value / 100 : value;
+  // Report money cells are INR minor units; show them formatted (₹1.00), never as raw numbers.
+  if (kind === "money") {
+    return typeof value === "number" ? formatMoney({ amountMinor: value, currency: "INR" }) : value;
+  }
   return value;
 }
 
+/** Stays in minor units: the screen's `inr()` formatter divides by 100 itself. */
 function moneyCell(value: ReportCell | undefined): number {
-  return typeof value === "number" ? value / 100 : 0;
+  return typeof value === "number" ? value : 0;
 }
 
 /**

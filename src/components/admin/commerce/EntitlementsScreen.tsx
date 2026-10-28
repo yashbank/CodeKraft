@@ -12,7 +12,7 @@ import {
   resetDownloadCount,
   revokeEntitlement,
 } from "@/modules/entitlements/admin-mutations";
-import { completeDeliveryTask } from "@/modules/delivery/admin-mutations";
+import { completeDeliveryTask, markServiceStep } from "@/modules/delivery/admin-mutations";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -88,6 +88,7 @@ export function EntitlementsScreen({
   const [expanded, setExpanded] = React.useState<string | null>(null);
   const [doneTask, setDoneTask] = React.useState<DeliveryTaskRow | null>(null);
   const router = useRouter();
+  const [stepsFor, setStepsFor] = React.useState<EntitlementRow | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
 
   const doResetDownloads = async (e: EntitlementRow) => {
@@ -147,6 +148,35 @@ export function EntitlementsScreen({
       return;
     }
     toast.success("Licence key saved — the customer can reveal it now");
+    router.refresh();
+  };
+
+  const doMarkStep = async (e: EntitlementRow, stepKey: string, done: boolean) => {
+    setSubmitting(true);
+    const result = await markServiceStep({ entitlementId: e.id, stepKey, done });
+    setSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(
+      result.data.fulfilled
+        ? "All steps done. Service fulfilled and customer notified."
+        : done
+          ? "Step marked done. Customer notified."
+          : "Step reopened",
+    );
+    // Reflect the new state in the open dialog without waiting for the refresh.
+    setStepsFor((cur) =>
+      cur && cur.id === e.id
+        ? {
+            ...cur,
+            serviceSteps: cur.serviceSteps?.map((st) =>
+              st.key === stepKey ? { ...st, done } : st,
+            ),
+          }
+        : cur,
+    );
     router.refresh();
   };
 
@@ -394,6 +424,12 @@ export function EntitlementsScreen({
                                   e.type !== "license" || e.status === "revoked" || submitting,
                                 onSelect: () => void doSetKey(e),
                               },
+                              {
+                                label: "Service steps",
+                                disabled:
+                                  e.type !== "service" || e.status === "revoked" || submitting,
+                                onSelect: () => setStepsFor(e),
+                              },
                               { label: "Mark provisioned", disabled: e.provisioning !== "pending" },
                               {
                                 label: "Reset downloads",
@@ -595,6 +631,46 @@ export function EntitlementsScreen({
           )}
         </>
       )}
+
+      <Dialog open={stepsFor !== null} onOpenChange={(o) => !o && setStepsFor(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Service steps</DialogTitle>
+            <DialogDescription>
+              {stepsFor ? `${stepsFor.customer.name} · ${stepsFor.product}. ` : ""}
+              Marking a step done notifies the customer. When every step is done the service is
+              fulfilled.
+            </DialogDescription>
+          </DialogHeader>
+          {stepsFor?.serviceSteps && stepsFor.serviceSteps.length > 0 ? (
+            <ul className="flex flex-col gap-2">
+              {stepsFor.serviceSteps.map((st) => (
+                <li
+                  key={st.key}
+                  className="flex items-center justify-between gap-3 rounded-md border border-border p-2"
+                >
+                  <span className={cn(st.done && "text-fg-muted line-through")}>{st.title}</span>
+                  <Button
+                    size="sm"
+                    variant={st.done ? "ghost" : "secondary"}
+                    disabled={submitting}
+                    onClick={() => void doMarkStep(stepsFor, st.key, !st.done)}
+                  >
+                    {st.done ? "Reopen" : "Mark done"}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-body-sm text-fg-muted">This service has no steps configured.</p>
+          )}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="ghost">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={doneTask !== null} onOpenChange={(o) => !o && setDoneTask(null)}>
         <DialogContent>

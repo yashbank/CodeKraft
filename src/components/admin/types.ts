@@ -481,6 +481,8 @@ export interface EntitlementRow {
   orderNumber: string;
   orderId: string;
   grantedManually?: boolean;
+  /** Service entitlements: offering steps and whether each is done. */
+  serviceSteps?: Array<{ key: string; title: string; done: boolean }>;
 }
 
 export interface DeliveryTaskRow {
