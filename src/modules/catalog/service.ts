@@ -1051,6 +1051,7 @@ export class DefaultCatalogService implements CatalogService {
     input: ListProductsAdminInput,
     tx?: DbOrTx,
   ): Promise<ListResult<ProductAdminRow>> {
+    await (await import("@/jobs/publish")).publishDueProducts();
     assertPermission(ctx, "catalog.read");
     const dbClient = await this.getDatabase(tx);
 
@@ -1179,6 +1180,7 @@ export class DefaultCatalogService implements CatalogService {
     input: { productId: string },
     tx?: DbOrTx,
   ): Promise<ProductAdminGraph> {
+    await (await import("@/jobs/publish")).publishDueProducts();
     assertPermission(ctx, "catalog.read");
     const dbClient = await this.getDatabase(tx);
 
@@ -1466,6 +1468,7 @@ export class DefaultCatalogService implements CatalogService {
     input: GetProductBySlugInput,
     tx?: DbOrTx,
   ): Promise<ProductDetail> {
+    await (await import("@/jobs/publish")).publishDueProducts();
     const dbClient = await this.getDatabase(tx);
 
     let [p] = await dbClient.select().from(products).where(eq(products.slug, input.slug)).limit(1);
@@ -1778,6 +1781,7 @@ export class DefaultCatalogService implements CatalogService {
     input: { limit?: number; categorySlug?: string; displayCurrency: Currency },
     tx?: DbOrTx,
   ): Promise<ProductCard[]> {
+    await (await import("@/jobs/publish")).publishDueProducts();
     void ctx;
     const dbClient = await this.getDatabase(tx);
     const max = input.limit ?? 100;

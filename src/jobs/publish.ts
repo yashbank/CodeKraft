@@ -83,3 +83,25 @@ export const scheduledPublishJob = {
     }
   },
 };
+
+let lastDueCheck = 0;
+
+/**
+ * Daily crons (Vercel plan limit) cannot publish on time, so catalog reads call this: at most one
+ * cheap check per minute per instance, and the real job (with its job_runs row) runs only when a
+ * scheduled product is actually due.
+ */
+export async function publishDueProducts(now: Date = new Date()): Promise<void> {
+  if (now.getTime() - lastDueCheck < 60_000) return;
+  lastDueCheck = now.getTime();
+  try {
+    const [due] = await db
+      .select({ id: products.id })
+      .from(products)
+      .where(and(eq(products.status, "scheduled"), lte(products.publishAt, now)))
+      .limit(1);
+    if (due) await scheduledPublishJob.run(now);
+  } catch {
+    lastDueCheck = 0;
+  }
+}

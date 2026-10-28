@@ -3,7 +3,7 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { products } from "../../../drizzle/schema/catalog";
 import { jobRuns } from "../../../drizzle/schema/ops";
-import { scheduledPublishJob } from "@/jobs/publish";
+import { publishDueProducts, scheduledPublishJob } from "@/jobs/publish";
 import { truncateAll } from "../../setup/db";
 import { migrateTestDb } from "../../setup/migrate";
 import { createProduct } from "../../factories/catalog";
@@ -71,5 +71,17 @@ describe("publish.scheduled job integration (docs/06 §3.3, docs/12 §2.3, P3.9)
     // 7. Idempotent replay: running again publishes 0 products
     const replay = await scheduledPublishJob.run(now);
     expect(replay.count).toBe(0);
+  });
+
+  it("publishDueProducts publishes a due product without waiting for the daily cron", async () => {
+    await truncateAll();
+    const due = await createProduct({
+      status: "scheduled",
+      name: "Due On Read",
+      overrides: { publishAt: new Date(Date.now() - 60_000) },
+    });
+    await publishDueProducts(new Date(Date.now() + 120_000));
+    const [row] = await db.select().from(products).where(eq(products.id, due.id));
+    expect(row?.status).toBe("published");
   });
 });
