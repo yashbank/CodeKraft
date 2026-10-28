@@ -33,6 +33,7 @@ import { Banner } from "../Banner";
 import { initials } from "../format";
 import { Field } from "../RichTextField";
 import { RowActions } from "../RowActions";
+import { LogoMark } from "../../site/LogoMark";
 import type { ClientLogo, TestimonialItem } from "../types";
 import { ContentEditorFrame } from "./ContentEditorFrame";
 import {
@@ -172,7 +173,7 @@ export function TestimonialsLogos({
       name: String(data.get("name") ?? "").trim(),
       mediaId,
       url: String(data.get("url") ?? "").trim() || undefined,
-      position: logos.length,
+      position: l ? logos.findIndex((x) => x.id === l.id) : logos.length,
       published: lPublished,
     });
     setSaving(false);
@@ -214,6 +215,34 @@ export function TestimonialsLogos({
     } else {
       router.refresh();
     }
+  }
+
+  async function moveLogo(logo: LogoRow, dir: -1 | 1) {
+    const i = logos.findIndex((x) => x.id === logo.id);
+    const j = i + dir;
+    if (j < 0 || j >= logos.length) return;
+    const next = [...logos];
+    next.splice(j, 0, ...next.splice(i, 1));
+    setLogos(next);
+    const results = await Promise.all(
+      [i, j].map((idx) => {
+        const x = next[idx];
+        return x?.mediaId
+          ? saveClientLogo({
+              id: x.id,
+              name: x.name,
+              mediaId: x.mediaId,
+              url: x.url,
+              position: idx,
+              published: x.published,
+            })
+          : Promise.resolve({ ok: true as const });
+      }),
+    );
+    if (results.some((r) => !r.ok)) {
+      toast.error("Could not reorder logos");
+      setLogos(logos);
+    } else router.refresh();
   }
 
   async function handleDeleteLogo(logo: LogoRow) {
@@ -355,13 +384,13 @@ export function TestimonialsLogos({
                     className="grid h-16 place-items-center rounded-sm bg-inverse text-inverse-fg text-caption"
                     aria-label={`${logo.name} on dark`}
                   >
-                    {logo.name}
+                    {logo.logoUrl ? <LogoMark src={logo.logoUrl} name={logo.name} /> : logo.name}
                   </div>
                   <div
                     className="grid h-16 place-items-center rounded-sm border border-border bg-canvas text-caption"
                     aria-label={`${logo.name} on light`}
                   >
-                    {logo.name}
+                    {logo.logoUrl ? <LogoMark src={logo.logoUrl} name={logo.name} /> : logo.name}
                   </div>
                 </div>
                 <div className="flex items-center justify-between gap-2 text-body-sm">
@@ -383,6 +412,8 @@ export function TestimonialsLogos({
                       label={`Actions for ${logo.name}`}
                       actions={[
                         { label: "Edit", onSelect: () => openLEdit(logo) },
+                        { label: "Move earlier", onSelect: () => moveLogo(logo, -1) },
+                        { label: "Move later", onSelect: () => moveLogo(logo, 1) },
                         {
                           label: "Delete",
                           destructive: true,
