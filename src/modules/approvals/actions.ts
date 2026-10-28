@@ -26,6 +26,10 @@ import { approvalsService } from "./service";
 import "@/modules/catalog/service";
 import "@/modules/ownership/service";
 import "@/modules/users/service";
+import "@/modules/finance/adjustments";
+import "@/modules/finance/payouts";
+import "@/modules/payments/refunds";
+import "@/modules/orders/project-split";
 
 export const approveRequestAction = defineAction({
   name: "API-ADM-02 approval.approve",

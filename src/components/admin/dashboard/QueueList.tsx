@@ -10,7 +10,7 @@ export function QueueList({ items, empty }: { items: QueueItem[]; empty: string 
     return <p className="py-6 text-center text-body-sm text-fg-subtle">{empty}</p>;
   return (
     <ul className="divide-y divide-border">
-      {items.slice(0, 5).map((it) => {
+      {items.slice(0, 5).map((it, i) => {
         const inner = (
           <span className="flex items-start gap-2 py-2">
             <span
@@ -44,7 +44,7 @@ export function QueueList({ items, empty }: { items: QueueItem[]; empty: string 
           </span>
         );
         return (
-          <li key={it.label}>
+          <li key={`${it.label}-${i}`}>
             {it.href ? (
               <Link href={it.href} className="block hover:bg-accent-soft/50">
                 {inner}

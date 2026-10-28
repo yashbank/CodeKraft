@@ -71,7 +71,7 @@ export function BarChart({
           const x = gap + i * (bw + gap);
           const fill = SERIES_FILL[(colourByBar ? i : series - 1) % SERIES_FILL.length];
           return (
-            <g key={d.label}>
+            <g key={`${d.label}-${i}`}>
               <rect x={x} y={plotH - h} width={bw} height={h} rx={2} className={fill}>
                 <title>{`${d.label}: ${formatValue(d.value)}`}</title>
               </rect>
@@ -90,8 +90,8 @@ export function BarChart({
           </tr>
         </thead>
         <tbody>
-          {data.map((d) => (
-            <tr key={d.label}>
+          {data.map((d, i) => (
+            <tr key={`${d.label}-${i}`}>
               <th scope="row">{d.label}</th>
               <td>{formatValue(d.value)}</td>
             </tr>
@@ -140,7 +140,7 @@ export function StackedBarChart({
           const hb = (d.b / max) * plotH;
           const x = gap + i * (bw + gap);
           return (
-            <g key={d.label}>
+            <g key={`${d.label}-${i}`}>
               <rect x={x} y={plotH - ha} width={bw} height={ha} rx={2} className="fill-chart-3">
                 <title>{`${d.label} ${seriesLabels[0]}: ${formatValue(d.a)}`}</title>
               </rect>
@@ -177,8 +177,8 @@ export function StackedBarChart({
           </tr>
         </thead>
         <tbody>
-          {data.map((d) => (
-            <tr key={d.label}>
+          {data.map((d, i) => (
+            <tr key={`${d.label}-${i}`}>
               <th scope="row">{d.label}</th>
               <td>{formatValue(d.a)}</td>
               <td>{formatValue(d.b)}</td>
@@ -198,8 +198,8 @@ function AxisLabels({ labels }: { labels: string[] }) {
       className="mt-1 grid text-center text-caption text-fg-muted"
       style={{ gridTemplateColumns: `repeat(${Math.max(1, labels.length)}, minmax(0, 1fr))` }}
     >
-      {labels.map((l) => (
-        <span key={l} className="truncate px-0.5">
+      {labels.map((l, i) => (
+        <span key={`${l}-${i}`} className="truncate px-0.5">
           {l}
         </span>
       ))}
