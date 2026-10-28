@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { LEGAL_NAV, LEGAL_PRIVACY } from "@/app/dev/screens/_fixtures/site";
+import { contentService } from "@/modules/content/service";
 import { LegalPage } from "@/components/site/LegalPage";
 import type { LegalKey, LegalPageView } from "@/components/site/types";
 
@@ -97,13 +98,31 @@ const LEGAL_DOCS: Record<LegalKey, LegalPageView> = {
   },
 };
 
-export async function generateStaticParams() {
-  return LEGAL_NAV.map((item) => ({ slug: item.key }));
+// Published copy comes from the DB; static rendering would pin the built-in fixtures forever.
+export const dynamic = "force-dynamic";
+
+/** DB-published page when one exists (fixture copy otherwise, e.g. before seeding). */
+async function loadDoc(slug: string): Promise<LegalPageView | undefined> {
+  const fallback = LEGAL_DOCS[slug as LegalKey];
+  if (!fallback) return undefined;
+  try {
+    const db = await contentService.getLegalPage({} as never, { key: fallback.key });
+    if (!db.publishedAt) return fallback;
+    return {
+      key: db.key,
+      title: db.title,
+      version: db.version,
+      updatedAt: db.publishedAt.slice(0, 10),
+      sections: [{ id: "content", title: db.title, bodyHtml: db.html }],
+    };
+  } catch {
+    return fallback;
+  }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const doc = LEGAL_DOCS[slug as LegalKey];
+  const doc = await loadDoc(slug);
   if (!doc) return {};
 
   return {
@@ -114,7 +133,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function LegalPageRoute({ params }: PageProps) {
   const { slug } = await params;
-  const doc = LEGAL_DOCS[slug as LegalKey];
+  const doc = await loadDoc(slug);
 
   if (!doc) {
     notFound();
