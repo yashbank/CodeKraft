@@ -6,6 +6,10 @@ Updated: 2026-10-29
 - P1-03 | ready | branch feat/p1-03-notifications | vitest tests/unit/notifications/read-state.test.ts: 2 pass; tests/unit/admin + account: 128 pass
 - P1-04 | ready | branch feat/p1-04-approvals-card | vitest tests/unit/admin/approval-text.test.ts: 10 pass; integration inbox-labels.test.ts updated, not run (needs DB)
 - P1-05 | ready | branch feat/p1-05-email-failures | vitest tests/unit/lib/email/transport.test.ts: 12 pass
+- P2-01 | doing | branch feat/p2-01-version-upload
+- P2-02 | doing | branch feat/p2-02-licence-on-confirm
+- P2-03 | doing | branch feat/p2-03-post-payment-access
+- P2-04 | doing | branch feat/p2-04-pdf-preview
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
 ## Log
