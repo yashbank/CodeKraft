@@ -5,7 +5,10 @@ import { CheckCircle2Icon, LayoutGridIcon, PlusIcon, XCircleIcon } from "lucide-
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { saveDashboardWidgets } from "@/modules/dashboard-widgets/admin-mutations";
+import {
+  refreshDashboardWidget,
+  saveDashboardWidgets,
+} from "@/modules/dashboard-widgets/admin-mutations";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -63,7 +66,7 @@ export interface AdminDashboardProps {
  * toggles; "Edit layout" shows the drag handles; "Reset" restores the default layout.
  */
 export function AdminDashboard({
-  data,
+  data: serverData,
   layout,
   isSuperAdmin,
   greeting,
@@ -76,7 +79,33 @@ export function AdminDashboard({
   const [enabled, setEnabled] = React.useState<WidgetKey[]>(layout ?? DEFAULT_LAYOUT);
   const [editing, setEditing] = React.useState(false);
   const [libraryOpen, setLibraryOpen] = React.useState(false);
-  const range = data.range;
+  const range = serverData.range;
+  // Per-widget refresh results are layered over the server-rendered data; a new server render
+  // (range change, router.refresh) supersedes them.
+  const [overrides, setOverrides] = React.useState<Partial<DashboardData>>({});
+  const [refreshing, setRefreshing] = React.useState<ReadonlySet<WidgetKey>>(new Set());
+  React.useEffect(() => setOverrides({}), [serverData]);
+  const data: DashboardData = { ...serverData, ...overrides };
+
+  const refreshWidget = async (key: WidgetKey, title: string) => {
+    if (refreshing.has(key)) return;
+    setRefreshing((prev) => new Set(prev).add(key));
+    try {
+      const res = await refreshDashboardWidget({ widget: key, range });
+      if (res.ok) setOverrides((prev) => ({ ...prev, ...res.data.data }));
+      else toast.error(`Couldn't refresh ${title}`, { description: res.error.message });
+    } catch (err) {
+      toast.error(`Couldn't refresh ${title}`, {
+        description: err instanceof Error ? err.message : "Try again in a moment.",
+      });
+    } finally {
+      setRefreshing((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
+  };
   // Saves are sequenced so a slow earlier request can never overwrite a newer layout.
   const saveChain = React.useRef<Promise<unknown>>(Promise.resolve());
 
@@ -203,7 +232,8 @@ export function AdminDashboard({
               }
               editing={editing}
               onRemove={() => toggle(def.key, false)}
-              onRefresh={() => router.refresh()}
+              onRefresh={() => void refreshWidget(def.key, def.title)}
+              refreshing={refreshing.has(def.key)}
               onMoveUp={index > 0 ? () => move(def.key, -1) : undefined}
               onMoveDown={index < definitions.length - 1 ? () => move(def.key, 1) : undefined}
               viewAllHref={VIEW_ALL[def.key] ? href(VIEW_ALL[def.key] as string) : undefined}
@@ -323,9 +353,22 @@ function Stat({ value, delta, hint }: { value: string; delta?: string; hint?: st
   );
 }
 
-function WidgetBody({ widget, data }: { widget: WidgetKey; data: DashboardData }) {
+export const NO_DATA_TEXT = "No data yet";
+
+function NoData({ text = NO_DATA_TEXT }: { text?: string }) {
+  return (
+    <p data-empty className="py-6 text-center text-body-sm text-fg-subtle">
+      {text}
+    </p>
+  );
+}
+
+const hasValues = (rows: ReadonlyArray<{ value: number }>) => rows.some((r) => r.value !== 0);
+
+export function WidgetBody({ widget, data }: { widget: WidgetKey; data: DashboardData }) {
   switch (widget) {
     case "revenue_by_period":
+      if (!hasValues(data.revenueByPeriod)) return <NoData />;
       return (
         <BarChart
           data={data.revenueByPeriod}
@@ -335,6 +378,7 @@ function WidgetBody({ widget, data }: { widget: WidgetKey; data: DashboardData }
         />
       );
     case "revenue_by_product":
+      if (!hasValues(data.revenueByProduct)) return <NoData />;
       return (
         <BarChart
           data={data.revenueByProduct}
@@ -345,6 +389,7 @@ function WidgetBody({ widget, data }: { widget: WidgetKey; data: DashboardData }
         />
       );
     case "revenue_by_partner":
+      if (!hasValues(data.revenueByPartner)) return <NoData />;
       return (
         <BarChart
           data={data.revenueByPartner}
@@ -362,7 +407,9 @@ function WidgetBody({ widget, data }: { widget: WidgetKey; data: DashboardData }
             delta={data.myShare.delta}
             hint="Your allocations, net of refunds"
           />
-          <Sparkline points={data.myShare.sparkline} label="Weekly share trend" series={2} />
+          {data.myShare.sparkline.length > 1 ? (
+            <Sparkline points={data.myShare.sparkline} label="Weekly share trend" series={2} />
+          ) : null}
         </div>
       );
     case "outstanding_payouts":
@@ -373,6 +420,7 @@ function WidgetBody({ widget, data }: { widget: WidgetKey; data: DashboardData }
         </>
       );
     case "expenses_vs_profit":
+      if (!data.expensesVsProfit.some((d) => d.expenses !== 0 || d.profit !== 0)) return <NoData />;
       return (
         <StackedBarChart
           data={data.expensesVsProfit.map((d) => ({ label: d.label, a: d.expenses, b: d.profit }))}
@@ -400,6 +448,7 @@ function WidgetBody({ widget, data }: { widget: WidgetKey; data: DashboardData }
         </>
       );
     case "pipeline_funnel":
+      if (!hasValues(data.funnel)) return <NoData text="No leads in the pipeline yet" />;
       return <Funnel stages={data.funnel} caption="Leads per pipeline stage" />;
     case "overdue_follow_ups":
       return <QueueList items={data.overdueFollowUps} empty="No overdue follow-ups" />;
@@ -421,7 +470,8 @@ function WidgetBody({ widget, data }: { widget: WidgetKey; data: DashboardData }
             delta={data.visits.delta}
             hint="Visits (Umami)"
           />
-          <Table>
+          {data.visits.top.length === 0 ? <NoData text="No product views yet" /> : null}
+          <Table className={data.visits.top.length === 0 ? "hidden" : undefined}>
             <TableHeader>
               <TableRow>
                 <TableHead>Product</TableHead>
@@ -458,6 +508,7 @@ function WidgetBody({ widget, data }: { widget: WidgetKey; data: DashboardData }
         </div>
       );
     case "catalog_status":
+      if (data.catalogStatus.length === 0) return <NoData text="No products yet" />;
       return (
         <ul className="flex flex-wrap gap-2">
           {data.catalogStatus.map((c) => (
@@ -475,10 +526,13 @@ function WidgetBody({ widget, data }: { widget: WidgetKey; data: DashboardData }
       return (
         <div className="flex items-end justify-between gap-3">
           <Stat value={String(data.newCustomers.count)} delta={data.newCustomers.delta} />
-          <Sparkline points={data.newCustomers.sparkline} label="Daily sign-ups" series={6} />
+          {data.newCustomers.sparkline.length > 1 ? (
+            <Sparkline points={data.newCustomers.sparkline} label="Daily sign-ups" series={6} />
+          ) : null}
         </div>
       );
     case "system_health":
+      if (data.systemHealth.length === 0) return <NoData text="No health checks reported" />;
       return (
         <ul className="space-y-1.5">
           {data.systemHealth.map((h) => (

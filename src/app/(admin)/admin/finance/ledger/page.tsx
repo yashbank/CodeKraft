@@ -3,6 +3,8 @@ import { PageHeader } from "@/components/admin/PageHeader";
 import { LedgerScreen } from "@/components/admin/finance/LedgerScreen";
 import { getAdminRequestContext } from "@/lib/authz/admin-request-context";
 import { mapLedgerEntries } from "@/lib/admin/finance-view";
+import { can } from "@/lib/authz/assert";
+import { getFinanceSummary } from "@/modules/finance/metrics";
 import { listLedgerEntriesQuery } from "@/modules/finance/queries";
 import { listPartnersQuery } from "@/modules/users/queries";
 
@@ -41,6 +43,13 @@ export default async function AdminLedgerPage() {
       : [],
   );
 
+  const summary = can(ctx, "finance.reports.read")
+    ? await getFinanceSummary().catch((err: unknown) => {
+        console.error("[finance/ledger] summary failed", err);
+        return null;
+      })
+    : null;
+
   const entries = mapLedgerEntries(items, partnerNames);
   const lastPostedAt = entries[0]?.at ?? now;
 
@@ -53,6 +62,7 @@ export default async function AdminLedgerPage() {
       adjustmentsHref="/admin/finance/adjustments"
       approvalsHref="/admin/approvals"
       isSuperAdmin={ctx.roles.includes("super_admin")}
+      summary={summary}
       ownPartnerName={ctx.partnerId ? (partnerNames.get(ctx.partnerId) ?? null) : null}
     />
   );

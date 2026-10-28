@@ -85,6 +85,14 @@ export async function exportStatement(
   // 3. Closing balance
   const closingBalanceInrMinor = openingBalanceInrMinor + periodSumInrMinor;
 
+  // Labelled period summary (same terms as the finance reports).
+  const sumOf = (...types: string[]) =>
+    entries.filter((e) => types.includes(e.entryType)).reduce((a, e) => a + e.amountInrMinor, 0);
+  const sharesEarnedInr = sumOf("partner_allocation");
+  const refundReversalsInr = sumOf("refund_partner_allocation");
+  const payoutsInr = sumOf("payout");
+  const otherInr = periodSumInrMinor - sharesEarnedInr - refundReversalsInr - payoutsInr;
+
   const storage = getStorageDriver();
   const bucket = getDocumentsBucketName();
   const timestamp = Date.now();
@@ -99,6 +107,10 @@ export async function exportStatement(
       `Period: ${input.dateFrom} to ${input.dateTo}`,
       `Opening Balance: INR ${toDecimalString(openingBalanceInrMinor)}`,
       `Closing Balance: INR ${toDecimalString(closingBalanceInrMinor)}`,
+      `Partner shares earned: INR ${toDecimalString(sharesEarnedInr)}`,
+      `Refund reversals: INR ${toDecimalString(refundReversalsInr)}`,
+      `Payouts: INR ${toDecimalString(payoutsInr)}`,
+      `Expenses / adjustments: INR ${toDecimalString(otherInr)}`,
       `Total Entries in Period: ${entries.length}`,
       "----------------------------------------",
       ...entries.map(
@@ -128,6 +140,10 @@ export async function exportStatement(
       ["Period", `${input.dateFrom} to ${input.dateTo}`],
       ["Opening Balance (INR)", toDecimalString(openingBalanceInrMinor)],
       ["Closing Balance (INR)", toDecimalString(closingBalanceInrMinor)],
+      ["Partner shares earned (INR)", toDecimalString(sharesEarnedInr)],
+      ["Refund reversals (INR)", toDecimalString(refundReversalsInr)],
+      ["Payouts (INR)", toDecimalString(payoutsInr)],
+      ["Expenses / adjustments (INR)", toDecimalString(otherInr)],
       [],
       [
         "Date",

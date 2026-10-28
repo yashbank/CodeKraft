@@ -111,10 +111,11 @@ describe("finance reports + partner lists with empty / company-only data", () =>
     expect(profit.rows[0]).toMatchObject({ saleMinor: 100, profitMinor: 100 });
     const period = await financeService.getReport(ctx, { report: "revenue_by_period", ...range });
     expect(period.totals).toMatchObject({ grossMinor: 100, netMinor: 100 });
-    expect(defs.revenue_by_product!.tiles.find((t) => t.label === "Net Revenue")?.valueInr).toBe(
-      100,
-    );
-    expect(defs.profit_by_product!.tiles.find((t) => t.label === "Net Profit")?.valueInr).toBe(100);
+    expect(
+      defs.revenue_by_product!.tiles.find((t) => t.label === "Net sales (gross - discounts)")
+        ?.valueInr,
+    ).toBe(100);
+    expect(defs.profit_by_product!.tiles.find((t) => t.label === "Profit")?.valueInr).toBe(100);
     expect(defs.revenue_by_partner!.rows).toEqual([]);
     // mapped table cells are formatted INR, never raw minor units or /100 twice
     expect(defs.revenue_by_product!.rows[0]).toContain("₹1.00");

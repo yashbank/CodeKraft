@@ -506,7 +506,10 @@ export function mapReportResultToDefinition(
   const displayCols = shown.length > 0 ? shown : result.columns;
   const labelCol =
     displayCols.find((c) => c.kind === "text" || c.kind === "date") ?? result.columns[0];
-  const valueCol = moneyOrCountCols[moneyOrCountCols.length - 1];
+  // Chart "Net sales" when the report has it (consistent across reports), else the last metric column.
+  const valueCol =
+    moneyOrCountCols.find((c) => c.key === "netMinor") ??
+    moneyOrCountCols[moneyOrCountCols.length - 1];
   const series = valueCol
     ? result.rows.map((row) => ({
         label: String((labelCol && row[labelCol.key]) ?? ""),

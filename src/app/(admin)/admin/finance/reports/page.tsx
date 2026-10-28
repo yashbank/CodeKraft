@@ -19,13 +19,17 @@ export const dynamic = "force-dynamic";
 const REPORT_META: Record<ReportKey, { title: string; description: string; formula: string }> = {
   revenue_by_period: {
     title: "Revenue by period",
-    description: "Net sales posted to the ledger per month (INR reporting currency).",
-    formula: "Σ sale − Σ discount − Σ refund_sale, grouped by payment date",
+    description:
+      "Gross sales, coupons, tax, refunds, shares and profit per month (INR reporting currency).",
+    formula:
+      "Net sales = gross − discounts; Collected = net sales + tax; Profit = company share + partner shares − expenses; grouped by payment date",
   },
   revenue_by_product: {
     title: "Revenue by product",
-    description: "Net revenue per product with order counts.",
-    formula: "Σ sale − Σ refund_sale per product",
+    description:
+      "Gross sales, coupons, net sales, tax, collected and refunds per product with order counts.",
+    formula:
+      "Net sales = Σ sale − Σ discount; Collected = net sales + tax; Refunds = cash returned",
   },
   revenue_by_partner: {
     title: "Revenue by partner",
@@ -40,7 +44,8 @@ const REPORT_META: Record<ReportKey, { title: string; description: string; formu
   refunds: {
     title: "Refunds & customer credits",
     description: "Refunds issued and overpayments held as customer credit.",
-    formula: "Σ refund_* entries; credits from the customer_credits view",
+    formula:
+      "Refunds = Σ refund_sale − Σ refund_discount + Σ refund_tax (cash returned); credits from the customer_credits view",
   },
   outstanding_payouts: {
     title: "Outstanding payouts",
@@ -49,8 +54,8 @@ const REPORT_META: Record<ReportKey, { title: string; description: string; formu
   },
   profit_by_product: {
     title: "Profit by product",
-    description: "Revenue minus expenses recorded against each product.",
-    formula: "net revenue − Σ expense per product",
+    description: "Company and partner shares minus expenses recorded against each product.",
+    formula: "Profit = company share + partner shares (net of refunds) − Σ expense per product",
   },
 };
 

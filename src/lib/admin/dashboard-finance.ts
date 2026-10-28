@@ -33,19 +33,24 @@ const EMPTY: FinanceWidgets = {
 
 const n = (v: unknown) => Number(v ?? 0);
 
-/** Net revenue (ex-tax) per product over the last `days` days. */
+/**
+ * Net sales (gross list price - discounts/coupons, ex-tax; same definition as finance reports,
+ * see modules/finance/metrics.ts) per product over the last `days` days.
+ */
 export async function revenueByProduct(days = 30) {
   const rows = await db.execute<{ label: string; value: string }>(sql`
     select p.name as label,
-           sum(case when le.entry_type in ('sale','discount','refund_sale','refund_discount')
-                    then -le.amount_inr_minor else 0 end) as value
+           sum(case when le.entry_type = 'sale' then abs(le.amount_inr_minor)
+                    when le.entry_type = 'discount' then -abs(le.amount_inr_minor)
+                    else 0 end) as value
     from ledger_entries le
     join order_items oi on oi.id = le.order_item_id
     join products p on p.id = oi.product_id
     where le.created_at >= now() - make_interval(days => ${days})
     group by p.name
-    having sum(case when le.entry_type in ('sale','discount','refund_sale','refund_discount')
-                    then -le.amount_inr_minor else 0 end) <> 0
+    having sum(case when le.entry_type = 'sale' then abs(le.amount_inr_minor)
+                    when le.entry_type = 'discount' then -abs(le.amount_inr_minor)
+                    else 0 end) <> 0
     order by value desc
     limit 8`);
   return [...rows].map((r) => ({ label: r.label, value: n(r.value) }));
@@ -106,8 +111,9 @@ export async function loadDashboardFinance(ctx: RequestContext): Promise<Finance
       })),
     };
 
-    // Last 6 calendar months: expenses vs company profit (company cut net of refunds).
-    const months = await db.execute<{ m: string; expenses: string; profit: string }>(sql`
+    // Last 6 calendar months: expenses vs profit (company + partner shares net of refunds, minus
+    // expenses; floored at 0 because the stacked chart cannot draw a negative bar).
+    const months = await db.execute<{ m: string; expenses: string; shares: string }>(sql`
       with months as (
         select to_char(d, 'YYYY-MM') as m
         from generate_series(date_trunc('month', now()) - interval '5 months',
@@ -117,13 +123,14 @@ export async function loadDashboardFinance(ctx: RequestContext): Promise<Finance
         coalesce((select sum(e.amount_minor) from expenses e
                   where to_char(e.incurred_on::date, 'YYYY-MM') = months.m), 0) as expenses,
         coalesce((select sum(le.amount_inr_minor) from ledger_entries le
-                  where le.entry_type in ('company_cut','refund_company_cut')
-                    and to_char(le.created_at, 'YYYY-MM') = months.m), 0) as profit
+                  where le.entry_type in ('company_cut','refund_company_cut',
+                                          'partner_allocation','refund_partner_allocation')
+                    and to_char(le.created_at, 'YYYY-MM') = months.m), 0) as shares
       from months order by months.m`);
     out.expensesVsProfit = [...months].map((r) => ({
       label: r.m,
       expenses: n(r.expenses),
-      profit: n(r.profit),
+      profit: Math.max(0, n(r.shares) - n(r.expenses)),
     }));
   }
 

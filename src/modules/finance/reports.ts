@@ -9,7 +9,42 @@ import { db } from "@/lib/db";
 import { assertPermission } from "@/lib/authz/assert";
 import type { RequestContext } from "@/lib/authz/context";
 import { toMinor } from "./minor";
+import {
+  EMPTY_RAW_SUMS,
+  addRawSums,
+  deriveMetrics,
+  rawSumsFromRow,
+  rawSumsSql,
+  type FinanceMetrics,
+} from "./metrics-core";
 import { getReportInput, type GetReportInput, type ReportResult } from "./types";
+
+/** Shared sales columns so every report labels and computes the same metrics (see ./metrics.ts). */
+const SALE_COLUMNS: ReportResult["columns"] = [
+  { key: "grossMinor", label: "Gross sales (list price)", kind: "money" },
+  { key: "discountMinor", label: "Discounts / coupons", kind: "money" },
+  { key: "netMinor", label: "Net sales (gross - discounts)", kind: "money" },
+  { key: "taxMinor", label: "Tax collected", kind: "money" },
+  { key: "collectedMinor", label: "Collected (net + tax)", kind: "money" },
+  { key: "refundMinor", label: "Refunds", kind: "money" },
+  { key: "feesMinor", label: "Gateway fees / bank shortfall", kind: "money" },
+  { key: "companyShareMinor", label: "Company share", kind: "money" },
+  { key: "partnerSharesMinor", label: "Partner shares", kind: "money" },
+];
+
+function saleCells(m: FinanceMetrics) {
+  return {
+    grossMinor: m.grossSalesMinor,
+    discountMinor: m.discountsMinor,
+    netMinor: m.netSalesMinor,
+    taxMinor: m.taxCollectedMinor,
+    collectedMinor: m.collectedMinor,
+    refundMinor: m.refundsMinor,
+    feesMinor: m.feesMinor,
+    companyShareMinor: m.companyShareMinor,
+    partnerSharesMinor: m.partnerSharesMinor,
+  };
+}
 
 export async function getReport(
   ctx: RequestContext,
@@ -24,70 +59,31 @@ export async function getReport(
 
   switch (input.report) {
     case "revenue_by_product": {
-      // Aggregate ledger entries by product
-      const rows = await database.execute<{
-        product_id: string;
-        title: string;
-        gross_minor: string;
-        discount_minor: string;
-        tax_minor: string;
-        refund_minor: string;
-        net_minor: string;
-        order_count: string;
-      }>(sql`
+      const rows = await database.execute<Record<string, unknown>>(sql`
         SELECT
           p.id AS product_id,
           p.name AS title,
-          COALESCE(SUM(CASE WHEN le.entry_type = 'sale' THEN ABS(le.amount_inr_minor) ELSE 0 END), 0) AS gross_minor,
-          COALESCE(SUM(CASE WHEN le.entry_type = 'discount' THEN ABS(le.amount_inr_minor) ELSE 0 END), 0) AS discount_minor,
-          COALESCE(SUM(CASE WHEN le.entry_type = 'tax_collected' THEN ABS(le.amount_inr_minor) ELSE 0 END), 0) AS tax_minor,
-          COALESCE(SUM(CASE WHEN le.entry_type IN ('refund_sale', 'refund_discount', 'refund_tax') THEN ABS(le.amount_inr_minor) ELSE 0 END), 0) AS refund_minor,
-          COALESCE(SUM(CASE 
-            WHEN le.entry_type = 'sale' THEN ABS(le.amount_inr_minor)
-            WHEN le.entry_type = 'discount' THEN -ABS(le.amount_inr_minor)
-            WHEN le.entry_type = 'tax_collected' THEN -ABS(le.amount_inr_minor)
-            WHEN le.entry_type IN ('refund_sale', 'refund_discount') THEN -ABS(le.amount_inr_minor)
-            ELSE 0 
-          END), 0) AS net_minor,
-          COUNT(DISTINCT oi.order_id) AS order_count
+          ${rawSumsSql("le")},
+          COUNT(DISTINCT CASE WHEN le.entry_type = 'sale' THEN le.order_id END) AS order_count
         FROM products p
         LEFT JOIN order_items oi ON oi.product_id = p.id
-        LEFT JOIN ledger_entries le ON le.order_item_id = oi.id 
+        LEFT JOIN ledger_entries le ON le.order_item_id = oi.id
           AND le.created_at >= ${fromDate} AND le.created_at <= ${toDate}
         GROUP BY p.id, p.name
-        ORDER BY net_minor DESC, p.name ASC
+        ORDER BY (COALESCE(SUM(CASE WHEN le.entry_type = 'sale' THEN ABS(le.amount_inr_minor) WHEN le.entry_type = 'discount' THEN -ABS(le.amount_inr_minor) ELSE 0 END), 0)) DESC, p.name ASC
       `);
 
-      let totalGross = 0;
-      let totalDiscount = 0;
-      let totalTax = 0;
-      let totalRefund = 0;
-      let totalNet = 0;
+      let totalRaw = EMPTY_RAW_SUMS;
       let totalOrders = 0;
-
       const reportRows = rows.map((r) => {
-        const gross = toMinor(r.gross_minor);
-        const discount = toMinor(r.discount_minor);
-        const tax = toMinor(r.tax_minor);
-        const refund = toMinor(r.refund_minor);
-        const net = toMinor(r.net_minor);
-        const orderCount = toMinor(r.order_count);
-
-        totalGross += gross;
-        totalDiscount += discount;
-        totalTax += tax;
-        totalRefund += refund;
-        totalNet += net;
+        const raw = rawSumsFromRow(r);
+        totalRaw = addRawSums(totalRaw, raw);
+        const orderCount = toMinor(r.order_count as string);
         totalOrders += orderCount;
-
         return {
-          productId: r.product_id,
-          title: r.title,
-          grossMinor: gross,
-          discountMinor: discount,
-          taxMinor: tax,
-          refundMinor: refund,
-          netMinor: net,
+          productId: String(r.product_id),
+          title: String(r.title),
+          ...saleCells(deriveMetrics(raw)),
           orderCount,
         };
       });
@@ -97,22 +93,11 @@ export async function getReport(
         columns: [
           { key: "productId", label: "Product ID", kind: "text" },
           { key: "title", label: "Product Title", kind: "text" },
-          { key: "grossMinor", label: "Gross Revenue", kind: "money" },
-          { key: "discountMinor", label: "Discounts", kind: "money" },
-          { key: "taxMinor", label: "Tax", kind: "money" },
-          { key: "refundMinor", label: "Refunds", kind: "money" },
-          { key: "netMinor", label: "Net Revenue", kind: "money" },
+          ...SALE_COLUMNS,
           { key: "orderCount", label: "Orders", kind: "count" },
         ],
         rows: reportRows,
-        totals: {
-          grossMinor: totalGross,
-          discountMinor: totalDiscount,
-          taxMinor: totalTax,
-          refundMinor: totalRefund,
-          netMinor: totalNet,
-          orderCount: totalOrders,
-        },
+        totals: { ...saleCells(deriveMetrics(totalRaw)), orderCount: totalOrders },
         currency: "INR",
       };
     }
@@ -184,62 +169,40 @@ export async function getReport(
     }
 
     case "revenue_by_period": {
-      const rows = await database.execute<{
-        period: string;
-        gross_minor: string;
-        refund_minor: string;
-        net_minor: string;
-      }>(sql`
+      const rows = await database.execute<Record<string, unknown>>(sql`
         SELECT
           TO_CHAR(le.created_at, 'YYYY-MM') AS period,
-          COALESCE(SUM(CASE WHEN le.entry_type = 'sale' THEN ABS(le.amount_inr_minor) ELSE 0 END), 0) AS gross_minor,
-          COALESCE(SUM(CASE WHEN le.entry_type::text LIKE 'refund_%' THEN ABS(le.amount_inr_minor) ELSE 0 END), 0) AS refund_minor,
-          COALESCE(SUM(CASE 
-            WHEN le.entry_type = 'sale' THEN ABS(le.amount_inr_minor)
-            WHEN le.entry_type::text LIKE 'refund_%' THEN -ABS(le.amount_inr_minor)
-            ELSE 0 
-          END), 0) AS net_minor
+          ${rawSumsSql("le")}
         FROM ledger_entries le
         WHERE le.created_at >= ${fromDate} AND le.created_at <= ${toDate}
         GROUP BY TO_CHAR(le.created_at, 'YYYY-MM')
         ORDER BY period ASC
       `);
 
-      let totalGross = 0;
-      let totalRefund = 0;
-      let totalNet = 0;
-
+      let totalRaw = EMPTY_RAW_SUMS;
       const reportRows = rows.map((r) => {
-        const gross = toMinor(r.gross_minor);
-        const refund = toMinor(r.refund_minor);
-        const net = toMinor(r.net_minor);
-
-        totalGross += gross;
-        totalRefund += refund;
-        totalNet += net;
-
+        const raw = rawSumsFromRow(r);
+        totalRaw = addRawSums(totalRaw, raw);
+        const m = deriveMetrics(raw);
         return {
-          period: r.period,
-          grossMinor: gross,
-          refundMinor: refund,
-          netMinor: net,
+          period: String(r.period),
+          ...saleCells(m),
+          expenseMinor: m.expensesMinor,
+          profitMinor: m.profitMinor,
         };
       });
+      const tm = deriveMetrics(totalRaw);
 
       return {
         report: "revenue_by_period",
         columns: [
           { key: "period", label: "Period", kind: "text" },
-          { key: "grossMinor", label: "Gross Revenue", kind: "money" },
-          { key: "refundMinor", label: "Refunds", kind: "money" },
-          { key: "netMinor", label: "Net Revenue", kind: "money" },
+          ...SALE_COLUMNS,
+          { key: "expenseMinor", label: "Expenses", kind: "money" },
+          { key: "profitMinor", label: "Profit", kind: "money" },
         ],
         rows: reportRows,
-        totals: {
-          grossMinor: totalGross,
-          refundMinor: totalRefund,
-          netMinor: totalNet,
-        },
+        totals: { ...saleCells(tm), expenseMinor: tm.expensesMinor, profitMinor: tm.profitMinor },
         currency: "INR",
       };
     }
@@ -307,6 +270,7 @@ export async function getReport(
     }
 
     case "refunds": {
+      // Cash refunded = refund_sale - refund_discount + refund_tax (never the sum of every reversal leg).
       const rows = await database.execute<{
         date: string;
         order_id: string;
@@ -318,12 +282,16 @@ export async function getReport(
           TO_CHAR(le.created_at, 'YYYY-MM-DD') AS date,
           le.order_id,
           COALESCE(o.order_no, '') AS order_no,
-          SUM(ABS(le.amount_inr_minor)) AS refund_total_minor,
+          SUM(CASE
+            WHEN le.entry_type = 'refund_sale' THEN ABS(le.amount_inr_minor)
+            WHEN le.entry_type = 'refund_discount' THEN -ABS(le.amount_inr_minor)
+            WHEN le.entry_type = 'refund_tax' THEN ABS(le.amount_inr_minor)
+            ELSE 0 END) AS refund_total_minor,
           COALESCE(MAX(le.memo), 'Refund') AS memo
         FROM ledger_entries le
         LEFT JOIN orders o ON o.id = le.order_id
         WHERE le.created_at >= ${fromDate} AND le.created_at <= ${toDate}
-          AND le.entry_type::text LIKE 'refund_%'
+          AND le.entry_type IN ('refund_sale', 'refund_discount', 'refund_tax')
         GROUP BY TO_CHAR(le.created_at, 'YYYY-MM-DD'), le.order_id, o.order_no
         ORDER BY date DESC
       `);
@@ -347,7 +315,7 @@ export async function getReport(
           { key: "date", label: "Date", kind: "date" },
           { key: "orderId", label: "Order ID", kind: "text" },
           { key: "orderNo", label: "Order #", kind: "text" },
-          { key: "refundTotalMinor", label: "Refund Total", kind: "money" },
+          { key: "refundTotalMinor", label: "Refunds (cash returned)", kind: "money" },
           { key: "reason", label: "Reason", kind: "text" },
         ],
         rows: reportRows,
@@ -409,30 +377,12 @@ export async function getReport(
     }
 
     case "profit_by_product": {
-      // FR-FIN-14: Σ sale − discount − refunds − Σ expenses linked to product
-      const rows = await database.execute<{
-        product_id: string;
-        title: string;
-        sale_minor: string;
-        discount_minor: string;
-        refund_minor: string;
-        expense_minor: string;
-        profit_minor: string;
-      }>(sql`
+      // Profit = company share + partner shares - expenses (see ./metrics.ts).
+      const rows = await database.execute<Record<string, unknown>>(sql`
         SELECT
           p.id AS product_id,
           p.name AS title,
-          COALESCE(SUM(CASE WHEN le.entry_type = 'sale' THEN ABS(le.amount_inr_minor) ELSE 0 END), 0) AS sale_minor,
-          COALESCE(SUM(CASE WHEN le.entry_type = 'discount' THEN ABS(le.amount_inr_minor) ELSE 0 END), 0) AS discount_minor,
-          COALESCE(SUM(CASE WHEN le.entry_type::text LIKE 'refund_%' THEN ABS(le.amount_inr_minor) ELSE 0 END), 0) AS refund_minor,
-          COALESCE(SUM(CASE WHEN le.entry_type = 'expense' THEN ABS(le.amount_inr_minor) ELSE 0 END), 0) AS expense_minor,
-          COALESCE(SUM(CASE 
-            WHEN le.entry_type = 'sale' THEN ABS(le.amount_inr_minor)
-            WHEN le.entry_type = 'discount' THEN -ABS(le.amount_inr_minor)
-            WHEN le.entry_type::text LIKE 'refund_%' THEN -ABS(le.amount_inr_minor)
-            WHEN le.entry_type = 'expense' THEN -ABS(le.amount_inr_minor)
-            ELSE 0 
-          END), 0) AS profit_minor
+          ${rawSumsSql("le")}
         FROM products p
         LEFT JOIN (
           SELECT le.*, COALESCE(oi.product_id, exp.product_id) AS matched_product_id
@@ -442,36 +392,28 @@ export async function getReport(
           WHERE le.created_at >= ${fromDate} AND le.created_at <= ${toDate}
         ) le ON le.matched_product_id = p.id
         GROUP BY p.id, p.name
-        ORDER BY profit_minor DESC, p.name ASC
+        ORDER BY (COALESCE(SUM(CASE WHEN le.entry_type IN ('company_cut','partner_allocation') THEN ABS(le.amount_inr_minor)
+                                    WHEN le.entry_type IN ('refund_company_cut','refund_partner_allocation','expense') THEN -ABS(le.amount_inr_minor)
+                                    ELSE 0 END), 0)) DESC, p.name ASC
       `);
 
-      let totalSales = 0;
-      let totalDiscounts = 0;
-      let totalRefunds = 0;
-      let totalExpenses = 0;
-      let totalProfit = 0;
-
+      let totalRaw = EMPTY_RAW_SUMS;
+      const cells = (m: FinanceMetrics) => ({
+        saleMinor: m.grossSalesMinor,
+        discountMinor: m.discountsMinor,
+        taxMinor: m.taxCollectedMinor,
+        refundMinor: m.refundsMinor,
+        feesMinor: m.feesMinor,
+        expenseMinor: m.expensesMinor,
+        profitMinor: m.profitMinor,
+      });
       const reportRows = rows.map((r) => {
-        const sale = toMinor(r.sale_minor);
-        const discount = toMinor(r.discount_minor);
-        const refund = toMinor(r.refund_minor);
-        const exp = toMinor(r.expense_minor);
-        const profit = toMinor(r.profit_minor);
-
-        totalSales += sale;
-        totalDiscounts += discount;
-        totalRefunds += refund;
-        totalExpenses += exp;
-        totalProfit += profit;
-
+        const raw = rawSumsFromRow(r);
+        totalRaw = addRawSums(totalRaw, raw);
         return {
-          productId: r.product_id,
-          productTitle: r.title,
-          saleMinor: sale,
-          discountMinor: discount,
-          refundMinor: refund,
-          expenseMinor: exp,
-          profitMinor: profit,
+          productId: String(r.product_id),
+          productTitle: String(r.title),
+          ...cells(deriveMetrics(raw)),
         };
       });
 
@@ -480,20 +422,16 @@ export async function getReport(
         columns: [
           { key: "productId", label: "Product ID", kind: "text" },
           { key: "productTitle", label: "Product Title", kind: "text" },
-          { key: "saleMinor", label: "Sales", kind: "money" },
-          { key: "discountMinor", label: "Discounts", kind: "money" },
+          { key: "saleMinor", label: "Gross sales (list price)", kind: "money" },
+          { key: "discountMinor", label: "Discounts / coupons", kind: "money" },
+          { key: "taxMinor", label: "Tax collected", kind: "money" },
           { key: "refundMinor", label: "Refunds", kind: "money" },
+          { key: "feesMinor", label: "Gateway fees / bank shortfall", kind: "money" },
           { key: "expenseMinor", label: "Expenses", kind: "money" },
-          { key: "profitMinor", label: "Net Profit", kind: "money" },
+          { key: "profitMinor", label: "Profit", kind: "money" },
         ],
         rows: reportRows,
-        totals: {
-          saleMinor: totalSales,
-          discountMinor: totalDiscounts,
-          refundMinor: totalRefunds,
-          expenseMinor: totalExpenses,
-          profitMinor: totalProfit,
-        },
+        totals: cells(deriveMetrics(totalRaw)),
         currency: "INR",
       };
     }
