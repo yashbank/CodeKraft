@@ -7,9 +7,9 @@ export interface ChatModelOption {
 }
 
 const MODELS: ChatModelOption[] = [
-  { id: "claude-opus-5-5", label: "Claude Opus 5.5", inputPerMTok: 5, outputPerMTok: 25 },
-  { id: "claude-sonnet-5-5", label: "Claude Sonnet 5.5", inputPerMTok: 3, outputPerMTok: 15 },
-  { id: "claude-haiku-5-5", label: "Claude Haiku 5.5", inputPerMTok: 1, outputPerMTok: 5 },
+  { id: "claude-opus-5-5", label: "Claude Opus 5.5", inputPerMTok: 4, outputPerMTok: 20 },
+  { id: "claude-sonnet-5-5", label: "Claude Sonnet 5.5", inputPerMTok: 2, outputPerMTok: 10 },
+  { id: "claude-haiku-5-5", label: "Claude Haiku 5.5", inputPerMTok: 0.1, outputPerMTok: 0.5 },
   { id: "gpt-4o-mini", label: "GPT-4o mini", inputPerMTok: 0.15, outputPerMTok: 0.6 },
 ];
 
