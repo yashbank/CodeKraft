@@ -6,7 +6,7 @@ import { buildSellerSnapshot } from "@/modules/invoices/service";
 import { renderGenericEmail } from "@/lib/email/render";
 import { clearFlagCache, getFlag, setFlagLoader } from "@/lib/feature-flags";
 
-const base = { siteName: "Acme", gstin: "29ABCDE1234F1Z5", sellerDetails: null };
+const base = { siteName: "Acme", siteLogo: null, gstin: "29ABCDE1234F1Z5", sellerDetails: null };
 
 describe("settings propagation (P4-02)", () => {
   it("new invoice seller snapshot follows current settings", () => {

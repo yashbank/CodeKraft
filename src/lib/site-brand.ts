@@ -110,6 +110,28 @@ export async function getThemeConfig(): Promise<ThemeConfig> {
   }
 }
 
+async function readSiteLogo(): Promise<string | null> {
+  try {
+    const { settingsService } = await import("@/modules/settings/service");
+    return (await settingsService.load()).siteLogo;
+  } catch {
+    return null;
+  }
+}
+
+/** Admin-uploaded site logo URL, or null (callers then show a text wordmark of the site name). */
+export async function getSiteLogo(): Promise<string | null> {
+  try {
+    const { unstable_cache } = await import("next/cache");
+    return await unstable_cache(readSiteLogo, ["site-brand:site-logo"], {
+      tags: ["settings"],
+      revalidate: 300,
+    })();
+  } catch {
+    return readSiteLogo();
+  }
+}
+
 export async function getSiteName(): Promise<string> {
   try {
     const { unstable_cache } = await import("next/cache");

@@ -143,14 +143,15 @@ async function deliver(message: EmailMessage): Promise<EmailSendResult> {
     return { transport: "resend", skipped: "daily_cap" };
   }
   if (!env.RESEND_API_KEY) throw new Error("RESEND_API_KEY missing for EMAIL_TRANSPORT=resend");
-  const { getSiteName } = await import("@/lib/site-brand");
-  const siteName = await getSiteName();
+  const { getSiteLogo, getSiteName } = await import("@/lib/site-brand");
+  const [siteName, logoUrl] = await Promise.all([getSiteName(), getSiteLogo()]);
   const subject = brandSubject(message.subject, siteName);
   const { html, text } = await renderGenericEmail(
     subject,
     message.data,
     env.NEXT_PUBLIC_SITE_URL,
     siteName,
+    logoUrl,
   );
   const res = await getResend(env.RESEND_API_KEY).emails.send({
     from: brandFromAddress(env.EMAIL_FROM, siteName),

@@ -2978,6 +2978,7 @@ export const LEGAL_PAGES: LegalPage[] = [
 export const SETTINGS: SettingsData = {
   general: {
     siteName: "CodeKraft",
+    siteLogo: null,
     domain: "codekraft.example (placeholder until launch)",
     legalName: "CodeKraft Technologies LLP",
     address: "3rd Floor, Trade Centre, Pune 411045",

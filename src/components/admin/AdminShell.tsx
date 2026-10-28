@@ -91,7 +91,7 @@ import { cn } from "@/components/ui/_utils";
 import { applyRead, countUnread } from "@/lib/notifications/read-state";
 import { initials, timeAgo } from "./format";
 import { LaptopNotice } from "./LaptopNotice";
-import { useSiteName } from "@/components/brand/site-brand";
+import { useSiteLogo, useSiteName } from "@/components/brand/site-brand";
 import type { AdminNotification, AdminUserRef, SearchItem } from "./types";
 
 /** Admin routes (docs/07 §2.4). `routes` can remap them (the previews point at /dev/screens). */
@@ -274,6 +274,7 @@ export function AdminShell({
   const [open, setOpen] = React.useState(true);
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const siteName = useSiteName();
+  const logo = useSiteLogo();
   const [paletteOpen, setPaletteOpen] = React.useState(false);
   const [paletteQuery, setPaletteQuery] = React.useState("");
   const [remoteItems, setRemoteItems] = React.useState<SearchItem[]>([]);
@@ -340,12 +341,17 @@ export function AdminShell({
             href={href("/dashboard")}
             className="flex items-center gap-2 font-display text-body font-semibold"
           >
-            <span
-              aria-hidden
-              className="grid size-7 place-items-center rounded-sm bg-accent font-mono text-caption text-accent-fg"
-            >
-              CK
-            </span>
+            {logo ? (
+              // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded URL
+              <img src={logo} alt={siteName} className="size-7 rounded-sm object-contain" />
+            ) : (
+              <span
+                aria-hidden
+                className="grid size-7 place-items-center rounded-sm bg-accent font-mono text-caption text-accent-fg"
+              >
+                {siteName.slice(0, 1).toUpperCase()}
+              </span>
+            )}
             <span className="group-data-[collapsible=icon]:hidden">
               {siteName} <span className="text-fg-muted">Admin</span>
             </span>

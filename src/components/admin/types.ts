@@ -897,6 +897,7 @@ export interface FeatureFlagRow {
 export interface SettingsData {
   general: {
     siteName: string;
+    siteLogo: string | null;
     domain: string;
     legalName: string;
     address: string;
