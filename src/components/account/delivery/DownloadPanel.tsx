@@ -27,29 +27,36 @@ export function DownloadPanel({
   changelog = [],
   downloadsUsed,
   downloadsCap,
+  entitlementId,
   onDownload,
   queryHref,
 }: {
   files: ReleaseFile[];
   changelog?: ChangelogEntry[];
   downloadsUsed: number;
+  /** 0 / undefined = unlimited (entitlement `downloadCap` is null). */
   downloadsCap: number;
+  /** Real entitlement id: the button opens `/api/files/download/<id>/<mediaId>` (302 to the signed URL). */
+  entitlementId?: string;
   onDownload?: (file: ReleaseFile) => Promise<void> | void;
   queryHref: string;
 }) {
   const [used, setUsed] = React.useState(downloadsUsed);
   const [preparing, setPreparing] = React.useState<string | null>(null);
+  const unlimited = !downloadsCap;
   const left = Math.max(downloadsCap - used, 0);
-  const capped = left === 0;
+  const capped = !unlimited && left === 0;
 
   async function download(file: ReleaseFile) {
     setPreparing(file.id);
     try {
       await onDownload?.(file);
-      await new Promise((r) => setTimeout(r, 600));
-      const next = Math.min(used + 1, downloadsCap);
+      if (entitlementId) window.location.assign(`/api/files/download/${entitlementId}/${file.id}`);
+      const next = unlimited ? used + 1 : Math.min(used + 1, downloadsCap);
       setUsed(next);
-      toast.success("Download started", { description: `${downloadsCap - next} left` });
+      toast.success("Download started", {
+        description: unlimited ? undefined : `${downloadsCap - next} left`,
+      });
     } finally {
       setPreparing(null);
     }
@@ -59,18 +66,22 @@ export function DownloadPanel({
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-h3 text-fg">Files</h2>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Badge tone={capped ? "danger" : left <= 1 ? "warning" : "accent"} tabIndex={0}>
-                {left} of {downloadsCap} downloads left
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent>
-              Each purchase includes {downloadsCap} downloads across all versions.
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        {unlimited ? (
+          <Badge tone="accent">Unlimited downloads</Badge>
+        ) : (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge tone={capped ? "danger" : left <= 1 ? "warning" : "accent"} tabIndex={0}>
+                  {left} of {downloadsCap} downloads left
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                Each purchase includes {downloadsCap} downloads across all versions.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </div>
 
       {capped ? (
