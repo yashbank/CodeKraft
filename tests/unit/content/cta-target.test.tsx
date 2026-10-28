@@ -84,3 +84,19 @@ describe("secondary CTA and chapter CTAs", () => {
     expect(renderToStaticMarkup(<ChapterCtas cta={undefined} />)).toBe("");
   });
 });
+
+describe("safeCta (render-time re-check)", () => {
+  it("drops javascript: links stored before validation existed", async () => {
+    const { safeCta } = await import("@/components/admin/content/cta-targets");
+    const ok = { label: "Go", href: "/contact" };
+    expect(safeCta({ primary: { label: "x", href: "javascript:alert(1)" } })).toBeUndefined();
+    expect(safeCta({ primary: ok, secondary: { label: "y", href: "data:text/html,x" } })).toEqual({
+      primary: ok,
+      secondary: undefined,
+    });
+    expect(safeCta({ primary: ok, secondary: { label: "", href: "" } })?.secondary).toEqual({
+      label: "",
+      href: "",
+    });
+  });
+});

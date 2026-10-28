@@ -26,3 +26,14 @@ export function resolveCtaHref(selected: string, otherUrl: string): string | nul
   const parsed = hrefSchema.safeParse(selected === CTA_OTHER ? otherUrl : selected);
   return parsed.success ? parsed.data : null;
 }
+
+type CtaLink = { label: string; href: string };
+/** Re-check stored hrefs at render: rows saved before hrefSchema existed may hold `javascript:` etc. */
+const safeLink = (l: CtaLink | null | undefined): CtaLink | undefined =>
+  l && (l.href === "" || hrefSchema.safeParse(l.href).success) ? l : undefined;
+
+/** Stored landing CTA with unsafe links dropped (no primary -> no CTA, so defaults apply). */
+export function safeCta(cta: { primary: CtaLink; secondary?: CtaLink | null } | null | undefined) {
+  const primary = safeLink(cta?.primary);
+  return primary ? { primary, secondary: safeLink(cta?.secondary) } : undefined;
+}

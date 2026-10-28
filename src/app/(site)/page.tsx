@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { safeCta } from "@/components/admin/content/cta-targets";
+
 import { anonymousContext } from "@/lib/authz/context";
 import { toneFromSlug } from "@/lib/media-tone";
 import { toServiceIcon } from "@/lib/service-icon";
@@ -51,7 +53,7 @@ function chapterCopy(c: LandingChapterView | undefined) {
     eyebrow: c?.eyebrow ?? "",
     title: c?.title ?? "",
     body: c?.plainBody ?? "",
-    cta: c?.cta ?? undefined,
+    cta: safeCta(c?.cta),
   };
 }
 
