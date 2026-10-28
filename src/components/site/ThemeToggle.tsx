@@ -1,23 +1,35 @@
-import { MoonStarIcon } from "lucide-react";
+"use client";
+
+import { MoonStarIcon, SunIcon } from "lucide-react";
+import * as React from "react";
 
 import { Button } from "@/components/ui/button";
+import { THEME_COOKIE, type ThemeName } from "@/lib/theme";
 
-/**
- * Theme toggle placeholder (docs/07 §4.2). Rendered only when the `theme_light_editorial`
- * flag is on (release 1: off). P7 wires the cookie/user-pref persistence; the props-only shell
- * exists so header/footer layouts already reserve the slot.
- */
+/** Visitor theme switch (docs/07 §4.2), shown when the admin enables "visitors can switch theme". */
 export function ThemeToggle({ enabled = false }: { enabled?: boolean }) {
+  const [theme, setTheme] = React.useState<ThemeName>("dark-cinematic");
+  React.useEffect(() => {
+    if (document.documentElement.dataset.theme === "light-editorial") setTheme("light-editorial");
+  }, []);
   if (!enabled) return null;
+
+  const next: ThemeName = theme === "light-editorial" ? "dark-cinematic" : "light-editorial";
+  const label = `Switch to ${next === "light-editorial" ? "light" : "dark"} theme`;
   return (
     <Button
       type="button"
       variant="ghost"
       size="icon-sm"
-      aria-label="Theme: Dark cinematic"
-      title="Theme: Dark cinematic"
+      aria-label={label}
+      title={label}
+      onClick={() => {
+        document.documentElement.dataset.theme = next;
+        document.cookie = `${THEME_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
+        setTheme(next);
+      }}
     >
-      <MoonStarIcon aria-hidden />
+      {theme === "light-editorial" ? <MoonStarIcon aria-hidden /> : <SunIcon aria-hidden />}
     </Button>
   );
 }

@@ -424,7 +424,7 @@ export function ChatScreen({
             {messagesLeft} messages left today
           </Badge>
         )}
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-1">
           {/* R8-05: always-visible human handoff (the chip only lives in scrolled-away menus). */}
           <Button
             variant="outline"
