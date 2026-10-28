@@ -10,7 +10,6 @@ import { uuidSchema } from "@/modules/_shared/zod";
 import { positionSchema, text } from "../catalog/contracts";
 import {
   EMBED_HOSTS,
-  IMAGE_MEDIA_KINDS,
   MEDIA_KINDS,
   UPLOAD_PURPOSES,
   UPLOAD_RULES,
