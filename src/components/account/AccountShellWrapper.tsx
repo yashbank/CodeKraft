@@ -33,6 +33,8 @@ export function AccountShellWrapper({
     active = "purchases";
   else if (pathname.startsWith("/account/invoices")) active = "invoices";
   else if (pathname.startsWith("/account/queries")) active = "queries";
+  else if (pathname.startsWith("/account/quotes") || pathname.startsWith("/quote/"))
+    active = "quotes";
   else if (pathname.startsWith("/account/chat")) active = "chat";
   else if (pathname.startsWith("/account/wishlist")) active = "wishlist";
   else if (pathname.startsWith("/account/notifications")) active = "notifications";

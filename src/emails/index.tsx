@@ -214,6 +214,23 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplateDefinition> = {
       </>
     ),
   ),
+  "custom-quote": makeTemplate(
+    "custom-quote",
+    (d) =>
+      `${d.resend ? "Reminder: your" : "Your"} quote: ${d.title ?? "Custom quote"} (${d.currency ?? ""} ${d.amount ?? ""})`,
+    (d) => (
+      <>
+        <Text style={emailStyles.p}>
+          We prepared a custom quote for you: {String(d.title ?? "")} - {String(d.currency ?? "")}{" "}
+          {String(d.amount ?? "")}
+          {d.validUntil ? `, valid until ${String(d.validUntil)}` : ""}.
+        </Text>
+        <Link href={String(d.payUrl ?? "/account/quotes")} style={emailStyles.button}>
+          Review quote
+        </Link>
+      </>
+    ),
+  ),
   "payment-confirmed": makeTemplate(
     "payment-confirmed",
     (d) => `Payment confirmed for order ${d.orderNo ?? ""}`,

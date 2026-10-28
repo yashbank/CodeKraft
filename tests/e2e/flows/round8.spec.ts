@@ -665,7 +665,7 @@ test.describe("round 8 end to end", () => {
         const quoteTitle = `R8 e2e custom quote ${Date.now()}`;
         await form.locator("#q-title").fill(quoteTitle);
         await form.locator("#q-amount").fill("25000");
-        await form.getByRole("button", { name: "Save" }).click();
+        await form.getByRole("button", { name: "Save draft" }).click();
         await expect(A.page.getByText(quoteTitle).first()).toBeVisible({ timeout: 30_000 });
         // send
         await A.page.getByText(quoteTitle).first().click();

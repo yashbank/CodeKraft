@@ -31,3 +31,9 @@ export async function acceptCustomQuote(raw: unknown) {
   const { acceptCustomQuoteAction } = await import("./actions");
   return withCtx(acceptCustomQuoteAction, raw);
 }
+
+/** Customer rejects the quote (sent/viewed only). */
+export async function rejectCustomQuote(raw: unknown) {
+  const { rejectCustomQuoteAction } = await import("./actions");
+  return withCtx(rejectCustomQuoteAction, raw);
+}

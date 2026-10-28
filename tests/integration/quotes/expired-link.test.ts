@@ -1,11 +1,22 @@
 import { beforeAll, describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { customQuotes } from "../../../drizzle/schema/commerce";
 import { quotesService } from "@/modules/quotes/service";
+
 import { AppError, ErrorCode } from "@/lib/errors";
 import { migrateTestDb } from "../../setup/migrate";
 import { truncateAll } from "../../setup/db";
 import { createAdmin, createUser } from "../../factories/users";
 import { buildContext } from "@/lib/authz/context";
 
+/** Sending an already-expired quote is rejected, so tests backdate the expiry after sending. */
+async function backdate(quoteId: string, iso: string) {
+  await db
+    .update(customQuotes)
+    .set({ expiresAt: new Date(iso) })
+    .where(eq(customQuotes.id, quoteId));
+}
 describe("Custom Quotes expired link integration (API-COM-10, BR-10)", () => {
   beforeAll(async () => {
     await migrateTestDb();
@@ -31,15 +42,17 @@ describe("Custom Quotes expired link integration (API-COM-10, BR-10)", () => {
 
     // Create quote expiring in the past
     const pastDate = new Date(Date.now() - 3600 * 1000).toISOString();
+    const futureDate = new Date(Date.now() + 3600 * 1000).toISOString();
     const quoteRes = await quotesService.createCustomQuote(adminCtx, {
       customerId: customer.id,
       title: "Expiring Offer",
       currency: "INR",
       amountMinor: 25000,
-      expiresAt: pastDate,
+      expiresAt: futureDate,
     });
 
     await quotesService.sendCustomQuote(adminCtx, { quoteId: quoteRes.quoteId });
+    await backdate(quoteRes.quoteId, pastDate);
 
     // Customer views quote -> canAccept should be false
     const view = await quotesService.getQuote(custCtx, { token: quoteRes.token });

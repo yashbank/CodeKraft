@@ -1,7 +1,7 @@
 /**
  * Custom quotes service implementation (docs/06 §2.3 API-COM-09, API-COM-10; D-520; MASTER_SPEC §7).
  */
-import { and, desc, eq, isNull, lte } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, isNull, lte, or } from "drizzle-orm";
 import { getDb, withTx, type TxCtx } from "@/lib/db";
 import { customQuotes, type CustomQuote } from "../../../drizzle/schema/commerce";
 import { orders, orderItems } from "../../../drizzle/schema/commerce";
@@ -18,6 +18,8 @@ import { createNotImplemented } from "@/modules/_shared/not-implemented";
 import type { ListResult } from "@/modules/_shared/zod";
 import type { CreateOrderResult } from "@/modules/orders/types";
 import { nextOrderNo } from "@/modules/orders/numbering";
+import type { Currency } from "@/lib/money";
+import { fxService } from "@/modules/fx/service";
 import { paymentsService } from "@/modules/payments/service";
 import { quotePayUrl } from "@/lib/routes";
 import { generateQuoteToken } from "./token";
@@ -28,10 +30,17 @@ import type {
   CreateCustomQuoteInput,
   CreateQuoteResult,
   GetQuoteInput,
+  RejectCustomQuoteInput,
+  SearchCustomersInput,
   ListQuotesInput,
   QuoteView,
   SendCustomQuoteInput,
 } from "./types";
+
+/** Tax on a tax-exclusive amount, rounded to the nearest minor unit. */
+function taxOf(amountMinor: number, taxBps: number): number {
+  return Math.round((amountMinor * taxBps) / 10000);
+}
 
 export class DefaultQuotesService implements QuotesService {
   // -- API-COM-09 createCustomQuote --------------------------------------------------------------
@@ -68,6 +77,17 @@ export class DefaultQuotesService implements QuotesService {
         }
       }
 
+      const lineItems = input.lineItems ?? null;
+      const lineSum = lineItems
+        ? lineItems.reduce((n, l) => n + l.quantity * l.unitMinor, 0)
+        : null;
+      if (lineSum !== null && input.amountMinor !== undefined && input.amountMinor !== lineSum) {
+        throw new AppError(ErrorCode.VALIDATION, "Amount must equal the sum of the line items");
+      }
+      const amountMinor = lineSum ?? input.amountMinor;
+      if (amountMinor === undefined || amountMinor <= 0) {
+        throw new AppError(ErrorCode.VALIDATION, "Enter an amount or add at least one line item");
+      }
       const token = generateQuoteToken();
       const expiresAt = input.expiresAt ? new Date(input.expiresAt) : null;
 
@@ -79,7 +99,10 @@ export class DefaultQuotesService implements QuotesService {
           title: input.title,
           description: input.description ?? null,
           currency: input.currency,
-          amountMinor: input.amountMinor,
+          amountMinor,
+          lineItems,
+          taxBps: input.taxBps ?? 0,
+          internalNote: input.internalNote ?? null,
           token,
           expiresAt,
           status: "draft",
@@ -128,21 +151,35 @@ export class DefaultQuotesService implements QuotesService {
         throw new AppError(ErrorCode.NOT_FOUND, "Custom quote not found");
       }
 
-      if (quote.status !== "draft") {
+      // draft -> sent; sent/viewed -> resend (same token, customer is re-notified).
+      const isResend =
+        quote.status === "sent" || quote.status === "viewed" || quote.status === "expired";
+      if (quote.status !== "draft" && !isResend) {
         throw new AppError(
           ErrorCode.STATE_INVALID,
-          `Cannot send quote in status '${quote.status}'`,
+          `Cannot send a quote in status '${quote.status}'`,
+        );
+      }
+      const newExpiry = input.expiresAt ? new Date(input.expiresAt) : quote.expiresAt;
+      if (newExpiry && newExpiry.getTime() <= Date.now()) {
+        throw new AppError(
+          ErrorCode.VALIDATION,
+          "This quote's validity date has passed - pick a new validity date to send it",
         );
       }
 
+      const now = new Date();
       const [updatedQuote] = await tx
         .update(customQuotes)
-        .set({ status: "sent" })
+        .set({
+          status: quote.status === "viewed" ? "viewed" : "sent",
+          sentAt: now,
+          expiresAt: newExpiry,
+        })
         .where(eq(customQuotes.id, quote.id))
         .returning();
       if (!updatedQuote) throw new AppError(ErrorCode.INTERNAL, "Write returned no row");
 
-      // Get customer email
       const [customer] = await tx
         .select({ email: users.email })
         .from(users)
@@ -150,18 +187,17 @@ export class DefaultQuotesService implements QuotesService {
         .limit(1);
 
       const payUrl = quotePayUrl(quote.token);
+      const totalMinor = quote.amountMinor + taxOf(quote.amountMinor, quote.taxBps);
 
-      // Notification
       await tx.insert(notifications).values({
         userId: quote.customerId,
         type: "quote.sent",
-        title: "New custom quote received",
+        title: isResend ? "Reminder: custom quote awaiting you" : "New custom quote received",
         body: `You received a custom quote: ${quote.title}`,
         link: `/quote/${quote.token}`,
-        payload: { quoteId: quote.id, amountMinor: quote.amountMinor, currency: quote.currency },
+        payload: { quoteId: quote.id, amountMinor: totalMinor, currency: quote.currency },
       });
 
-      // Email outbox
       if (customer?.email) {
         await tx.insert(emailOutbox).values({
           toEmail: customer.email,
@@ -169,8 +205,10 @@ export class DefaultQuotesService implements QuotesService {
           payload: {
             quoteId: quote.id,
             title: quote.title,
-            amount: (quote.amountMinor / 100).toFixed(2),
+            amount: (totalMinor / 100).toFixed(2),
             currency: quote.currency,
+            validUntil: newExpiry ? newExpiry.toISOString().slice(0, 10) : null,
+            resend: isResend,
             payUrl,
           },
           priority: 1,
@@ -179,7 +217,7 @@ export class DefaultQuotesService implements QuotesService {
 
       await auditService.log(
         ctx,
-        "quote.sent",
+        isResend ? "quote.resent" : "quote.sent",
         { type: "custom_quote", id: quote.id },
         quote,
         updatedQuote,
@@ -213,8 +251,8 @@ export class DefaultQuotesService implements QuotesService {
         throw new AppError(ErrorCode.NOT_FOUND, "Custom quote not found");
       }
 
-      if (quote.status === "paid") {
-        throw new AppError(ErrorCode.STATE_INVALID, "Cannot cancel a paid quote");
+      if (quote.status === "paid" || quote.status === "cancelled" || quote.status === "rejected") {
+        throw new AppError(ErrorCode.STATE_INVALID, `Cannot cancel a ${quote.status} quote`);
       }
 
       const [updatedQuote] = await tx
@@ -304,7 +342,20 @@ export class DefaultQuotesService implements QuotesService {
 
     const isCustomer = ctx.userId !== null && ctx.userId === quote.customerId;
     const isExpired = quote.expiresAt !== null && quote.expiresAt < new Date();
-    const canAccept = isCustomer && quote.status === "sent" && !isExpired && quote.orderId === null;
+    const open = quote.status === "sent" || quote.status === "viewed";
+    let status = quote.status;
+    if (open && isExpired) {
+      status = "expired";
+    } else if (isCustomer && quote.status === "sent") {
+      // First time the invited customer opens the link: sent -> viewed.
+      await db
+        .update(customQuotes)
+        .set({ status: "viewed", viewedAt: new Date() })
+        .where(and(eq(customQuotes.id, quote.id), eq(customQuotes.status, "sent")));
+      status = "viewed";
+    }
+    const canAccept =
+      isCustomer && (status === "sent" || status === "viewed") && quote.orderId === null;
 
     return {
       quote: {
@@ -313,12 +364,100 @@ export class DefaultQuotesService implements QuotesService {
         description: quote.description,
         currency: quote.currency,
         amountMinor: quote.amountMinor,
-        status: quote.status,
+        status,
         expiresAt: quote.expiresAt,
         orderId: quote.orderId,
+        taxBps: quote.taxBps,
+        lineItems: quote.lineItems,
       },
       canAccept,
     };
+  }
+
+  // -- reject (customer) -------------------------------------------------------------------------
+
+  async rejectCustomQuote(
+    ctx: RequestContext,
+    input: RejectCustomQuoteInput,
+    outerTx?: TxCtx,
+  ): Promise<{ quote: CustomQuote }> {
+    const runner = async (tx: TxCtx): Promise<{ quote: CustomQuote }> => {
+      const [quote] = await tx
+        .select()
+        .from(customQuotes)
+        .where(eq(customQuotes.token, input.token))
+        .limit(1);
+      if (!quote) throw new AppError(ErrorCode.NOT_FOUND, "Quote not found");
+      if (ctx.userId !== quote.customerId) {
+        throw new AppError(
+          ErrorCode.FORBIDDEN,
+          "Only the invited customer account can reject this quote",
+        );
+      }
+      if (quote.status !== "sent" && quote.status !== "viewed") {
+        throw new AppError(
+          ErrorCode.STATE_INVALID,
+          `Cannot reject quote in status '${quote.status}'`,
+        );
+      }
+      const [updated] = await tx
+        .update(customQuotes)
+        .set({ status: "rejected", rejectedAt: new Date() })
+        .where(eq(customQuotes.id, quote.id))
+        .returning();
+      if (!updated) throw new AppError(ErrorCode.INTERNAL, "Write returned no row");
+      await auditService.log(
+        ctx,
+        "quote.rejected",
+        { type: "custom_quote", id: quote.id },
+        quote,
+        { status: "rejected", reason: input.reason ?? null },
+        tx,
+      );
+      return { quote: updated };
+    };
+    if (outerTx) return await runner(outerTx);
+    return await withTx(runner);
+  }
+
+  async listMyQuotes(ctx: RequestContext): Promise<CustomQuote[]> {
+    // `commerce.self` is enforced by the action layer; rows are scoped to ctx.userId here.
+    if (!ctx.userId) return [];
+    const db = await getDb();
+    const rows = await db
+      .select()
+      .from(customQuotes)
+      .where(eq(customQuotes.customerId, ctx.userId))
+      .orderBy(desc(customQuotes.createdAt))
+      .limit(100);
+    const now = new Date();
+    return rows
+      .filter((q) => q.status !== "draft")
+      .map((q) =>
+        (q.status === "sent" || q.status === "viewed") && q.expiresAt && q.expiresAt < now
+          ? { ...q, status: "expired" as const }
+          : q,
+      );
+  }
+
+  // -- admin customer search ---------------------------------------------------------------------
+
+  async searchCustomers(
+    ctx: RequestContext,
+    input: SearchCustomersInput,
+  ): Promise<Array<{ id: string; name: string; email: string }>> {
+    assertPermission(ctx, "customers.read");
+    const db = await getDb();
+    const needle = `%${input.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+    const where = input.q
+      ? and(isNull(users.deletedAt), or(ilike(users.name, needle), ilike(users.email, needle)))
+      : isNull(users.deletedAt);
+    return await db
+      .select({ id: users.id, name: users.name, email: users.email })
+      .from(users)
+      .where(where)
+      .orderBy(desc(users.createdAt))
+      .limit(20);
   }
 
   // -- API-COM-10 acceptCustomQuote --------------------------------------------------------------
@@ -347,7 +486,7 @@ export class DefaultQuotesService implements QuotesService {
         );
       }
 
-      if (quote.status !== "sent") {
+      if (quote.status !== "sent" && quote.status !== "viewed") {
         throw new AppError(
           ErrorCode.STATE_INVALID,
           `Cannot accept quote in status '${quote.status}'`,
@@ -393,6 +532,8 @@ export class DefaultQuotesService implements QuotesService {
 
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
+      const taxMinor = taxOf(quote.amountMinor, quote.taxBps);
+
       // Create Order
       const [order] = await tx
         .insert(orders)
@@ -404,8 +545,8 @@ export class DefaultQuotesService implements QuotesService {
           currency: quote.currency,
           subtotalMinor: quote.amountMinor,
           discountMinor: 0,
-          taxMinor: 0,
-          totalMinor: quote.amountMinor,
+          taxMinor,
+          totalMinor: quote.amountMinor + taxMinor,
           customQuoteId: quote.id,
           billingSnapshot: {
             name: input.billing.name,
@@ -415,32 +556,48 @@ export class DefaultQuotesService implements QuotesService {
             address: input.billing.address ?? null,
             gst_number: input.billing.gstNumber ?? null,
           },
-          taxRateBps: 0,
-          fxRateToInr: "1.00000000",
+          taxRateBps: quote.taxBps,
+          fxRateToInr:
+            quote.currency === "INR"
+              ? "1.00000000"
+              : await fxService.rateToInrOn(quote.currency as Currency, new Date(), tx),
           expiresAt,
         })
         .returning();
       if (!order) throw new AppError(ErrorCode.INTERNAL, "Write returned no row");
 
-      // Create Order Item
-      await tx.insert(orderItems).values({
-        orderId: order.id,
-        offeringId: quote.offeringId ?? null,
-        productId,
-        description: quote.title,
-        quantity: 1,
-        unitMinor: quote.amountMinor,
-        discountMinor: 0,
-        taxMinor: 0,
-        totalMinor: quote.amountMinor,
-        ownershipId,
-      });
+      // Order items: itemised lines when present (tax on the first line absorbs rounding so the
+      // lines add up to the order tax), otherwise a single line for the whole quote.
+      const lines =
+        quote.lineItems && quote.lineItems.length > 0
+          ? quote.lineItems
+          : [{ description: quote.title, quantity: 1, unitMinor: quote.amountMinor }];
+      let taxLeft = taxMinor;
+      for (const [i, line] of lines.entries()) {
+        const lineNet = line.quantity * line.unitMinor;
+        const lineTax =
+          i === lines.length - 1 ? taxLeft : Math.min(taxLeft, taxOf(lineNet, quote.taxBps));
+        taxLeft -= lineTax;
+        await tx.insert(orderItems).values({
+          orderId: order.id,
+          offeringId: quote.offeringId ?? null,
+          productId,
+          description: line.description,
+          quantity: line.quantity,
+          unitMinor: line.unitMinor,
+          discountMinor: 0,
+          taxMinor: lineTax,
+          totalMinor: lineNet + lineTax,
+          ownershipId,
+        });
+      }
 
       // Update quote status to accepted and link order
       await tx
         .update(customQuotes)
         .set({
           status: "accepted",
+          acceptedAt: new Date(),
           orderId: order.id,
         })
         .where(eq(customQuotes.id, quote.id));
@@ -498,7 +655,7 @@ export class DefaultQuotesService implements QuotesService {
         .from(customQuotes)
         .where(
           and(
-            eq(customQuotes.status, "sent"),
+            inArray(customQuotes.status, ["sent", "viewed"]),
             lte(customQuotes.expiresAt, now),
             isNull(customQuotes.orderId),
           ),
@@ -529,6 +686,9 @@ export function createNotImplementedQuotesService(): QuotesService {
     listQuotes: "async",
     getQuote: "async",
     acceptCustomQuote: "async",
+    rejectCustomQuote: "async",
+    searchCustomers: "async",
+    listMyQuotes: "async",
     markPaid: "async",
     expireQuotes: "async",
   });

@@ -5,6 +5,8 @@ import {
   acceptCustomQuoteInput,
   cancelCustomQuoteInput,
   createCustomQuoteInput,
+  rejectCustomQuoteInput,
+  searchCustomersInput,
   sendCustomQuoteInput,
 } from "./types";
 import { quotesService } from "./service";
@@ -42,5 +44,23 @@ export const acceptCustomQuoteAction = defineAction({
   input: acceptCustomQuoteInput,
   handler: async (input, ctx) => {
     return await quotesService.acceptCustomQuote(ctx, input);
+  },
+});
+
+export const rejectCustomQuoteAction = defineAction({
+  name: "API-COM-10 quote.reject",
+  permission: "commerce.self",
+  input: rejectCustomQuoteInput,
+  handler: async (input, ctx) => {
+    return await quotesService.rejectCustomQuote(ctx, input);
+  },
+});
+
+export const searchQuoteCustomersAction = defineAction({
+  name: "API-COM-09 quote.searchCustomers",
+  permission: "customers.read",
+  input: searchCustomersInput,
+  handler: async (input, ctx) => {
+    return await quotesService.searchCustomers(ctx, input);
   },
 });

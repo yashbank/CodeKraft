@@ -13,7 +13,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { add, format } from "@/lib/money";
 import { mapBillingToOrderInput } from "@/lib/account/checkout-view";
-import { acceptCustomQuote } from "@/modules/quotes/customer-mutations";
+import { useRouter } from "next/navigation";
+import { acceptCustomQuote, rejectCustomQuote } from "@/modules/quotes/customer-mutations";
 import type { CreateOrderResult } from "@/modules/orders/types";
 import { Banner } from "./Banner";
 import { BillingFields, PaymentMethodChoice } from "./CheckoutScreen";
@@ -50,10 +51,12 @@ export function QuoteScreen({
   const [method, setMethod] = React.useState<PaymentProvider>(q.paymentMethods[0] ?? "manual_upi");
   const [consent, setConsent] = React.useState(false);
   const [accepting, setAccepting] = React.useState(false);
+  const router = useRouter();
+  const [rejecting, setRejecting] = React.useState(false);
   const [order, setOrder] = React.useState<CreateOrderResult | null>(null);
   const total = q.tax ? add(q.amount, q.tax) : q.amount;
   const remaining = timeUntil(q.validUntil, now);
-  const payable = q.status === "sent" && canAccept && !!remaining;
+  const payable = (q.status === "sent" || q.status === "viewed") && canAccept && !!remaining;
 
   async function handleAccept(e: React.FormEvent) {
     e.preventDefault();
@@ -68,6 +71,19 @@ export function QuoteScreen({
     if (result.ok) {
       setOrder(result.data);
       toast.success(`Order ${result.data.orderNo} placed`);
+    } else {
+      toast.error(result.error.message);
+    }
+  }
+
+  async function handleReject() {
+    if (rejecting) return;
+    setRejecting(true);
+    const result = await rejectCustomQuote({ token: q.token });
+    setRejecting(false);
+    if (result.ok) {
+      toast.success("Quote rejected");
+      router.refresh();
     } else {
       toast.error(result.error.message);
     }
@@ -140,6 +156,12 @@ export function QuoteScreen({
         }
       >
         Thanks — this quote is paid and delivery is under way.
+      </Banner>
+    );
+  } else if (q.status === "rejected") {
+    banner = (
+      <Banner tone="neutral" title="You rejected this quote">
+        Open a query if you&apos;d like a revised one.
       </Banner>
     );
   } else if (q.status === "expired" || !remaining) {
@@ -222,16 +244,18 @@ export function QuoteScreen({
           </p>
         </div>
 
-        <section aria-labelledby="quote-includes" className="space-y-2">
-          <h2 id="quote-includes" className="text-h4 text-fg">
-            What&apos;s included
-          </h2>
-          <ul className="list-disc space-y-1 pl-5 text-body-sm text-fg-muted">
-            {q.includes.map((i) => (
-              <li key={i}>{i}</li>
-            ))}
-          </ul>
-        </section>
+        {q.includes.length > 0 ? (
+          <section aria-labelledby="quote-includes" className="space-y-2">
+            <h2 id="quote-includes" className="text-h4 text-fg">
+              What&apos;s included
+            </h2>
+            <ul className="list-disc space-y-1 pl-5 text-body-sm text-fg-muted">
+              {q.includes.map((i) => (
+                <li key={i}>{i}</li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         {payable ? (
           <form className="space-y-6" onSubmit={handleAccept}>
@@ -298,6 +322,15 @@ export function QuoteScreen({
               </Button>
               <Button type="button" size="lg" variant="ghost" asChild>
                 <Link href={links.newQuery}>Ask a question</Link>
+              </Button>
+              <Button
+                type="button"
+                size="lg"
+                variant="ghost"
+                onClick={handleReject}
+                disabled={rejecting || accepting}
+              >
+                {rejecting ? "Rejecting…" : "Reject quote"}
               </Button>
             </div>
           </form>
