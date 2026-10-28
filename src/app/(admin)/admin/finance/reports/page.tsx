@@ -114,7 +114,19 @@ export default async function AdminReportsPage() {
   const reports: ReportDefinition[] = REPORT_ORDER.map((key, i) => {
     const result = reportResults[i];
     if (!result || !("data" in result) || !result.ok) {
-      return { key, ...REPORT_META[key], tiles: [], series: [], columns: [], rows: [] };
+      console.error("[finance/reports] report query failed", {
+        report: key,
+        error: result && "error" in result ? result.error : undefined,
+      });
+      return {
+        key,
+        ...REPORT_META[key],
+        tiles: [],
+        series: [],
+        columns: [],
+        rows: [],
+        error: "This report could not be loaded. Try again; if it persists, check the server log.",
+      };
     }
     return mapReportResultToDefinition(result.data, REPORT_META[key]);
   });

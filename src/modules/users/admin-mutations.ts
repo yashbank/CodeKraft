@@ -23,6 +23,8 @@ import {
   suspendCustomerAction,
   updateCustomerNotesAction,
   updatePartnerAction,
+  createPartnerAction,
+  ensureSuperAdminPartnersAction,
 } from "./actions";
 
 async function withCtx<T>(
@@ -85,4 +87,12 @@ export async function updatePartner(raw: unknown) {
 
 export async function createCustomer(raw: unknown) {
   return withCtx(createCustomerAction, raw);
+}
+
+export async function createPartner(raw: unknown) {
+  return withCtx(createPartnerAction, raw);
+}
+
+export async function ensureSuperAdminPartners() {
+  return withCtx(ensureSuperAdminPartnersAction, {});
 }

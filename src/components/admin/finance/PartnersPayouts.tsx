@@ -41,6 +41,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { parseMinor, type Currency } from "@/lib/money";
 import { recordPayout } from "@/modules/finance/admin-mutations";
+import { createPartner, ensureSuperAdminPartners } from "@/modules/users/admin-mutations";
 import { ApprovalGateNotice } from "../Banner";
 import { Sparkline } from "../charts/Sparkline";
 import { FilterChips } from "../FilterChips";
@@ -57,6 +58,8 @@ export interface PartnersPayoutsProps {
   payouts: PayoutRow[];
   approvers: string[];
   isSuperAdmin: boolean;
+  /** Admin-class users without a partner row yet (the "Add partner" picker). */
+  candidates?: Array<{ userId: string; name: string; email: string }>;
   statementsHref: string;
   ledgerHref: string;
   approvalsHref: string;
@@ -74,6 +77,7 @@ export function PartnersPayouts({
   payouts,
   approvers,
   isSuperAdmin,
+  candidates = [],
   statementsHref,
   ledgerHref,
   approvalsHref,
@@ -88,6 +92,12 @@ export function PartnersPayouts({
   const [amount, setAmount] = React.useState("");
   const [status, setStatus] = React.useState<PayoutRow["status"] | null>(null);
   const [selectedHistory, setSelectedHistory] = React.useState(partners[0]?.id ?? "");
+  const [addOpen, setAddOpen] = React.useState(false);
+  const [addUserId, setAddUserId] = React.useState("");
+  const [addEmail, setAddEmail] = React.useState("");
+  const [addName, setAddName] = React.useState("");
+  const [adding, setAdding] = React.useState(false);
+  const [backfilling, setBackfilling] = React.useState(false);
   const partner = partners.find((p) => p.id === partnerId);
   const amountMinor = (() => {
     try {
@@ -143,15 +153,73 @@ export function PartnersPayouts({
     router.refresh();
   }
 
+  async function handleAddPartner() {
+    const email = addEmail.trim();
+    if (!addUserId && !email) {
+      toast.error("Pick an admin user or enter their email.");
+      return;
+    }
+    setAdding(true);
+    const result = await createPartner({
+      ...(addUserId ? { userId: addUserId } : { email }),
+      ...(addName.trim() ? { displayName: addName.trim() } : {}),
+    });
+    setAdding(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(`${result.data.partner.displayName} added as a partner`);
+    setAddOpen(false);
+    setAddUserId("");
+    setAddEmail("");
+    setAddName("");
+    router.refresh();
+  }
+
+  async function handleBackfill() {
+    setBackfilling(true);
+    const result = await ensureSuperAdminPartners();
+    setBackfilling(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    const n = result.data.created.length;
+    toast.success(
+      n === 0
+        ? "Every super admin already has a partner row."
+        : `Added ${n} super admin${n === 1 ? "" : "s"} as partner${n === 1 ? "" : "s"}.`,
+    );
+    router.refresh();
+  }
+
   return (
     <TooltipProvider>
       <PageHeader
         title="Partners & payouts"
         description="Payouts are recorded after you transfer the money by hand; the platform does not move money."
         actions={
-          <Button size="sm" onClick={() => openDialog()}>
-            <PlusIcon aria-hidden /> Record payout
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {isSuperAdmin ? (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={backfilling}
+                onClick={() => {
+                  void handleBackfill();
+                }}
+              >
+                Add super admins as partners
+              </Button>
+            ) : null}
+            <Button size="sm" variant="secondary" onClick={() => setAddOpen(true)}>
+              <PlusIcon aria-hidden /> Add partner
+            </Button>
+            <Button size="sm" disabled={partners.length === 0} onClick={() => openDialog()}>
+              <PlusIcon aria-hidden /> Record payout
+            </Button>
+          </div>
         }
       />
       <Tabs defaultValue={initialTab}>
@@ -160,6 +228,35 @@ export function PartnersPayouts({
           <TabsTrigger value="payouts">Payouts ({payouts.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="partners" className="space-y-6">
+          {partners.length === 0 ? (
+            <section
+              aria-label="No partners"
+              className="rounded-lg border border-dashed border-border bg-surface p-8 text-center"
+            >
+              <h2 className="text-h4">No partners yet</h2>
+              <p className="mx-auto mt-1 max-w-md text-body-sm text-fg-muted">
+                Partners hold ownership shares in products and receive payouts. Add an admin user as
+                a partner, then set their share on each product&rsquo;s ownership tab.
+              </p>
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                <Button size="sm" onClick={() => setAddOpen(true)}>
+                  <PlusIcon aria-hidden /> Add partner
+                </Button>
+                {isSuperAdmin ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={backfilling}
+                    onClick={() => {
+                      void handleBackfill();
+                    }}
+                  >
+                    Add super admins as partners
+                  </Button>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
           <div className="grid gap-4 lg:grid-cols-3 tv:grid-cols-4">
             {partners.map((p) => (
               <section
@@ -267,63 +364,72 @@ export function PartnersPayouts({
               </section>
             ) : null}
           </div>
-          <section
-            aria-labelledby="history-title"
-            className="rounded-lg border border-border bg-surface"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
-              <h2 id="history-title" className="text-h4">
-                Balance history
-              </h2>
-              <Select value={selectedHistory} onValueChange={setSelectedHistory}>
-                <SelectTrigger size="sm" className="w-44" aria-label="Partner">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {partners.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Table>
-              <TableCaption className="sr-only">Balance history</TableCaption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Month</TableHead>
-                  <TableHead className="text-right">Allocations</TableHead>
-                  <TableHead className="text-right">Refunds</TableHead>
-                  <TableHead className="text-right">Expense share</TableHead>
-                  <TableHead className="text-right">Payouts</TableHead>
-                  <TableHead className="text-right">Closing</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(historyPartner?.history ?? []).map((h) => (
-                  <TableRow key={h.month}>
-                    <TableCell>{h.month}</TableCell>
-                    <TableCell>
-                      <MoneyCell value={{ amountMinor: h.allocations, currency: "INR" }} signed />
-                    </TableCell>
-                    <TableCell>
-                      <MoneyCell value={{ amountMinor: h.refunds, currency: "INR" }} signed />
-                    </TableCell>
-                    <TableCell>
-                      <MoneyCell value={{ amountMinor: h.expenses, currency: "INR" }} signed />
-                    </TableCell>
-                    <TableCell>
-                      <MoneyCell value={{ amountMinor: h.payouts, currency: "INR" }} signed />
-                    </TableCell>
-                    <TableCell>
-                      <MoneyCell value={{ amountMinor: h.closing, currency: "INR" }} />
-                    </TableCell>
+          {partners.length > 0 ? (
+            <section
+              aria-labelledby="history-title"
+              className="rounded-lg border border-border bg-surface"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+                <h2 id="history-title" className="text-h4">
+                  Balance history
+                </h2>
+                <Select value={selectedHistory} onValueChange={setSelectedHistory}>
+                  <SelectTrigger size="sm" className="w-44" aria-label="Partner">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {partners.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Table>
+                <TableCaption className="sr-only">Balance history</TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Month</TableHead>
+                    <TableHead className="text-right">Allocations</TableHead>
+                    <TableHead className="text-right">Refunds</TableHead>
+                    <TableHead className="text-right">Expense share</TableHead>
+                    <TableHead className="text-right">Payouts</TableHead>
+                    <TableHead className="text-right">Closing</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </section>
+                </TableHeader>
+                <TableBody>
+                  {(historyPartner?.history ?? []).length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-6 text-center text-fg-muted">
+                        No ledger activity for this partner yet.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                  {(historyPartner?.history ?? []).map((h) => (
+                    <TableRow key={h.month}>
+                      <TableCell>{h.month}</TableCell>
+                      <TableCell>
+                        <MoneyCell value={{ amountMinor: h.allocations, currency: "INR" }} signed />
+                      </TableCell>
+                      <TableCell>
+                        <MoneyCell value={{ amountMinor: h.refunds, currency: "INR" }} signed />
+                      </TableCell>
+                      <TableCell>
+                        <MoneyCell value={{ amountMinor: h.expenses, currency: "INR" }} signed />
+                      </TableCell>
+                      <TableCell>
+                        <MoneyCell value={{ amountMinor: h.payouts, currency: "INR" }} signed />
+                      </TableCell>
+                      <TableCell>
+                        <MoneyCell value={{ amountMinor: h.closing, currency: "INR" }} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </section>
+          ) : null}
         </TabsContent>
         <TabsContent value="payouts" className="space-y-4">
           <div className="flex flex-wrap items-end gap-3">
@@ -349,18 +455,20 @@ export function PartnersPayouts({
               value={status}
               onChange={setStatus}
             />
-            <Select>
-              <SelectTrigger size="sm" className="w-40" aria-label="Partner filter">
-                <SelectValue placeholder="Any partner" />
-              </SelectTrigger>
-              <SelectContent>
-                {partners.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {partners.length > 0 ? (
+              <Select>
+                <SelectTrigger size="sm" className="w-40" aria-label="Partner filter">
+                  <SelectValue placeholder="Any partner" />
+                </SelectTrigger>
+                <SelectContent>
+                  {partners.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
           </div>
           <div className="rounded-lg border border-border bg-surface">
             <Table>
@@ -379,6 +487,13 @@ export function PartnersPayouts({
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="py-8 text-center text-fg-muted">
+                      No payouts recorded yet.
+                    </TableCell>
+                  </TableRow>
+                ) : null}
                 {rows.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell>{formatDate(p.paidOn)}</TableCell>
@@ -434,6 +549,75 @@ export function PartnersPayouts({
           </div>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent size="md">
+          <DialogHeader>
+            <DialogTitle>Add partner</DialogTitle>
+            <DialogDescription>
+              A partner is an admin user who can hold product shares and receive payouts. Set their
+              share on the product&rsquo;s ownership tab afterwards.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4">
+            {candidates.length > 0 ? (
+              <Field id="ap-user" label="Admin user">
+                <Select
+                  value={addUserId}
+                  onValueChange={(v) => {
+                    setAddUserId(v);
+                    setAddEmail("");
+                  }}
+                >
+                  <SelectTrigger id="ap-user">
+                    <SelectValue placeholder="Pick an admin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {candidates.map((c) => (
+                      <SelectItem key={c.userId} value={c.userId}>
+                        {c.name ? `${c.name} · ${c.email}` : c.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            ) : null}
+            <Field
+              id="ap-email"
+              label={candidates.length > 0 ? "Or admin email" : "Admin email"}
+              hint="Must already be an admin user."
+            >
+              <Input
+                id="ap-email"
+                type="email"
+                value={addEmail}
+                onChange={(e) => {
+                  setAddEmail(e.target.value);
+                  if (e.target.value) setAddUserId("");
+                }}
+              />
+            </Field>
+            <Field id="ap-name" label="Display name" optional>
+              <Input id="ap-name" value={addName} onChange={(e) => setAddName(e.target.value)} />
+            </Field>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="ghost" disabled={adding}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              disabled={adding || (!addUserId && !addEmail.trim())}
+              onClick={() => {
+                void handleAddPartner();
+              }}
+            >
+              Add partner
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent size="md">

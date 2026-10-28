@@ -27,7 +27,7 @@
  *  - `AdjustmentRow.createdAt` is derived from the approval's `ageHours` (`ApprovalView` has no
  *    exact timestamp field), so it is accurate to the hour, not the second.
  */
-import type { Currency } from "@/lib/money";
+import { format as formatMoney, type Currency } from "@/lib/money";
 import type {
   Expense,
   LedgerEntryView,
@@ -278,7 +278,7 @@ export function mapApprovalToAdjustmentRow(
 // ---------------------------------------------------------------------------------------------
 
 /** Bounds how much ledger history feeds "earned (all time)" / balance history -- see file header. */
-export const LEDGER_ROLLUP_LIMIT = 500;
+export const LEDGER_ROLLUP_LIMIT = 100;
 
 interface MonthBucket {
   month: string; // "2026-09"
@@ -467,23 +467,29 @@ export function computeCompanyTotals(entries: LedgerEntryView[]): CompanyTotals 
 // Reports & statements (SCR-ADM-22)
 // ---------------------------------------------------------------------------------------------
 
+/** Report cells are integer minor units for `money` columns; format them as INR strings. */
 function formatCell(
   value: ReportCell | undefined,
   kind: "text" | "money" | "count" | "date",
 ): string | number {
-  if (value === null || value === undefined) return kind === "money" || kind === "count" ? 0 : "—";
-  if (kind === "money") return typeof value === "number" ? value / 100 : value;
+  if (kind === "money") return formatMoney({ amountMinor: numericCell(value), currency: "INR" });
+  if (kind === "count") return numericCell(value);
+  if (value === null || value === undefined || value === "") return "—";
   return value;
 }
 
-function moneyCell(value: ReportCell | undefined): number {
-  return typeof value === "number" ? value / 100 : 0;
+/** Finite number or 0 -- a null/NaN/non-numeric cell must never reach the UI as NaN. */
+function numericCell(value: ReportCell | undefined): number {
+  const n = typeof value === "number" ? value : Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
 }
 
 /**
  * Generic `ReportResult` (columns/rows/totals) -> `ReportDefinition` (tiles/series/table) mapper.
- * Works uniformly across all 8 report keys because `getReport` follows a consistent shape:
- * text/id columns first, one or more money/count columns after -- see the heuristics inline.
+ * Works uniformly across all report keys because `getReport` follows a consistent shape:
+ * text/id columns first, one or more money/count columns after. Money values stay in minor units
+ * in `tiles`/`series` (the screen formats them with `inr()`); table cells are pre-formatted.
+ * Raw id columns (`*Id`) are internal keys, not display columns, so they are dropped from the table.
  */
 export function mapReportResultToDefinition(
   result: ReportResult,
@@ -492,28 +498,30 @@ export function mapReportResultToDefinition(
   const moneyOrCountCols = result.columns.filter((c) => c.kind === "money" || c.kind === "count");
   const tiles = moneyOrCountCols.map((c) => ({
     label: c.label,
-    valueInr:
-      c.kind === "count" ? Number(result.totals[c.key] ?? 0) : moneyCell(result.totals[c.key]),
+    valueInr: numericCell(result.totals[c.key]),
+    ...(c.kind === "count" ? { isCount: true } : {}),
   }));
 
-  // Label column: index 1 when it's text/date (skips a leading id column), else index 0.
+  const shown = result.columns.filter((c) => !/Id$/.test(c.key));
+  const displayCols = shown.length > 0 ? shown : result.columns;
   const labelCol =
-    result.columns[1] && (result.columns[1].kind === "text" || result.columns[1].kind === "date")
-      ? result.columns[1]
-      : result.columns[0];
+    displayCols.find((c) => c.kind === "text" || c.kind === "date") ?? result.columns[0];
   const valueCol = moneyOrCountCols[moneyOrCountCols.length - 1];
   const series = valueCol
     ? result.rows.map((row) => ({
         label: String((labelCol && row[labelCol.key]) ?? ""),
-        value:
-          valueCol.kind === "count" ? Number(row[valueCol.key] ?? 0) : moneyCell(row[valueCol.key]),
+        value: numericCell(row[valueCol.key]),
       }))
     : [];
 
-  const columns = result.columns.map((c) => c.label);
-  const rows = result.rows.map((row) => result.columns.map((c) => formatCell(row[c.key], c.kind)));
-  const totals: Array<string | number> = result.columns.map((c, i) =>
-    i === 0 ? "Total" : formatCell(result.totals[c.key], c.kind),
+  const columns = displayCols.map((c) => c.label);
+  const rows = result.rows.map((row) => displayCols.map((c) => formatCell(row[c.key], c.kind)));
+  const totals: Array<string | number> = displayCols.map((c, i) =>
+    i === 0
+      ? "Total"
+      : c.kind === "text" || c.kind === "date"
+        ? ""
+        : formatCell(result.totals[c.key], c.kind),
   );
 
   return {
@@ -525,7 +533,7 @@ export function mapReportResultToDefinition(
     series,
     columns,
     rows,
-    totals,
+    totals: result.rows.length > 0 ? totals : undefined,
   };
 }
 
