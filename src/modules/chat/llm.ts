@@ -22,7 +22,7 @@ export interface LLMToolDefinition {
 }
 
 export interface LLMStreamOptions {
-  /** `site_settings.ai_model` snapshot on the conversation (e.g. `claude-opus-5`, `claude-haiku-4-5`). */
+  /** `site_settings.ai_model` snapshot on the conversation (e.g. `claude-opus-5-5`, `claude-haiku-5-5`). */
   model: string;
   maxTokens: number;
   timeoutMs: number;

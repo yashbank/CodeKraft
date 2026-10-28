@@ -38,6 +38,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/components/ui/_utils";
+import { CHAT_MODELS, chatModelOptionLabel } from "@/modules/chat/models";
 import { CURRENCIES } from "@/lib/money";
 import { PALETTES } from "@/lib/palettes";
 import { updateRazorpaySettings, updateSettings } from "@/modules/settings/admin-mutations";
@@ -449,6 +450,7 @@ export function SettingsScreen({
       }
     } else if (section === "ai") {
       patch = {
+        aiModel: val("st-model"),
         aiDailyPlatformCap: Number(val("st-cap")),
         aiDailyUserCap: Number(val("st-user-cap")),
         chatTimeoutMs: Math.round(Number(val("st-timeout")) * 1000),
@@ -855,8 +857,26 @@ export function SettingsScreen({
                 Why this matters: daily caps protect cost; a cap of 0 turns AI answers off.
               </p>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field id="st-model" label="Model" hint="Configured on the server.">
-                  <Input id="st-model" value={s.ai.model} readOnly className="font-mono" />
+                <Field
+                  id="st-model"
+                  label="Default model"
+                  hint="Cheapest first. New chats use this model."
+                >
+                  <select
+                    id="st-model"
+                    defaultValue={s.ai.model}
+                    disabled={ro}
+                    className="border-input bg-bg h-10 w-full rounded-md border px-3 font-mono text-sm"
+                  >
+                    {!CHAT_MODELS.some((m) => m.id === s.ai.model) ? (
+                      <option value={s.ai.model}>{s.ai.model}</option>
+                    ) : null}
+                    {CHAT_MODELS.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {chatModelOptionLabel(m)}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
                 <Field
                   id="st-cap"

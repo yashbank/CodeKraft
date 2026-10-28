@@ -138,7 +138,7 @@ export const SITE_SETTINGS_DEFAULTS: SiteSettings = Object.freeze({
   defaultTheme: "dark-cinematic",
   themeToggle: true,
   palette: DEFAULT_PALETTE,
-  aiModel: "claude-opus-5",
+  aiModel: "claude-sonnet-5-5",
   aiDailyPlatformCap: 2000,
   aiDailyUserCap: 30,
   chatTimeoutMs: 30_000,
