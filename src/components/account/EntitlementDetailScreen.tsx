@@ -97,6 +97,7 @@ export function EntitlementDetailScreen({
           changelog={e.changelog}
           downloadsUsed={e.downloadsUsed ?? 0}
           downloadsCap={e.downloadsCap ?? 0}
+          entitlementId={e.id}
           queryHref={links.newQuery}
         />
       ) : null}
