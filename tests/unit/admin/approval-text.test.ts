@@ -13,6 +13,7 @@ const payloads: Record<(typeof APPROVAL_TYPES)[number], Record<string, unknown>>
   "product.delete": { productId: id, reason: "Duplicate" },
   "admin.user_change": { kind: "change_role", userId: id, role: "super_admin" },
   "project_order.split": { orderId: id },
+  "site.reset": { categories: ["leads", "quotes"] },
 };
 const facts = { productName: "Widget", orderNo: "CK-ORD-000012", partnerName: "Asha" };
 

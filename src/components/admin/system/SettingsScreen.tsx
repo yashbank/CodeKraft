@@ -45,6 +45,7 @@ import { uploadMediaFile } from "@/lib/admin/media-upload";
 import { updateRazorpaySettings, updateSettings } from "@/modules/settings/admin-mutations";
 import { testRazorpayConnection } from "@/modules/settings/razorpay-test-connection";
 import { Banner } from "../Banner";
+import { DangerZoneSection } from "./DangerZoneSection";
 import { ManualPaymentSettings } from "./ManualPaymentSettings";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
@@ -361,6 +362,7 @@ const SECTIONS = [
   ["notifications", "Notifications"],
   ["flags", "Feature flags"],
   ["retention", "Retention"],
+  ["danger", "Danger zone"],
 ] as const;
 type SectionKey = (typeof SECTIONS)[number][0];
 
@@ -589,7 +591,7 @@ export function SettingsScreen({
           className="rounded-lg border border-border bg-surface p-2"
         >
           <ul className="space-y-0.5">
-            {SECTIONS.map(([k, label]) => (
+            {SECTIONS.filter(([k]) => k !== "danger" || isSuperAdmin).map(([k, label]) => (
               <li key={k}>
                 <button
                   type="button"
@@ -1120,6 +1122,10 @@ export function SettingsScreen({
                 Personal data is anonymised immediately when a customer deletes their account.
               </p>
             </>
+          ) : null}
+
+          {section === "danger" && isSuperAdmin ? (
+            <DangerZoneSection siteName={s.general.siteName} />
           ) : null}
 
           {saveable ? (

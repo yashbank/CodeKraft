@@ -83,6 +83,8 @@ function payloadSummaryFor(type: ApprovalType, payload: Record<string, unknown>)
       return `Admin user change: ${String(payload.kind ?? "")}`;
     case "project_order.split":
       return `Split order ${String(payload.orderId ?? "")}`;
+    case "site.reset":
+      return `Reset site data: ${Array.isArray(payload.categories) ? payload.categories.join(", ") : ""}`;
     default:
       return `${type} approval request`;
   }
