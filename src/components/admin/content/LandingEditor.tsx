@@ -19,6 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { Field, RichTextField } from "../RichTextField";
 import type { LandingChapter, ServiceRow } from "../types";
 import { ContentEditorFrame, moveItem, SortableRow } from "./ContentEditorFrame";
+import { landingFieldHelp as help } from "./landing-field-help";
 import { fromPlainText } from "@/modules/content/render";
 import { saveFeaturedProducts, saveLandingChapter } from "@/modules/content/admin-mutations";
 
@@ -173,7 +174,7 @@ export function LandingEditor({
             id="ch-poster"
             label="Hero image"
             optional
-            hint="Shown in the large image panel next to the headline at the top of the home page (/). Without one, the built-in illustration is used. Landscape, at least 1600×1200."
+            hint={`${help("who", "poster")} Without one, the built-in illustration is used. Landscape, at least 1600×1200.`}
           >
             <input
               ref={posterFileInputRef}
@@ -211,7 +212,7 @@ export function LandingEditor({
           id="ch-eyebrow"
           label="Eyebrow"
           optional
-          hint="Small label above the title. 60 chars."
+          hint={`${help(chapter.key, "eyebrow")} 60 chars.`}
         >
           <Input id="ch-eyebrow" name="eyebrow" maxLength={60} defaultValue={chapter.eyebrow} />
         </Field>
@@ -219,11 +220,9 @@ export function LandingEditor({
           id="ch-title"
           label="Title"
           required
-          hint={
-            chapter.key === "who"
-              ? "Keep the hero title under 60 characters for the 3D scene layout."
-              : undefined
-          }
+          hint={`${help(chapter.key, "title")}${
+            chapter.key === "who" ? " Keep under 60 characters for the 3D scene layout." : ""
+          }`}
         >
           <Input
             id="ch-title"
@@ -233,19 +232,30 @@ export function LandingEditor({
             required
           />
         </Field>
-        <Field id="ch-subtitle" label="Subtitle" optional>
+        <Field id="ch-subtitle" label="Subtitle" optional hint={help(chapter.key, "subtitle")}>
           <Input id="ch-subtitle" name="subtitle" defaultValue={chapter.subtitle} />
         </Field>
-        <RichTextField id="ch-body" name="body" label="Body" defaultValue={chapter.body} rows={4} />
+        <RichTextField
+          id="ch-body"
+          name="body"
+          label="Body"
+          hint={help(chapter.key, "body")}
+          defaultValue={chapter.body}
+          rows={4}
+        />
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="ch-cta1" label="Primary CTA label">
+          <Field id="ch-cta1" label="Primary CTA label" hint={help(chapter.key, "cta1")}>
             <Input
               id="ch-cta1"
               name="cta1"
               defaultValue={chapter.ctaPrimary?.label ?? "Start a project"}
             />
           </Field>
-          <Field id="ch-cta1-target" label="Primary CTA target">
+          <Field
+            id="ch-cta1-target"
+            label="Primary CTA target"
+            hint={help(chapter.key, "cta1-target")}
+          >
             <Select name="cta1-target" defaultValue={chapter.ctaPrimary?.target ?? "inquiry"}>
               <SelectTrigger id="ch-cta1-target" className="w-full">
                 <SelectValue />
@@ -259,10 +269,15 @@ export function LandingEditor({
               </SelectContent>
             </Select>
           </Field>
-          <Field id="ch-cta2" label="Secondary CTA label" optional>
+          <Field id="ch-cta2" label="Secondary CTA label" optional hint={help(chapter.key, "cta2")}>
             <Input id="ch-cta2" name="cta2" defaultValue={chapter.ctaSecondary?.label ?? ""} />
           </Field>
-          <Field id="ch-cta2-target" label="Secondary CTA target" optional>
+          <Field
+            id="ch-cta2-target"
+            label="Secondary CTA target"
+            optional
+            hint={help(chapter.key, "cta2-target")}
+          >
             <Select name="cta2-target" defaultValue={chapter.ctaSecondary?.target ?? "none"}>
               <SelectTrigger id="ch-cta2-target" className="w-full">
                 <SelectValue />
