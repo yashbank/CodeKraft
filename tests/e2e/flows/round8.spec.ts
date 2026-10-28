@@ -607,6 +607,21 @@ test.describe("round 8 end to end", () => {
       await A.page.goto(`${ADMIN}/admin/queries/${qy!.id}`);
       await A.page.locator("#q-composer").fill("Hello from adminA, we got your chat.");
       await A.page.getByRole("button", { name: "Reply", exact: true }).click();
+      // Wait for the reply to be committed before the customer loads the thread (the page is not live).
+      await expect
+        .poll(
+          async () =>
+            Number(
+              (
+                await q(
+                  `select count(*)::int as n from query_messages where query_id=$1 and author_kind='admin'`,
+                  [qy!.id],
+                )
+              )[0]?.n,
+            ),
+          { timeout: 30_000, message: "admin reply saved" },
+        )
+        .toBeGreaterThan(0);
       await p.goto(`${SITE}/account/queries/${qy!.id}`);
       await expect(p.getByText("Hello from adminA, we got your chat.")).toBeVisible({
         timeout: 30_000,
@@ -656,7 +671,21 @@ test.describe("round 8 end to end", () => {
         await A.page.getByText(quoteTitle).first().click();
         await A.page.getByRole("button", { name: "Send to customer" }).click();
         await expect(A.page.getByText(/Sent/).first()).toBeVisible({ timeout: 30_000 });
-        // c2 sees it
+        // c2 sees it (wait until the send has committed and notified the customer)
+        await expect
+          .poll(
+            async () =>
+              Number(
+                (
+                  await q(
+                    `select count(*)::int as n from notifications where type='quote.sent' and user_id=(select id from users where email=$1) and created_at > now() - interval '5 minutes'`,
+                    [C2],
+                  )
+                )[0]?.n,
+              ),
+            { timeout: 30_000, message: "quote.sent notification" },
+          )
+          .toBeGreaterThan(0);
         await p.goto(`${SITE}/account/notifications`);
         await expect(p.getByText(/quote/i).first()).toBeVisible({ timeout: 30_000 });
       },
