@@ -55,6 +55,20 @@ describe("site reset plan", () => {
     expect(order.at(-1)).toBe("users");
   });
 
+  it("handles the credit_notes/refunds cycle, quotes dependency and customer media", async () => {
+    const order = RESET_STEPS.map((s) => s.table);
+    expect(order.indexOf("credit_notes")).toBeLessThan(order.indexOf("refunds"));
+    expect(RESET_STEPS.find((s) => s.table === "credit_notes")?.before).toContain("credit_note_id");
+    expect(expandCategories(["quotes"])).toContain("customers_orders");
+    expect(order.indexOf("media")).toBeLessThan(order.indexOf("users"));
+    expect(RESET_STEPS.find((s) => s.table === "media")?.customersOnly).toBe("uploaded_by");
+    const { db, log } = fakeDb();
+    await runReset(db, ["quotes"]);
+    expect(log.findIndex((l) => l.startsWith("UPDATE"))).toBeLessThan(
+      log.findIndex((l) => l.startsWith('DELETE FROM "credit_notes"')),
+    );
+  });
+
   it("never touches protected tables and only deletes customer users", () => {
     const tables = new Set(RESET_STEPS.map((s) => s.table));
     for (const keep of ["site_settings", "audit_logs", "roles", "permissions", "legal_pages"]) {

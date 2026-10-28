@@ -26,7 +26,7 @@ export const RESET_CATEGORY_LABELS: Record<ResetCategory, string> = {
 /** Rows elsewhere point at these, so wiping them alone would break foreign keys. */
 export const RESET_REQUIRES: Record<ResetCategory, readonly ResetCategory[]> = {
   leads: [],
-  quotes: [],
+  quotes: ["customers_orders"],
   finance: [],
   content: [],
   customers_orders: ["leads", "quotes", "finance"],
@@ -51,12 +51,14 @@ export interface ResetStep {
   table: string;
   category: ResetCategory;
   /** Only rows of customer users (never admins); the column that holds the user id. */
-  customersOnly?: "user_id" | "id";
+  customersOnly?: "user_id" | "id" | "uploaded_by";
+  /** Runs first: breaks a circular FK (refunds.credit_note_id <-> credit_notes.refund_id). */
+  before?: string;
 }
 
 const s = (category: ResetCategory, ...tables: string[]): ResetStep[] =>
   tables.map((table) => ({ table, category }));
-const cu = (table: string, col: "user_id" | "id"): ResetStep => ({
+const cu = (table: string, col: "user_id" | "id" | "uploaded_by"): ResetStep => ({
   table,
   category: "customers_orders",
   customersOnly: col,
@@ -65,11 +67,15 @@ const cu = (table: string, col: "user_id" | "id"): ResetStep => ({
 /** Children before parents. */
 export const RESET_STEPS: readonly ResetStep[] = [
   ...s("finance", "ledger_entries", "allocations", "payouts", "expenses"),
+  {
+    table: "credit_notes",
+    category: "customers_orders",
+    before: 'UPDATE "refunds" SET "credit_note_id" = NULL',
+  },
   ...s(
     "customers_orders",
     "refunds",
     "coupon_redemptions",
-    "credit_notes",
     "invoices",
     "user_offering_purchases",
     "downloads",
@@ -114,6 +120,7 @@ export const RESET_STEPS: readonly ResetStep[] = [
     "slug_redirects",
     "products",
   ),
+  cu("media", "uploaded_by"),
   cu("customer_profiles", "user_id"),
   cu("sessions", "user_id"),
   cu("two_factor", "user_id"),

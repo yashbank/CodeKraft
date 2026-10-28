@@ -80,7 +80,10 @@ export async function runReset(
   // Append-only / frozen guard triggers must be off for the wipe; re-enabled in the same tx.
   for (const st of steps) await db.run(`ALTER TABLE ${quoteIdent(st.table)} DISABLE TRIGGER USER`);
   const counts = await previewCounts(db, categories);
-  for (const st of steps) await db.run(deleteSql(st));
+  for (const st of steps) {
+    if (st.before) await db.run(st.before);
+    await db.run(deleteSql(st));
+  }
   for (const st of steps) await db.run(`ALTER TABLE ${quoteIdent(st.table)} ENABLE TRIGGER USER`);
   return counts;
 }
