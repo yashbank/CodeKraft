@@ -43,6 +43,7 @@ export const UPLOAD_PURPOSES = [
   "expense_receipt",
   "query_attachment",
   "avatar",
+  "site_logo",
 ] as const;
 export type UploadPurpose = (typeof UPLOAD_PURPOSES)[number];
 
@@ -118,6 +119,12 @@ export const UPLOAD_RULES: Readonly<Record<UploadPurpose, UploadRule>> = Object.
   },
   query_attachment: { mimes: ATTACHMENT_MIMES, maxBytes: 20 * MB, visibility: "private" },
   avatar: { mimes: IMAGE_MIMES, maxBytes: 10 * MB, visibility: "public" },
+  // Raster only: SVG is never accepted (TM-12).
+  site_logo: {
+    mimes: ["image/png", "image/jpeg", "image/webp"],
+    maxBytes: 2 * MB,
+    visibility: "public",
+  },
 });
 
 /** Embed hosts accepted for `video_embed` (API-CAT-06). */

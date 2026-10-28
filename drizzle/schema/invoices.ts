@@ -33,6 +33,8 @@ export interface SellerSnapshot {
   email?: string | null;
   phone?: string | null;
   state_code?: string | null;
+  /** Site logo URL at issue time (null = text wordmark). */
+  logo_url?: string | null;
   [key: string]: unknown;
 }
 

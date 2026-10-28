@@ -26,7 +26,10 @@ vi.mock("resend", () => ({
 }));
 
 const siteNameMock = vi.fn(async () => "CodeKraft");
-vi.mock("@/lib/site-brand", () => ({ getSiteName: () => siteNameMock() }));
+vi.mock("@/lib/site-brand", () => ({
+  getSiteName: () => siteNameMock(),
+  getSiteLogo: async () => null,
+}));
 
 async function load(transport: string) {
   vi.resetModules();
