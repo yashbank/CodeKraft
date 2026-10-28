@@ -21,6 +21,7 @@ export const approvalType = pgEnum("approval_type", [
   "product.delete",
   "admin.user_change",
   "project_order.split",
+  "site.reset",
 ]);
 
 export const approvalStatus = pgEnum("approval_status", [

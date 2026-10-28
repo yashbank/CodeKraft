@@ -23,6 +23,7 @@ import {
 } from "@/modules/_shared/zod";
 import { projectOrderSplitPayload } from "@/modules/orders/types";
 import { refundIssuePayload } from "@/modules/payments/types";
+import { RESET_CATEGORIES } from "@/modules/settings/site-reset-plan";
 import { ledgerAdjustmentPayload, payoutRecordPayload } from "@/modules/finance/types";
 
 export const APPROVAL_TYPES = [
@@ -35,6 +36,7 @@ export const APPROVAL_TYPES = [
   "product.delete",
   "admin.user_change",
   "project_order.split",
+  "site.reset",
 ] as const satisfies readonly ApprovalType[];
 export const zApprovalType = z.enum(APPROVAL_TYPES);
 
@@ -101,6 +103,11 @@ export const adminUserChangePayload = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("remove"), userId: zUuid }).strict(),
 ]);
 
+/** Super-admin "Reset site data": which categories to wipe (expanded server-side). */
+export const siteResetPayload = z
+  .object({ categories: z.array(z.enum(RESET_CATEGORIES)).min(1) })
+  .strict();
+
 export const approvalPayloadSchemas = {
   "product.publish": productPublishPayload,
   "ownership.change": ownershipChangePayload,
@@ -111,6 +118,7 @@ export const approvalPayloadSchemas = {
   "product.delete": productDeletePayload,
   "admin.user_change": adminUserChangePayload,
   "project_order.split": projectOrderSplitPayload,
+  "site.reset": siteResetPayload,
 } as const satisfies Record<ApprovalType, z.ZodType>;
 
 export type ApprovalPayloadMap = {
@@ -150,6 +158,7 @@ export const APPROVAL_TYPE_INFO: Readonly<
   "product.delete": { applyApi: "API-CAT-15", subjectType: "product", onRejected: "nothing" },
   "admin.user_change": { applyApi: "API-ADM-11", subjectType: "user", onRejected: "nothing" },
   "project_order.split": { applyApi: "API-COM-14", subjectType: "order", onRejected: "nothing" },
+  "site.reset": { applyApi: "API-ADM-20", subjectType: "site", onRejected: "nothing" },
 });
 
 // ---------------------------------------------------------------------------------------------
