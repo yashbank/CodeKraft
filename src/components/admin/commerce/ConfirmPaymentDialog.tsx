@@ -32,11 +32,14 @@ export interface ConfirmPaymentDialogProps {
   blockedReason?: string;
   /** True while the confirm mutation is in flight -- disables the primary button. */
   busy?: boolean;
+  /** Licence-delivery items whose key can optionally be entered now (blank = set later / auto). */
+  licenseItems?: Array<{ id: string; product: string }>;
   onConfirm?: (result: {
     receivedMinor: number;
     reference: string;
     note: string;
     receivedOn: string;
+    licenseKeys: Array<{ orderItemId: string; licenseKey: string }>;
   }) => void;
 }
 
@@ -53,11 +56,13 @@ export function ConfirmPaymentDialog({
   customerReference,
   blockedReason,
   busy = false,
+  licenseItems = [],
   onConfirm,
 }: ConfirmPaymentDialogProps) {
   const [received, setReceived] = React.useState(() => (due.amountMinor / 100).toFixed(2));
   const [reference, setReference] = React.useState(customerReference ?? "");
   const [note, setNote] = React.useState("");
+  const [keys, setKeys] = React.useState<Record<string, string>>({});
   const [verified, setVerified] = React.useState(false);
   const [receivedOn, setReceivedOn] = React.useState(() => new Date().toISOString().slice(0, 10));
   const receivedMinor = React.useMemo(() => {
@@ -141,6 +146,24 @@ export function ConfirmPaymentDialog({
               onChange={(e) => setNote(e.target.value)}
             />
           </Field>
+          {licenseItems.map((li) => (
+            <Field
+              key={li.id}
+              id={`cp-key-${li.id}`}
+              label={`Licence key · ${li.product}`}
+              optional
+              className="sm:col-span-2"
+              hint="Optional. Stored encrypted; leave blank to set it later."
+            >
+              <Input
+                id={`cp-key-${li.id}`}
+                value={keys[li.id] ?? ""}
+                onChange={(e) => setKeys((k) => ({ ...k, [li.id]: e.target.value }))}
+                className="font-mono"
+                autoComplete="off"
+              />
+            </Field>
+          ))}
         </form>
         <table className="w-full text-body-sm">
           <caption className="sr-only">Payment recap</caption>
@@ -200,11 +223,18 @@ export function ConfirmPaymentDialog({
               !valid ||
               reference.trim() === "" ||
               (credit !== null && note.trim() === "") ||
+              licenseItems.some((li) => {
+                const n = (keys[li.id] ?? "").trim().length;
+                return n > 0 && n < 8;
+              }) ||
               Boolean(blockedReason) ||
               busy
             }
             onClick={() => {
-              onConfirm?.({ receivedMinor, reference, note, receivedOn });
+              const licenseKeys = licenseItems
+                .map((li) => ({ orderItemId: li.id, licenseKey: (keys[li.id] ?? "").trim() }))
+                .filter((k) => k.licenseKey !== "");
+              onConfirm?.({ receivedMinor, reference, note, receivedOn, licenseKeys });
             }}
           >
             {busy ? "Confirming…" : "Confirm and mark Paid"}

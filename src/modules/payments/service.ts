@@ -331,6 +331,21 @@ export class DefaultPaymentsService implements PaymentsService {
       const { entitlementsService } = await import("@/modules/entitlements/service");
       const granted = await entitlementsService.grantForOrder(order.id, tx);
 
+      // Admin-typed licence keys reuse API-DEL-08 inside this transaction (blank = unchanged flow).
+      for (const k of parsed.licenseKeys ?? []) {
+        const ent = granted.find(
+          (g) => g.orderItemId === k.orderItemId && g.deliveryType === "license",
+        );
+        if (!ent)
+          throw new AppError(ErrorCode.VALIDATION, "Licence key given for a non-licence item");
+        const { deliveryService } = await import("@/modules/delivery/service");
+        await deliveryService.setLicenseKey(
+          ctx,
+          { entitlementId: ent.entitlementId, licenseKey: k.licenseKey, notifyEmail: false },
+          tx,
+        );
+      }
+
       // Custom quote mark paid hook
       if (order.customQuoteId) {
         await quotesService.markPaid(order.customQuoteId, tx);
