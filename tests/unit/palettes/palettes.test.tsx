@@ -44,6 +44,7 @@ describe("palettes", () => {
     vi.doMock("@/lib/fonts", () => ({ fontVariables: "" }));
     vi.doMock("@/lib/site-brand", () => ({
       getSiteName: async () => "CodeKraft",
+      getSiteLogo: async () => null,
       getThemeConfig: async () => ({
         defaultTheme: "light-editorial",
         themeToggle: true,
