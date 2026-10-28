@@ -62,4 +62,34 @@ Two machines, one repo. Never both on the same task. Never push `main`. Never pu
 | P6-04 | 6 | UI sweep with Playwright at mobile/tablet/desktop on site + admin + account; fix console errors, overflow, dead buttons | B |
 | P6-05 | 6 | Super admin "Reset site data" (Settings): tick categories (leads, quotes, customers+orders, products/services, content, finance), type site name to confirm, second super admin approves via approval engine, backup JSON download first. Keeps super admin accounts, settings, migrations. Reuse table list/order from scripts/wipe-demo-data.mjs. Audit-logged. Tests incl. that super admins survive | B |
 
-Order for B: P1 (all tasks in parallel via agents) -> P2 -> P3 -> P4 -> P5 -> P6. A tests each phase as B marks tasks `ready`; B continues to the next phase without waiting.
+| P7-01 | 7 | BUG Reset site data: ticking one category ticks others; typed site name never enables the button. Fix + component test + e2e (do NOT run reset on a real DB) | B |
+| P7-02 | 7 | Rounded corners: client-logo tiles and the site logo (header/footer/admin/invoice) | B |
+| P7-03 | 7 | BUG logo missing from invoice. Premium colourful invoice redesign: logo, seller, GST/tax lines, items, price, discount, totals, purchase date, order no, payment status, notes; A4 print + PDF; tests | B |
+| P8-01 | 8 | Customer status truth: provisioning -> admin grants -> fulfilled -> "service started, expires <date>"; works for subscriptions + every offering type; admin and customer views agree | B |
+| P8-02 | 8 | Download offerings show provided version(s) after payment; licence offerings reveal key after payment confirmed | B |
+| P8-03 | 8 | Remove "for testing only" / report-to-tester text from inquiry + other forms | B |
+| P8-04 | 8 | System health widget never empty (real checks: DB, storage, email transport, cron last run, errors) | B |
+| P9-01 | 9 | Currency works everywhere (site, checkout, admin, account, invoices); enabled-currency selector; display conversion | B |
+| P9-02 | 9 | Expenses in other currency: fetch live rate, lock it on the expense, convert to base; rate source + fallback + tests | B |
+| P9-03 | 9 | All finance sub-tab filters work (incl. allocation), reliable + tested | B |
+| P9-04 | 9 | Ledger: cleaner modern layout, correct debit/credit; partners + payouts end-to-end tests | B |
+| P10-01 | 10 | Invites for customer/admin/staff/partner: unique single-use link (7 days) + "Copy link" button; temp password shown ONCE at creation (never stored readable), "Regenerate" invalidates old; forced change on first login | B |
+| P10-02 | 10 | Reset password works for admins and customers (no email: admin-generated link also works) | B |
+| P10-03 | 10 | docs/ACCESS-POLICY.md: invite/password policy, NO real passwords | B |
+| P11-01 | 11 | UI customization settings: font choices (add distinctive non-AI-looking fonts), radius/border styles, background patterns; applies site-wide, no layout regressions | B |
+| P11-02 | 11 | Hero "Architecture Node" label editable (admin content) + 3 styles | B |
+| P11-03 | 11 | Changed site logo applies EVERYWHERE (site, admin, account, invoices, emails, favicon/OG); audit grep for hardcoded logo | B |
+| P12-01 | 12 | Modern interactive widgets + reports (hover, drill-down, animated counters, skeleton loaders) | B |
+| P12-02 | 12 | Dead/disabled button audit (Playwright, all admin+site+account routes) and fix | B |
+| P12-03 | 12 | SEO: metadata, JSON-LD, sitemap, canonical for products, case studies, blogs, site; auto-generated OG share image per page (next/og) | B |
+| P12-04 | 12 | Admin extras: Cmd+K command palette, sticky table headers + CSV export, saved filters, first-run setup checklist, smooth page transitions | B |
+
+Order for B: P1 (all tasks in parallel via agents) -> P2 -> P3 -> P4 -> P5 -> P6 -> P7 -> P8 -> P9 -> P10 -> P11 -> P12. A tests each phase as B marks tasks `ready`; B continues to the next phase without waiting.
+
+## Token plan (Phase 7-12, both Macs)
+- Read only your task rows + its files. Never reread this whole doc: grep `^| P<n>-`.
+- Per phase: one Opus planner turn, then Sonnet/Haiku agents per task in worktrees (<=8-line reports). Haiku for mechanical edits/tests, Sonnet for features.
+- Tests: touched files only. A runs the full gate once per phase, not B.
+- Reuse existing modules (finance, settings, content, invoices); no new libraries unless a task needs one (fonts via next/font).
+- Migrations: hand-write SQL (drizzle-kit snapshots collide), next number 0007+. Additive only. Tell A in B.md.
+- Mobile/tablet/laptop must not regress: every UI task checks 375/768/1280.
