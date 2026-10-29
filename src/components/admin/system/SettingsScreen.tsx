@@ -41,6 +41,16 @@ import { cn } from "@/components/ui/_utils";
 import { CHAT_MODELS, chatModelOptionLabel } from "@/modules/chat/models";
 import { CURRENCIES } from "@/lib/money";
 import { PALETTES } from "@/lib/palettes";
+import {
+  BORDER_IDS,
+  FONT_IDS,
+  FONT_LABELS,
+  PATTERN_IDS,
+  RADIUS_IDS,
+  patternProps,
+  uiStyleVars,
+  type UiStyle,
+} from "@/lib/ui-style";
 import { uploadMediaFile } from "@/lib/admin/media-upload";
 import { updateRazorpaySettings, updateSettings } from "@/modules/settings/admin-mutations";
 import { testRazorpayConnection } from "@/modules/settings/razorpay-test-connection";
@@ -426,6 +436,96 @@ function mapSettingsFieldErrors(fe: Record<string, string[]> | undefined): Recor
 }
 
 /** SCR-ADM-29 — settings with a nine-section rail, 760 px forms, per-section save bar and AlertDialogs for dangerous changes. */
+const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
+
+/** Font / shape / background pickers with a live preview card (P11-01). */
+function UiStylePicker({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: UiStyle;
+  onChange: (v: UiStyle) => void;
+  disabled: boolean;
+}) {
+  const set = <K extends keyof UiStyle>(k: K, v: string) => onChange({ ...value, [k]: v });
+  const group = (
+    label: string,
+    k: keyof UiStyle,
+    ids: readonly string[],
+    text: (id: string) => string,
+  ) => (
+    <fieldset className="grid gap-2">
+      <legend className="text-body-sm mb-1 font-medium">{label}</legend>
+      <RadioGroup
+        value={value[k]}
+        onValueChange={(v) => set(k, v)}
+        className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3"
+        disabled={disabled}
+        aria-label={label}
+      >
+        {ids.map((id) => (
+          <RadioGroupCard key={id} value={id}>
+            <span className="text-body-sm font-semibold">{text(id)}</span>
+          </RadioGroupCard>
+        ))}
+      </RadioGroup>
+    </fieldset>
+  );
+  const vars = uiStyleVars(value);
+  const bg = patternProps(value.pattern);
+  const style = {
+    ...vars,
+    ...Object.fromEntries(
+      Object.entries(bg).map(([k, v]) => [k.replace(/-(\w)/g, (_, c) => c.toUpperCase()), v]),
+    ),
+  } as React.CSSProperties;
+  return (
+    <div className="grid gap-4">
+      {group("Font pairing", "font", FONT_IDS, (id) => FONT_LABELS[id as keyof typeof FONT_LABELS])}
+      {group("Corner radius", "radius", RADIUS_IDS, (id) =>
+        id === "soft" ? "Soft (default)" : cap(id),
+      )}
+      {group("Borders", "border", BORDER_IDS, cap)}
+      {group("Background pattern", "pattern", PATTERN_IDS, (id) =>
+        id === "mesh" ? "Gradient mesh" : cap(id),
+      )}
+      <div
+        data-testid="ui-style-preview"
+        aria-label="Style preview"
+        role="group"
+        style={style}
+        className="bg-canvas grid gap-3 overflow-hidden rounded-lg border p-5"
+      >
+        <h3
+          className="text-h3"
+          style={{ fontFamily: "var(--ck-font-display)", fontWeight: "var(--ck-display-weight)" }}
+        >
+          Build something remarkable
+        </h3>
+        <p className="text-body-sm text-fg-muted" style={{ fontFamily: "var(--ck-font-body)" }}>
+          Preview of your font pairing, corners, borders and background.
+        </p>
+        <div className="flex flex-wrap gap-2" style={{ fontFamily: "var(--ck-font-body)" }}>
+          <span className="bg-accent-solid text-accent-fg rounded-md px-4 py-2 text-sm font-medium">
+            Primary
+          </span>
+          <span
+            className="rounded-md border px-4 py-2 text-sm"
+            style={
+              value.border === "defined"
+                ? { borderColor: "var(--ck-color-border-strong)" }
+                : undefined
+            }
+          >
+            Secondary
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SettingsScreen({
   settings: s,
   isSuperAdmin,
@@ -447,6 +547,12 @@ export function SettingsScreen({
   const [theme, setTheme] = React.useState(s.theme.defaultTheme);
   const [themeToggle, setThemeToggle] = React.useState(s.theme.toggle);
   const [palette, setPalette] = React.useState(s.theme.palette);
+  const [ui, setUi] = React.useState<UiStyle>({
+    font: s.theme.font,
+    radius: s.theme.radius,
+    border: s.theme.border,
+    pattern: s.theme.pattern,
+  } as UiStyle);
   const [saving, setSaving] = React.useState(false);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const saveable = SAVEABLE_SECTIONS.includes(section);
@@ -459,6 +565,12 @@ export function SettingsScreen({
     setTheme(s.theme.defaultTheme);
     setThemeToggle(s.theme.toggle);
     setPalette(s.theme.palette);
+    setUi({
+      font: s.theme.font,
+      radius: s.theme.radius,
+      border: s.theme.border,
+      pattern: s.theme.pattern,
+    } as UiStyle);
   }
 
   async function saveFlag(key: string, value: boolean) {
@@ -549,6 +661,10 @@ export function SettingsScreen({
         defaultTheme: theme as SiteSettings["defaultTheme"],
         themeToggle,
         palette: palette as SiteSettings["palette"],
+        uiFont: ui.font,
+        uiRadius: ui.radius,
+        uiBorder: ui.border,
+        uiPattern: ui.pattern,
       };
     } else {
       return;
@@ -934,6 +1050,7 @@ export function SettingsScreen({
                 Accent palette applies across the site, account and admin. Left swatch is used on
                 dark, right on light.
               </p>
+              <UiStylePicker value={ui} onChange={setUi} disabled={ro} />
             </>
           ) : null}
 

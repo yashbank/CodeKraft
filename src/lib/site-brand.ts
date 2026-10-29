@@ -8,6 +8,7 @@
  */
 import { DEFAULT_SITE_NAME } from "./brand-constants";
 import { DEFAULT_PALETTE, type PaletteId } from "./palettes";
+import { DEFAULT_UI_STYLE, type UiStyle } from "./ui-style";
 import { DEFAULT_THEME, type ThemeName } from "./theme";
 
 export { DEFAULT_SITE_NAME };
@@ -80,18 +81,25 @@ export interface ThemeConfig {
   defaultTheme: ThemeName;
   themeToggle: boolean;
   palette: PaletteId;
+  ui: UiStyle;
 }
 const THEME_FALLBACK: ThemeConfig = {
   defaultTheme: DEFAULT_THEME,
   themeToggle: true,
   palette: DEFAULT_PALETTE,
+  ui: DEFAULT_UI_STYLE,
 };
 
 async function readThemeConfig(): Promise<ThemeConfig> {
   try {
     const { settingsService } = await import("@/modules/settings/service");
     const s = await settingsService.load();
-    return { defaultTheme: s.defaultTheme, themeToggle: s.themeToggle, palette: s.palette };
+    return {
+      defaultTheme: s.defaultTheme,
+      themeToggle: s.themeToggle,
+      palette: s.palette,
+      ui: { font: s.uiFont, radius: s.uiRadius, border: s.uiBorder, pattern: s.uiPattern },
+    };
   } catch {
     return THEME_FALLBACK;
   }
