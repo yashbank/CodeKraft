@@ -3,11 +3,11 @@
 Plain English, for the founder. Test counts are real. Percent and score are our own judgement, based on what the tests cover and what still fails or is skipped.
 
 Test numbers behind this page:
-- Run 4 (fresh build e5ca084, all R9 specs except r9-01): 293 passed, 4 failed, 7 skipped. The 4 failures were fixed in d75e563.
-- Run 5: <lead fills in>
-- r9-01 (reset site data) on its own: 5 passed, 1 skipped.
-- R9-14 route sweep (every page, 5 roles, 375/768/1280): 259 passed on a fresh build of this branch (252 sweep + 3 staff + 4 login setup). The first run had 32 failures; most were wrong test assumptions (deliberate redirects, order-number format, session rate limit), 2 were real app defects (fixed, below), the rest are under known gaps.
-- Unit and integration tests (vitest): green, about 1660 tests.
+- Final run (fresh production build of df353db, local DB, Desktop Chrome + Pixel 7): 504 passed, 47 failed, 259 skipped. All 47 failures are in the sweep spec (see next line); every other spec passed. Skips are the desktop-only sweep on the phone project and laptop-only admin on phones.
+- R9-14 route sweep, run on its own fresh DB (every page, 5 roles, 375/768/1280): 259 passed, 0 failed. Run inside the big suite it fails 47 times only because other specs sign the same admin in again (one session per user), so it is run separately.
+- r9-01 (reset site data, wipes the DB) on its own: 5 passed, 1 skipped (phone, by design).
+- Earlier runs on the way: run 1 239 passed / 38 failed, run 4 293 / 4, run 5 298 / 1; every failure was fixed or was a wrong test assumption.
+- Unit and integration tests (vitest, full suite): 1744 tests, all passing (2 stale palette tests updated for the 20-palette catalogue).
 - Phone-size admin tests are skipped on purpose. The admin panel is laptop-only below 1024px and shows a "designed for laptops" notice.
 
 "Tests" below means how many browser tests each spec has per screen size (desktop and phone each run them).

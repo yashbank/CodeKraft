@@ -15,9 +15,8 @@ const ratio = (a: string, b: string) => {
 };
 
 describe("palettes", () => {
-  it("has 6-8 palettes", () => {
-    expect(PALETTES.length).toBeGreaterThanOrEqual(6);
-    expect(PALETTES.length).toBeLessThanOrEqual(8);
+  it("has the R9-08 palette catalogue (16+)", () => {
+    expect(PALETTES.length).toBeGreaterThanOrEqual(16);
   });
 
   it.each(PALETTES)("$id accent meets WCAG AA on both canvases and under its button text", (p) => {
@@ -49,7 +48,14 @@ describe("palettes", () => {
         defaultTheme: "light-editorial",
         themeToggle: true,
         palette: "teal",
-        ui: { font: "default", radius: "soft", border: "subtle", pattern: "none" },
+        ui: {
+          font: "default",
+          radius: "soft",
+          border: "subtle",
+          pattern: "none",
+          layout: "standard",
+          density: "normal",
+        },
       }),
     }));
     const { default: RootLayout } = await import("@/app/layout");
