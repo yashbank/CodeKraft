@@ -37,6 +37,8 @@ export const TEST_USER_EMAILS = {
   unverified: "unverified@codekraft.test",
   suspended: "suspended@codekraft.test",
   partner: "partner@codekraft.test",
+  admin: "admin@codekraft.test",
+  staff: "staff@codekraft.test",
 } as const;
 
 export interface SeedAdminsOptions {
@@ -132,6 +134,9 @@ export async function seedTestUsers(ctx: SeedContext, password: string): Promise
     emailVerified: true,
     status: "suspended",
   });
+  // R9 role harness: a plain admin (no partner row) and a staff user.
+  await ensure(TEST_USER_EMAILS.admin, { name: "Admin", role: "admin", emailVerified: true });
+  await ensure(TEST_USER_EMAILS.staff, { name: "Staff", role: "staff", emailVerified: true });
   const usersBefore = createdUsers;
   const partnerUser = await ensure(TEST_USER_EMAILS.partner, {
     name: "Partner",
@@ -161,5 +166,5 @@ export async function seedTestUsers(ctx: SeedContext, password: string): Promise
   tally(ctx, "users", createdUsers);
   tally(ctx, "user_roles", createdRoles);
   tally(ctx, "partners", createdPartners);
-  ctx.log("test users ensured (buyer@, unverified@, suspended@, partner@)");
+  ctx.log("test users ensured (buyer@, unverified@, suspended@, partner@, admin@, staff@)");
 }
