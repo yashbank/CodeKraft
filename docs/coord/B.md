@@ -1,5 +1,5 @@
 # Mac B status
-Updated: 2026-10-29
+Updated: 2026-10-30
 ## Tasks
 - P1-01 | ready | branch feat/p1-01-ledger | vitest tests/unit/ledger-debit-credit.test.ts: 1 pass
 - P1-02 | ready | branch feat/p1-02-dashboard-widgets | vitest tests/unit/admin/dashboard-finance-core.test.ts: 3 pass (+45 existing widget tests)
@@ -61,6 +61,11 @@ Updated: 2026-10-29
 - R9-12 | ready | branch feat/r9-integration | r9-12 SEO tags/OG/sitemap/preview; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-13 | ready | branch feat/r9-integration | r9-13 new-user chat+handoff; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-14 | ready | branch feat/r9-integration | r9-14 sweep 259/259, SCORECARD; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
+- P14-03 | doing | Phase 14 wave 1 | -
+- P14-01 | doing | Phase 14 wave 1 | -
+- P14-10 | doing | Phase 14 wave 1 | -
+- P14-07 | doing | Phase 14 wave 1 | -
+- P14-08 | doing | Phase 14 wave 1 | -
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
 - [open] R2 private bucket CORS must allow PUT from the admin origin | P2-01 browser uploads straight to R2 | upload a .dmg on a product version, it completes and appears
@@ -127,3 +132,5 @@ Behaviour changes for A to check live:
 - On the invoice, the business name comes from the Legal name field.
 Note: the founder's "Delete button stays disabled" (R9-01) did not reproduce in a real browser. The fix lists the missing step under the button (the backup download is required first). A site reset needs approval from every other active admin.
 Run e2e: `pnpm build && pnpm start`, then `playwright test tests/e2e/r9 --project=r9-setup --project=r9-desktop --project=r9-mobile --workers=1`, running the sweep and r9-01 separately.
+
+- 2026-10-30 Phase 14+15 started (base 14af3bd). Wave 1 doing: P14-03, P14-01, P14-10, P14-07, P14-08. Done 0 of 13, estimated remaining ~14 h.
