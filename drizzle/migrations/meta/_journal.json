@@ -57,6 +57,13 @@
       "when": 1791903600000,
       "tag": "0007_expense_fx_lock",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791990000000,
+      "tag": "0008_user_tokens",
+      "breakpoints": true
     }
   ]
 }

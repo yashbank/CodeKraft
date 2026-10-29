@@ -48,8 +48,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { reinstateCustomer, sendResetLink, suspendCustomer } from "@/modules/users/admin-mutations";
+import { reinstateCustomer, suspendCustomer } from "@/modules/users/admin-mutations";
 import { NewCustomerDialog } from "./NewCustomerDialog";
+import { AccessDialog } from "../system/AccessDialog";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
 import { formatDate, initials, inr, timeAgo } from "../format";
@@ -84,15 +85,7 @@ export function CustomersList({
   const [reason, setReason] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [newOpen, setNewOpen] = React.useState(false);
-
-  async function handleSendResetLink(c: CustomerRow) {
-    const result = await sendResetLink({ userId: c.id, kind: "reset" });
-    if (!result.ok) {
-      toast.error(result.error.message);
-      return;
-    }
-    toast.success(`Reset link sent to ${result.data.sentTo}`);
-  }
+  const [accessFor, setAccessFor] = React.useState<CustomerRow | null>(null);
 
   async function confirmStatusChange() {
     if (!statusDialog) return;
@@ -163,6 +156,11 @@ export function CustomersList({
             </Button>
           </>
         }
+      />
+      <AccessDialog
+        open={accessFor !== null}
+        onOpenChange={(o) => !o && setAccessFor(null)}
+        target={accessFor ? { userId: accessFor.id, label: accessFor.name } : null}
       />
       <NewCustomerDialog
         open={newOpen}
@@ -326,8 +324,8 @@ export function CustomersList({
                       actions={[
                         { label: "Open", href: `${detailHref}/${c.id}` },
                         {
-                          label: "Send reset link",
-                          onSelect: () => void handleSendResetLink(c),
+                          label: "Reset link / password",
+                          onSelect: () => setAccessFor(c),
                           disabled: c.status === "deleted",
                         },
                         {

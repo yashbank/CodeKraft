@@ -12,11 +12,13 @@
 import { getSession } from "@/modules/auth/service";
 import { loadRoles } from "@/modules/auth/roles-port";
 import { buildContext, type RequestContext } from "./context";
+import { assertNoPasswordChange } from "./must-change";
 import { AppError, ErrorCode } from "@/lib/errors";
 
 export async function getSiteRequestContext(): Promise<RequestContext> {
   const session = await getSession();
   if (!session) throw new AppError(ErrorCode.UNAUTHENTICATED);
+  assertNoPasswordChange(session);
 
   const loadedRoles = await loadRoles(session.user.id);
   const roles = loadedRoles.length > 0 ? loadedRoles : (["customer"] as const);

@@ -100,6 +100,7 @@ Actions never throw to the client (a thrown error becomes `INTERNAL` with a Sent
 | `RATE_LIMITED` | 429 | Sliding-window limit hit; `retryAfterMs` set |
 | `IDEMPOTENT_REPLAY` | 200 | Same idempotency key seen; original `data` returned (informational, `ok: true`) |
 | `UPSTREAM_UNAVAILABLE` | 503 | R2, Resend, Anthropic, FX API failure that could not be degraded |
+| `PASSWORD_CHANGE_REQUIRED` | 403 | Session user still has a temporary password (`must_change_password`); only change-password and sign-out allowed |
 | `INTERNAL` | 500 | Unexpected |
 
 ### 1.5 Idempotency

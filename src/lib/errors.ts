@@ -23,6 +23,7 @@ export enum ErrorCode {
   RATE_LIMITED = "RATE_LIMITED",
   IDEMPOTENT_REPLAY = "IDEMPOTENT_REPLAY",
   UPSTREAM_UNAVAILABLE = "UPSTREAM_UNAVAILABLE",
+  PASSWORD_CHANGE_REQUIRED = "PASSWORD_CHANGE_REQUIRED",
   INTERNAL = "INTERNAL",
 }
 
@@ -44,6 +45,7 @@ export const ERROR_HTTP_STATUS: Readonly<Record<ErrorCode, number>> = Object.fre
   [ErrorCode.RATE_LIMITED]: 429,
   [ErrorCode.IDEMPOTENT_REPLAY]: 200,
   [ErrorCode.UPSTREAM_UNAVAILABLE]: 503,
+  [ErrorCode.PASSWORD_CHANGE_REQUIRED]: 403,
   [ErrorCode.INTERNAL]: 500,
 });
 
@@ -66,6 +68,7 @@ export const ERROR_DEFAULT_MESSAGE: Readonly<Record<ErrorCode, string>> = Object
   [ErrorCode.IDEMPOTENT_REPLAY]: "Already processed.",
   [ErrorCode.UPSTREAM_UNAVAILABLE]:
     "A service we depend on is unavailable. Please try again later.",
+  [ErrorCode.PASSWORD_CHANGE_REQUIRED]: "You must change your temporary password first.",
   [ErrorCode.INTERNAL]: "Something went wrong.",
 });
 

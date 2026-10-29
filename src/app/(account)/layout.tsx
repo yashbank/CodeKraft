@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/sonner";
+import { enforcePasswordChange } from "@/lib/authz/must-change";
 import { redirectToLogin } from "@/lib/authz/login-redirect";
 
 import { getSession } from "@/modules/auth/service";
@@ -9,6 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session) return redirectToLogin("/account");
+  enforcePasswordChange(session);
   return (
     <div data-app="account">
       {children}
