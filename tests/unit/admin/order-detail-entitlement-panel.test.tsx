@@ -86,9 +86,12 @@ describe("OrderDetail entitlement panel", () => {
     await vi.waitFor(() => expect(ok).toHaveBeenCalledWith({ entitlementId: "ent-x" }));
   });
 
-  it("hosted: no dead buttons beyond Revoke", () => {
+  it("hosted: R9-03 offers Mark delivered (was a dead end) plus Revoke", () => {
     const p = render1("hosted");
-    expect(p.getAllByRole("button").map((b) => b.textContent)).toEqual(["Revoke access"]);
+    expect(p.getAllByRole("button").map((b) => b.textContent)).toEqual([
+      "Mark delivered",
+      "Revoke access",
+    ]);
   });
 
   it("revoke dialog calls revokeEntitlement with reason", async () => {

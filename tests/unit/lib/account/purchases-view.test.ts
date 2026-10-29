@@ -105,15 +105,15 @@ describe("mapEntitlementDetail (SCR-ACC-03)", () => {
     expect(mapEntitlementDetail(e).licenseKey).toBeUndefined();
   });
 
-  it("never fills in `hosted`, even for saas/hosted deliveries with structured provisioning notes", () => {
-    const e = baseEntitlement({
+  it("R9-03: fills in `hosted` once saas/hosted provisioning is done, not while pending", () => {
+    const notes = { loginUrl: "https://app.example.com", username: "buyer@example.com" };
+    const done = baseEntitlement({ deliveryType: "saas", provisioning: { state: "done", notes } });
+    expect(mapEntitlementDetail(done).hosted).toMatchObject(notes);
+    const pending = baseEntitlement({
       deliveryType: "saas",
-      provisioning: {
-        state: "done",
-        notes: { loginUrl: "https://app.example.com", username: "buyer@example.com" },
-      },
+      provisioning: { state: "pending", notes: null },
     });
-    expect(mapEntitlementDetail(e).hosted).toBeUndefined();
+    expect(mapEntitlementDetail(pending).hosted).toBeUndefined();
   });
 
   it("only sets `steps` for service deliveries, mapping doneAt to state", () => {

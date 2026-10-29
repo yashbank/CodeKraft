@@ -65,11 +65,8 @@ export class DefaultDeliveryService implements DeliveryService {
         );
       }
 
-      // Hosted transitions from pending -> active on provisioning complete
-      const newStatus =
-        entitlement.deliveryType === "hosted" && entitlement.status === "pending"
-          ? "active"
-          : entitlement.status;
+      // Hosted and custom land pending; they become active once provisioning completes
+      const newStatus = entitlement.status === "pending" ? "active" : entitlement.status;
 
       const [updated] = await tx
         .update(entitlements)

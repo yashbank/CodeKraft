@@ -119,7 +119,13 @@ export interface EntitlementDetail extends EntitlementSummary {
   files?: ReleaseFile[];
   changelog?: ChangelogEntry[];
   licenseKey?: { masked: string; full: string };
-  hosted?: { loginUrl: string; username: string; credentialsSentAt: string; expectedBy?: string };
+  hosted?: {
+    loginUrl?: string;
+    username?: string;
+    message?: string;
+    credentialsSentAt?: string;
+    expectedBy?: string;
+  };
   steps?: ServiceStep[];
   attachments?: { name: string; sizeLabel: string }[];
   /** Post-purchase instructions, one paragraph per entry (offering `instructions_json`). */

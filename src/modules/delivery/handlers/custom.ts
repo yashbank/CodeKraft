@@ -1,5 +1,5 @@
 import type { TxCtx } from "@/lib/db";
-import type { Entitlement } from "../../../../drizzle/schema/delivery";
+import { deliveryTasks, type Entitlement } from "../../../../drizzle/schema/delivery";
 import type {
   CustomerDeliveryView,
   CustomerViewSource,
@@ -16,13 +16,19 @@ export class CustomDeliveryHandler implements DeliveryHandler<"custom"> {
 
   async onGranted(
     _ctx: DeliveryHandlerContext,
-    _entitlement: Entitlement,
-    _tx: TxCtx,
+    entitlement: Entitlement,
+    tx: TxCtx,
   ): Promise<GrantOutcome> {
+    // Custom work is hand-delivered: pending + an open 'provision' task until an admin marks it
+    // delivered, otherwise the order would read "fulfilled" the moment it is paid.
+    const [task] = await tx
+      .insert(deliveryTasks)
+      .values({ entitlementId: entitlement.id, kind: "provision", status: "open" })
+      .returning({ id: deliveryTasks.id });
     return {
-      status: "active",
-      provisioningState: "n/a",
-      taskIds: [],
+      status: "pending",
+      provisioningState: "pending",
+      taskIds: task ? [task.id] : [],
       emails: [],
     };
   }
@@ -57,6 +63,12 @@ export class CustomDeliveryHandler implements DeliveryHandler<"custom"> {
     const isRevoked = entitlement.status === "revoked";
     return [
       {
+        key: "complete_provisioning",
+        label: "Mark delivered",
+        apiId: "API-DEL-07",
+        enabled: !isRevoked && entitlement.provisioningState === "pending",
+      },
+      {
         key: "extend_access",
         label: "Extend Access",
         apiId: "API-DEL-14",
@@ -72,7 +84,8 @@ export class CustomDeliveryHandler implements DeliveryHandler<"custom"> {
   }
 
   isFulfilled(entitlement: Entitlement): boolean {
-    return entitlement.status === "active";
+    // 'n/a' = legacy rows granted before custom orders needed a delivery step.
+    return entitlement.provisioningState !== "pending" && entitlement.status === "active";
   }
 }
 

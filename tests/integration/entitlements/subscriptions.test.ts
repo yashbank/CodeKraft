@@ -136,4 +136,39 @@ describe("Subscriptions Lifecycle & Cron (API-DEL-04/05/14, BR-14, MASTER_SPEC Â
     const [entSuspended] = await db.select().from(entitlements).where(eq(entitlements.id, ent.id));
     expect(entSuspended?.status).toBe("suspended");
   });
+
+  it("never revives or re-suspends a revoked entitlement (refund / admin revoke)", async () => {
+    await truncateAll();
+    const admin = await createAdmin();
+    const product = await createProduct({ createdBy: admin.id });
+    const offering = await createOffering({
+      productId: product.id,
+      purchaseModel: "subscription",
+      billingInterval: "monthly",
+      deliveryType: "saas",
+    });
+    const buyer = await createUser({ emailVerified: true });
+    const ent = await createEntitlement({
+      offering,
+      userId: buyer.id,
+      deliveryType: "saas",
+      status: "revoked",
+      accessStartsAt: new Date("2026-01-01T00:00:00Z"),
+    });
+    const sub = await createSubscription({
+      entitlement: ent,
+      interval: "monthly",
+      currentPeriodStart: new Date("2026-01-01T00:00:00Z"),
+      currentPeriodEnd: new Date("2026-02-01T00:00:00Z"),
+      status: "past_due",
+      userId: buyer.id,
+    });
+    await db
+      .update(subscriptions)
+      .set({ graceUntil: new Date("2026-02-08T00:00:00Z") })
+      .where(eq(subscriptions.id, sub.id));
+    await subscriptionsRemindGraceSuspendJob.run(new Date("2026-02-10T00:00:00Z"));
+    const [after] = await db.select().from(entitlements).where(eq(entitlements.id, ent.id));
+    expect(after?.status).toBe("revoked");
+  });
 });
