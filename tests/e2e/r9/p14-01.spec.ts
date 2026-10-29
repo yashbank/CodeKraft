@@ -35,7 +35,7 @@ async function pin(role: Role, keys: string[]): Promise<string> {
     saved.set(id, row);
   }
   await q(
-    `insert into dashboard_layouts (user_id, layout) values ($1, $2::jsonb)
+    `insert into dashboard_layouts (user_id, layout) values ($1, $2::text::jsonb)
      on conflict (user_id) do update set layout = excluded.layout`,
     [id, JSON.stringify(keys)],
   );
@@ -50,7 +50,7 @@ test.describe("P14-01 role dashboard", () => {
   test.afterAll(async () => {
     for (const [id, row] of saved) {
       if (row)
-        await q(`update dashboard_layouts set layout = $2::jsonb where user_id = $1`, [
+        await q(`update dashboard_layouts set layout = $2::text::jsonb where user_id = $1`, [
           id,
           JSON.stringify(row.layout),
         ]);

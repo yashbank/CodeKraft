@@ -138,7 +138,8 @@ export const siteSettingsSchema = z.strictObject({
   siteLogo: z
     .string()
     .max(2048)
-    .regex(/^(https:\/\/|\/)/, "logo must be an https URL")
+    // http://localhost is what the local storage driver returns outside production.
+    .regex(/^(https:\/\/|\/|http:\/\/localhost[:/])/, "logo must be an https URL")
     .nullable(),
   emailFromName: emailFromNameSchema.nullable(),
   emailFromAddress: emailFromAddressSchema.nullable(),

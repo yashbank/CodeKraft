@@ -24,7 +24,7 @@ test.describe("P14-12a admin extras", () => {
 
   test.afterAll(async () => {
     if (before)
-      await q(`update dashboard_layouts set layout = $2::jsonb where user_id = $1`, [
+      await q(`update dashboard_layouts set layout = $2::text::jsonb where user_id = $1`, [
         uid,
         JSON.stringify(before.layout),
       ]);
@@ -95,6 +95,8 @@ test.describe("P14-12a admin extras", () => {
     const toast = page.locator("[data-sonner-toast]", { hasText: `View “${name}” deleted` });
     await expect(toast).toBeVisible();
     await toast.getByRole("button", { name: "Undo" }).click();
+    // clicking the toast is an outside click, so the popover closes: reopen it to see the list
+    await page.getByRole("button", { name: "Views (1)" }).click();
     await expect(list.getByText(name)).toBeVisible();
     await page.getByRole("button", { name: `Delete view ${name}` }).click(); // clean up
   });
@@ -104,7 +106,7 @@ test.describe("P14-12a admin extras", () => {
   }) => {
     test.setTimeout(180_000);
     await q(
-      `insert into dashboard_layouts (user_id, layout) values ($1, $2::jsonb)
+      `insert into dashboard_layouts (user_id, layout) values ($1, $2::text::jsonb)
        on conflict (user_id) do update set layout = excluded.layout`,
       [
         uid,
@@ -139,6 +141,16 @@ test.describe("P14-12a admin extras", () => {
     // keyboard path
     await page.getByRole("button", { name: "Move New leads earlier" }).click();
     await expect.poll(order).toEqual(["open_queries", "new_leads", "conversion_rate"]);
+    // the save is a server action: reloading before it lands would read the previous order
+    await expect
+      .poll(async () => {
+        const [row] = await q<{ layout: Array<{ i: string }> }>(
+          `select layout from dashboard_layouts where user_id = $1`,
+          [uid],
+        );
+        return row?.layout.map((l) => l.i);
+      })
+      .toEqual(["open_queries", "new_leads", "conversion_rate"]);
     await page.reload();
     await expect
       .poll(order, { timeout: 60_000 })
@@ -148,7 +160,7 @@ test.describe("P14-12a admin extras", () => {
   test("4 heatmap: weekday x hour widget, style switch, accessible", async ({ page }) => {
     test.setTimeout(180_000);
     await q(
-      `insert into dashboard_layouts (user_id, layout) values ($1, $2::jsonb)
+      `insert into dashboard_layouts (user_id, layout) values ($1, $2::text::jsonb)
        on conflict (user_id) do update set layout = excluded.layout`,
       [uid, JSON.stringify(["orders_heatmap"])],
     );
