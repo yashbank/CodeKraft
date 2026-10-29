@@ -9,6 +9,7 @@ import { db, withTx } from "@/lib/db";
 import { products } from "../../drizzle/schema/catalog";
 import { jobRuns } from "../../drizzle/schema/ops";
 import { revalidateTagsSafe } from "@/lib/revalidate";
+import { triggerReindexSafe } from "@/modules/search/indexer";
 
 export interface ScheduledPublishResult {
   publishedProductIds: string[];
@@ -53,6 +54,7 @@ export const scheduledPublishJob = {
           if (updated) {
             publishedProductIds.push(updated.id);
             revalidateTagsSafe(["catalog", "sitemap", `product:${prod.slug}`]);
+            await triggerReindexSafe("product", updated.id, tx);
           }
         });
       }

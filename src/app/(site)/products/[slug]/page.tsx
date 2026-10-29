@@ -123,6 +123,7 @@ async function loadProduct(slug: string): Promise<ProductDetail | null> {
     deliveryTypes: deliveryTypes.length ? deliveryTypes : ["custom"],
     isFeatured: p.isFeatured,
     isComingSoon: p.isComingSoon,
+    isUnlisted: p.isUnlisted,
     tags: p.tags.map((t) => t.name),
     techStack: p.techStack,
     industries: p.industry,
@@ -160,6 +161,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     path: `/products/${product.slug}`,
     title: product.name,
     description: product.shortDescription,
+    noindex: product.isUnlisted,
   });
 }
 

@@ -547,7 +547,7 @@ export function ProductsList({
                 </DialogTitle>
                 <DialogDescription>
                   {dialog.kind === "delete"
-                    ? `This product has ${dialog.product.orderCount} orders, so deletion is allowed. Another admin must approve.`
+                    ? "This product has no orders, so it can be deleted. Another admin must approve."
                     : dialog.kind === "archive"
                       ? `It has ${dialog.product.orderCount} orders, so it can't be deleted. Existing customers keep access. Another admin must approve.`
                       : dialog.kind === "unpublish"

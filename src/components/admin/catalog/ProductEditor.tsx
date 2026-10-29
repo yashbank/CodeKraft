@@ -2544,13 +2544,14 @@ export function ProductEditor({
                 <Button
                   type="submit"
                   disabled={
-                    product.status === "published" ||
                     product.status === "pending_approval" ||
                     product.status === "archived" ||
                     missingReadiness.length > 0
                   }
                 >
-                  Submit for approval
+                  {product.status === "published"
+                    ? "Republish (needs approval)"
+                    : "Submit for approval"}
                 </Button>
                 {missingReadiness.length > 0 ? (
                   <p

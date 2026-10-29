@@ -55,6 +55,8 @@ export function resetRevalidatedTags(): void {
  */
 export function revalidateTagSafe(tag: string): void {
   revalidatedTagsHistory.push(tag);
+  // The sitemap is a time-revalidated route, not tag-cached: refresh it explicitly.
+  if (tag === CATALOG_TAGS.sitemap) revalidatePathSafe("/sitemap.xml");
   try {
     revalidateTag(tag);
   } catch {

@@ -215,6 +215,8 @@ export interface ProductAdminRow {
   category: CategoryRef | null;
   isFeatured: boolean;
   isUnlisted: boolean;
+  isComingSoon: boolean;
+  taxEnabled: boolean;
   publishAt: string | null;
   updatedAt: string;
   updatedBy: { id: string; name: string };

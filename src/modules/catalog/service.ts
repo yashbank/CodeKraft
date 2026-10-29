@@ -3,7 +3,7 @@
  * Full implementation satisfying CatalogService contracts.
  */
 import { buildProductMediaUrl } from "./media-access";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
 import type { DbOrTx, TxCtx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
@@ -795,11 +795,13 @@ export class DefaultCatalogService implements CatalogService {
         );
       }
 
-      // Transition to pending_approval
-      await actionTx
-        .update(products)
-        .set({ status: "pending_approval", updatedAt: new Date() })
-        .where(eq(products.id, p.id));
+      // Republishing a live/scheduled product keeps it live until approved; only drafts go dark.
+      if (p.status === "draft" || p.status === "unpublished") {
+        await actionTx
+          .update(products)
+          .set({ status: "pending_approval", updatedAt: new Date() })
+          .where(eq(products.id, p.id));
+      }
 
       // Request approval via approvalsService
       const req = await approvalsService.request(
@@ -832,7 +834,9 @@ export class DefaultCatalogService implements CatalogService {
     );
     const newStatus = isFuture ? "scheduled" : "published";
     const publishDate = isFuture && payload.publishAt ? new Date(payload.publishAt) : null;
-    const publishedAtDate = isFuture ? null : new Date();
+    const publishedAtDate = isFuture
+      ? null
+      : (p.status === "published" && p.publishedAt) || new Date();
 
     await tx
       .update(products)
@@ -854,10 +858,11 @@ export class DefaultCatalogService implements CatalogService {
    * Internal reject handler for 'product.publish': product reverts to draft.
    */
   async onPublishRejected(payload: PublishPayload, tx: TxCtx): Promise<void> {
+    // A rejected republish of a live product must not take it down.
     await tx
       .update(products)
       .set({ status: "draft", publishAt: null, updatedAt: new Date() })
-      .where(eq(products.id, payload.productId));
+      .where(and(eq(products.id, payload.productId), eq(products.status, "pending_approval")));
   }
 
   /**
@@ -1019,6 +1024,7 @@ export class DefaultCatalogService implements CatalogService {
       .where(eq(offerings.productId, payload.productId));
 
     revalidateTagsSafe(["catalog", "sitemap", `product:${p.slug}`]);
+    await triggerReindexSafe("product", payload.productId, tx);
   }
 
   /**
@@ -1041,8 +1047,11 @@ export class DefaultCatalogService implements CatalogService {
       );
     }
 
+    // product_ownerships.product_id is ON DELETE RESTRICT (history); lines cascade. No orders => safe.
+    await tx.delete(productOwnerships).where(eq(productOwnerships.productId, p.id));
     await tx.delete(products).where(eq(products.id, payload.productId));
     revalidateTagsSafe(["catalog", "sitemap", `product:${p.slug}`]);
+    await triggerReindexSafe("product", payload.productId, tx);
   }
 
   /**
@@ -1158,6 +1167,8 @@ export class DefaultCatalogService implements CatalogService {
         category: cat ? { id: cat.id, slug: cat.slug, name: cat.name } : null,
         isFeatured: p.isFeatured,
         isUnlisted: p.isUnlisted,
+        isComingSoon: p.isComingSoon,
+        taxEnabled: p.taxEnabled,
         publishAt: p.publishAt ? p.publishAt.toISOString() : null,
         updatedAt: p.updatedAt.toISOString(),
         updatedBy: { id: p.updatedBy, name: "Admin" },
@@ -1697,11 +1708,18 @@ export class DefaultCatalogService implements CatalogService {
         product: products,
         category: categories,
       })
-      .from(featuredProducts)
-      .innerJoin(products, eq(featuredProducts.productId, products.id))
+      .from(products)
+      .leftJoin(featuredProducts, eq(featuredProducts.productId, products.id))
       .leftJoin(categories, eq(products.categoryId, categories.id))
-      .where(and(eq(products.status, "published"), eq(products.isUnlisted, false)))
-      .orderBy(featuredProducts.position)
+      .where(
+        and(
+          eq(products.status, "published"),
+          eq(products.isUnlisted, false),
+          // curated landing picks OR the product's own Featured flag
+          or(eq(products.isFeatured, true), isNotNull(featuredProducts.productId)),
+        ),
+      )
+      .orderBy(sql`${featuredProducts.position} asc nulls last`, desc(products.publishedAt))
       .limit(max);
 
     const covers = await loadProductCovers(
@@ -1787,7 +1805,7 @@ export class DefaultCatalogService implements CatalogService {
       .from(products)
       .leftJoin(categories, eq(products.categoryId, categories.id))
       .where(and(...conditions))
-      .orderBy(desc(products.publishedAt))
+      .orderBy(desc(products.isFeatured), desc(products.publishedAt))
       .limit(max);
 
     const covers = await loadProductCovers(
