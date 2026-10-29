@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { JsonLd } from "@/components/seo/JsonLd";
+import { breadcrumbLd, faqLd, pageMetadata, productLd } from "@/lib/seo";
+
 import { SERVICE_OPTIONS } from "@/app/dev/screens/_fixtures/site";
 import { ProductDetailPage } from "@/components/site/product/ProductDetailPage";
 import type {
@@ -153,11 +156,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const product = await loadProduct(slug);
   if (!product) return {};
 
-  return {
+  return pageMetadata({
+    path: `/products/${product.slug}`,
     title: product.name,
     description: product.shortDescription,
-    openGraph: { title: product.name, description: product.shortDescription },
-  };
+  });
 }
 
 export default async function ProductPage({ params }: PageProps) {
@@ -165,5 +168,26 @@ export default async function ProductPage({ params }: PageProps) {
   const product = await loadProduct(slug);
   if (!product) notFound();
 
-  return <ProductDetailPage product={product} serviceOptions={SERVICE_OPTIONS} />;
+  const ld: object[] = [
+    productLd({
+      slug: product.slug,
+      name: product.name,
+      description: product.shortDescription,
+      image: product.media[0]?.url,
+      price: product.fromPrice,
+      inStock: !product.isComingSoon,
+    }),
+    breadcrumbLd([
+      { name: "Products", path: "/products" },
+      { name: product.name, path: `/products/${product.slug}` },
+    ]),
+  ];
+  if (product.faqs.length) ld.push(faqLd(product.faqs));
+
+  return (
+    <>
+      <JsonLd data={ld} />
+      <ProductDetailPage product={product} serviceOptions={SERVICE_OPTIONS} />
+    </>
+  );
 }

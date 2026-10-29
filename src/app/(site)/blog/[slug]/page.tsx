@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { JsonLd } from "@/components/seo/JsonLd";
+import { articleLd, breadcrumbLd, pageMetadata } from "@/lib/seo";
+
 import { BlogPostPage } from "@/components/site/BlogPostPage";
 import { toBlogPost, toBlogTeaser } from "@/lib/blog-view";
 import { anonymousContext } from "@/lib/authz/context";
@@ -23,11 +26,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const title = blog.seoTitle ?? blog.title;
   const description = blog.seoDescription ?? blog.excerpt ?? undefined;
 
-  return {
-    title: `${title} — Blog`,
-    description,
-    openGraph: { title, description },
-  };
+  return pageMetadata({ path: `/blog/${slug}`, title, description, type: "article" });
 }
 
 export default async function BlogPostRoute({ params }: PageProps) {
@@ -69,12 +68,31 @@ export default async function BlogPostRoute({ params }: PageProps) {
     : [];
 
   return (
-    <BlogPostPage
-      post={post}
-      product={toProductSummary(product)}
-      serviceOptions={serviceOptions}
-      prev={prev}
-      next={next}
-    />
+    <>
+      <JsonLd
+        data={[
+          articleLd({
+            type: "BlogPosting",
+            path: `/blog/${blog.slug}`,
+            title: blog.seoTitle ?? blog.title,
+            description: blog.seoDescription ?? blog.excerpt,
+            image: post.coverUrl,
+            datePublished: blog.publishedAt ? new Date(blog.publishedAt).toISOString() : null,
+            author: blog.author?.name,
+          }),
+          breadcrumbLd([
+            { name: "Blog", path: "/blog" },
+            { name: blog.title, path: `/blog/${blog.slug}` },
+          ]),
+        ]}
+      />
+      <BlogPostPage
+        post={post}
+        product={toProductSummary(product)}
+        serviceOptions={serviceOptions}
+        prev={prev}
+        next={next}
+      />
+    </>
   );
 }

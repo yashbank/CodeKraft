@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+
+import { pageMetadata } from "@/lib/seo";
 import { notFound } from "next/navigation";
 
 import { LEGAL_NAV, LEGAL_PRIVACY } from "@/app/dev/screens/_fixtures/site";
@@ -125,10 +127,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const doc = await loadDoc(slug);
   if (!doc) return {};
 
-  return {
+  return pageMetadata({
+    path: `/legal/${slug}`,
     title: doc.title,
     description: `Official ${doc.title.toLowerCase()} for our products and engineering services.`,
-  };
+  });
 }
 
 export default async function LegalPageRoute({ params }: PageProps) {

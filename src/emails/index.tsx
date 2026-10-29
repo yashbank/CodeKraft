@@ -1,5 +1,6 @@
 import React from "react";
 import { render } from "@react-email/components";
+import { brandSubject } from "@/lib/email/branding";
 import { EmailLayout, emailStyles } from "@/lib/email/render";
 import { Text, Link } from "@react-email/components";
 
@@ -27,8 +28,16 @@ function makeTemplate(
     subject: subjectFn,
     async render(data: Record<string, unknown>, siteUrl: string) {
       const subject = subjectFn(data);
+      const { getSiteLogo, getSiteName } = await import("@/lib/site-brand");
+      const [siteName, logoUrl] = await Promise.all([getSiteName(), getSiteLogo()]);
       const element = (
-        <EmailLayout preview={subject} title={subject} siteUrl={siteUrl}>
+        <EmailLayout
+          preview={brandSubject(subject, siteName)}
+          title={brandSubject(subject, siteName)}
+          siteUrl={siteUrl}
+          siteName={siteName}
+          logoUrl={logoUrl}
+        >
           {bodyFn(data)}
         </EmailLayout>
       );

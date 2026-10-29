@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Banner } from "./Banner";
 import { Field } from "./RichTextField";
-import { SiteName } from "@/components/brand/site-brand";
+import { SiteLogo, SiteName } from "@/components/brand/site-brand";
 
 export type LoginReason = "expired" | "replaced" | "forbidden" | "locked";
 
@@ -65,15 +65,8 @@ export function AdminLogin({
       <Card className="w-full max-w-[400px] gap-5 py-6 tv:max-w-[480px]">
         <CardHeader className="gap-3">
           <div className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className="grid size-8 place-items-center rounded-sm bg-accent font-mono text-body-sm text-accent-fg"
-            >
-              CK
-            </span>
-            <span className="font-display text-body-lg font-semibold">
-              <SiteName /> <span className="text-fg-muted">Admin</span>
-            </span>
+            <SiteLogo className="h-8" />
+            <span className="font-display text-body-lg font-semibold text-fg-muted">Admin</span>
             <Badge tone={envTone} dot className="ml-auto capitalize">
               {environment}
             </Badge>

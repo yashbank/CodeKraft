@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
 
+import { pageMetadata } from "@/lib/seo";
+
 import { SERVICE_OPTIONS } from "@/app/dev/screens/_fixtures/site";
 import { ContactPage } from "@/components/site/ContactPage";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/contact",
   title: "Contact & Start a Project",
   description:
     "Tell us what you're building. Fixed-scope proposals, fast turnaround, and enterprise-grade software.",
-};
+});
 
 export default function ContactPageRoute() {
   return (

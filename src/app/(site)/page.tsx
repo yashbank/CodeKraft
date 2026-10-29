@@ -32,7 +32,9 @@ import type {
 import { toPlainText } from "@/modules/content/render";
 import type { LandingChapterView } from "@/modules/content/types";
 import type { RichTextDoc } from "@/modules/_shared/zod";
-import { getSiteName } from "@/lib/site-brand";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { faqLd, organizationLd, pageMetadata, websiteLd } from "@/lib/seo";
+import { getSiteLogo, getSiteName } from "@/lib/site-brand";
 
 // ISR (docs/08 §10). Anonymous data only. Every admin save that changes homepage content
 // calls revalidatePath("/", "layout") (content, catalog, settings admin wrappers), so edits show
@@ -42,10 +44,15 @@ export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
   const siteName = await getSiteName();
+  const title = `${siteName} — Architected for scale. Crafted for production.`;
   return {
-    title: { absolute: `${siteName} — Architected for scale. Crafted for production.` },
-    description:
-      "We design and build bespoke software architectures, digital products, and robust enterprise solutions.",
+    ...pageMetadata({
+      path: "/",
+      title,
+      description:
+        "We design and build bespoke software architectures, digital products, and robust enterprise solutions.",
+    }),
+    title: { absolute: title },
   };
 }
 
@@ -160,17 +167,24 @@ export default async function LandingRoute() {
     answer: toPlainText(f.answer as unknown as RichTextDoc),
   }));
 
+  const [siteName, siteLogo] = await Promise.all([getSiteName(), getSiteLogo()]);
+  const ld: object[] = [organizationLd(siteName, siteLogo), websiteLd(siteName)];
+  if (faqs.length) ld.push(faqLd(faqs));
+
   return (
-    <LandingPage
-      content={content}
-      services={services}
-      featuredProducts={featuredProducts}
-      caseStudies={caseStudies}
-      testimonials={testimonials}
-      logos={logos}
-      blogTeasers={blogTeasers}
-      serviceOptions={serviceOptions}
-      faqs={faqs}
-    />
+    <>
+      <JsonLd data={ld} />
+      <LandingPage
+        content={content}
+        services={services}
+        featuredProducts={featuredProducts}
+        caseStudies={caseStudies}
+        testimonials={testimonials}
+        logos={logos}
+        blogTeasers={blogTeasers}
+        serviceOptions={serviceOptions}
+        faqs={faqs}
+      />
+    </>
   );
 }

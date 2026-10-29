@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 
 import { SiteBrandProvider } from "@/components/brand/site-brand";
+import { DEFAULT_ICON } from "@/lib/brand-constants";
 import { fontVariables } from "@/lib/fonts";
 import { paletteCss } from "@/lib/palettes";
 import { getSiteLogo, getSiteName, getThemeConfig } from "@/lib/site-brand";
@@ -11,13 +12,15 @@ import "./globals.css";
 /** R8-11 — page titles follow the admin-editable site name (Settings → General). */
 export async function generateMetadata(): Promise<Metadata> {
   const [siteName, logo] = await Promise.all([getSiteName(), getSiteLogo()]);
+  const images = logo ? [logo] : undefined;
   return {
     title: { default: siteName, template: `%s · ${siteName}` },
     description: "Premium software studio and digital-product marketplace.",
     // Logo if set, else the existing default mark.
-    icons: { icon: logo ?? "/brand/mark.svg" },
+    icons: { icon: logo ?? DEFAULT_ICON, apple: logo ?? DEFAULT_ICON },
     applicationName: siteName,
-    openGraph: { siteName },
+    openGraph: { siteName, images },
+    twitter: { card: "summary", images },
   };
 }
 
