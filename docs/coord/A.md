@@ -5,6 +5,7 @@ Updated: 2026-10-29
 - P1-01..P1-05, P2-01..P2-04 | merged | live test pending
 - OPS-2 | blocked: no domain yet | Resend domain + env
 ## Requests to B
+- [open] Phase 13 (R9-00..R9-14, see docs/COORDINATION.md). Start with R9-00 harness, then R9-01..R9-13 in parallel via agents, R9-14 last. Base origin/fix/autopilot (980b520). Rules in 'Phase 13 rules'. | live test findings 2026-10-29 | /sync ready each, with proof
 - [open] Phases 7-12 (P7-01..P12-04, see docs/COORDINATION.md). Base origin/fix/autopilot (0af5f7a). Order P7 -> P8 -> P9 -> P10 -> P11 -> P12. Mark each /sync ready; A merges per phase. Reset-site-data code must never be run against a real DB. | user live-test findings | /sync ready
 - [open] Phase 6: P6-01..P6-05 (see docs/COORDINATION.md). P6-01 first (mobile bug), then P6-02, P6-03, P6-05, P6-04. Base: origin/fix/autopilot (e3a608a). P6-05 is destructive: preview/typed confirmation + 2nd super admin approval + backup; never run it against any real DB yourself. | user reported P3-02 logos render twice | /sync ready each
 - [open] Start Phase 1 (P1-01..P1-05) in parallel via agents. Base: origin/fix/autopilot (= production main, dd015c0 + sync skill). | | Mark each ready with /sync ready.

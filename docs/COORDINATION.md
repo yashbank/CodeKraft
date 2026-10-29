@@ -84,7 +84,23 @@ Two machines, one repo. Never both on the same task. Never push `main`. Never pu
 | P12-03 | 12 | SEO: metadata, JSON-LD, sitemap, canonical for products, case studies, blogs, site; auto-generated OG share image per page (next/og) | B |
 | P12-04 | 12 | Admin extras: Cmd+K command palette, sticky table headers + CSV export, saved filters, first-run setup checklist, smooth page transitions | B |
 
-Order for B: P1 (all tasks in parallel via agents) -> P2 -> P3 -> P4 -> P5 -> P6 -> P7 -> P8 -> P9 -> P10 -> P11 -> P12. A tests each phase as B marks tasks `ready`; B continues to the next phase without waiting.
+| R9-00 | 13 | Test harness FIRST: Playwright on a production build (`next build` + `next start`) with local DB; roles customer, super_admin, admin, staff; 2 browsers. Reporter `line`/json, print only failures. Covers P1-P12 flows. Writes BUGS-R9.md (severity-ranked) | B |
+| R9-01 | 13 | BUG Reset site data: Delete button stays disabled. Find root cause; e2e must EXECUTE a reset on the LOCAL DB and prove super admins survive | B |
+| R9-02 | 13 | Invoices render from CURRENT settings (name, logo, seller details, theme/fonts/radius) incl. already-generated ones, behind setting "Update old invoices when business details change" (default ON). Fix discount/grand-total overlap; modern layout; PDF + print | B |
+| R9-03 | 13 | Order/fulfilment status reliable for hosted website, licence key, download, SaaS, custom (+ subscriptions). In-app "Fulfilment guide" in admin Settings explaining each type's steps | B |
+| R9-04 | 13 | Products: edit a published product then schedule/republish works; approved delete removes it from lists; flags coming-soon, unlisted/listed, featured, tax-enabled work on storefront + admin. Tests | B |
+| R9-05 | 13 | Purge "for testing only"/report-to-tester copy everywhere (grep whole src) + guard test | B |
+| R9-06 | 13 | After payment submit: "Confirming your payment" screen, auto-poll, redirect to payments/invoices in 2-3 s, Refresh button, live status, then Download / delivery steps / Reveal licence key. No error/product-page redirect | B |
+| R9-07 | 13 | Dashboard: System health real checks, all widgets wired, nicer bars; widgets honour UI-customization tokens (padding, border, radius, font) | B |
+| R9-08 | 13 | UI customization: show 2-3 options per group + "Show all" (dialog/sheet) for fonts, palettes, border styles, radius, patterns, layouts; many more options; no regression at 375/768/1280 | B |
+| R9-09 | 13 | Currency + expense FX: wrong rate bug, one trusted rate source + fallback + lock, platform-wide conversion; tests with known rates | B |
+| R9-10 | 13 | Finance: every sub-filter works; ledger debit/credit exact (credit 40,000 + spend 2 shows debit 2); "My share" = logged-in admin's own share; partners + payouts end-to-end | B |
+| R9-11 | 13 | Exports everywhere: styled .xlsx (coloured header, fonts, widths, number formats) plus plain CSV option | B |
+| R9-12 | 13 | SEO proof: tests for title/description/canonical/JSON-LD/OG image/sitemap on product, case study, blog, site; admin SEO preview showing what search/share shows | B |
+| R9-13 | 13 | Chatbot: customer chats (incl. brand-new signups e.g. a new email) appear in admin chatbot list + handoff notifications; test | B |
+| R9-14 | 13 | Full sweep by role (customer, super admin, admin, staff): every route, redirects, console errors, failed requests, broken screens at 3 widths. Fix all. Write docs/SCORECARD.md (percent done, 1-10 reliability, evidence) | B |
+
+Order for B: P1 (all tasks in parallel via agents) -> P2 -> P3 -> P4 -> P5 -> P6 -> P7 -> P8 -> P9 -> P10 -> P11 -> P12 -> R9 (Phase 13). A tests each phase as B marks tasks `ready`; B continues to the next phase without waiting.
 
 ## Token plan (Phase 7-12, both Macs)
 - Read only your task rows + its files. Never reread this whole doc: grep `^| P<n>-`.
@@ -93,3 +109,10 @@ Order for B: P1 (all tasks in parallel via agents) -> P2 -> P3 -> P4 -> P5 -> P6
 - Reuse existing modules (finance, settings, content, invoices); no new libraries unless a task needs one (fonts via next/font).
 - Migrations: hand-write SQL (drizzle-kit snapshots collide), next number 0007+. Additive only. Tell A in B.md.
 - Mobile/tablet/laptop must not regress: every UI task checks 375/768/1280.
+
+## Phase 13 rules (hard-won)
+- A task is `ready` only with: (1) a test that FAILED before the fix, (2) Playwright proof in the real UI on a production build, (3) 375/768/1280 check for UI work.
+- Playwright output costs tokens: run with `--reporter=line`, tail failures only, never paste full traces. Run per-file while fixing, full suite once at the end of each task group.
+- Use only the LOCAL DB. Never run reset/wipe against Neon. No real credentials in tests (fixtures only).
+- Migrations: hand-written, additive, next number 0009+, note in B.md.
+- Small shared files (layout, settings contracts) cause merge conflicts: keep edits minimal, rebase onto origin/fix/autopilot before `ready`.
