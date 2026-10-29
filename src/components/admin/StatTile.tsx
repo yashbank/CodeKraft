@@ -1,7 +1,9 @@
 import { ArrowDownRightIcon, ArrowUpRightIcon } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { cn } from "@/components/ui/_utils";
+import { AnimatedNumber } from "./use-count-up";
 
 /** Stat card — docs/08 §6.3: overline label, 28px 600 tabular value, delta chip. */
 export function StatTile({
@@ -10,6 +12,8 @@ export function StatTile({
   delta,
   deltaTone,
   hint,
+  count,
+  href,
   children,
   className,
 }: {
@@ -18,6 +22,10 @@ export function StatTile({
   delta?: string;
   deltaTone?: "success" | "danger" | "neutral";
   hint?: string;
+  /** Numeric value to count up on first view (`format` renders it); replaces `value`. */
+  count?: { to: number; format: (n: number) => string };
+  /** Drill-down: the label links to the filtered list. */
+  href?: string;
   children?: ReactNode;
   className?: string;
 }) {
@@ -30,9 +38,17 @@ export function StatTile({
         : "neutral");
   return (
     <div className={cn("rounded-lg border border-border bg-surface p-4", className)}>
-      <div className="text-overline tracking-wider text-fg-muted uppercase">{label}</div>
+      <div className="text-overline tracking-wider text-fg-muted uppercase">
+        {href ? (
+          <Link href={href} className="hover:text-accent-text hover:underline">
+            {label}
+          </Link>
+        ) : (
+          label
+        )}
+      </div>
       <div className="mt-1 text-[clamp(20px,1.6vw,28px)] leading-tight font-semibold break-words text-fg tnum">
-        {value}
+        {count ? <AnimatedNumber value={count.to} format={count.format} /> : value}
       </div>
       {delta ? (
         <div

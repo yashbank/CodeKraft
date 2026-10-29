@@ -779,7 +779,7 @@ export interface ReportDefinition {
   description: string;
   formula: string;
   tiles: Array<{ label: string; valueInr: number; delta?: string; isCount?: boolean }>;
-  series: Array<{ label: string; value: number }>;
+  series: Array<{ label: string; value: number; id?: string }>;
   columns: string[];
   rows: Array<Array<string | number>>;
   totals?: Array<string | number>;
@@ -1048,7 +1048,7 @@ export interface QueueItem {
 export interface DashboardData {
   range: "7d" | "30d" | "90d" | "fy";
   revenueByPeriod: Array<{ label: string; value: number }>;
-  revenueByProduct: Array<{ label: string; value: number }>;
+  revenueByProduct: Array<{ label: string; value: number; id?: string }>;
   revenueByPartner: Array<{ label: string; value: number }>;
   myShare: { valueInr: number; delta: string; sparkline: number[] };
   outstandingPayouts: { totalInr: number; items: QueueItem[] };

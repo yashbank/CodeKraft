@@ -54,6 +54,7 @@ export function parseLedgerFilters(
   const type = one(sp, "type");
   const party = one(sp, "party");
   const partner = uuid(sp, "partner");
+  const product = uuid(sp, "product");
   const ccy = currencySchema.safeParse(one(sp, "ccy"));
   const q = one(sp, "q")?.toUpperCase();
   return {
@@ -66,6 +67,7 @@ export function parseLedgerFilters(
       ? { partyType: party as (typeof PARTY_TYPES)[number] }
       : {}),
     ...(partner ? { partnerId: partner } : {}),
+    ...(product ? { productId: product } : {}),
     ...(ccy.success ? { currency: ccy.data } : {}),
     ...(q && ORDER_NO_RE.test(q) ? { orderNo: q } : {}),
   };

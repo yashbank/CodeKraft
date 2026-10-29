@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/components/ui/_utils";
+import { WIDGET_BODY_HEIGHT } from "./WidgetSkeleton";
 
 /**
  * Widget card — docs/08 §6.3: 44px header (title, muted subtitle, refresh, menu), 16px body.
@@ -138,7 +139,9 @@ export function WidgetFrame({
           ) : null}
         </span>
       </header>
-      <div className="flex flex-1 flex-col p-4">{children}</div>
+      <div className="flex flex-1 flex-col p-4" style={{ minHeight: WIDGET_BODY_HEIGHT + 32 }}>
+        {children}
+      </div>
       {viewAllHref ? (
         <footer className="border-t border-border px-4 py-2 text-right">
           <Link href={viewAllHref} className="text-body-sm text-accent-text hover:underline">
