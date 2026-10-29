@@ -5,6 +5,7 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import { AdminShell, type AdminRoute } from "./AdminShell";
+import { KeyboardShortcutsSheet } from "./KeyboardShortcutsSheet";
 import type { AdminNotification, AdminUserRef } from "./types";
 import { searchAdmin } from "@/lib/admin/global-search";
 import { mapNotificationItem } from "@/lib/admin/notifications-view";
@@ -133,6 +134,7 @@ export function AdminShellWrapper({
       routes={ADMIN_ROUTE_MAP}
       onSearch={searchAdmin}
     >
+      <KeyboardShortcutsSheet area="admin" />
       {children}
     </AdminShell>
   );

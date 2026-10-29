@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 
 import { AccountShell, type AccountNavKey } from "./AccountShell";
+import { KeyboardShortcutsSheet } from "@/components/admin/KeyboardShortcutsSheet";
 import { Banner } from "./Banner";
 import { ResendVerificationButton } from "./ResendVerificationButton";
 import type { NotificationItem } from "./types";
@@ -90,6 +91,7 @@ export function AccountShellWrapper({
           it&apos;s verified.
         </Banner>
       ) : null}
+      <KeyboardShortcutsSheet area="account" />
       {children}
     </AccountShell>
   );
