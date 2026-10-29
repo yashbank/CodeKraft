@@ -10,7 +10,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { EntitlementStatusChip } from "./EntitlementStatusChip";
+import { entitlementStatusInput, entitlementStatusLine } from "./EntitlementCard";
 import { Banner } from "./Banner";
 import { DELIVERY_LABELS, DeliveryTypeIcon } from "./DeliveryTypeIcon";
 import { DownloadPanel } from "./delivery/DownloadPanel";
@@ -115,7 +116,7 @@ export function EntitlementDetailScreen({
       {e.deliveryType === "custom" ? (
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-h3 text-fg">Custom delivery</h2>
-          <StatusBadge kind="entitlements.status" value={e.status} />
+          <EntitlementStatusChip input={entitlementStatusInput(e)} size="md" />
         </div>
       ) : null}
       <InstructionsBlock paragraphs={e.instructions} attachments={e.attachments} />
@@ -196,7 +197,7 @@ export function EntitlementDetailScreen({
                 e.productName
               )}
             </h1>
-            <StatusBadge kind="entitlements.status" value={e.status} />
+            <EntitlementStatusChip input={entitlementStatusInput(e)} size="md" />
           </div>
           <p className="text-body text-fg-muted">{e.offeringName}</p>
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-fg-muted">
@@ -204,7 +205,7 @@ export function EntitlementDetailScreen({
               <DeliveryTypeIcon type={e.deliveryType} className="size-3.5" />
               {DELIVERY_LABELS[e.deliveryType]}
             </span>
-            <span>{e.accessLabel}</span>
+            <span>{entitlementStatusLine(e)}</span>
             <Link href={links.order} className="font-mono text-accent-text hover:underline">
               {e.orderNumber}
             </Link>

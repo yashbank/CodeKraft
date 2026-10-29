@@ -2,20 +2,28 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { entitlementStatus, type EntitlementStatusInput } from "@/lib/entitlement-status";
 import { cn } from "@/components/ui/_utils";
 import { DELIVERY_LABELS, DeliveryTypeIcon, primaryActionLabel } from "./DeliveryTypeIcon";
+import { EntitlementStatusChip } from "./EntitlementStatusChip";
 import { ProductCover } from "./ProductCover";
 import type { EntitlementSummary } from "./types";
 
+/** Input for the shared lifecycle label, from a customer entitlement row. */
+export function entitlementStatusInput(e: EntitlementSummary): EntitlementStatusInput {
+  return {
+    status: e.status,
+    provisioningState: e.provisioningState,
+    startsAt: e.accessStartsAt,
+    endsAt: e.accessEndsAt,
+    subscriptionPeriodEnd: e.subscription?.currentPeriodEnd,
+    refunded: e.refunded,
+  };
+}
+
 /** Status copy for entitlements (SCR-ACC-01 §Content). */
 export function entitlementStatusLine(e: EntitlementSummary): string {
-  if (e.status === "active" && e.provisioningState === "pending") return "Being set up";
-  if (e.status === "suspended") return "Suspended — payment overdue";
-  if (e.status === "revoked") return "Access revoked";
-  if (e.status === "expired") return "Expired";
-  if (e.status === "pending") return "Pending";
-  return e.accessEndsAt ? `Active until ${e.accessLabel.replace(/^Until /, "")}` : "Active";
+  return entitlementStatus(entitlementStatusInput(e)).label;
 }
 
 /**
@@ -61,10 +69,7 @@ export function EntitlementCard({
               {e.productName}
             </Link>
           </h3>
-          <StatusBadge kind="entitlements.status" value={e.status} size="sm" />
-          {e.provisioningState === "pending" ? (
-            <StatusBadge kind="entitlements.provisioning_state" value="pending" size="sm" />
-          ) : null}
+          <EntitlementStatusChip input={entitlementStatusInput(e)} />
         </div>
         <p className="truncate text-body-sm text-fg-muted">{e.offeringName}</p>
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-fg-muted">
@@ -72,7 +77,7 @@ export function EntitlementCard({
             <DeliveryTypeIcon type={e.deliveryType} className="size-3.5" />
             {DELIVERY_LABELS[e.deliveryType]}
           </span>
-          <span>{e.accessLabel}</span>
+          <span>{entitlementStatusLine(e)}</span>
           {e.secondaryLine ? <span className="text-fg">{e.secondaryLine}</span> : null}
         </p>
         {progress !== null && !compact ? (

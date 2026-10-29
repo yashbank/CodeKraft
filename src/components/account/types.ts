@@ -103,6 +103,8 @@ export interface EntitlementSummary {
   keyIssued?: boolean;
   subscription?: SubscriptionInfo;
   purchasedAt: string;
+  refunded?: boolean;
+  accessStartsAt?: string;
   accessEndsAt?: string;
   orderNumber: string;
   invoiceNumber?: string;
