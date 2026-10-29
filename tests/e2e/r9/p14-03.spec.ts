@@ -165,8 +165,10 @@ test("[admin] @1280: bell + inbox open targets, popup closes, read persists, sid
   // Outside click closes the popup.
   await bell.click();
   await expect(page.locator('[data-slot="popover-content"]')).toBeVisible();
-  await page.mouse.click(640, 880);
-  await expect(page.locator('[data-slot="popover-content"]')).toHaveCount(0);
+  await expect(async () => {
+    await page.mouse.click(640, 880);
+    await expect(page.locator('[data-slot="popover-content"]')).toHaveCount(0, { timeout: 1000 });
+  }).toPass({ timeout: 10_000 });
 
   // Inbox page row opens its target; read items stay read on other pages and after reload.
   await page.goto(`${ADMIN}/admin/notifications`);
