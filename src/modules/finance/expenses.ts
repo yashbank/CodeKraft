@@ -11,7 +11,8 @@ import { auditService } from "@/modules/audit/service";
 import { fxService } from "@/modules/fx/service";
 import { ownershipService } from "@/modules/ownership/service";
 import { allocateLargestRemainder, mulBps, type Currency } from "@/lib/money";
-import { resolveExpenseRate, toBaseMinor } from "@/modules/fx/expense-rate";
+import { resolveExpenseRate } from "@/modules/fx/expense-rate";
+import { toInrMinor } from "./minor";
 import { expenses, ledgerEntries, type Expense } from "../../../drizzle/schema/finance";
 import { partners } from "../../../drizzle/schema/users-ext";
 import { users } from "../../../drizzle/schema/auth";
@@ -142,7 +143,7 @@ export async function postExpense(
     expense.fxRateToInr ??
     (await fxService.rateToInrOn(expense.currency as Currency, expense.incurredOn, tx));
   const toInr = (amtMinor: number) =>
-    expense.currency === "INR" ? amtMinor : toBaseMinor(amtMinor, fxRateToInr);
+    expense.currency === "INR" ? amtMinor : toInrMinor(amtMinor, fxRateToInr);
 
   const memo = expense.description ?? expense.category;
 

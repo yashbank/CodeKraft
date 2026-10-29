@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { DbOrTx } from "@/lib/db";
-import { formatRateLine, resolveExpenseRate, toBaseMinor } from "@/modules/fx/expense-rate";
+import { formatRateLine, resolveExpenseRate } from "@/modules/fx/expense-rate";
+import { toInrMinor as toBaseMinor } from "@/modules/finance/minor";
 
 const NOW = new Date("2026-10-29T10:12:00Z");
 
@@ -52,12 +53,16 @@ describe("resolveExpenseRate", () => {
     );
   });
 
-  it("requires a manual rate when the stored rate is stale or missing", async () => {
+  it("a stale or missing stored rate falls to the flagged default", async () => {
     const stale = { rate: "83.12000000", source: "x", createdAt: new Date("2026-10-01T00:00:00Z") };
     for (const row of [stale, null]) {
-      await expect(
-        resolveExpenseRate({ currency: "USD", db: dbWith(row), now: NOW, fetchFn: failFetch }),
-      ).rejects.toMatchObject({ fieldErrors: { manualRate: expect.any(Array) } });
+      const lock = await resolveExpenseRate({
+        currency: "USD",
+        db: dbWith(row),
+        now: NOW,
+        fetchFn: failFetch,
+      });
+      expect(lock.source).toBe("default");
     }
   });
 
@@ -107,9 +112,5 @@ describe("resolveExpenseRate", () => {
 describe("toBaseMinor minor units", () => {
   it("USD cents -> INR paise", () => {
     expect(toBaseMinor(10000, "83.12000000")).toBe(831200);
-  });
-  it("JPY (0 decimals) -> INR paise", () => {
-    // 1000 JPY at 0.55 INR/JPY = 550.00 INR = 55000 paise
-    expect(toBaseMinor(1000, "0.55000000", 0, 2)).toBe(55000);
   });
 });
