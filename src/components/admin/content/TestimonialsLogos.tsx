@@ -381,13 +381,13 @@ export function TestimonialsLogos({
               >
                 <div className="grid grid-cols-2 gap-2">
                   <div
-                    className="grid h-16 place-items-center rounded-sm bg-inverse text-inverse-fg text-caption"
+                    className="grid h-16 place-items-center rounded-md bg-inverse text-inverse-fg text-caption"
                     aria-label={`${logo.name} on dark`}
                   >
                     {logo.logoUrl ? <LogoMark src={logo.logoUrl} name={logo.name} /> : logo.name}
                   </div>
                   <div
-                    className="grid h-16 place-items-center rounded-sm border border-border bg-canvas text-caption"
+                    className="grid h-16 place-items-center rounded-md border border-border bg-canvas text-caption"
                     aria-label={`${logo.name} on light`}
                   >
                     {logo.logoUrl ? <LogoMark src={logo.logoUrl} name={logo.name} /> : logo.name}
