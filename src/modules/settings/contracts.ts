@@ -106,12 +106,15 @@ export const bankDetailsSchema = z.strictObject({
 
 /** Max length of the inline UPI QR data URL (~220 KB image). */
 export const UPI_QR_IMAGE_MAX_CHARS = 300_000;
-/** R8-01: admin-uploaded UPI QR image, stored inline as a base64 data URL. */
+/**
+ * Admin-uploaded UPI QR image: the media URL (`payment_qr` upload purpose, public bucket). Legacy
+ * rows saved before P15-01 hold an inline base64 data URL; those still validate until re-saved.
+ */
 export const upiQrImageSchema = z
   .string()
   .max(UPI_QR_IMAGE_MAX_CHARS, "QR image is too large (max ~220 KB)")
   .regex(
-    /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/,
+    /^(data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+|https:\/\/[^\s]+|\/api\/files\/public\/[^\s]+)$/,
     "must be a PNG, JPEG or WebP image",
   );
 

@@ -46,6 +46,7 @@ export const UPLOAD_PURPOSES = [
   "chat_attachment",
   "avatar",
   "site_logo",
+  "payment_qr",
 ] as const;
 export type UploadPurpose = (typeof UPLOAD_PURPOSES)[number];
 
@@ -135,6 +136,12 @@ export const UPLOAD_RULES: Readonly<Record<UploadPurpose, UploadRule>> = Object.
   site_logo: {
     mimes: ["image/png", "image/jpeg"],
     maxBytes: 2 * MB,
+    visibility: "public",
+  },
+  // Manual-payment UPI QR: stored in the public bucket, the setting keeps only its URL (never a DB blob).
+  payment_qr: {
+    mimes: ["image/png", "image/jpeg", "image/webp"],
+    maxBytes: 1 * MB,
     visibility: "public",
   },
 });
