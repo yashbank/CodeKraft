@@ -84,6 +84,7 @@ import { cn } from "@/components/ui/_utils";
 import { applyRead, countUnread } from "@/lib/notifications/read-state";
 import { initials, timeAgo } from "./format";
 import { LaptopNotice } from "./LaptopNotice";
+import { filterAdminNav } from "@/lib/authz/admin-routes";
 import { AdminCommandPalette } from "./AdminCommandPalette";
 import { AdminUserIdContext } from "./SavedViews";
 import { isPaletteShortcut, quickActionsFor } from "@/lib/admin/palette";
@@ -267,6 +268,7 @@ export function AdminShell({
   children,
 }: AdminShellProps) {
   const href = React.useCallback((route: AdminRoute) => routes?.[route] ?? route, [routes]);
+  const nav = React.useMemo(() => filterAdminNav(ADMIN_NAV, [user.role]), [user.role]);
   const [open, setOpen] = React.useState(true);
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const siteName = useSiteName();
@@ -275,21 +277,23 @@ export function AdminShell({
   const paletteItems = React.useMemo<SearchItem[]>(
     () => [
       ...quickActionsFor(user.role, href),
-      ...ADMIN_NAV.flatMap((g) =>
-        g.items.flatMap((i) =>
-          "children" in i
-            ? i.children.map((c) => ({ label: c.label, hint: i.label, route: c.route }))
-            : [{ label: i.label, hint: g.label, route: i.route }],
-        ),
-      ).map((n) => ({
-        group: "Go to" as const,
-        label: n.label,
-        hint: n.hint,
-        href: href(n.route),
-      })),
+      ...nav
+        .flatMap((g) =>
+          g.items.flatMap((i) =>
+            "children" in i
+              ? i.children.map((c) => ({ label: c.label, hint: i.label, route: c.route }))
+              : [{ label: i.label, hint: g.label, route: i.route }],
+          ),
+        )
+        .map((n) => ({
+          group: "Go to" as const,
+          label: n.label,
+          hint: n.hint,
+          href: href(n.route),
+        })),
       ...searchItems,
     ],
-    [user.role, href, searchItems],
+    [user.role, nav, href, searchItems],
   );
   const [paletteOpen, setPaletteOpen] = React.useState(false);
   const [paletteQuery, setPaletteQuery] = React.useState("");
@@ -375,7 +379,7 @@ export function AdminShell({
             </Link>
           </SidebarHeader>
           <SidebarContent className="py-2">
-            {ADMIN_NAV.map((group) => (
+            {nav.map((group) => (
               <SidebarGroup key={group.label} className="py-1">
                 <SidebarGroupLabel className="text-overline tracking-wider uppercase">
                   {group.label}

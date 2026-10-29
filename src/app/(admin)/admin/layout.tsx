@@ -1,5 +1,8 @@
+import { headers } from "next/headers";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { canOpenAdminRoute } from "@/lib/authz/admin-routes";
 import { getSession } from "@/modules/auth/service";
 import { hasAdminClassRole, loadRoles } from "@/modules/auth/roles-port";
 import { buildContext } from "@/lib/authz/context";
@@ -26,8 +29,30 @@ export default async function AdminAppLayout({ children }: { children: React.Rea
     id: session.user.id,
     name: session.user.name || "Admin",
     email: session.user.email,
-    role: roles.includes("super_admin") ? ("super_admin" as const) : ("admin" as const),
+    role: roles.includes("super_admin")
+      ? ("super_admin" as const)
+      : roles.includes("admin")
+        ? ("admin" as const)
+        : ("staff" as const),
   };
+
+  // Permission check first, before the shell (and its mobile "laptop" notice) renders.
+  const path = (await headers()).get("x-request-path") ?? "";
+  if (!canOpenAdminRoute(roles, path)) {
+    return (
+      <main className="flex min-h-screen items-center justify-center p-6">
+        <div className="max-w-md space-y-3 text-center" data-testid="admin-no-access">
+          <h1 className="text-h2">You don&apos;t have access</h1>
+          <p className="text-body text-fg-muted">
+            Your role does not include this page. Ask an admin if you need it.
+          </p>
+          <Link href="/admin/dashboard" className="text-body underline">
+            Back to dashboard
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   const ctx = buildContext({
     user: { id: session.user.id },
