@@ -139,6 +139,7 @@ export interface BlogPost extends BlogTeaser {
 }
 
 export interface ProductDetail extends ProductSummary {
+  seo?: { title?: string | null; description?: string | null };
   version: string;
   descriptionHtml: string;
   benefits: string[];

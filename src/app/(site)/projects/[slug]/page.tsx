@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { JsonLd } from "@/components/seo/JsonLd";
-import { articleLd, breadcrumbLd, NOINDEX, pageMetadata } from "@/lib/seo";
+import { articleLd, breadcrumbLd, caseStudySeo, NOINDEX, pageMetadata } from "@/lib/seo";
 import { anonymousContext } from "@/lib/authz/context";
 import { toneFromSlug } from "@/lib/media-tone";
 import {
@@ -22,12 +22,16 @@ export async function generateMetadata(props: {
   const result = await getCaseStudyBySlugQuery({ slug: params.slug }, anonymousContext());
   if (!result.ok) return { title: "Project Not Found", robots: NOINDEX };
 
-  return pageMetadata({
-    path: `/projects/${params.slug}`,
-    title: result.data.seo.title || result.data.title,
-    description: result.data.seo.description || result.data.resultHighlight,
-    type: "article",
-  });
+  const d = result.data;
+  return pageMetadata(
+    caseStudySeo({
+      slug: params.slug,
+      title: d.title,
+      resultHighlight: d.resultHighlight,
+      seoTitle: d.seo.title,
+      seoDescription: d.seo.description,
+    }),
+  );
 }
 
 export default async function ProjectDetailRoute(props: { params: Promise<{ slug: string }> }) {

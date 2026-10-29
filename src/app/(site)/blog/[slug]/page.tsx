@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { JsonLd } from "@/components/seo/JsonLd";
-import { articleLd, breadcrumbLd, pageMetadata } from "@/lib/seo";
+import { articleLd, blogSeo, breadcrumbLd, pageMetadata } from "@/lib/seo";
 
 import { BlogPostPage } from "@/components/site/BlogPostPage";
 import { toBlogPost, toBlogTeaser } from "@/lib/blog-view";
@@ -23,10 +23,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const result = await getBlogBySlugQuery({ slug, displayCurrency: "INR" }, anonymousContext());
   if (!result.ok) return {};
   const { blog } = result.data;
-  const title = blog.seoTitle ?? blog.title;
-  const description = blog.seoDescription ?? blog.excerpt ?? undefined;
-
-  return pageMetadata({ path: `/blog/${slug}`, title, description, type: "article" });
+  return pageMetadata(blogSeo({ ...blog, slug }));
 }
 
 export default async function BlogPostRoute({ params }: PageProps) {

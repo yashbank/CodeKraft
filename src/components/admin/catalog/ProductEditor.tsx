@@ -87,6 +87,8 @@ import {
 } from "@/modules/media/admin-mutations";
 import { ApprovalGateNotice, Banner } from "../Banner";
 import { formatDate, formatDateTime, money, percentFromBps } from "../format";
+import { productSeo } from "@/lib/seo";
+import { SeoPreview } from "../SeoPreview";
 import { RowActions } from "../RowActions";
 import { Field, RichTextField } from "../RichTextField";
 import type {
@@ -2133,6 +2135,15 @@ export function ProductEditor({
                 <Checkbox id="seo-noindex" checked={flags.has("is_unlisted")} disabled />
                 <Label htmlFor="seo-noindex">noindex (automatic for unlisted products)</Label>
               </div>
+              <SeoPreview
+                input={productSeo({
+                  slug: product.slug || "slug",
+                  name: product.name,
+                  shortDescription: product.shortDescription,
+                  seoTitle: product.seo.title,
+                  seoDescription: product.seo.description,
+                })}
+              />
               <div className="space-y-1">
                 <p className="text-body-sm font-semibold">JSON-LD preview</p>
                 <pre className="overflow-auto rounded-md bg-canvas p-3 font-mono text-caption text-fg-muted">{`{ "@type": "Product", "name": "${product.name}" }`}</pre>

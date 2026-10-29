@@ -170,3 +170,70 @@ export function faqLd(faqs: { question: string; answer: string }[]) {
     })),
   };
 }
+
+// R9-12 — per-type SEO inputs. Public pages AND the admin SEO preview call these, so they can't drift.
+type Opt = string | null | undefined;
+const pick = (...v: Opt[]) => v.find((x) => x?.trim()) ?? undefined;
+
+export function productSeo(p: {
+  slug: string;
+  name: string;
+  shortDescription?: Opt;
+  seoTitle?: Opt;
+  seoDescription?: Opt;
+}): PageMetaInput {
+  return {
+    path: `/products/${p.slug}`,
+    title: pick(p.seoTitle, p.name) ?? "",
+    description: pick(p.seoDescription, p.shortDescription),
+  };
+}
+
+export function blogSeo(b: {
+  slug: string;
+  title: string;
+  excerpt?: Opt;
+  seoTitle?: Opt;
+  seoDescription?: Opt;
+}): PageMetaInput {
+  return {
+    path: `/blog/${b.slug}`,
+    title: pick(b.seoTitle, b.title) ?? "",
+    description: pick(b.seoDescription, b.excerpt),
+    type: "article",
+  };
+}
+
+export function caseStudySeo(c: {
+  slug: string;
+  title: string;
+  resultHighlight?: Opt;
+  seoTitle?: Opt;
+  seoDescription?: Opt;
+}): PageMetaInput {
+  return {
+    path: `/projects/${c.slug}`,
+    title: pick(c.seoTitle, c.title) ?? "",
+    description: pick(c.seoDescription, c.resultHighlight),
+    type: "article",
+  };
+}
+
+/** Google-style snippet + share card fields read back from the built Metadata. */
+export function seoSnippet(m: Metadata, siteName: string) {
+  const full = `${typeof m.title === "string" ? m.title : ""} · ${siteName}`;
+  const description = typeof m.description === "string" ? m.description : "";
+  const url = String(m.alternates?.canonical ?? "");
+  const warnings: string[] = [];
+  if (full.length > 60) warnings.push("Title is over 60 characters; Google will cut it off.");
+  if (!description) warnings.push("No description; Google will pick text from the page.");
+  else if (description.endsWith("…"))
+    warnings.push("Description is over 160 characters; Google will cut it off.");
+  return {
+    title: full.length > 60 ? `${full.slice(0, 59)}…` : full,
+    url,
+    description,
+    image: `${url}/opengraph-image`,
+    warnings,
+  };
+}

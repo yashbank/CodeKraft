@@ -25,7 +25,9 @@ import {
 } from "@/components/ui/sheet";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
+import { blogSeo } from "@/lib/seo";
 import { Field, RichTextField } from "../RichTextField";
+import { SeoPreview } from "../SeoPreview";
 import { RowActions } from "../RowActions";
 import { ContentEditorFrame } from "./ContentEditorFrame";
 import { fromPlainText, toPlainText } from "@/modules/content/render";
@@ -313,6 +315,17 @@ export function BlogEditor({ posts: initial, productsWithoutBlog }: AdminBlogLis
                 />
               </Field>
             </div>
+            {post ? (
+              <SeoPreview
+                input={blogSeo({
+                  slug: post.slug,
+                  title: post.title,
+                  excerpt: post.excerpt,
+                  seoTitle: post.seoTitle,
+                  seoDescription: post.seoDescription,
+                })}
+              />
+            ) : null}
             <Button type="submit" disabled={saving}>
               Save post
             </Button>

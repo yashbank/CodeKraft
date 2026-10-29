@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { JsonLd } from "@/components/seo/JsonLd";
-import { breadcrumbLd, faqLd, pageMetadata, productLd } from "@/lib/seo";
+import { breadcrumbLd, faqLd, pageMetadata, productLd, productSeo } from "@/lib/seo";
 
 import { SERVICE_OPTIONS } from "@/app/dev/screens/_fixtures/site";
 import { ProductDetailPage } from "@/components/site/product/ProductDetailPage";
@@ -148,6 +148,7 @@ async function loadProduct(slug: string): Promise<ProductDetail | null> {
     hasPresentation: p.media.some((m) => m.kind === "presentation"),
     presentationMediaId: p.media.find((m) => m.kind === "presentation")?.mediaId ?? undefined,
     liveDemoUrl: p.liveDemoUrl ?? undefined,
+    seo: { title: p.seo?.title, description: p.seo?.description },
   };
 }
 
@@ -156,11 +157,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const product = await loadProduct(slug);
   if (!product) return {};
 
-  return pageMetadata({
-    path: `/products/${product.slug}`,
-    title: product.name,
-    description: product.shortDescription,
-  });
+  return pageMetadata(
+    productSeo({
+      slug: product.slug,
+      name: product.name,
+      shortDescription: product.shortDescription,
+      seoTitle: product.seo?.title,
+      seoDescription: product.seo?.description,
+    }),
+  );
 }
 
 export default async function ProductPage({ params }: PageProps) {
