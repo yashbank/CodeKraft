@@ -91,22 +91,16 @@ export async function createPartner(
         "Only admin users can be partners. Invite them as an admin first.",
       );
     }
-    const [existing] = await tx
-      .select({ id: partners.id })
-      .from(partners)
-      .where(eq(partners.userId, user.id))
-      .limit(1);
-    if (existing) {
-      throw new AppError(ErrorCode.CONFLICT, "That user is already a partner.");
-    }
+    // One partner row per user: a concurrent double submit loses on the unique index (CONFLICT, not a 500).
     const [created] = await tx
       .insert(partners)
       .values({
         userId: user.id,
         displayName: input.displayName ?? (user.name || String(user.email)),
       })
+      .onConflictDoNothing({ target: partners.userId })
       .returning();
-    if (!created) throw new AppError(ErrorCode.INTERNAL, "Failed to create partner");
+    if (!created) throw new AppError(ErrorCode.CONFLICT, "That user is already a partner.");
     await auditService.log(
       ctx,
       "API-ADM-12 partner.create",

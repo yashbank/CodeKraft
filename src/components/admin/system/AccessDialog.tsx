@@ -46,7 +46,9 @@ export function AccessDialog({
 }) {
   const [email, setEmail] = React.useState("");
   const [name, setName] = React.useState("");
-  const [busy, setBusy] = React.useState(false);
+  const [busy, setBusy] = React.useState<"link" | "password" | null>(null);
+  // Synchronous guard: two fast clicks can both pass a `disabled` state check.
+  const lock = React.useRef(false);
   const [secret, setSecret] = React.useState<Secret | null>(null);
 
   React.useEffect(() => {
@@ -58,11 +60,13 @@ export function AccessDialog({
   }, [open]);
 
   async function run(kind: "link" | "password") {
+    if (lock.current) return;
     if (!target && (!email.trim() || (kind === "password" && !name.trim()))) {
       toast.error(kind === "password" ? "Email and name are required." : "Email is required.");
       return;
     }
-    setBusy(true);
+    lock.current = true;
+    setBusy(kind);
     setSecret(null);
     try {
       if (kind === "link") {
@@ -84,7 +88,8 @@ export function AccessDialog({
         setSecret({ kind: "password", value: res.data.password });
       }
     } finally {
-      setBusy(false);
+      lock.current = false;
+      setBusy(null);
     }
   }
 
@@ -118,13 +123,20 @@ export function AccessDialog({
           </div>
         ) : null}
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" disabled={busy} onClick={() => void run("link")}>
+          <Button
+            type="button"
+            variant="outline"
+            loading={busy === "link"}
+            disabled={busy !== null}
+            onClick={() => void run("link")}
+          >
             {secret?.kind === "link" ? "Regenerate link" : "Generate link"}
           </Button>
           <Button
             type="button"
             variant="outline"
-            disabled={busy}
+            loading={busy === "password"}
+            disabled={busy !== null}
             onClick={() => void run("password")}
           >
             {secret?.kind === "password" ? "Regenerate temporary password" : "Temporary password"}
