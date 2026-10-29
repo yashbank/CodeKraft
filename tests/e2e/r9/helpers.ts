@@ -2,7 +2,8 @@
  * Phase 13 (R9) Playwright helpers: role logins, local-DB access, width checks, issue tracking.
  * Runs against a production build (`next build` + `next start`) on a LOCAL database only.
  */
-import { expect, type Page } from "@playwright/test";
+import fs from "node:fs";
+import { expect, type Cookie, type Page } from "@playwright/test";
 import postgres from "postgres";
 
 export const SITE = process.env.E2E_SITE_URL ?? "http://localhost:3000";
@@ -42,9 +43,19 @@ export const authFile = (role: Role): string => `test-results/r9-auth/${role}.js
 /** Base URL for a role's home host: customers use the site, the rest the admin host. */
 export const baseFor = (role: Role): string => (role === "customer" ? SITE : ADMIN);
 
-/** Sign in through the real login form. Clears the local rate-limit buckets first. */
-export async function loginAs(page: Page, role: Role): Promise<void> {
+/**
+ * Sign a role in. Reuses the r9-setup session cookies when present: the app keeps one active
+ * session per user (D-1203), so a fresh form login here would sign out every other spec's page.
+ * `fresh` forces the real login form (used by r9-auth.setup.ts).
+ */
+export async function loginAs(page: Page, role: Role, fresh = false): Promise<void> {
   const base = baseFor(role);
+  if (!fresh && fs.existsSync(authFile(role))) {
+    const state = JSON.parse(fs.readFileSync(authFile(role), "utf8")) as { cookies: Cookie[] };
+    await page.context().addCookies(state.cookies);
+    await page.goto(base);
+    return;
+  }
   for (let attempt = 0; ; attempt++) {
     await q(`delete from rate_limit_buckets`);
     await page.goto(`${base}/auth/login`);

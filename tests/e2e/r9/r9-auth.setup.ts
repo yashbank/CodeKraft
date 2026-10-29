@@ -9,7 +9,7 @@ import { authFile, loginAs, type Role } from "./helpers";
 
 for (const role of ["customer", "super_admin", "admin", "staff"] as const satisfies Role[])
   test(`[${role}] /auth/login - signs in and lands on home`, async ({ page }) => {
-    await loginAs(page, role);
+    await loginAs(page, role, true);
     expect(new URL(page.url()).pathname, "post-login landing").toMatch(
       role === "customer" ? /^\/account/ : /^\/(admin|dashboard)/,
     );
