@@ -16,6 +16,7 @@ test("r9-06 confirming screen, redirect, delivery action", async ({ browser }) =
   const adminCtx = await browser.newContext();
   const custCtx = await browser.newContext();
   const admin = await adminCtx.newPage();
+  await admin.setViewportSize({ width: 1280, height: 900 }); // admin settings/orders are laptop-only
   const cust = await custCtx.newPage();
   const issues = trackIssues(cust, [/razorpay/i]);
 
@@ -37,13 +38,16 @@ test("r9-06 confirming screen, redirect, delivery action", async ({ browser }) =
     await expect(mps).toBeVisible();
     const upi = mps.locator("#st-upi");
     if ((await upi.getAttribute("aria-checked")) !== "true") await upi.click();
+    // Bank transfer on with empty details blocks the save; this test only needs UPI.
+    const bank = mps.locator("#st-bank");
+    if ((await bank.getAttribute("aria-checked")) === "true") await bank.click();
     await mps.locator("#st-vpa").fill(VPA);
     await mps.locator("#st-payee").fill("R906 Payee Pvt Ltd");
     await mps
       .locator("#st-qr")
       .setInputFiles({ name: "qr.png", mimeType: "image/png", buffer: QR_PNG });
     await admin.getByRole("button", { name: "Save payment details" }).click();
-    await expect(admin.getByText(/saved|requested|approval/i).first()).toBeVisible({
+    await expect(admin.getByText(/Payment details saved|requested/i).first()).toBeVisible({
       timeout: 30_000,
     });
   });
