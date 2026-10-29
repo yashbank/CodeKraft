@@ -65,7 +65,10 @@ export const upsertCouponInput = z
   });
 export type UpsertCouponInput = z.infer<typeof upsertCouponInput>;
 
-export const deactivateCouponInput = z.object({ id: zUuid }).strict();
+/** `undo: true` re-activates (the admin toast "Undo" after a deactivate). */
+export const deactivateCouponInput = z
+  .object({ id: zUuid, undo: z.literal(true).optional() })
+  .strict();
 export type DeactivateCouponInput = z.infer<typeof deactivateCouponInput>;
 
 export const listCouponsInput = zListParams(

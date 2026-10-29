@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { STATUS_ENUMS } from "@/lib/status-tone";
+import { undoToast } from "@/lib/admin/undo";
 import { deactivateCoupon, upsertCoupon } from "@/modules/coupons/admin-mutations";
 import { DataToolbar } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
@@ -96,7 +97,15 @@ export function CouponsList({
       toast.error(result.error.message);
       return;
     }
-    toast.success(`${c.code} deactivated — orders already using it are unaffected`);
+    undoToast(
+      `${c.code} deactivated — orders already using it are unaffected`,
+      async () => {
+        const r = await deactivateCoupon({ id: c.id, undo: true });
+        router.refresh();
+        return r.ok ? undefined : r.error.message;
+      },
+      `${c.code} is active again`,
+    );
     router.refresh();
   }
 
