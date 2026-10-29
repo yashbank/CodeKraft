@@ -3072,6 +3072,9 @@ export const SETTINGS: SettingsData = {
     digestEnabled: true,
     digestTime: "08:30 IST",
     sender: "no-reply@codekraft.in",
+    fromName: "",
+    fromAddress: "",
+    transport: "log",
   },
   flags: [
     {

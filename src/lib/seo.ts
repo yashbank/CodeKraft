@@ -1,6 +1,8 @@
 /** P12-03 — SEO helpers: absolute URLs, metadata factory and JSON-LD builders. Pure, no I/O. */
 import type { Metadata } from "next";
 
+import { DEFAULT_ICON } from "./brand-constants";
+
 export const NOINDEX = { index: false, follow: false } as const;
 
 /** Public origin without trailing slash (NEXT_PUBLIC_SITE_URL, then APP_URL, then default). */
@@ -47,6 +49,25 @@ export function pageMetadata(i: PageMetaInput): Metadata {
     robots: i.noindex ? NOINDEX : undefined,
     openGraph: { type: i.type ?? "website", url, title: i.title, description, ...images },
     twitter: { card: "summary_large_image", title: i.title, description, ...images },
+  };
+}
+
+/** P14-05: tab icon + apple icon follow the uploaded site logo; static fallback while none is set. */
+export function brandIcons(logo?: string | null, fallback: string = DEFAULT_ICON) {
+  const icon = logo || fallback;
+  return { icon, apple: icon };
+}
+
+/** P14-05: title/icons for the admin and account areas ("<page> · <area> · <site name>"). */
+export function areaMetadata(
+  area: string,
+  siteName: string,
+  logo?: string | null,
+  fallbackIcon?: string,
+): Metadata {
+  return {
+    title: { absolute: `${area} · ${siteName}`, template: `%s · ${area} · ${siteName}` },
+    icons: brandIcons(logo, fallbackIcon),
   };
 }
 

@@ -75,7 +75,11 @@ describe("SettingsScreen save (BUG-059)", () => {
   });
 
   it("no section shows unfinished-feature copy or a dead Save button", () => {
-    for (const sec of ["notifications", "flags"] as const) {
+    // P14-04: notifications now holds the editable From fields, so it has a real Save button.
+    renderAt("notifications");
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
+    cleanup();
+    for (const sec of ["flags"] as const) {
       renderAt(sec);
       expect(screen.queryByRole("button", { name: "Save changes" })).toBeNull();
       expect(screen.queryByText(/not available yet|V1\.1|coming soon/i)).toBeNull();

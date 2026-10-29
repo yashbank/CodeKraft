@@ -1,5 +1,6 @@
 import { emailSenderProblem } from "@/lib/email/transport";
 import { getEnv } from "@/lib/env";
+import { getStoredEmailFrom } from "@/lib/site-brand";
 import type { RequestContext } from "@/lib/authz/context";
 import { listProductsAdminQuery } from "@/modules/catalog/queries";
 import { getSettingsQuery } from "@/modules/settings/queries";
@@ -22,7 +23,10 @@ export async function loadSetupChecklist(ctx: RequestContext): Promise<SetupItem
     razorpayKeyId: s?.razorpaySettings?.keyId ?? null,
     upiVpa: s?.upiVpa ?? null,
     bankDetails: s?.bankDetails ?? null,
-    emailProblem: emailSenderProblem(getEnv()),
+    emailProblem: emailSenderProblem(
+      getEnv(),
+      s?.emailFromAddress ? await getStoredEmailFrom() : null,
+    ),
     publishedProducts: products?.ok
       ? products.data.items.filter((p) => p.status === "published").length
       : 0,

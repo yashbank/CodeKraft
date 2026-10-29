@@ -13,6 +13,7 @@ import { mapNotificationItem } from "@/lib/admin/notifications-view";
 import { Banner } from "@/components/admin/Banner";
 import { emailSenderProblem } from "@/lib/email/transport";
 import { getEnv } from "@/lib/env";
+import { getStoredEmailFrom } from "@/lib/site-brand";
 import { enforcePasswordChange } from "@/lib/authz/must-change";
 
 export const dynamic = "force-dynamic";
@@ -71,7 +72,7 @@ export default async function AdminAppLayout({ children }: { children: React.Rea
     : [];
 
   const env = getEnv();
-  const emailProblem = emailSenderProblem(env);
+  const emailProblem = emailSenderProblem(env, await getStoredEmailFrom());
   const appEnv = env.APP_ENV;
   const environment =
     appEnv === "production" ? "production" : appEnv === "staging" ? "staging" : "development";

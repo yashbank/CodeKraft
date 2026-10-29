@@ -6,14 +6,16 @@ import { hasAdminClassRole, loadRoles } from "@/modules/auth/roles-port";
 import { getSession, hostFromHeaders } from "@/modules/auth/service";
 import { AdminForbidden } from "@/components/admin/AdminForbidden";
 import { DEFAULT_ADMIN_ICON } from "@/lib/brand-constants";
-import { getSiteLogo } from "@/lib/site-brand";
+import { areaMetadata } from "@/lib/seo";
+import { getSiteLogo, getSiteName } from "@/lib/site-brand";
 import { redirectToLogin } from "@/lib/authz/login-redirect";
 
 export const dynamic = "force-dynamic";
 
 /** BUG-074: tinted favicon so admin tabs are distinguishable from the storefront. */
 export async function generateMetadata() {
-  return { icons: { icon: (await getSiteLogo()) ?? DEFAULT_ADMIN_ICON } };
+  const [siteName, logo] = await Promise.all([getSiteName(), getSiteLogo()]);
+  return areaMetadata("Admin", siteName, logo, DEFAULT_ADMIN_ICON);
 }
 
 /**
