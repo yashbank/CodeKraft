@@ -6,11 +6,20 @@ const B = "sanketshrikant42@gmail.com";
 const SUPERS = [ROLE_EMAILS.super_admin, B];
 
 async function signIn(page: Page, email: string) {
-  await q(`delete from rate_limit_buckets`);
-  await page.goto(`${ADMIN}/auth/login`);
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  // better-auth's in-memory limiter (sign-in: 3 per 10s per IP) is not the DB table; wait it out.
+  for (let i = 0; i < 4; i++) {
+    await page.goto(`${ADMIN}/auth/login`);
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    const limited = page.getByText(/too many requests/i);
+    await Promise.race([
+      page.waitForURL((u) => !/\/auth\/login/.test(u.pathname), { timeout: 20_000 }),
+      limited.waitFor({ timeout: 20_000 }),
+    ]).catch(() => {});
+    if (!(await limited.isVisible())) break;
+    await page.waitForTimeout(11_000);
+  }
   await expect(page).not.toHaveURL(/\/auth\/login/, { timeout: 20_000 });
 }
 
@@ -31,7 +40,7 @@ async function approveAs(browser: Browser, email: string) {
   await page
     .getByRole("button", { name: /^approve/i })
     .first()
-    .click();
+    .click({ noWaitAfter: true });
   await expect(page.getByText(/approved|applied|recorded/i).first()).toBeVisible();
   await ctx.close();
 }
@@ -43,8 +52,13 @@ const statusOf = async (id: string) =>
 test("reset site data: request, second super admin approves, data wiped, admins kept", async ({
   browser,
   page,
+  isMobile,
 }) => {
-  test.setTimeout(240_000);
+  test.skip(
+    isMobile,
+    "admin Settings is laptop-only (>=1024px) by design; covered at 375/768 on desktop",
+  );
+  test.setTimeout(300_000);
   // Guard first: q() refuses any non-localhost DATABASE_URL, before anything is clicked.
   const before = (await q<{ n: number }>(`select count(*)::int n from products`))[0]!.n;
   expect(before).toBeGreaterThan(0);
@@ -83,16 +97,23 @@ test("reset site data: request, second super admin approves, data wiped, admins 
 
   // B approves; then any other active admin-class user the approver set still owes.
   await approveAs(browser, B);
-  for (let i = 0; i < 4 && (await statusOf(appr.id)) === "pending"; i++) {
-    const owed = await q<{ email: string }>(
+  const owedOf = () =>
+    q<{ email: string }>(
       `select distinct u.email from users u join user_roles ur on ur.user_id = u.id
         where u.status = 'active' and ur.role_key in ('super_admin','admin')
           and u.id <> (select requested_by from approval_requests where id = $1)
           and u.id not in (select decided_by from approval_decisions where request_id = $1)`,
       [appr.id],
     );
+  for (let i = 0; i < 4 && (await statusOf(appr.id)) === "pending"; i++) {
+    const owed = await owedOf();
     expect(owed.length, "pending but nobody left to approve").toBeGreaterThan(0);
-    await approveAs(browser, owed[0]!.email);
+    const email = owed[0]!.email;
+    await approveAs(browser, email);
+    // The approve click returns before the action commits: wait for the decision to land.
+    await expect
+      .poll(async () => !(await owedOf()).some((o) => o.email === email), { timeout: 15_000 })
+      .toBe(true);
   }
   await expect.poll(() => statusOf(appr.id)).toBe("applied");
 
@@ -110,7 +131,12 @@ test("reset site data: request, second super admin approves, data wiped, admins 
   expect(roles.length).toBe(2);
 
   // Danger zone still renders and fits at every width after the wipe.
-  await atWidths(page, `${ADMIN}/admin/settings`, async () => {
+  await atWidths(page, `${ADMIN}/admin/settings`, async (w) => {
+    if (w < 1024) {
+      // Settings is deliberately laptop-only: below 1024px the app shows a notice instead.
+      await expect(page.getByText(/designed for laptops/i)).toBeVisible();
+      return;
+    }
     await page
       .getByRole("button", { name: /danger/i })
       .first()
