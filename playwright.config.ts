@@ -31,6 +31,9 @@ const SITE_ONLY_SPECS = [
   /commerce\/purchase-path\.spec\.ts$/,
 ];
 
+/** R9 harness specs run only in the r9-* projects (production build, local DB). */
+const R9 = /tests[\\/]e2e[\\/]r9[\\/]/;
+
 export default defineConfig({
   testDir: "tests/e2e",
   testMatch: /.*\.spec\.ts$/,
@@ -50,13 +53,19 @@ export default defineConfig({
     timezoneId: "Asia/Kolkata",
   },
   projects: [
-    { name: "site", use: { ...desktopChrome, baseURL: SITE_URL } },
-    { name: "site-mobile", use: { ...mobileChrome, baseURL: SITE_URL } },
-    { name: "admin", use: { ...desktopChrome, baseURL: ADMIN_URL }, testIgnore: SITE_ONLY_SPECS },
+    { name: "r9-desktop", use: { ...desktopChrome, baseURL: SITE_URL }, testMatch: R9 },
+    { name: "r9-mobile", use: { ...mobileChrome, baseURL: SITE_URL }, testMatch: R9 },
+    { name: "site", use: { ...desktopChrome, baseURL: SITE_URL }, testIgnore: R9 },
+    { name: "site-mobile", use: { ...mobileChrome, baseURL: SITE_URL }, testIgnore: R9 },
+    {
+      name: "admin",
+      use: { ...desktopChrome, baseURL: ADMIN_URL },
+      testIgnore: [...SITE_ONLY_SPECS, R9],
+    },
     {
       name: "admin-mobile",
       use: { ...mobileChrome, baseURL: ADMIN_URL },
-      testIgnore: SITE_ONLY_SPECS,
+      testIgnore: [...SITE_ONLY_SPECS, R9],
     },
     ...(full
       ? [
