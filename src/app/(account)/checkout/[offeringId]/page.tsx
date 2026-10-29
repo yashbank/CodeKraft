@@ -51,6 +51,13 @@ export default async function CheckoutPage({ params }: PageProps) {
     !!siteSettings.razorpaySettings?.keyId &&
     !!siteSettings.razorpaySettings?.keySecret;
 
+  // R9-06: a reload after submitting proof must not resume the pay panel (a "submitted" payment
+  // still counts as pending), it goes to "Confirming your payment".
+  if (pendingOrder) {
+    const submittedNo = await findRecentPaidOrderNo(ctx.userId, offeringId);
+    if (submittedNo === pendingOrder.orderNo) redirect(`/checkout/confirming/${submittedNo}`);
+  }
+
   if (!previewResult.ok) {
     // R9-06: a customer who already paid/submitted lands on "Confirming your payment", never a
     // 404 or the "Back to product" dead end.

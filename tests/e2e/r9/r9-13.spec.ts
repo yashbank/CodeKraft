@@ -6,7 +6,6 @@ import { expect, test } from "@playwright/test";
 
 import {
   ADMIN,
-  PASSWORD,
   SITE,
   atWidths,
   expectNoOverflow,
@@ -14,6 +13,9 @@ import {
   q,
   trackIssues,
 } from "./helpers";
+
+// Must satisfy the register form's rules (upper+lower, digit, symbol, 12+); helpers' PASSWORD is lowercase-only.
+const NEW_PASSWORD = "R9-Thirteen-Pass#2026";
 
 test.setTimeout(240_000);
 
@@ -31,7 +33,7 @@ test("R9-13 new customer chat + handoff reach the admin chatbot list and bell", 
   await page.goto(`${SITE}/auth/register`);
   await page.locator("#reg-name").fill("R9 Thirteen");
   await page.locator("#reg-email").fill(email);
-  await page.locator("#reg-password").fill(PASSWORD);
+  await page.locator("#reg-password").fill(NEW_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(
     page.getByText(/check your email|verification|Continue to your account/i).first(),
@@ -70,7 +72,12 @@ test("R9-13 new customer chat + handoff reach the admin chatbot list and bell", 
   for (const w of [375, 768, 1280]) {
     await ap.setViewportSize({ width: w, height: 900 });
     await ap.goto(`${ADMIN}/admin/chatbot`);
-    await expect(ap.getByRole("cell", { name: email })).toBeVisible({ timeout: 30_000 });
+    // Admin chatbot is a laptop-only screen (<1024px shows a "designed for laptops" notice).
+    if (w >= 1024) {
+      await expect(ap.getByRole("cell", { name: email }).first()).toBeVisible({ timeout: 30_000 });
+    } else {
+      await expect(ap.getByText(/designed for laptops/i)).toBeVisible();
+    }
     await expectNoOverflow(ap);
   }
   await ap.setViewportSize({ width: 1280, height: 900 });
