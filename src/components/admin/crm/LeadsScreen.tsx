@@ -1,5 +1,6 @@
 "use client";
 
+import { downloadCsv } from "@/lib/admin/csv";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -241,7 +242,39 @@ export function LeadsScreen({
                 </button>
               ))}
             </div>
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                downloadCsv(
+                  "leads.csv",
+                  [
+                    "Name",
+                    "Company",
+                    "Email",
+                    "Phone",
+                    "Source",
+                    "Product",
+                    "Status",
+                    "Priority",
+                    "Assignee",
+                    "Created",
+                  ],
+                  rows.map((l) => [
+                    l.name,
+                    l.company,
+                    l.email,
+                    l.phone,
+                    l.source,
+                    l.product,
+                    l.status,
+                    l.priority,
+                    l.assignee?.name,
+                    l.createdAt,
+                  ]),
+                )
+              }
+            >
               <DownloadIcon aria-hidden /> Export CSV
             </Button>
             <Button size="sm" onClick={() => setNewOpen(true)}>

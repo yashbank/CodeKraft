@@ -1,5 +1,6 @@
 "use client";
 
+import { downloadCsv } from "@/lib/admin/csv";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -125,7 +126,31 @@ export function CustomersList({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => toast("Export queued — excludes deleted PII")}
+              onClick={() =>
+                downloadCsv(
+                  "customers.csv",
+                  [
+                    "Name",
+                    "Email",
+                    "Company",
+                    "Country",
+                    "Status",
+                    "Orders open",
+                    "Lifetime spend INR",
+                    "Joined",
+                  ],
+                  customers.map((c) => [
+                    c.name,
+                    c.email,
+                    c.company,
+                    c.country,
+                    c.status,
+                    c.openOrders,
+                    (c.lifetimeSpendInr / 100).toFixed(2),
+                    c.joinedAt,
+                  ]),
+                )
+              }
             >
               <DownloadIcon aria-hidden /> Export CSV
             </Button>

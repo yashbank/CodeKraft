@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { pageMetadata } from "@/lib/seo";
+
 import { anonymousContext } from "@/lib/authz/context";
 import { toneFromSlug } from "@/lib/media-tone";
 import {
@@ -12,11 +14,12 @@ import type { CaseStudySummary, ClientLogo, ServiceOption } from "@/components/s
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/projects",
   title: "Case Studies & Projects",
   description:
     "Explore case studies, client systems, and custom architectures engineered and shipped by our team.",
-};
+});
 
 export default async function ProjectsRoute() {
   const ctx = anonymousContext();

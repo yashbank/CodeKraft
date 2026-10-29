@@ -1,9 +1,10 @@
 "use client";
 
+import { SavedViews } from "../SavedViews";
+import { downloadCsv } from "@/lib/admin/csv";
 import Link from "next/link";
 import * as React from "react";
 import { ChevronDownIcon, DownloadIcon, InfoIcon } from "lucide-react";
-import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,41 @@ export function AllocationsScreen({
   const sum = (f: (r: AllocationRow) => number) => rows.reduce((s, r) => s + f(r), 0);
   const partnerName = (n: string) => (isSuperAdmin || n === ownPartnerName ? n : "Other partner");
   const f = useUrlFilters();
+  const m = (x: { amountMinor: number }) => (x.amountMinor / 100).toFixed(2);
+  const exportRows = () =>
+    downloadCsv(
+      "allocations.csv",
+      [
+        "Date",
+        "Order",
+        "Product",
+        "Item",
+        "Gross",
+        "Discount",
+        "Tax",
+        "Gateway fee",
+        "Bank charge",
+        "Distributable",
+        "Company cut",
+        "Partners",
+        "Ownership version",
+      ],
+      rows.map((r) => [
+        r.at,
+        r.order,
+        r.product,
+        r.item,
+        m(r.gross),
+        m(r.discount),
+        m(r.tax),
+        m(r.gatewayFee),
+        m(r.bankCharge),
+        m(r.distributable),
+        m(r.companyCut.amount),
+        r.partners.map((p) => `${partnerName(p.name)} ${m(p.amount)}`).join("; "),
+        r.ownershipVersion,
+      ]),
+    );
   const [search, setSearch] = useUrlSearch();
   // Keep the active choice selectable even when it filtered every row out.
   const productOptions = [
@@ -72,9 +108,12 @@ export function AllocationsScreen({
         title="Allocations"
         description="How each paid order item was split: gross → discount → tax → gateway fee → bank shortfall → distributable → company cut → partner lines, with the ownership version used."
         actions={
-          <Button variant="outline" size="sm" onClick={() => toast("Export queued (audited)")}>
-            <DownloadIcon aria-hidden /> Export CSV
-          </Button>
+          <>
+            <SavedViews screen="allocations" />
+            <Button variant="outline" size="sm" onClick={exportRows}>
+              <DownloadIcon aria-hidden /> Export CSV
+            </Button>
+          </>
         }
       />
       <DataToolbar

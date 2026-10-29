@@ -393,7 +393,22 @@
  *    changes (toast, tab panel, dialog) stay comprehensible. The same path is forced by the
  *    in-app switch via <html data-motion="reduce"> (cookie ck_motion=reduce).
  * ------------------------------------------------------------------------- */
+/* Admin route change: subtle fade/slide on the main content (keyed by route in AdminShell). The
+ * keyframes end at the natural state and no fill-mode is kept, so there is no layout shift. */
+@keyframes ck-admin-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.admin-page-enter {
+  animation: ck-admin-page-enter 180ms ease-out backwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .admin-page-enter {
+    animation: none;
+  }
   *,
   *::before,
   *::after {
@@ -411,6 +426,9 @@
     ) !important;
     transition-timing-function: linear !important;
   }
+}
+[data-motion="reduce"] .admin-page-enter {
+  animation: none;
 }
 [data-motion="reduce"] *,
 [data-motion="reduce"] *::before,

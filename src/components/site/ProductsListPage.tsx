@@ -47,7 +47,7 @@ import {
   type CategoryNode,
   type ProductFilterState,
 } from "./ProductFilters";
-import { currencySymbol } from "@/lib/display-currency";
+import { currencySymbol } from "@/lib/currency-prefs";
 import type { DeliveryType, ProductSummary, PurchaseModel } from "./types";
 
 export type ProductSort = "newest" | "price_asc" | "price_desc" | "popular" | "featured";

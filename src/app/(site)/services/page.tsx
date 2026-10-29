@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { pageMetadata } from "@/lib/seo";
+
 import { anonymousContext } from "@/lib/authz/context";
 import { toServiceIcon } from "@/lib/service-icon";
 import { listServicesQuery } from "@/modules/content/queries";
@@ -8,11 +10,12 @@ import type { Service, ServiceOption } from "@/components/site/types";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/services",
   title: "Services — Custom Web Applications & Platform Engineering",
   description:
     "End-to-end custom engineering, software architecture, and full-stack development. Scoped, built, and delivered.",
-};
+});
 
 export default async function ServicesRoute() {
   const result = await listServicesQuery({}, anonymousContext());

@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
 
+import { siteUrl } from "@/lib/seo";
+
 import { anonymousContext } from "@/lib/authz/context";
 import { listBlogPostsQuery } from "@/modules/blog/queries";
 import { listProductsQuery } from "@/modules/catalog/queries";
@@ -11,7 +13,7 @@ import { LEGAL_NAV } from "@/app/dev/screens/_fixtures/site";
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://codekraft.in";
+  const baseUrl = siteUrl();
   const now = new Date();
   const ctx = anonymousContext();
   const [productsResult, caseStudiesResult, blogResult] = await Promise.all([

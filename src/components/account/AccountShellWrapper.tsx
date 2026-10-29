@@ -7,7 +7,7 @@ import { AccountShell, type AccountNavKey } from "./AccountShell";
 import { Banner } from "./Banner";
 import { ResendVerificationButton } from "./ResendVerificationButton";
 import type { NotificationItem } from "./types";
-import { CURRENCY_COOKIE } from "@/lib/display-currency";
+import { CURRENCY_COOKIE } from "@/lib/currency-prefs";
 import type { Currency } from "@/lib/money";
 import { updateMyAccountSettings } from "@/modules/users/site-mutations";
 import { markAllMyNotificationsRead } from "@/modules/notifications/site-mutations";

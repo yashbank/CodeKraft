@@ -376,7 +376,6 @@ export function QuotesScreen({
                             disabled: q.status === "draft",
                             onSelect: () => handleCopyPayLink(q.payLink),
                           },
-                          { label: "Duplicate", disabled: true },
                           {
                             label: "Cancel",
                             destructive: true,
@@ -691,6 +690,11 @@ export function QuotesScreen({
                   variant="ghost"
                   size="icon-md"
                   aria-label="Copy pay link"
+                  title={
+                    !selected || selected.status === "draft"
+                      ? "Send the quote to get a pay link"
+                      : undefined
+                  }
                   disabled={!selected || selected.status === "draft"}
                   onClick={() => selected && handleCopyPayLink(selected.payLink)}
                 >
@@ -703,6 +707,7 @@ export function QuotesScreen({
             </div>
             <div className="mt-4 flex flex-col gap-2">
               <Button
+                title={selected ? undefined : "Select a quote first"}
                 onClick={() =>
                   selected &&
                   handleSend(
@@ -724,6 +729,7 @@ export function QuotesScreen({
               </Button>
               <Button
                 variant="destructive"
+                title={selected ? undefined : "Select a quote first"}
                 disabled={
                   !selected ||
                   ["paid", "cancelled", "rejected"].includes(selected.status) ||

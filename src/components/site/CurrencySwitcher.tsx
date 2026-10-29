@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { CurrencySelect } from "@/components/account/CurrencySelect";
-import { CURRENCY_COOKIE, resolveDisplayCurrency } from "@/lib/display-currency";
+import { CURRENCY_COOKIE, resolveDisplayCurrency } from "@/lib/currency-prefs";
 import type { Currency } from "@/lib/money";
 import { updateMyAccountSettings } from "@/modules/users/site-mutations";
 
