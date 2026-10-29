@@ -1,16 +1,19 @@
 # BUGS-R9
 
-Generated from test-results/r9.json: 4 failing, 302 passing.
+Generated from test-results/r9.json: 7 failing, 252 passing.
 
 ## S1
 
-- [r9-desktop] route `health is real, widgets clean, radius token reaches cards, 3 widths` role `?` width 1280:  - Error: expect(locator).toBeVisible() failed | Expected: visible
-- [r9-mobile] route `health is real, widgets clean, radius token reaches cards, 3 widths` role `?` width 412:  - Error: expect(locator).toBeVisible() failed | Expected: visible
 
 ## S2
 
-- [r9-desktop] route `My share is the signed-in admin's own partner (CEO vs CFO)` role `?` width 1280:  - Error: expect(received).toBe(expected) // Object.is equality | Expected: true
+- [r9-desktop] route `/legal/privacy` role `anonymous` width 1280: loads at 375/768/1280 - Error: 429 /api/auth/get-session | 429 /api/auth/get-session
+- [r9-desktop] route `/legal/terms` role `anonymous` width 1280: loads at 375/768/1280 - Error: 429 /api/auth/get-session | 429 /api/auth/get-session
+- [r9-desktop] route `/legal/refunds` role `anonymous` width 1280: loads at 375/768/1280 - Error: 429 /api/auth/get-session | 429 /api/auth/get-session
+- [r9-desktop] route `/contact` role `customer` width 1280: public page loads at 375/768/1280 - Error: 429 /api/auth/get-session | 429 /api/auth/get-session
+- [r9-desktop] route `/legal/privacy` role `customer` width 1280: public page loads at 375/768/1280 - Error: 429 /api/auth/get-session | 429 /api/auth/get-session
+- [r9-desktop] route `/legal/terms` role `customer` width 1280: public page loads at 375/768/1280 - Error: 429 /api/auth/get-session | 429 /api/auth/get-session
+- [r9-desktop] route `/account/orders/:orderNo` role `customer` width 1280: loads at 375/768/1280 - Error: /account/orders/R914-PENDING @375 status | expect(received).toBeLessThan(expected)
 
 ## S3
 
-- [r9-desktop] route `dialog / sheet fits at 375, 768, 1280 and Esc closes it` role `?` width 1280:  - Error: horizontal overflow 24px at 1280px | expect(received).toBeLessThanOrEqual(expected)

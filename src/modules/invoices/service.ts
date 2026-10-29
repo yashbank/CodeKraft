@@ -122,7 +122,8 @@ export async function getInvoiceDocument(
   ctx: RequestContext,
   invoiceId: string,
 ): Promise<{ props: InvoiceProps; id: string }> {
-  const isAdmin = ctx.roles.includes("admin") || ctx.roles.includes("super_admin");
+  const isAdmin =
+    ctx.roles.includes("admin") || ctx.roles.includes("super_admin") || ctx.roles.includes("staff");
   if (isAdmin) assertPermission(ctx, "invoices.read");
   return await withTx(async (tx) => {
     const [row] = await tx
@@ -352,7 +353,10 @@ export class DefaultInvoicesService implements InvoicesService {
 
   async getInvoicePdfUrl(ctx: RequestContext, input: GetInvoicePdfUrlInput): Promise<PdfUrlResult> {
     const db = await getDb();
-    const isAdmin = ctx.roles.includes("admin") || ctx.roles.includes("super_admin");
+    const isAdmin =
+      ctx.roles.includes("admin") ||
+      ctx.roles.includes("super_admin") ||
+      ctx.roles.includes("staff");
 
     let objectKey: string;
 
