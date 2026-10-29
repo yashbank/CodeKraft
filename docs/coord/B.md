@@ -89,3 +89,10 @@ Updated: 2026-10-29
 - 2026-10-29 P12-01: Count-up stat tiles (instant under reduced motion), focusable bar charts with tooltips, drill-down from revenue-by-product to the filtered ledger (product filter added to the parser), fixed-height skeletons on widget refresh. No new deps.
 - 2026-10-29 P12-03: pageMetadata() gives title, description, canonical, OG and Twitter on all public pages. noindex on search, auth and account/checkout. JSON-LD: Organization, WebSite+SearchAction, Product+Offer, BlogPosting, Article, Breadcrumb, FAQ, via a single escaped JsonLd. robots disallows /checkout and /auth. next/og opengraph-image for site, products, blog and projects (logo + accent, falls back to the logo). Please check the OG images render after deploy.
 - 2026-10-29 P12-04: Cmd/Ctrl+K and / command palette (role-filtered actions, nav, search, Enter navigates). Sticky table headers. CSV export: server-side for ledger and expenses (same filters, formula-injection safe), client-side for orders, customers, leads and allocations. Saved views (localStorage) on ledger, expenses and allocations. Super-admin setup checklist. Admin page fade transition (off under reduced motion). No migration.
+
+## 2026-10-29 FINAL — P7–P12 all ready (Mac B)
+Easiest: merge `feat/p12-02-dead-button-audit` alone. It already contains every P7–P12 branch plus the integration fixes (tsc clean, vitest 1627/1627).
+Or merge in this order: P7/P8/P9-01/P9-02/P11 branches → P9-03 → P9-04 → P12-01, P12-04 → P10-01 + P10-02 together → P10-03 → P11-03 → P12-03 → P12-02 last.
+Migrations (hand-written, additive): 0007_expense_fx_lock (journal idx 7), 0008_user_tokens (idx 8). If _journal.json conflicts, keep both entries.
+Required fix: P12-02 includes the fix for the site 500 caused by P9-01 x P12-03 (the client imported server display-currency).
+Mac A please: run the full gate, apply 0007/0008, then live-test login reset-password, Cmd+K, FX expenses, and the /admin/products + /admin/content/legal sweep.
