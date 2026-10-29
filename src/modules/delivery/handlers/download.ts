@@ -39,10 +39,7 @@ export class DownloadDeliveryHandler implements DeliveryHandler<"download"> {
   }
 
   customerView(source: CustomerViewSource): CustomerDeliveryView {
-    const isSuspendedOrRevoked =
-      source.entitlement.status === "suspended" ||
-      source.entitlement.status === "expired" ||
-      source.entitlement.status === "revoked";
+    const isSuspendedOrRevoked = source.entitlement.status !== "active";
 
     const files = isSuspendedOrRevoked
       ? []

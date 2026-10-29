@@ -19,7 +19,7 @@ import {
 import { orders, orderItems } from "../../../drizzle/schema/commerce";
 import { invoices } from "../../../drizzle/schema/invoices";
 import { media } from "../../../drizzle/schema/media";
-import { products } from "../../../drizzle/schema/catalog";
+import { productVersions, products, type ChangelogJson } from "../../../drizzle/schema/catalog";
 import { offerings } from "../../../drizzle/schema/offerings";
 import { users } from "../../../drizzle/schema/auth";
 import type { EntitlementsService, GrantedEntitlement, SystemRevokeReason } from "./contracts";
@@ -59,6 +59,18 @@ import { assertValidEntitlementTransition } from "./state";
 import { calculateAccessEndsAt, isWithinAccessWindow } from "./access";
 import { buildHandlerCtx, required } from "@/modules/_shared/handler-ctx";
 import type { JobContext, JobOutcome } from "@/modules/analytics/types";
+
+function formatChangelog(c: ChangelogJson | null): string | null {
+  if (!c) return null;
+  const lines = [
+    c.summary,
+    ...(c.added ?? []).map((x) => `Added: ${x}`),
+    ...(c.changed ?? []).map((x) => `Changed: ${x}`),
+    ...(c.fixed ?? []).map((x) => `Fixed: ${x}`),
+    ...(c.breaking ?? []).map((x) => `Breaking: ${x}`),
+  ].filter(Boolean);
+  return lines.length ? lines.join("\n") : null;
+}
 
 function userIdOf(ctx: RequestContext): string {
   if (ctx.userId === null) throw new AppError(ErrorCode.UNAUTHENTICATED, "Sign in required");
@@ -881,7 +893,14 @@ export class DefaultEntitlementsService implements EntitlementsService {
       })
       .from(releaseFiles)
       .innerJoin(media, eq(releaseFiles.mediaId, media.id))
-      .where(eq(releaseFiles.productId, ent.productId));
+      .where(eq(releaseFiles.productId, ent.productId))
+      .orderBy(desc(releaseFiles.releasedAt));
+
+    const versionRows = await db
+      .select()
+      .from(productVersions)
+      .where(eq(productVersions.productId, ent.productId))
+      .orderBy(desc(productVersions.releasedAt));
 
     const openTasks = await db
       .select()
@@ -955,7 +974,12 @@ export class DefaultEntitlementsService implements EntitlementsService {
       grantedAt: ent.createdAt.toISOString(),
       refunded: ent.revokeReason === "refund",
       instructionsHtml: null,
-      versions: [],
+      // Newest first. shortcut: no update-policy filtering, every provided version is listed.
+      versions: versionRows.map((v) => ({
+        version: v.version,
+        releasedAt: v.releasedAt.toISOString(),
+        changelog: formatChangelog(v.changelogJson),
+      })),
       downloads: "downloads" in cView ? cView.downloads : undefined,
       licenseKeyMasked: "licenseKeyMasked" in cView ? cView.licenseKeyMasked : undefined,
       provisioning: "provisioning" in cView ? cView.provisioning : undefined,
