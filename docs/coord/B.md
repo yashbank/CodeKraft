@@ -43,6 +43,7 @@ Updated: 2026-10-29
 - P10-02 | ready | branch feat/p10-02-reset-password (stacked on P10-01; merge this branch, it includes P10-01) | vitest tests/unit: 1081 pass at e762a2b
 - P10-03 | ready | branch feat/p10-03-access-policy | docs only (stacked on P10-02); prettier ok
 - P12-01 | ready | branch feat/p12-01-interactive-widgets | stacked on P9-04; vitest tests/unit+static: 1102 pass
+- P12-03 | ready | branch feat/p12-03-seo | stacked on P11-03; vitest tests/unit+static: 1095 pass (seo 9)
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
 - [open] R2 private bucket CORS must allow PUT from the admin origin | P2-01 browser uploads straight to R2 | upload a .dmg on a product version, it completes and appears
@@ -84,3 +85,4 @@ Updated: 2026-10-29
 - 2026-10-29 P10-02: Admin-generated single-use reset link (1 hour, Copy link): sets the password, revokes sessions, clears the forced-change flag. Only a super admin can reset a super admin; no self-reset. The forgot-password email goes through sendEmail. Known: the better-auth email /reset-password path doesn't clear must_change_password (the user is just asked to change again).
 - 2026-10-29 P10-03: docs/ACCESS-POLICY.md: roles, invites, temp passwords, reset links, password rules, 2FA, offboarding. Placeholders only. Lists the remaining gaps: any other active admin can approve; 2FA not enforced; session caps unused; email reset doesn't clear the forced-change flag; partner is not a login role.
 - 2026-10-29 P12-01: Count-up stat tiles (instant under reduced motion), focusable bar charts with tooltips, drill-down from revenue-by-product to the filtered ledger (product filter added to the parser), fixed-height skeletons on widget refresh. No new deps.
+- 2026-10-29 P12-03: pageMetadata() gives title, description, canonical, OG and Twitter on all public pages. noindex on search, auth and account/checkout. JSON-LD: Organization, WebSite+SearchAction, Product+Offer, BlogPosting, Article, Breadcrumb, FAQ, via a single escaped JsonLd. robots disallows /checkout and /auth. next/og opengraph-image for site, products, blog and projects (logo + accent, falls back to the logo). Please check the OG images render after deploy.
