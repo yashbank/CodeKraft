@@ -93,6 +93,7 @@ export interface AccountShellProps {
   title?: string;
   breadcrumb?: { label: string; href?: string }[];
   currency: Currency;
+  currencyOptions?: readonly Currency[];
   onCurrencyChange?: (c: Currency) => void;
   notifications: NotificationItem[];
   unreadCount: number;
@@ -116,6 +117,7 @@ export function AccountShell({
   title,
   breadcrumb,
   currency,
+  currencyOptions,
   onCurrencyChange,
   notifications,
   unreadCount,
@@ -278,6 +280,7 @@ export function AccountShell({
           <div className="ml-auto flex items-center gap-1">
             <CurrencySelect
               value={currency}
+              options={currencyOptions}
               onChange={onCurrencyChange}
               className="hidden sm:flex"
             />

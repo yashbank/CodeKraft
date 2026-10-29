@@ -13,6 +13,7 @@ import type { ListResult } from "@/modules/_shared/zod";
 import { auditService } from "@/modules/audit/service";
 import { approvalsService } from "@/modules/approvals/service";
 import { offeringsService } from "@/modules/offerings/service";
+import { cardFromPrice } from "@/modules/offerings/pricing";
 import { revalidateTagSafe, revalidateTagsSafe } from "@/lib/revalidate";
 import { getPublicMediaBaseUrl } from "@/lib/storage";
 import { loadProductCovers } from "./cover-images";
@@ -1737,10 +1738,7 @@ export class DefaultCatalogService implements CatalogService {
         (o): o is typeof o & { amountMinor: number; currency: string } =>
           o.amountMinor != null && o.currency != null,
       );
-      const displayPrices = priced.filter((o) => o.currency === input.displayCurrency);
-      const pool = displayPrices.length > 0 ? displayPrices : priced;
-      const minRow =
-        pool.length > 0 ? pool.reduce((a, b) => (a.amountMinor <= b.amountMinor ? a : b)) : null;
+      const from = await cardFromPrice(priced, input.displayCurrency);
 
       cards.push({
         id: p.id,
@@ -1750,9 +1748,8 @@ export class DefaultCatalogService implements CatalogService {
         coverImage: covers.get(p.id) ?? null,
         category: cat ? { id: cat.id, slug: cat.slug, name: cat.name } : null,
         tags: tagRows,
-        fromPrice: minRow
-          ? { amountMinor: minRow.amountMinor, currency: minRow.currency as Currency }
-          : null,
+        fromPrice: from?.money ?? null,
+        fromPriceApprox: from?.approx ?? false,
         purchaseModels: models.length > 0 ? models : ["one_time"],
         deliveryTypes: deliveries.length > 0 ? deliveries : ["download"],
         isFeatured: true,
@@ -1826,10 +1823,7 @@ export class DefaultCatalogService implements CatalogService {
         (o): o is typeof o & { amountMinor: number; currency: string } =>
           o.amountMinor != null && o.currency != null,
       );
-      const displayPrices = priced.filter((o) => o.currency === input.displayCurrency);
-      const pool = displayPrices.length > 0 ? displayPrices : priced;
-      const minRow =
-        pool.length > 0 ? pool.reduce((a, b) => (a.amountMinor <= b.amountMinor ? a : b)) : null;
+      const from = await cardFromPrice(priced, input.displayCurrency);
 
       cards.push({
         id: p.id,
@@ -1839,9 +1833,8 @@ export class DefaultCatalogService implements CatalogService {
         coverImage: covers.get(p.id) ?? null,
         category: cat ? { id: cat.id, slug: cat.slug, name: cat.name } : null,
         tags: tagRows,
-        fromPrice: minRow
-          ? { amountMinor: minRow.amountMinor, currency: minRow.currency as Currency }
-          : null,
+        fromPrice: from?.money ?? null,
+        fromPriceApprox: from?.approx ?? false,
         purchaseModels: models.length > 0 ? models : ["one_time"],
         deliveryTypes: deliveries.length > 0 ? deliveries : ["download"],
         isFeatured: p.isFeatured,

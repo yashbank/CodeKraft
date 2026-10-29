@@ -43,7 +43,13 @@ export function ProductCardCompact({
         {p.isComingSoon ? (
           <p className="text-body-sm text-fg-muted">Coming soon</p>
         ) : (
-          <PriceBlock amount={p.fromPrice} compareAt={p.compareAtPrice} prefix="From" size="sm" />
+          <PriceBlock
+            amount={p.fromPrice}
+            approx={p.priceApprox}
+            compareAt={p.compareAtPrice}
+            prefix="From"
+            size="sm"
+          />
         )}
       </div>
       <div className="flex items-center gap-2">

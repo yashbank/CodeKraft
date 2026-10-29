@@ -47,6 +47,7 @@ import {
   type CategoryNode,
   type ProductFilterState,
 } from "./ProductFilters";
+import { currencySymbol } from "@/lib/display-currency";
 import type { DeliveryType, ProductSummary, PurchaseModel } from "./types";
 
 export type ProductSort = "newest" | "price_asc" | "price_desc" | "popular" | "featured";
@@ -170,6 +171,7 @@ export function ProductsListPage({
   signedIn = false,
   wishlistedIds = [],
 }: ProductsListPageProps) {
+  const symbol = currencySymbol(products.find((p) => p.fromPrice)?.fromPrice?.currency ?? "INR");
   const [wishlisted, setWishlisted] = useState<Set<string>>(() => new Set(wishlistedIds));
 
   async function toggleWishlistFor(productId: string) {
@@ -319,7 +321,7 @@ export function ProductsListPage({
       ? [
           {
             key: "price",
-            label: `₹${String(filters.priceMin ?? 0)} – ${filters.priceMax !== undefined ? `₹${String(filters.priceMax)}` : "any"}`,
+            label: `${symbol}${String(filters.priceMin ?? 0)} – ${filters.priceMax !== undefined ? `${symbol}${String(filters.priceMax)}` : "any"}`,
             remove: () => applyFilters({ ...filters, priceMin: undefined, priceMax: undefined }),
           },
         ]
@@ -331,6 +333,7 @@ export function ProductsListPage({
     techOptions: facets.tech,
     industryOptions: facets.industries,
     audienceOptions: facets.audiences,
+    currencySymbol: symbol,
   };
 
   return (

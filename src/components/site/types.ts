@@ -25,6 +25,8 @@ export interface OfferingView {
   deliveryType: DeliveryType;
   /** Absent for `custom_quote`. */
   price?: Money;
+  /** `price` is converted from the base price (render "≈"). */
+  priceApprox?: boolean;
   compareAtPrice?: Money;
   licenseType?: string;
   /** "Lifetime" / "12 months" (D-605). */
@@ -45,6 +47,8 @@ export interface ProductSummary {
   category: CategoryRef;
   /** Lowest active offering price; absent means "Custom quote" (or coming soon). */
   fromPrice?: Money;
+  /** `fromPrice` is converted from the base price (render "≈"). */
+  priceApprox?: boolean;
   compareAtPrice?: Money;
   purchaseModels: PurchaseModel[];
   deliveryTypes: DeliveryType[];

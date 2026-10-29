@@ -1,3 +1,4 @@
+import { getDisplayCurrency } from "@/lib/display-currency";
 import type { Metadata } from "next";
 
 import { safeCta } from "@/components/admin/content/cta-targets";
@@ -58,6 +59,7 @@ function chapterCopy(c: LandingChapterView | undefined) {
 }
 
 export default async function LandingRoute() {
+  const { currency } = await getDisplayCurrency();
   const ctx = anonymousContext();
   const [
     landingResult,
@@ -73,7 +75,7 @@ export default async function LandingRoute() {
     listTestimonialsQuery({ context: "site" }, ctx),
     listCaseStudiesQuery({ limit: 3 }, ctx),
     listServicesQuery({}, ctx),
-    listFeaturedProductsQuery({ limit: 8, displayCurrency: "INR" }, ctx),
+    listFeaturedProductsQuery({ limit: 8, displayCurrency: currency }, ctx),
     listBlogTeasersQuery({ limit: 3 }, ctx),
   ]);
 

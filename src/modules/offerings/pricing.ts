@@ -49,3 +49,39 @@ export async function resolveOfferingPrice(
 export function formatOfferingPrice(price: OfferingPriceView): string {
   return format({ amountMinor: price.amountMinor, currency: price.currency });
 }
+
+/**
+ * Lowest "from" price for a product card in `displayCurrency`: the cheapest explicit price in that
+ * currency, else the cheapest INR price converted at the latest rate (`approx: true`). If no rate
+ * is available the unconverted cheapest price is returned (never hides the price).
+ */
+export async function cardFromPrice(
+  rows: readonly { amountMinor: number; currency: string }[],
+  displayCurrency: Currency,
+): Promise<{ money: { amountMinor: number; currency: Currency }; approx: boolean } | null> {
+  const cheapest = (pool: typeof rows) =>
+    pool.reduce((a, b) => (a.amountMinor <= b.amountMinor ? a : b));
+  const own = rows.filter((r) => r.currency === displayCurrency);
+  if (own.length > 0) {
+    const r = cheapest(own);
+    return { money: { amountMinor: r.amountMinor, currency: displayCurrency }, approx: false };
+  }
+  const inr = rows.filter((r) => r.currency === "INR");
+  if (inr.length > 0) {
+    try {
+      const quote = await getFxProvider().getRate("INR", displayCurrency);
+      return {
+        money: {
+          amountMinor: convertMinor(cheapest(inr).amountMinor, quote.rate),
+          currency: displayCurrency,
+        },
+        approx: true,
+      };
+    } catch {
+      // no stored/static rate: fall through to the unconverted price
+    }
+  }
+  if (rows.length === 0) return null;
+  const r = cheapest(rows);
+  return { money: { amountMinor: r.amountMinor, currency: r.currency as Currency }, approx: false };
+}
