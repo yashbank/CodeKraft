@@ -29,6 +29,7 @@ const DOC_TABLE: ReadonlyArray<[string, number]> = [
   ["RATE_LIMITED", 429],
   ["IDEMPOTENT_REPLAY", 200],
   ["UPSTREAM_UNAVAILABLE", 503],
+  ["PASSWORD_CHANGE_REQUIRED", 403],
   ["INTERNAL", 500],
 ];
 
