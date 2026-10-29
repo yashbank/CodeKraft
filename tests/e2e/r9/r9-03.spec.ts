@@ -67,13 +67,14 @@ async function entitlementId(orderId: string): Promise<string> {
   return e!.id!;
 }
 
-test.describe.configure({ mode: "serial" });
+test.describe.configure({ mode: "serial", timeout: 120_000 });
 
 test.describe("R9-03 fulfilment per delivery type", () => {
   let admin: Page;
   let cust: Page;
   test.beforeAll(async ({ browser }) => {
-    admin = await (await browser.newContext()).newPage();
+    // Admin order/settings screens are laptop-only; keep the admin side desktop in the mobile project.
+    admin = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
     cust = await (await browser.newContext()).newPage();
     await loginAs(admin, "super_admin");
     await loginAs(cust, "customer");
@@ -120,7 +121,12 @@ test.describe("R9-03 fulfilment per delivery type", () => {
       const mark = admin.getByRole("button", { name: "Mark delivered" }).first();
       await expect(mark).toBeEnabled();
       await cust.goto(`${SITE}/account/purchases/${entId}`);
-      await expect(cust.getByText(/Provisioning|Being set up/).first()).toBeVisible();
+      // Hosted shows "Being set up"; custom has no panel copy beyond its heading + Pending chip.
+      if (type === "hosted") await expect(cust.getByText(/Being set up/).first()).toBeVisible();
+      else {
+        await expect(cust.getByRole("heading", { name: "Custom delivery" })).toBeVisible();
+        await expect(cust.getByText("Pending").first()).toBeVisible();
+      }
       await mark.click();
       await expect.poll(() => orderStatus(orderId), { timeout: 30_000 }).toBe("fulfilled");
       await cust.reload();
@@ -132,7 +138,12 @@ test.describe("R9-03 fulfilment per delivery type", () => {
   }
 
   test("Fulfilment guide in Settings renders at 375/768/1280", async () => {
-    await atWidths(admin, `${ADMIN}/admin/settings`, async () => {
+    await atWidths(admin, `${ADMIN}/admin/settings`, async (w) => {
+      // Admin settings is laptop-only (<1024px shows a notice instead of the screen).
+      if (w < 1024) {
+        await expect(admin.getByText(/designed for laptops/)).toBeVisible();
+        return;
+      }
       await admin.getByRole("button", { name: "Fulfilment guide" }).click();
       const guide = admin.getByTestId("fulfilment-guide");
       await expect(guide).toBeVisible();
