@@ -54,7 +54,7 @@ Updated: 2026-10-29
 - R9-05 | ready | branch feat/r9-integration | guard test + r9-05; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-06 | ready | branch feat/r9-integration | r9-06 confirming screen + delivery; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-07 | ready | branch feat/r9-integration | r9-07 real health + tokens; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
-- R9-08 | doing | branch feat/r9-08
+- R9-08 | ready | branch feat/r9-integration | r9-08 options/Show all/density; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-09 | doing | branch feat/r9-09
 - R9-10 | doing | branch feat/r9-10
 - R9-11 | doing | branch feat/r9-11
