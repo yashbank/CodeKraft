@@ -93,7 +93,7 @@ export function SiteHeader({
         <div className="mx-auto flex h-14 max-w-[1320px] items-center gap-4 px-4 sm:px-6 lg:h-16 lg:px-8 2xl:max-w-[1440px] tv:h-20 tv:max-w-[1920px] tv:px-24">
           <Link
             href="/"
-            className="inline-flex h-10 items-center rounded-sm text-fg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+            className="inline-flex h-10 min-w-10 items-center rounded-sm text-fg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
             aria-label={`${siteName} home`}
           >
             <Wordmark className="h-5 lg:h-6 tv:h-8" />

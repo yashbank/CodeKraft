@@ -94,12 +94,12 @@ test.describe("P14-07 theme studio", () => {
       .poll(
         async () => {
           await page.goto(SITE);
-          return page.evaluate(() => document.documentElement.dataset.palette);
+          const palette = await page.evaluate(() => document.documentElement.dataset.palette);
+          return `${String(palette)}|${await rootVar(page, "--ck-radius-lg")}`;
         },
         { timeout: 30_000 },
       )
-      .toBe("sunset");
-    expect(await rootVar(page, "--ck-radius-lg")).toBe("32px");
+      .toBe("sunset|32px");
     expect(await rootVar(page, "--ck-font-display")).toMatch(/Playfair Display/);
     expect(
       await page
