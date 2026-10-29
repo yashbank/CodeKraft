@@ -27,7 +27,7 @@ Updated: 2026-10-29
 - P6-04 | ready | branch feat/p6-04-ui-sweep (contains merged P6-01/02/03/05; merge it LAST) | e2e tests/e2e/flows/ui-sweep.spec.ts 6/6 pass (--workers=1); vitest tests/unit/site: 46 pass
 - P7-01 | ready | branch feat/p7-01-reset-ui-fix | vitest tests/unit/admin/danger-zone.test.tsx: 2 pass; e2e reset-site-data-ui.spec.ts type-checked only (never clicks Request)
 - P7-02 | ready | branch feat/p7-02-rounded-logos | vitest logo-radius + logo-strip + site-logo: 11 pass
-- P7-03 | doing | branch feat/p7-03-invoice-redesign
+- P7-03 | ready | branch feat/p7-03-invoice-redesign | vitest tests/unit/invoices + pdf: 28 pass (RGBA/palette/gray+alpha/JPEG logos, all fields, size guard)
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
 - [open] R2 private bucket CORS must allow PUT from the admin origin | P2-01 browser uploads straight to R2 | upload a .dmg on a product version, it completes and appears
@@ -53,3 +53,4 @@ Updated: 2026-10-29
 - 2026-10-29 P6-04 ready. Phase 6 complete. Sweep at 390/768/1440 over site, account and admin: no console errors or failed requests in app code. Fixed: /account/chat overflowed at 390; the theme toggle did nothing (it now switches theme and saves the ck_theme cookie, honouring the P4-01 setting). Left: /admin/customers table overflows at 390 (admin is laptop-gated on mobile by design). The e2e spec is stable only with --workers=1 on next dev.
 - 2026-10-29 P7-02: Client logo tiles, LogoMark and SiteLogo get rounded-md (6px) with overflow-hidden; admin logo tiles too. Class-only change.
 - 2026-10-29 P7-01: Ticks showed the expanded dependency set; ticks now show only the user's picks plus an 'Also removed because they depend on it' line. The name check used raw settings while the server used getSiteName(); the page now passes getSiteName(). Reset never run on any DB.
+- 2026-10-29 P7-03: Missing logo: the PDF only embedded plain 8-bit RGB/gray PNGs and JPEGs, so transparent or palette PNGs (most logos) were skipped silently. It now decodes them (node zlib, alpha onto white, 4096px cap). Logo upload is now PNG/JPEG only (WebP can't embed). New colourful invoice (accent band, status badge, order no, purchase date, tax lines, notes) in HTML and PDF. Invoices issued before the logo was set have no logo in their snapshot by design: test with a NEW order.
