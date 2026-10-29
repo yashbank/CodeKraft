@@ -28,13 +28,14 @@ const WIDTH: Record<string, number> = { "r9-desktop": 1280, "r9-mobile": 412 };
 function severity(msg: string): "S1" | "S2" | "S3" {
   if (/horizontal overflow/.test(msg)) return "S3";
   if (
-    /\b5\d\d\b|HTTP status|pageerror|Timeout|toHaveURL|redirected away|no checkout link|staff sees/.test(
+    /\b5\d\d\b|HTTP status|pageerror|Timeout|page load hung|toHaveURL|redirected away|no checkout link|staff sees/.test(
       msg,
     )
   )
     return "S1";
   return "S2";
 }
+// eslint-disable-next-line no-control-regex
 const strip = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
 function collect(s: Suite, out: Spec[]) {
   out.push(...(s.specs ?? []));
