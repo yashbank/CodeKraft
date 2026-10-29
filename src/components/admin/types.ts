@@ -960,6 +960,8 @@ export interface SettingsData {
     radius: string;
     border: string;
     pattern: string;
+    layout: string;
+    density: string;
     lightEnabled: boolean;
   };
   ai: {

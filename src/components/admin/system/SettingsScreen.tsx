@@ -41,12 +41,20 @@ import { cn } from "@/components/ui/_utils";
 import { CHAT_MODELS, chatModelOptionLabel } from "@/modules/chat/models";
 import { CURRENCIES } from "@/lib/money";
 import { PALETTES } from "@/lib/palettes";
+import { OptionPicker, type PickerOption } from "./OptionPicker";
 import {
   BORDER_IDS,
+  DEFAULT_UI_STYLE,
+  DENSITY_IDS,
+  DENSITY_PAD,
   FONT_IDS,
   FONT_LABELS,
+  LAYOUT_IDS,
+  LAYOUT_LABELS,
+  LAYOUT_WIDTH,
   PATTERN_IDS,
   RADIUS_IDS,
+  borderValue,
   patternProps,
   uiStyleVars,
   type UiStyle,
@@ -451,28 +459,116 @@ function UiStylePicker({
   disabled: boolean;
 }) {
   const set = <K extends keyof UiStyle>(k: K, v: string) => onChange({ ...value, [k]: v });
+  const camel = (o: Record<string, string>) =>
+    Object.fromEntries(
+      Object.entries(o).map(([k, v]) => [k.replace(/-(\w)/g, (_, c) => c.toUpperCase()), v]),
+    );
+  const prev = "h-10 overflow-hidden rounded-md border border-border bg-canvas";
+  const theme =
+    typeof document === "undefined" ? undefined : document.documentElement.dataset.theme;
+  const fontOpt = (id: string): PickerOption => ({
+    id,
+    label: FONT_LABELS[id as keyof typeof FONT_LABELS],
+    preview: (
+      <span
+        aria-hidden
+        className="text-h4 block truncate"
+        style={{
+          ...uiStyleVars({ ...DEFAULT_UI_STYLE, font: id as UiStyle["font"] }),
+          fontFamily: "var(--ck-font-display)",
+        }}
+      >
+        Build something remarkable
+      </span>
+    ),
+  });
+  const radiusOpt = (id: string): PickerOption => ({
+    id,
+    label: id === "soft" ? "Soft (default)" : cap(id),
+    preview: (
+      <span
+        aria-hidden
+        className="bg-accent-soft block h-9 w-full border"
+        style={{
+          ...uiStyleVars({ ...DEFAULT_UI_STYLE, radius: id as UiStyle["radius"] }),
+          borderRadius: "var(--ck-radius-xl)",
+        }}
+      />
+    ),
+  });
+  const borderOpt = (id: string): PickerOption => ({
+    id,
+    label: cap(id),
+    preview: (
+      <span
+        aria-hidden
+        className="bg-surface block h-9 w-full rounded-md border-2"
+        style={{
+          borderColor:
+            borderValue(
+              id as UiStyle["border"],
+              theme === "light-editorial" ? "light-editorial" : "dark-cinematic",
+            ) ?? "var(--ck-color-border)",
+        }}
+      />
+    ),
+  });
+  const patternOpt = (id: string): PickerOption => ({
+    id,
+    label: id === "mesh" ? "Gradient mesh" : cap(id),
+    preview: (
+      <span
+        aria-hidden
+        className={cn(prev, "block w-full")}
+        style={camel(patternProps(id as UiStyle["pattern"]))}
+      />
+    ),
+  });
+  const layoutOpt = (id: string): PickerOption => ({
+    id,
+    label: LAYOUT_LABELS[id as keyof typeof LAYOUT_LABELS],
+    preview: (
+      <span aria-hidden className={cn(prev, "flex items-center justify-center")}>
+        <span
+          className="bg-accent-soft border-accent h-6 rounded-sm border"
+          style={{
+            width: `${Math.round((LAYOUT_WIDTH[id as keyof typeof LAYOUT_WIDTH] / 1440) * 100)}%`,
+          }}
+        />
+      </span>
+    ),
+  });
+  const densityOpt = (id: string): PickerOption => ({
+    id,
+    label: id === "normal" ? "Normal (default)" : cap(id),
+    preview: (
+      <span aria-hidden className={cn(prev, "flex items-center justify-center")}>
+        <span
+          className="bg-accent-soft border-accent rounded-sm border"
+          style={{ padding: `calc(${DENSITY_PAD[id as keyof typeof DENSITY_PAD]} / 3)` }}
+        >
+          <span className="bg-fg-muted block h-1 w-8 rounded-full" />
+        </span>
+      </span>
+    ),
+  });
   const group = (
     label: string,
     k: keyof UiStyle,
     ids: readonly string[],
-    text: (id: string) => string,
+    opt: (id: string) => PickerOption,
+    popular: readonly string[],
+    searchable = false,
   ) => (
-    <fieldset className="grid gap-2">
-      <legend className="text-body-sm mb-1 font-medium">{label}</legend>
-      <RadioGroup
-        value={value[k]}
-        onValueChange={(v) => set(k, v)}
-        className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3"
-        disabled={disabled}
-        aria-label={label}
-      >
-        {ids.map((id) => (
-          <RadioGroupCard key={id} value={id}>
-            <span className="text-body-sm font-semibold">{text(id)}</span>
-          </RadioGroupCard>
-        ))}
-      </RadioGroup>
-    </fieldset>
+    <OptionPicker
+      label={label}
+      value={value[k]}
+      onChange={(v) => set(k, v)}
+      options={ids.map(opt)}
+      popular={popular}
+      searchable={searchable}
+      disabled={disabled}
+    />
   );
   const vars = uiStyleVars(value);
   const bg = patternProps(value.pattern);
@@ -484,14 +580,12 @@ function UiStylePicker({
   } as React.CSSProperties;
   return (
     <div className="grid gap-4">
-      {group("Font pairing", "font", FONT_IDS, (id) => FONT_LABELS[id as keyof typeof FONT_LABELS])}
-      {group("Corner radius", "radius", RADIUS_IDS, (id) =>
-        id === "soft" ? "Soft (default)" : cap(id),
-      )}
-      {group("Borders", "border", BORDER_IDS, cap)}
-      {group("Background pattern", "pattern", PATTERN_IDS, (id) =>
-        id === "mesh" ? "Gradient mesh" : cap(id),
-      )}
+      {group("Font pairing", "font", FONT_IDS, fontOpt, ["default", "grotesk-plex"], true)}
+      {group("Corner radius", "radius", RADIUS_IDS, radiusOpt, ["soft", "round"])}
+      {group("Borders", "border", BORDER_IDS, borderOpt, ["subtle", "defined"])}
+      {group("Background pattern", "pattern", PATTERN_IDS, patternOpt, ["none", "grid"])}
+      {group("Card padding", "density", DENSITY_IDS, densityOpt, ["normal", "comfortable"])}
+      {group("Site layout", "layout", LAYOUT_IDS, layoutOpt, ["standard", "wide"])}
       <div
         data-testid="ui-style-preview"
         aria-label="Style preview"
@@ -555,6 +649,8 @@ export function SettingsScreen({
     radius: s.theme.radius,
     border: s.theme.border,
     pattern: s.theme.pattern,
+    layout: s.theme.layout,
+    density: s.theme.density,
   } as UiStyle);
   const [saving, setSaving] = React.useState(false);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
@@ -573,6 +669,8 @@ export function SettingsScreen({
       radius: s.theme.radius,
       border: s.theme.border,
       pattern: s.theme.pattern,
+      layout: s.theme.layout,
+      density: s.theme.density,
     } as UiStyle);
   }
 
@@ -668,6 +766,8 @@ export function SettingsScreen({
         uiRadius: ui.radius,
         uiBorder: ui.border,
         uiPattern: ui.pattern,
+        uiLayout: ui.layout,
+        uiDensity: ui.density,
       };
     } else {
       return;
@@ -1029,26 +1129,27 @@ export function SettingsScreen({
                   Let visitors switch theme from the site footer
                 </Label>
               </div>
-              <RadioGroup
+              <OptionPicker
+                label="Accent palette"
                 value={palette}
-                onValueChange={setPalette}
-                className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+                onChange={setPalette}
                 disabled={ro}
-                aria-label="Accent palette"
-              >
-                {PALETTES.map((p) => (
-                  <RadioGroupCard key={p.id} value={p.id}>
-                    <span className="text-body font-semibold">{p.label}</span>
+                searchable
+                popular={["violet", "ocean", "emerald"]}
+                options={PALETTES.map((p) => ({
+                  id: p.id,
+                  label: p.label,
+                  preview: (
                     <span
                       aria-hidden
-                      className="mt-2 flex h-8 overflow-hidden rounded-sm border border-border"
+                      className="border-border flex h-8 overflow-hidden rounded-sm border"
                     >
                       <span className="flex-1" style={{ background: p.dark }} />
                       <span className="flex-1" style={{ background: p.light }} />
                     </span>
-                  </RadioGroupCard>
-                ))}
-              </RadioGroup>
+                  ),
+                }))}
+              />
               <p className="text-body-sm text-fg-muted">
                 Accent palette applies across the site, account and admin. Left swatch is used on
                 dark, right on light.

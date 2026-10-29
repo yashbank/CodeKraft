@@ -1,86 +1,173 @@
 /** Admin-selectable typography, shape and background pattern (P11-01). Applied as `html[data-*]` overrides of existing tokens. */
-import { THEMES } from "./theme";
+import { THEMES, type ThemeName } from "./theme";
 
 const SERIF = "ui-serif, Georgia, serif";
 const SANS = "ui-sans-serif, system-ui, sans-serif";
-// id → [label, display var, display fallback, body var, body fallback, display weight override]
-const FONTS_RAW = {
-  default: ["Default (theme)", "", "", "", "", ""],
-  "fraunces-tight": [
-    "Fraunces + Inter Tight",
-    "--font-fraunces",
-    SERIF,
-    "--font-inter-tight",
-    SANS,
-    "",
-  ],
-  "grotesk-plex": [
-    "Space Grotesk + IBM Plex Sans",
-    "--font-space-grotesk",
-    SANS,
-    "--font-ibm-plex",
-    SANS,
-    "",
-  ],
-  "instrument-geist": [
-    "Instrument Serif + Geist",
-    "--font-instrument-serif",
-    SERIF,
-    "--font-geist",
-    SANS,
-    "400",
-  ],
-  "syne-manrope": ["Syne + Manrope", "--font-syne", SANS, "--font-manrope", SANS, ""],
-  "bricolage-dm": [
-    "Bricolage Grotesque + DM Sans",
-    "--font-bricolage",
-    SANS,
-    "--font-dm-sans",
-    SANS,
-    "",
-  ],
+// family key → [css var, fallback]
+const FAM = {
+  fraunces: ["--font-fraunces", SERIF],
+  interTight: ["--font-inter-tight", SANS],
+  grotesk: ["--font-space-grotesk", SANS],
+  plex: ["--font-ibm-plex", SANS],
+  instrument: ["--font-instrument-serif", SERIF],
+  geist: ["--font-geist", SANS],
+  syne: ["--font-syne", SANS],
+  manrope: ["--font-manrope", SANS],
+  bricolage: ["--font-bricolage", SANS],
+  dmSans: ["--font-dm-sans", SANS],
+  inter: ["--font-inter", SANS],
+  mono: ["--font-jetbrains-mono", "ui-monospace, monospace"],
+  playfair: ["--font-playfair", SERIF],
+  dmSerif: ["--font-dm-serif", SERIF],
+  newsreader: ["--font-newsreader", SERIF],
+  sourceSerif: ["--font-source-serif", SERIF],
+  poppins: ["--font-poppins", SANS],
+  montserrat: ["--font-montserrat", SANS],
+  workSans: ["--font-work-sans", SANS],
+  outfit: ["--font-outfit", SANS],
+  jakarta: ["--font-jakarta", SANS],
+  sora: ["--font-sora", SANS],
+  lexend: ["--font-lexend", SANS],
+  rubik: ["--font-rubik", SANS],
+  archivo: ["--font-archivo", SANS],
+  figtree: ["--font-figtree", SANS],
 } as const;
-export const FONT_IDS = Object.keys(FONTS_RAW) as [
-  keyof typeof FONTS_RAW,
-  ...(keyof typeof FONTS_RAW)[],
+type Fam = keyof typeof FAM;
+// id → [label, display family, body family, display weight override]
+const PAIRS = {
+  "fraunces-tight": ["Fraunces + Inter Tight", "fraunces", "interTight", ""],
+  "grotesk-plex": ["Space Grotesk + IBM Plex Sans", "grotesk", "plex", ""],
+  "instrument-geist": ["Instrument Serif + Geist", "instrument", "geist", "400"],
+  "syne-manrope": ["Syne + Manrope", "syne", "manrope", ""],
+  "bricolage-dm": ["Bricolage Grotesque + DM Sans", "bricolage", "dmSans", ""],
+  "playfair-worksans": ["Playfair Display + Work Sans", "playfair", "workSans", ""],
+  "dmserif-dmsans": ["DM Serif Display + DM Sans", "dmSerif", "dmSans", "400"],
+  "newsreader-inter": ["Newsreader + Inter", "newsreader", "inter", ""],
+  "sourceserif-plex": ["Source Serif 4 + IBM Plex Sans", "sourceSerif", "plex", ""],
+  poppins: ["Poppins", "poppins", "poppins", ""],
+  "montserrat-worksans": ["Montserrat + Work Sans", "montserrat", "workSans", ""],
+  "outfit-inter": ["Outfit + Inter", "outfit", "inter", ""],
+  jakarta: ["Plus Jakarta Sans", "jakarta", "jakarta", ""],
+  "sora-manrope": ["Sora + Manrope", "sora", "manrope", ""],
+  "lexend-inter": ["Lexend + Inter", "lexend", "inter", ""],
+  rubik: ["Rubik", "rubik", "rubik", ""],
+  archivo: ["Archivo", "archivo", "archivo", ""],
+  "figtree-geist": ["Figtree + Geist", "figtree", "geist", ""],
+  geist: ["Geist", "geist", "geist", ""],
+  "mono-inter": ["JetBrains Mono + Inter", "mono", "inter", ""],
+} as const satisfies Record<string, readonly [string, Fam, Fam, string]>;
+type FontRow = readonly [string, string, string, string, string, string];
+const FONTS_RAW: Record<string, FontRow> & { default: FontRow } = {
+  default: ["Default (theme)", "", "", "", "", ""],
+  ...Object.fromEntries(
+    Object.entries(PAIRS).map(([id, [l, d, b, w]]) => [
+      id,
+      [l, FAM[d][0], FAM[d][1], FAM[b][0], FAM[b][1], w] as const,
+    ]),
+  ),
+};
+export const FONT_IDS = ["default", ...Object.keys(PAIRS)] as [
+  "default",
+  ...(keyof typeof PAIRS)[],
 ];
 export type FontId = (typeof FONT_IDS)[number];
 export const FONT_LABELS = Object.fromEntries(
-  FONT_IDS.map((id) => [id, FONTS_RAW[id][0]]),
+  FONT_IDS.map((id) => [id, FONTS_RAW[id]?.[0] ?? id]),
 ) as Record<FontId, string>;
 
-export const RADIUS_IDS = ["sharp", "soft", "round"] as const;
+export const RADIUS_IDS = ["sharp", "crisp", "soft", "smooth", "round", "pill"] as const;
 export type RadiusId = (typeof RADIUS_IDS)[number];
-export const BORDER_IDS = ["subtle", "defined"] as const;
+export const BORDER_IDS = ["subtle", "defined", "strong", "faint", "accent", "ink"] as const;
 export type BorderId = (typeof BORDER_IDS)[number];
-export const PATTERN_IDS = ["none", "grid", "dots", "noise", "mesh"] as const;
+export const PATTERN_IDS = [
+  "none",
+  "grid",
+  "dots",
+  "noise",
+  "mesh",
+  "diagonal",
+  "lines",
+  "checker",
+  "plus",
+] as const;
 export type PatternId = (typeof PATTERN_IDS)[number];
+export const LAYOUT_IDS = ["standard", "compact", "wide", "focused"] as const;
+export type LayoutId = (typeof LAYOUT_IDS)[number];
+// [label, site column max at xl, at 2xl]; standard = Container's built-in 1320/1440
+const LAYOUTS = {
+  standard: ["Standard", "", ""],
+  compact: ["Compact", "1120px", "1200px"],
+  wide: ["Wide", "1440px", "1680px"],
+  focused: ["Focused", "960px", "1040px"],
+} as const;
+export const LAYOUT_WIDTH = { standard: 1320, compact: 1120, wide: 1440, focused: 960 } as const;
+export const LAYOUT_LABELS = Object.fromEntries(
+  LAYOUT_IDS.map((id) => [id, LAYOUTS[id][0]]),
+) as Record<LayoutId, string>;
+
+/** Inline picker list: the current id plus up to two popular ones (never more than 3). */
+export function inlineIds<T extends string>(
+  current: T,
+  popular: readonly T[],
+  all: readonly T[],
+): T[] {
+  return [current, ...popular.filter((p) => p !== current && all.includes(p))].slice(0, 3);
+}
+
+export const DENSITY_IDS = ["compact", "normal", "comfortable"] as const;
+export type DensityId = (typeof DENSITY_IDS)[number];
+/** Card padding per density → `--card-pad`; normal = the components' built-in 1.5rem (no override). */
+export const DENSITY_PAD: Record<DensityId, string> = {
+  compact: "1rem",
+  normal: "1.5rem",
+  comfortable: "2rem",
+};
 
 export interface UiStyle {
   font: FontId;
   radius: RadiusId;
   border: BorderId;
   pattern: PatternId;
+  layout: LayoutId;
+  density: DensityId;
 }
 export const DEFAULT_UI_STYLE: UiStyle = {
   font: "default",
   radius: "soft",
   border: "subtle",
   pattern: "none",
+  layout: "standard",
+  density: "normal",
 };
 
 // px for xs, sm, md, lg, xl, 2xl ("soft" = the theme's own values, no override)
 const RADII = {
   sharp: [0, 1, 2, 3, 4, 6],
+  crisp: [1, 2, 4, 6, 8, 12],
+  smooth: [4, 6, 10, 14, 18, 26],
   round: [8, 12, 16, 22, 28, 36],
+  pill: [12, 18, 24, 32, 40, 56],
 } as const;
 const SIZES = ["xs", "sm", "md", "lg", "xl", "2xl"];
 const DEFINED_BORDER = { "dark-cinematic": "#3b4157", "light-editorial": "#c8c3b4" } as const;
+// Other border styles are theme-agnostic mixes of existing tokens (never self-referencing).
+const BORDER_MIX: Record<string, string> = {
+  strong: "var(--ck-color-border-strong)",
+  faint: "color-mix(in srgb,var(--ck-color-fg) 8%,var(--ck-color-canvas))",
+  accent: "color-mix(in srgb,var(--ck-color-accent) 45%,var(--ck-color-canvas))",
+  ink: "color-mix(in srgb,var(--ck-color-fg) 40%,var(--ck-color-canvas))",
+};
+
+/** `--ck-color-border` value for a border style on a theme (`undefined` = the theme's own). */
+export const borderValue = (b: BorderId, t: ThemeName): string | undefined =>
+  b === "subtle" ? undefined : b === "defined" ? DEFINED_BORDER[t] : BORDER_MIX[b];
 
 const fg = "var(--ck-color-fg)";
 const accent = "var(--ck-color-accent)";
 const NOISE =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.06'/%3E%3C/svg%3E\")";
+const PLUS =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Cpath d='M16 12v8M12 16h8' stroke='%23888' stroke-opacity='.22' stroke-width='1'/%3E%3C/svg%3E\")";
 const PATTERN_BG: Record<Exclude<PatternId, "none">, Record<string, string>> = {
   grid: {
     "background-image": `linear-gradient(color-mix(in srgb,${fg} 5%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,${fg} 5%,transparent) 1px,transparent 1px)`,
@@ -91,6 +178,17 @@ const PATTERN_BG: Record<Exclude<PatternId, "none">, Record<string, string>> = {
     "background-size": "20px 20px",
   },
   noise: { "background-image": NOISE },
+  diagonal: {
+    "background-image": `repeating-linear-gradient(45deg,color-mix(in srgb,${fg} 6%,transparent) 0 1px,transparent 1px 14px)`,
+  },
+  lines: {
+    "background-image": `repeating-linear-gradient(0deg,color-mix(in srgb,${fg} 5%,transparent) 0 1px,transparent 1px 24px)`,
+  },
+  checker: {
+    "background-image": `conic-gradient(color-mix(in srgb,${fg} 5%,transparent) 25%,transparent 0 50%,color-mix(in srgb,${fg} 5%,transparent) 0 75%,transparent 0)`,
+    "background-size": "40px 40px",
+  },
+  plus: { "background-image": PLUS, "background-size": "32px 32px" },
   mesh: {
     "background-image": `radial-gradient(at 12% 8%,color-mix(in srgb,${accent} 14%,transparent),transparent 45%),radial-gradient(at 88% 18%,color-mix(in srgb,${accent} 8%,transparent),transparent 40%),radial-gradient(at 50% 100%,color-mix(in srgb,${accent} 10%,transparent),transparent 50%)`,
   },
@@ -102,7 +200,7 @@ export const patternProps = (id: PatternId): Record<string, string> =>
 /** Font + radius token overrides for the chosen options (kebab-case custom properties). */
 export function uiStyleVars(o: UiStyle): Record<string, string> {
   const v: Record<string, string> = {};
-  const f = FONTS_RAW[o.font];
+  const f = FONTS_RAW[o.font] ?? FONTS_RAW.default;
   if (o.font !== "default") {
     v["--ck-font-display"] = `var(${f[1]}),${f[2]}`;
     v["--ck-font-body"] = `var(${f[3]}),${f[4]}`;
@@ -112,7 +210,9 @@ export function uiStyleVars(o: UiStyle): Record<string, string> {
     }
   }
   if (o.radius !== "soft")
-    SIZES.forEach((s, i) => (v[`--ck-radius-${s}`] = `${RADII[o.radius as "sharp"][i]}px`));
+    SIZES.forEach(
+      (s, i) => (v[`--ck-radius-${s}`] = `${RADII[o.radius as keyof typeof RADII][i]}px`),
+    );
   return v;
 }
 const decl = (v: Record<string, string>) =>
@@ -130,11 +230,18 @@ export function uiStyleCss(o: UiStyle): string {
   if (o.radius !== "soft") {
     css += `html[data-radius="${o.radius}"]{${decl(Object.fromEntries(Object.entries(vars).filter(([k]) => k.includes("radius"))))}}`;
   }
-  if (o.border === "defined") {
+  if (o.border !== "subtle") {
     css += THEMES.map(
       (t) =>
-        `html[data-border="defined"][data-theme="${t}"]{--ck-color-border:${DEFINED_BORDER[t]}}`,
+        `html[data-border="${o.border}"][data-theme="${t}"]{--ck-color-border:${borderValue(o.border, t)}}`,
     ).join("");
+  }
+  if (o.density !== "normal") {
+    css += `html[data-density="${o.density}"]{--card-pad:${DENSITY_PAD[o.density]}}`;
+  }
+  if (o.layout !== "standard") {
+    const [, xl, xxl] = LAYOUTS[o.layout];
+    css += `html[data-layout="${o.layout}"]{--ck-site-w:${xl};--ck-site-w-2xl:${xxl}}`;
   }
   if (o.pattern !== "none") {
     css +=

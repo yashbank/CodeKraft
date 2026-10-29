@@ -98,7 +98,14 @@ async function readThemeConfig(): Promise<ThemeConfig> {
       defaultTheme: s.defaultTheme,
       themeToggle: s.themeToggle,
       palette: s.palette,
-      ui: { font: s.uiFont, radius: s.uiRadius, border: s.uiBorder, pattern: s.uiPattern },
+      ui: {
+        font: s.uiFont,
+        radius: s.uiRadius,
+        border: s.uiBorder,
+        pattern: s.uiPattern,
+        layout: s.uiLayout,
+        density: s.uiDensity,
+      },
     };
   } catch {
     return THEME_FALLBACK;

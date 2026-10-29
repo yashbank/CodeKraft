@@ -11,6 +11,18 @@ const RAW = {
   coral: ["Coral", "#ff8a65", "#b43c14"],
   teal: ["Teal", "#2dd4cf", "#0b6e6a"],
   slate: ["Slate", "#a3b1d6", "#41507a"],
+  sunset: ["Sunset", "#ff9a5c", "#a8420a"],
+  crimson: ["Crimson", "#ff6b6b", "#b3202a"],
+  lime: ["Lime", "#a3e635", "#3f6212"],
+  mint: ["Mint", "#6ee7b7", "#0f766e"],
+  sky: ["Sky", "#7dd3fc", "#0369a1"],
+  indigo: ["Indigo", "#8c9bff", "#3730a3"],
+  fuchsia: ["Fuchsia", "#f088ff", "#a21caf"],
+  gold: ["Gold", "#e8c547", "#7a5b00"],
+  graphite: ["Graphite", "#c4c8d4", "#3d4350"],
+  forest: ["Forest", "#7bd88f", "#166534"],
+  plum: ["Plum", "#d79bff", "#7e22ce"],
+  copper: ["Copper", "#e0a07a", "#8f4a1c"],
 } as const;
 
 export const PALETTE_IDS = Object.keys(RAW) as [keyof typeof RAW, ...(keyof typeof RAW)[]];

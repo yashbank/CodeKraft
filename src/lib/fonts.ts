@@ -21,6 +21,20 @@ import {
   Manrope,
   Space_Grotesk,
   Syne,
+  Playfair_Display,
+  DM_Serif_Display,
+  Newsreader,
+  Source_Serif_4,
+  Poppins,
+  Montserrat,
+  Work_Sans,
+  Outfit,
+  Plus_Jakarta_Sans,
+  Sora,
+  Lexend,
+  Rubik,
+  Archivo,
+  Figtree,
 } from "next/font/google";
 
 export const spaceGrotesk = Space_Grotesk({
@@ -129,6 +143,120 @@ const dmSans = DM_Sans({
   adjustFontFallback: true,
 });
 
+// R9-08 extra pairings. Same rule: declared, never preloaded, fetched only when used or previewed.
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  weight: "variable",
+  display: "swap",
+  variable: "--font-playfair",
+  preload: false,
+  adjustFontFallback: true,
+});
+const dmSerif = DM_Serif_Display({
+  subsets: ["latin"],
+  weight: "400",
+  display: "swap",
+  variable: "--font-dm-serif",
+  preload: false,
+  adjustFontFallback: true,
+});
+const newsreader = Newsreader({
+  subsets: ["latin"],
+  weight: "variable",
+  display: "swap",
+  variable: "--font-newsreader",
+  preload: false,
+  adjustFontFallback: true,
+});
+const sourceSerif = Source_Serif_4({
+  subsets: ["latin"],
+  weight: "variable",
+  display: "swap",
+  variable: "--font-source-serif",
+  preload: false,
+  adjustFontFallback: true,
+});
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-poppins",
+  preload: false,
+  adjustFontFallback: true,
+});
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  weight: "variable",
+  display: "swap",
+  variable: "--font-montserrat",
+  preload: false,
+  adjustFontFallback: true,
+});
+const workSans = Work_Sans({
+  subsets: ["latin"],
+  weight: "variable",
+  display: "swap",
+  variable: "--font-work-sans",
+  preload: false,
+  adjustFontFallback: true,
+});
+const outfit = Outfit({
+  subsets: ["latin"],
+  weight: "variable",
+  display: "swap",
+  variable: "--font-outfit",
+  preload: false,
+  adjustFontFallback: true,
+});
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: "variable",
+  display: "swap",
+  variable: "--font-jakarta",
+  preload: false,
+  adjustFontFallback: true,
+});
+const sora = Sora({
+  subsets: ["latin"],
+  weight: "variable",
+  display: "swap",
+  variable: "--font-sora",
+  preload: false,
+  adjustFontFallback: true,
+});
+const lexend = Lexend({
+  subsets: ["latin"],
+  weight: "variable",
+  display: "swap",
+  variable: "--font-lexend",
+  preload: false,
+  adjustFontFallback: true,
+});
+const rubik = Rubik({
+  subsets: ["latin"],
+  weight: "variable",
+  display: "swap",
+  variable: "--font-rubik",
+  preload: false,
+  adjustFontFallback: true,
+});
+const archivo = Archivo({
+  subsets: ["latin"],
+  weight: "variable",
+  display: "swap",
+  variable: "--font-archivo",
+  preload: false,
+  adjustFontFallback: true,
+});
+const figtree = Figtree({
+  subsets: ["latin"],
+  weight: "variable",
+  display: "swap",
+  variable: "--font-figtree",
+  preload: false,
+  adjustFontFallback: true,
+});
+
 /** Class list for `<html>`: defines every `--font-*` variable for both themes. */
 export const fontVariables = [
   spaceGrotesk.variable,
@@ -143,4 +271,18 @@ export const fontVariables = [
   manrope.variable,
   bricolage.variable,
   dmSans.variable,
+  playfair.variable,
+  dmSerif.variable,
+  newsreader.variable,
+  sourceSerif.variable,
+  poppins.variable,
+  montserrat.variable,
+  workSans.variable,
+  outfit.variable,
+  jakarta.variable,
+  sora.variable,
+  lexend.variable,
+  rubik.variable,
+  archivo.variable,
+  figtree.variable,
 ].join(" ");

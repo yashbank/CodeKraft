@@ -47,6 +47,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       data-radius={ui.radius}
       data-border={ui.border}
       data-pattern={ui.pattern}
+      data-layout={ui.layout}
+      data-density={ui.density}
       className={fontVariables}
       suppressHydrationWarning
     >
