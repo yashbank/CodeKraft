@@ -140,7 +140,7 @@ test("[admin] @1280: bell + inbox open targets, popup closes, read persists, sid
   const badge = nav
     .locator("li")
     .filter({ has: page.getByRole("link", { name: "Approvals", exact: true }) })
-    .getByText(/pending approvals/);
+    .locator('[data-sidebar="menu-badge"]');
   await expect(badge).toHaveText(new RegExp(`^${pending}\\s*pending approvals`));
 
   const bell = page.getByRole("button", { name: /^Notifications, \d+ unread/ });

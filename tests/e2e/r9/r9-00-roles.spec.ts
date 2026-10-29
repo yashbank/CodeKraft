@@ -224,6 +224,7 @@ test.describe("catalog and checkout", () => {
   });
 
   test("[customer] /checkout - buy link from a product opens checkout", async ({ page }) => {
+    await q(`delete from rate_limit_buckets`); // the client session probe shares the 30/min auth limit
     await login(page, "customer");
     const t = trackIssues(page);
     // A product whose default one-time offering the buyer does not already own (earlier specs may

@@ -26,7 +26,7 @@ test.describe("P14-09 widget styles", () => {
       const [order] = await q<{ id: string }>(
         `insert into orders (order_no, user_id, currency, fx_rate_to_inr, subtotal_minor, total_minor, billing_snapshot)
          values ($1, (select id from users where email = $2), 'INR', '1', 100, 100, '{}'::jsonb) returning id`,
-        [`P1409-${Date.now()}`, ROLE_EMAILS.customer],
+        [`P1409-${Date.now()}`, ROLE_EMAILS.super_admin],
       );
       const [item] = await q<{ id: string }>(
         `insert into order_items (order_id, product_id, description, unit_minor, total_minor)
