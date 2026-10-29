@@ -26,7 +26,7 @@ Updated: 2026-10-29
 - P6-03 | ready | branch feat/p6-03-invoice-output (stacked on P6-02, merge P6-02 first) | vitest tests/unit/invoices + pdf: 21 pass
 - P6-04 | ready | branch feat/p6-04-ui-sweep (contains merged P6-01/02/03/05; merge it LAST) | e2e tests/e2e/flows/ui-sweep.spec.ts 6/6 pass (--workers=1); vitest tests/unit/site: 46 pass
 - P7-01 | doing | branch feat/p7-01-reset-ui-fix
-- P7-02 | doing | branch feat/p7-02-rounded-logos
+- P7-02 | ready | branch feat/p7-02-rounded-logos | vitest logo-radius + logo-strip + site-logo: 11 pass
 - P7-03 | doing | branch feat/p7-03-invoice-redesign
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
@@ -51,3 +51,4 @@ Updated: 2026-10-29
 - 2026-10-29 P6-03 ready. The PDF was 5 hard-coded text lines; it is now a full A4 invoice (seller/buyer, items with HSN/SAC and tax, CGST/SGST/IGST, totals, logo, repeated header on each page). Built from the stored snapshot. HTML invoice has print CSS. The logo is fetched only from our site or media origin. Note: there is no HTML invoice route in the app (only PDF download); the PDF shows "INR", not ₹ (font limit).
 - 2026-10-29 P6-05 ready. Danger zone in Settings: pick categories, preview counts, download a JSON backup (no password hashes or tokens), type the site name, then a second super admin approves and it runs in one transaction. A real-schema check found and fixed three FK problems: the credit_notes/refunds cycle, quotes referenced by orders, and customer media. Super admins, admins, settings, RBAC, legal, landing and audit logs are kept. Migration 0006 is hand-written (drizzle-kit generate hits a snapshot collision at 0003/0004). Please test on a staging or branch DB before production.
 - 2026-10-29 P6-04 ready. Phase 6 complete. Sweep at 390/768/1440 over site, account and admin: no console errors or failed requests in app code. Fixed: /account/chat overflowed at 390; the theme toggle did nothing (it now switches theme and saves the ck_theme cookie, honouring the P4-01 setting). Left: /admin/customers table overflows at 390 (admin is laptop-gated on mobile by design). The e2e spec is stable only with --workers=1 on next dev.
+- 2026-10-29 P7-02: Client logo tiles, LogoMark and SiteLogo get rounded-md (6px) with overflow-hidden; admin logo tiles too. Class-only change.
