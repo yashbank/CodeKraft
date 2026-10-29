@@ -100,6 +100,20 @@ Two machines, one repo. Never both on the same task. Never push `main`. Never pu
 | R9-13 | 13 | Chatbot: customer chats (incl. brand-new signups e.g. a new email) appear in admin chatbot list + handoff notifications; test | B |
 | R9-14 | 13 | Full sweep by role (customer, super admin, admin, staff): every route, redirects, console errors, failed requests, broken screens at 3 widths. Fix all. Write docs/SCORECARD.md (percent done, 1-10 reliability, evidence) | B |
 
+| P14-01 | 14 | Admin-role dashboard: role-based widget allow-list (super_admin all; admin only the few needed), each wired to that role's own numbers; tests per role | B |
+| P14-02 | 14 | Creating an admin/staff/partner: loaders, success animation, optimistic row; admin added as partner works end-to-end | B |
+| P14-03 | 14 | Notifications: click opens the target item; bell popup/modals close on navigation + outside click and never block the page; seen state persists (opening a customer/admin never resurfaces read items); sidebar badge with pending approvals count | B |
+| P14-04 | 14 | Settings -> Email: "From" name + address (DB-stored, used by sendEmail), test-send button; banner clears when valid. Delivery still needs a verified domain | B |
+| P14-05 | 14 | Browser tab title + favicon/apple icon follow site name + icon from Settings (site, admin, account) | B |
+| P14-06 | 14 | Chat + queries attachments: upload images/files (size/type limits, private storage), visible in chat for user and admin, AI reads them (vision / text extraction) | B |
+| P14-07 | 14 | Theme studio rebuild: dropdowns with 40-50+ options per group (fonts, palettes, radius, borders, padding/density, shadows, patterns, button + card styles); each group has a note "changes X, see it on Y"; huge LIVE interactive preview (button, product card, blog card, form, widgets, landing hero) updating before save; reset + saved presets | B |
+| P14-08 | 14 | Landing-page customization controls (font, border, padding, spacing per section) with live preview | B |
+| P14-09 | 14 | Widget library: 5-6 visual styles per widget; types bar, line/area, donut/pie, progress, sparkline, stat, heatmap; user picks style; honours theme tokens. Research modern dashboard patterns first (note sources in B.md) | B |
+| P14-10 | 14 | Mobile: remove the empty bar at the top of the landing page; full mobile sweep at 375/390/768 for site + account | B |
+| P14-11 | 14 | UI/UX bug sweep for stale state, dead clicks, modal traps, wrong redirects (like the notification bug); fix all; regression-safe | B |
+| P14-12 | 14 | Extras: per-user dark/light/auto, toast + Undo on deletes, global search (orders, customers, invoices, products), drag-to-reorder widgets, empty-state illustrations, cookie banner, chat typing indicator, settings export/import, real-time order alerts, keyboard-shortcuts sheet (?), activity timeline on customer/order, bulk actions in tables, notification preferences, branded 404/500, PWA manifest, print stylesheet, skeleton loaders everywhere | B |
+| P14-13 | 14 | Quality gates: axe accessibility + Lighthouse budget checks, re-run R9 suite + new specs, update docs/SCORECARD.md | B |
+
 Order for B: P1 (all tasks in parallel via agents) -> P2 -> P3 -> P4 -> P5 -> P6 -> P7 -> P8 -> P9 -> P10 -> P11 -> P12 -> R9 (Phase 13). A tests each phase as B marks tasks `ready`; B continues to the next phase without waiting.
 
 ## Token plan (Phase 7-12, both Macs)
@@ -116,3 +130,9 @@ Order for B: P1 (all tasks in parallel via agents) -> P2 -> P3 -> P4 -> P5 -> P6
 - Use only the LOCAL DB. Never run reset/wipe against Neon. No real credentials in tests (fixtures only).
 - Migrations: hand-written, additive, next number 0009+, note in B.md.
 - Small shared files (layout, settings contracts) cause merge conflicts: keep edits minimal, rebase onto origin/fix/autopilot before `ready`.
+
+## Phase 14 rules
+- Same proof rules as Phase 13 (failing test first, Playwright on production build, 375/768/1280 for UI).
+- ETA reporting: every time a task or group is marked `ready`, B tells the user in chat AND in the /sync note: "Done X of 13, estimated remaining ~N h".
+- Keep every existing R9 spec green. If a UI change breaks an old spec, fix the code, not the test (unless the test assumption is wrong; say why).
+- Hand-written additive migrations, 0009+ (none used so far).
