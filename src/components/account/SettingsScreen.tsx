@@ -52,9 +52,21 @@ const EVENT_LABEL: Record<AuthEvent["kind"], string> = {
 };
 
 const NOTIFICATION_ROWS = [
-  { category: "orders", label: "Orders and delivery", hint: "Order, delivery and subscription reminders." },
-  { category: "queries", label: "Queries and support", hint: "Replies to your questions and chats." },
-  { category: "marketing", label: "Product updates", hint: "New versions and news for products you own." },
+  {
+    category: "orders",
+    label: "Orders and delivery",
+    hint: "Order, delivery and subscription reminders.",
+  },
+  {
+    category: "queries",
+    label: "Queries and support",
+    hint: "Replies to your questions and chats.",
+  },
+  {
+    category: "marketing",
+    label: "Product updates",
+    hint: "New versions and news for products you own.",
+  },
 ] as const;
 
 /**

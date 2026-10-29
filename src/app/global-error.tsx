@@ -39,6 +39,8 @@ export default function RootError({
           >
             Try again
           </button>{" "}
+          {/* global-error replaces the root layout: a plain link is the safe choice here */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a href="/" style={{ color: "inherit", marginLeft: 12 }}>
             Go home
           </a>

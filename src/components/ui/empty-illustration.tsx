@@ -52,8 +52,18 @@ export function EmptyIllustration({
           className="fill-surface stroke-border"
           strokeWidth="1.5"
         />
-        <path d="M18 24v8M14 28h8" className="stroke-accent" strokeWidth="1.5" strokeLinecap="round" />
-        <path d="M110 12v6M107 15h6" className="stroke-accent" strokeWidth="1.5" strokeLinecap="round" />
+        <path
+          d="M18 24v8M14 28h8"
+          className="stroke-accent"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M110 12v6M107 15h6"
+          className="stroke-accent"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
         <circle cx="104" cy="34" r="2" className="fill-fg-subtle" />
       </svg>
       <Icon className="absolute left-1/2 top-[52%] size-7 -translate-x-1/2 -translate-y-1/2 text-fg-subtle" />

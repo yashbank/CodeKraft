@@ -33,7 +33,7 @@ export function ThemeToggle({ enabled = false }: { enabled?: boolean }) {
   React.useEffect(() => setPref(currentPref()), []);
   if (!enabled) return null;
 
-  const next = ORDER[(ORDER.indexOf(pref) + 1) % ORDER.length]!;
+  const next = ORDER[(ORDER.indexOf(pref) + 1) % ORDER.length] ?? "dark-cinematic";
   const label = `Switch to ${WORD[next]} theme`;
   const Icon = pref === "auto" ? MonitorIcon : pref === "light-editorial" ? SunIcon : MoonStarIcon;
   return (

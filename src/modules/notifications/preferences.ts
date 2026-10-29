@@ -77,6 +77,9 @@ export function resolveCategoryPrefs(
 ): Record<PrefCategory, Record<PrefChannel, boolean>> {
   const out = {} as Record<PrefCategory, Record<PrefChannel, boolean>>;
   for (const c of PREF_CATEGORIES)
-    out[c] = { email: categoryEnabled(c, "email", prefs), inapp: categoryEnabled(c, "inapp", prefs) };
+    out[c] = {
+      email: categoryEnabled(c, "email", prefs),
+      inapp: categoryEnabled(c, "inapp", prefs),
+    };
   return out;
 }

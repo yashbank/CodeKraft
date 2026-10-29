@@ -85,7 +85,13 @@ describe("emit enforces preferences (P14-12b)", () => {
   const svc = new DefaultNotificationsService();
   const run = async (type: "order.created" | "order.paid", cats: StoredPrefs["categories"]) => {
     const { tx, inserts } = fakeTx({ email: true, inapp: true, categories: cats });
-    await svc.emit("11111111-1111-4111-8111-111111111111", type, { orderNo: "CK-1" }, undefined, tx);
+    await svc.emit(
+      "11111111-1111-4111-8111-111111111111",
+      type,
+      { orderNo: "CK-1" },
+      undefined,
+      tx,
+    );
     return { inapp: inserts.includes(notifications), email: inserts.includes(emailOutbox) };
   };
 

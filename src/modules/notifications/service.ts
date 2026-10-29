@@ -151,7 +151,6 @@ export class DefaultNotificationsService implements NotificationsService {
       }
 
       if (canEmail && rendered.emailTemplate && channelEnabled(type, "email", r.prefs)) {
-
         const [outboxRow] = await tx
           .insert(emailOutbox)
           .values({
