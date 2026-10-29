@@ -279,3 +279,26 @@ describe("redesigned invoice", () => {
     );
   });
 });
+
+describe("PNG logo size guard", () => {
+  it("rejects a PNG larger than 4096px instead of inflating it", async () => {
+    const { parseLogo } = await import("@/modules/invoices/pdf");
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(20000, 0);
+    ihdr.writeUInt32BE(20000, 4);
+    ihdr[8] = 8;
+    ihdr[9] = 6; // RGBA
+    const chunk = (kind: string, body: Buffer) => {
+      const len = Buffer.alloc(4);
+      len.writeUInt32BE(body.length);
+      return Buffer.concat([len, Buffer.from(kind), body, Buffer.alloc(4)]);
+    };
+    const png = Buffer.concat([
+      Buffer.from("89504e470d0a1a0a", "hex"),
+      chunk("IHDR", ihdr),
+      chunk("IDAT", Buffer.alloc(8)),
+      chunk("IEND", Buffer.alloc(0)),
+    ]);
+    expect(parseLogo(png)).toBeNull();
+  });
+});

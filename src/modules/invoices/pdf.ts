@@ -336,10 +336,12 @@ function parsePng(buf: Buffer): PdfImage | null {
   }
   const ch = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[type];
   if (!ch || (type === 3 && !plte) || ![1, 2, 4, 8, 16].includes(depth)) return null;
+  // Decompression-bomb guard: a logo never needs more than 4096x4096.
+  if (w > 4096 || h > 4096) return null;
   try {
     const bpp = Math.max(1, (ch * depth) >> 3); // bytes per pixel for filtering
     const stride = Math.ceil((w * ch * depth) / 8);
-    const raw = inflateSync(data);
+    const raw = inflateSync(data, { maxOutputLength: (stride + 1) * h });
     const px = Buffer.alloc(stride * h);
     for (let r = 0; r < h; r++) {
       const f = raw[r * (stride + 1)] ?? 0;
