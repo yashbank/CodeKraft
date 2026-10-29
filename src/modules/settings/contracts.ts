@@ -8,7 +8,15 @@ import type { Context, RequestContext } from "@/lib/authz/context";
 import type { DbOrTx } from "@/lib/db";
 import { FLAG_KEYS } from "@/lib/feature-flags";
 import { DEFAULT_PALETTE, PALETTE_IDS } from "@/lib/palettes";
-import { BORDER_IDS, DEFAULT_UI_STYLE, FONT_IDS, PATTERN_IDS, RADIUS_IDS } from "@/lib/ui-style";
+import {
+  BORDER_IDS,
+  DEFAULT_UI_STYLE,
+  DENSITY_IDS,
+  FONT_IDS,
+  LAYOUT_IDS,
+  PATTERN_IDS,
+  RADIUS_IDS,
+} from "@/lib/ui-style";
 import { THEMES } from "@/lib/theme";
 import { bpsSchema, currencySchema } from "@/modules/_shared/zod";
 import { text } from "../catalog/contracts";
@@ -124,6 +132,8 @@ export const siteSettingsSchema = z.strictObject({
   uiRadius: z.enum(RADIUS_IDS),
   uiBorder: z.enum(BORDER_IDS),
   uiPattern: z.enum(PATTERN_IDS),
+  uiLayout: z.enum(LAYOUT_IDS),
+  uiDensity: z.enum(DENSITY_IDS),
   aiModel: text(120),
   aiDailyPlatformCap: z.number().int().min(0).max(1_000_000),
   aiDailyUserCap: z.number().int().min(0).max(10_000),
@@ -155,6 +165,8 @@ export const SITE_SETTINGS_DEFAULTS: SiteSettings = Object.freeze({
   uiRadius: DEFAULT_UI_STYLE.radius,
   uiBorder: DEFAULT_UI_STYLE.border,
   uiPattern: DEFAULT_UI_STYLE.pattern,
+  uiLayout: DEFAULT_UI_STYLE.layout,
+  uiDensity: DEFAULT_UI_STYLE.density,
   aiModel: "claude-sonnet-5-5",
   aiDailyPlatformCap: 2000,
   aiDailyUserCap: 30,

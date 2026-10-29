@@ -3049,6 +3049,8 @@ export const SETTINGS: SettingsData = {
     radius: "soft",
     border: "subtle",
     pattern: "none",
+    layout: "standard",
+    density: "normal",
     lightEnabled: false,
   },
   ai: {

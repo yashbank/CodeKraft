@@ -20,7 +20,9 @@ export function Container({
     <div
       className={cn(
         "mx-auto w-full px-4 sm:px-6 lg:px-8 tv:px-24",
-        size === "site" ? "max-w-[1320px] 2xl:max-w-[1440px] tv:max-w-[1920px]" : "max-w-[880px]",
+        size === "site"
+          ? "max-w-[var(--ck-site-w,1320px)] 2xl:max-w-[var(--ck-site-w-2xl,1440px)] tv:max-w-[1920px]"
+          : "max-w-[880px]",
         className,
       )}
     >

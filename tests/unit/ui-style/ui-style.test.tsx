@@ -11,9 +11,9 @@ describe("ui-style", () => {
     expect(ok.patch.uiRadius).toBe("round");
     for (const bad of [
       { uiFont: "comic" },
-      { uiRadius: "pill" },
+      { uiRadius: "blob" },
       { uiBorder: "thick" },
-      { uiPattern: "stripes" },
+      { uiPattern: "zigzag" },
     ]) {
       expect(() => updateSettingsSchema.parse({ patch: bad })).toThrow();
     }
@@ -50,6 +50,8 @@ describe("ui-style", () => {
       radius: "round",
       border: "defined",
       pattern: "grid",
+      layout: "standard",
+      density: "normal",
     };
     vi.doMock("@/lib/site-brand", () => ({
       getSiteName: async () => "CodeKraft",

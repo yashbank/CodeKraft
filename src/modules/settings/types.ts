@@ -8,7 +8,7 @@
 import type { Currency } from "@/lib/money";
 import type { FlagKey } from "@/lib/feature-flags";
 import type { PaletteId } from "@/lib/palettes";
-import type { BorderId, FontId, PatternId, RadiusId } from "@/lib/ui-style";
+import type { BorderId, DensityId, FontId, LayoutId, PatternId, RadiusId } from "@/lib/ui-style";
 import type { ThemeName } from "@/lib/theme";
 import type { PaymentMethodValue } from "../offerings/types";
 
@@ -94,6 +94,8 @@ export interface SiteSettings {
   uiRadius: RadiusId;
   uiBorder: BorderId;
   uiPattern: PatternId;
+  uiLayout: LayoutId;
+  uiDensity: DensityId;
   aiModel: string;
   aiDailyPlatformCap: number;
   aiDailyUserCap: number;
@@ -127,6 +129,8 @@ export const SITE_SETTING_KEYS: Readonly<Record<SiteSettingField, string>> = Obj
   uiRadius: "ui_radius",
   uiBorder: "ui_border",
   uiPattern: "ui_pattern",
+  uiLayout: "ui_layout",
+  uiDensity: "ui_density",
   aiModel: "ai_model",
   aiDailyPlatformCap: "ai_daily_platform_cap",
   aiDailyUserCap: "ai_daily_user_cap",

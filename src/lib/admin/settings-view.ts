@@ -174,6 +174,8 @@ export function mapSiteSettingsToSettingsData(settings: SiteSettings): SettingsD
       radius: settings.uiRadius,
       border: settings.uiBorder,
       pattern: settings.uiPattern,
+      layout: settings.uiLayout,
+      density: settings.uiDensity,
       lightEnabled: settings.flags.theme_light_editorial,
     },
     ai: {
