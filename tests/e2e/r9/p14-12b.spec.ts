@@ -122,9 +122,8 @@ test("branded 404 on site, account and admin: status 404, logo, search, links, n
 
   await loginAs(page, "customer");
   const acc = await page.goto(`${SITE}/account/orders/00000000-0000-4000-8000-000000000000`);
-  // loading.tsx streams the skeleton first, so the status is already 200 when notFound() fires
-  // (Next adds noindex instead); the site 404 above has no data fetch, so it keeps a real 404.
-  expect([200, 404]).toContain(acc?.status());
+  // Detail routes have no loading.tsx, so notFound() still sends a real 404 (R9-14 sweep relies on it).
+  expect(acc?.status()).toBe(404);
   await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute("content", /noindex/);
   await expect(page.getByRole("link", { name: "Account home" })).toBeVisible();
 
@@ -132,7 +131,7 @@ test("branded 404 on site, account and admin: status 404, logo, search, links, n
   const admin = await adminCtx.newPage();
   await loginAs(admin, "admin");
   const adm = await admin.goto(`${ADMIN}/admin/products/00000000-0000-4000-8000-000000000000`);
-  expect([200, 404]).toContain(adm?.status());
+  expect(adm?.status()).toBe(404);
   await expect(admin.locator('meta[name="robots"]').first()).toHaveAttribute("content", /noindex/);
   await expect(admin.getByRole("heading", { name: "Page not found" })).toBeVisible();
   await expect(admin.getByRole("link", { name: "Back to dashboard" })).toBeVisible();
