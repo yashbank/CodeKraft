@@ -32,7 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
 import { format } from "@/lib/money";
 import { cancelMyOrder } from "@/modules/orders/customer-mutations";
-import { fromPlainText } from "@/modules/content/render";
+import { fromPlainText } from "@/modules/content/plain-text";
 import { createQuery } from "@/modules/queries/customer-mutations";
 import { submitPaymentReference } from "@/modules/payments/customer-mutations";
 import { Banner } from "./Banner";
