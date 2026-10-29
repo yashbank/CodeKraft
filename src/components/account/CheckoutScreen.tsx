@@ -59,7 +59,7 @@ const METHODS: Record<PaymentProvider, { label: string; hint: string; Icon: type
   // (`razorpayAvailable`, flag + configured keys) included it in `offering.enabledMethods`.
   razorpay: {
     label: "Card / UPI (Razorpay)",
-    hint: "Pay instantly via Razorpay Checkout — test mode",
+    hint: "Pay instantly by card or UPI",
     Icon: CreditCardIcon,
   },
 };
