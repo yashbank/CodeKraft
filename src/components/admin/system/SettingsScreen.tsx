@@ -547,6 +547,7 @@ export function SettingsScreen({
   const router = useRouter();
   const formRef = React.useRef<HTMLFormElement>(null);
   const [theme, setTheme] = React.useState(s.theme.defaultTheme);
+  const [refreshInv, setRefreshInv] = React.useState(s.general.refreshOldInvoices);
   const [themeToggle, setThemeToggle] = React.useState(s.theme.toggle);
   const [palette, setPalette] = React.useState(s.theme.palette);
   const [ui, setUi] = React.useState<UiStyle>({
@@ -617,7 +618,7 @@ export function SettingsScreen({
       const email = val("st-email");
       const anySeller =
         legal || addr.line1 || addr.city || addr.postalCode || email || phones.length;
-      patch = { siteName };
+      patch = { siteName, refreshOldInvoices: refreshInv };
       // All-blank seller block with no existing seller means "not set"; otherwise validate it.
       if (anySeller || seller) {
         patch.sellerDetails = { name: legal, address: addr, contactPhones: phones, email };
@@ -839,6 +840,17 @@ export function SettingsScreen({
                 >
                   <Input id="st-email" defaultValue={s.general.email} disabled={ro} />
                 </Field>
+              </div>
+              <div className="flex items-center gap-3">
+                <Switch
+                  id="st-refresh-invoices"
+                  checked={refreshInv}
+                  onCheckedChange={setRefreshInv}
+                  disabled={ro}
+                />
+                <Label htmlFor="st-refresh-invoices">
+                  Update old invoices when business details change
+                </Label>
               </div>
               <p className="flex items-center gap-2 text-body-sm">
                 Environment{" "}

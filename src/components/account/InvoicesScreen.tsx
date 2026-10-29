@@ -219,6 +219,14 @@ export function InvoicesScreen({
                           <StatusBadge kind="orders.status" value={inv.status} size="sm" />
                         </TableCell>
                         <TableCell className="text-right">
+                          {inv.kind === "invoice" ? (
+                            <Link
+                              href={`/account/invoices/${inv.id}`}
+                              className="mr-3 text-body-sm text-accent-text hover:underline"
+                            >
+                              View
+                            </Link>
+                          ) : null}
                           <Button
                             size="sm"
                             variant="secondary"

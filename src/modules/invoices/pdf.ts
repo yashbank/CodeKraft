@@ -148,8 +148,19 @@ export function buildPdfBuffer(title: string, lines: string[]): Buffer {
   return assemble(c.pages);
 }
 
+const TOTAL_BOX_H = 24;
 /**
- * Invoice layout from the stored snapshot (callers pass snapshot data, never live settings).
+ * Baselines of the totals rows and the bottom of the Grand Total box. The box top sits clear of
+ * the last row's text (it used to overlap it, hiding Discount / Total Tax).
+ */
+export function totalsLayout(y0: number, n: number): { rowYs: number[]; boxY: number } {
+  const rowYs = Array.from({ length: n }, (_, i) => y0 - 8 - i * 15);
+  const last = rowYs.at(-1) ?? y0;
+  return { rowYs, boxY: last - 8 - TOTAL_BOX_H };
+}
+
+/**
+ * Invoice layout from the seller/brand props the caller resolved (callers pass snapshot data, never live settings).
  * Table head repeats on every page; rows are never split.
  */
 export function buildInvoicePdf(inv: InvoiceProps, logo?: PdfImage | null): Buffer {
@@ -160,26 +171,26 @@ export function buildInvoicePdf(inv: InvoiceProps, logo?: PdfImage | null): Buff
   const acc = hexToRgb(inv.accent);
   const fill = `${acc} rg`;
   const WHITE = "1 g";
+  const ZEBRA = "0.955 0.96 0.97";
   const INK = "0.07 0.09 0.15 rg";
   const MUTED = "0.42 0.45 0.5 rg";
   let y = H - M;
 
-  // Accent band: logo (on a white tile) + title, invoice meta right-aligned in white.
-  c.rect(0, H - 100, W, 100, acc);
+  // Clean header: logo + seller name left, title and invoice meta right, accent rule beneath.
   let hx = M;
   if (logo) {
-    const h = 44;
-    const w = Math.min((logo.w / logo.h) * h, 150);
-    c.rect(M - 4, H - 22 - h - 4, w + 8, h + 8, "1 1 1");
-    c.image(M, H - 22 - h, w, h);
-    hx = M + w + 20;
+    const h = 40;
+    const w = Math.min((logo.w / logo.h) * h, 140);
+    c.image(M, H - M - h + 6, w, h);
+    hx = M + w + 14;
   }
-  c.text(hx, H - 52, "TAX INVOICE", 22, true, false, WHITE);
-  c.text(hx, H - 70, inv.seller.name, 10, false, false, WHITE);
-  c.text(W - M, H - 40, `Invoice No: ${inv.invoiceNo}`, 10, true, true, WHITE);
-  if (inv.orderNo) c.text(W - M, H - 55, `Order No: ${inv.orderNo}`, 10, false, true, WHITE);
-  c.text(W - M, H - 70, `Purchase Date: ${inv.issuedAt}`, 10, false, true, WHITE);
-  y = H - 122;
+  c.text(hx, H - M - 8, inv.seller.name, 13, true, false, INK);
+  c.text(W - M, H - M - 8, "TAX INVOICE", 20, true, true, fill);
+  c.text(W - M, H - M - 28, `Invoice No: ${inv.invoiceNo}`, 9, true, true, INK);
+  if (inv.orderNo) c.text(W - M, H - M - 41, `Order No: ${inv.orderNo}`, 9, false, true, MUTED);
+  c.text(W - M, H - M - 54, `Purchase Date: ${inv.issuedAt}`, 9, false, true, MUTED);
+  c.rect(M, H - M - 66, W - 2 * M, 2, acc);
+  y = H - M - 90;
   const status = PAYMENT_LABEL[inv.paymentStatus ?? "paid"];
   c.rect(M, y - 4, textWidth(status, 9) + 20, 18, acc);
   c.text(M + 10, y + 1, status, 9, true, false, WHITE);
@@ -229,6 +240,7 @@ export function buildInvoicePdf(inv: InvoiceProps, logo?: PdfImage | null): Buff
       y = H - M;
       head();
     }
+    if (i % 2 === 1) c.rect(M, y - desc.length * 11 + 4, W - 2 * M, desc.length * 11 + 5, ZEBRA);
     c.text(M + 6, y, String(i + 1), 9, false, false, INK);
     desc.forEach((d, k) => c.text(66, y - k * 11, d, 9, false, false, INK));
     c.text(335, y, String(l.quantity), 9, false, true, INK);
@@ -248,19 +260,19 @@ export function buildInvoicePdf(inv: InvoiceProps, logo?: PdfImage | null): Buff
     if (g.igst_minor !== undefined) rows.push(["IGST:", `${cur} ${money(g.igst_minor)}`]);
   } else if (inv.taxMinor > 0) rows.push(["Tax:", `${cur} ${money(inv.taxMinor)}`]);
   if (g && inv.taxMinor > 0) rows.push(["Total Tax:", `${cur} ${money(inv.taxMinor)}`]);
-  if (y - (rows.length + 4) * 15 < M) {
+  if (y - (rows.length + 5) * 15 < M) {
     c.newPage();
     y = H - M;
   }
-  y -= 8;
-  for (const [label, value] of rows) {
-    c.text(340, y, label, 9, false, false, INK);
-    c.text(W - M - 6, y, value, 9, false, true, INK);
-    y -= 15;
-  }
-  c.rect(340, y - 8, W - M - 340, 24, acc);
-  c.text(346, y, "Grand Total:", 11, true, false, WHITE);
-  c.text(W - M - 6, y, `${cur} ${money(inv.totalMinor)}`, 11, true, true, WHITE);
+  const t = totalsLayout(y, rows.length);
+  rows.forEach(([label, value], i) => {
+    c.text(340, t.rowYs[i] ?? y, label, 9, false, false, INK);
+    c.text(W - M - 6, t.rowYs[i] ?? y, value, 9, false, true, INK);
+  });
+  c.rect(340, t.boxY, W - M - 340, TOTAL_BOX_H, acc);
+  c.text(346, t.boxY + 8, "Grand Total:", 11, true, false, WHITE);
+  c.text(W - M - 6, t.boxY + 8, `${cur} ${money(inv.totalMinor)}`, 11, true, true, WHITE);
+  y = t.boxY;
   y -= 36;
   c.text(M, y, "Notes", 8, true, false, fill);
   c.text(M, y - 12, inv.notes || DEFAULT_NOTE, 8, false, false, MUTED);

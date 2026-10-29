@@ -2985,6 +2985,7 @@ export const SETTINGS: SettingsData = {
   general: {
     siteName: "CodeKraft",
     siteLogo: null,
+    refreshOldInvoices: true,
     domain: "codekraft.example (placeholder until launch)",
     legalName: "CodeKraft Technologies LLP",
     address: "3rd Floor, Trade Centre, Pune 411045",

@@ -72,6 +72,8 @@ export interface SiteSettings {
   enabledCurrencies: Currency[];
   taxRateBps: number;
   gstin: string | null;
+  /** Re-render already-issued invoices with current seller details + brand (numbers/amounts stay immutable). */
+  refreshOldInvoices: boolean;
   sellerDetails: SellerDetails | null;
   upiVpa: string | null;
   /** Name shown to the payer in their UPI app (`pn=`); falls back to `siteName`. */
@@ -110,6 +112,7 @@ export const SITE_SETTING_KEYS: Readonly<Record<SiteSettingField, string>> = Obj
   enabledCurrencies: "enabled_currencies",
   taxRateBps: "tax_rate_bps",
   gstin: "gstin",
+  refreshOldInvoices: "refresh_old_invoices",
   sellerDetails: "seller_details",
   upiVpa: "upi_vpa",
   upiPayeeName: "upi_payee_name",
