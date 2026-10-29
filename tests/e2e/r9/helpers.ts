@@ -131,3 +131,20 @@ export async function atWidths(
     if (check) await check(w);
   }
 }
+
+/** The theme is cached 300s and direct DB deletes do not bust it: reset through the admin UI (revalidates). */
+export async function resetThemeViaUi(page: Page): Promise<void> {
+  try {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`${ADMIN}/admin/settings`);
+    await page.getByRole("button", { name: "Theme", exact: true }).click();
+    await page.getByRole("button", { name: "Reset to defaults" }).click();
+    const save = page.getByRole("button", { name: "Save changes" });
+    if (await save.isEnabled()) {
+      await save.click();
+      await expect(page.getByText(/saved/i).first()).toBeVisible({ timeout: 30_000 });
+    }
+  } catch {
+    /* best effort cleanup */
+  }
+}

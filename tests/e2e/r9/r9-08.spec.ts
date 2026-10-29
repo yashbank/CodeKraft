@@ -1,6 +1,15 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { ADMIN, SITE, WIDTHS, expectNoOverflow, loginAs, q, trackIssues } from "./helpers";
+import {
+  ADMIN,
+  SITE,
+  WIDTHS,
+  expectNoOverflow,
+  loginAs,
+  q,
+  resetThemeViaUi,
+  trackIssues,
+} from "./helpers";
 
 const KEYS = [
   "theme_palette",
@@ -32,7 +41,11 @@ const rootVar = (page: Page, name: string) =>
   page.evaluate((n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), name);
 
 test.describe("R9-08 theme options", () => {
-  test.afterAll(async () => {
+  test.afterAll(async ({ browser }) => {
+    const page = await browser.newPage();
+    await loginAs(page, "super_admin");
+    await resetThemeViaUi(page);
+    await page.close();
     await q(`delete from site_settings where key = any($1)`, [KEYS]);
   });
 
