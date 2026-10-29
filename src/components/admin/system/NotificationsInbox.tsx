@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import {
   BellOffIcon,
@@ -23,7 +24,7 @@ import {
   markAllNotificationsRead,
   markNotificationsRead,
 } from "@/modules/notifications/admin-mutations";
-import { applyRead, countUnread } from "@/lib/notifications/read-state";
+import { applyRead, countUnread, readThenOpen } from "@/lib/notifications/read-state";
 import { EmptyState } from "../EmptyState";
 import { FilterChips } from "../FilterChips";
 import { formatDate, hoursSince, timeAgo } from "../format";
@@ -51,6 +52,7 @@ export function NotificationsInbox({
   notifications: AdminNotification[];
   now: string;
 }) {
+  const router = useRouter();
   const [tab, setTab] = React.useState<"all" | "unread">("all");
   const [type, setType] = React.useState<NotificationType | null>(null);
   const [readIds, setReadIds] = React.useState<ReadonlySet<string>>(new Set());
@@ -67,9 +69,9 @@ export function NotificationsInbox({
   }, new Map<string, AdminNotification[]>());
   const markRead = (ids: Iterable<string>) => {
     const idList = [...ids];
-    if (idList.length === 0) return;
+    if (idList.length === 0) return Promise.resolve();
     setReadIds((s) => new Set([...s, ...idList]));
-    void markNotificationsRead({ notificationIds: idList }).then((result) => {
+    return markNotificationsRead({ notificationIds: idList }).then((result) => {
       if (!result.ok) toast.error(result.error.message);
     });
   };
@@ -130,7 +132,7 @@ export function NotificationsInbox({
             size="sm"
             variant="secondary"
             onClick={() => {
-              markRead(selected);
+              void markRead(selected);
               setSelected(new Set());
             }}
           >
@@ -186,7 +188,13 @@ export function NotificationsInbox({
                       <div className="min-w-0 flex-1">
                         <Link
                           href={n.href ?? "#"}
-                          onClick={() => markRead([n.id])}
+                          onClick={(e) =>
+                            void readThenOpen(
+                              e,
+                              () => (read ? Promise.resolve() : markRead([n.id])),
+                              () => router.push(n.href ?? "#"),
+                            )
+                          }
                           className={cn(
                             "block text-body-sm hover:text-accent-text",
                             !read && "font-semibold",

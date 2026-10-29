@@ -61,7 +61,7 @@ export default async function AdminAppLayout({ children }: { children: React.Rea
   });
 
   const [approvalsRes, notificationsRes] = await Promise.all([
-    listApprovalsAction({ status: "pending", limit: 100 }, ctx),
+    listApprovalsAction({ filters: { status: "pending" }, limit: 100 }, ctx),
     listNotificationsQuery({ unreadOnly: true, limit: 20 }, ctx),
   ]);
 

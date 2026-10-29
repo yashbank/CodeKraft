@@ -177,6 +177,7 @@ export class DefaultQueriesService implements QueriesService {
           queryId: query.id,
           subject: query.subject,
           preview: "New query opened by support",
+          audience: "customer",
         },
         ["inapp", "email"],
         this.db,

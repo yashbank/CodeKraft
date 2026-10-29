@@ -11,7 +11,12 @@ import { listApprovalsAction, listAdminDirectoryQuery } from "@/modules/approval
 
 export const dynamic = "force-dynamic";
 
-export default async function ApprovalsPage() {
+export default async function ApprovalsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ id?: string }>;
+}) {
+  const { id } = await searchParams;
   const ctx = await getAdminRequestContext();
   const now = new Date().toISOString();
 
@@ -26,5 +31,7 @@ export default async function ApprovalsPage() {
   const labels = await resolveSubjectLabels(getDb(), rawApprovals);
   const approvals = rawApprovals.map((a) => mapApprovalToItem(a, admins, now, labels));
 
-  return <ApprovalsInbox approvals={approvals} currentUser={currentUser} now={now} />;
+  return (
+    <ApprovalsInbox approvals={approvals} currentUser={currentUser} now={now} initialId={id} />
+  );
 }

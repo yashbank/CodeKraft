@@ -125,7 +125,7 @@ export function AdminShellWrapper({
       notifications={notifications}
       unreadCount={unreadCount}
       onMarkAllRead={() => void markAllNotificationsRead()}
-      onMarkRead={(id) => void markNotificationsRead({ notificationIds: [id] })}
+      onMarkRead={(id) => markNotificationsRead({ notificationIds: [id] })}
       now={new Date().toISOString()}
       title={title}
       routes={ADMIN_ROUTE_MAP}
