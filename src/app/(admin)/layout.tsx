@@ -7,7 +7,9 @@ import { getSession, hostFromHeaders } from "@/modules/auth/service";
 import { AdminForbidden } from "@/components/admin/AdminForbidden";
 import { DEFAULT_ADMIN_ICON } from "@/lib/brand-constants";
 import { areaMetadata } from "@/lib/seo";
-import { getSiteLogo, getSiteName } from "@/lib/site-brand";
+import { getSiteLogo, getSiteName, getThemeConfig } from "@/lib/site-brand";
+import { ThemeSync } from "@/components/site/ThemeSync";
+import { isThemePref } from "@/lib/theme";
 import { redirectToLogin } from "@/lib/authz/login-redirect";
 
 export const dynamic = "force-dynamic";
@@ -36,5 +38,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     });
     return <AdminForbidden />;
   }
-  return <div data-app="admin">{children}</div>;
+  const { themeToggle } = await getThemeConfig();
+  const themePref = (session.user as { themePref?: string | null }).themePref;
+  return (
+    <div data-app="admin">
+      {themeToggle ? <ThemeSync pref={isThemePref(themePref) ? themePref : null} /> : null}
+      {children}
+    </div>
+  );
 }

@@ -23,6 +23,7 @@ interface AccountShellWrapperProps {
   emailVerified?: boolean;
   currency?: Currency;
   currencyOptions?: readonly Currency[];
+  themeToggle?: boolean;
   children: React.ReactNode;
 }
 
@@ -33,6 +34,7 @@ export function AccountShellWrapper({
   emailVerified = true,
   currency = "INR",
   currencyOptions,
+  themeToggle,
   children,
 }: AccountShellWrapperProps) {
   const pathname = usePathname();
@@ -62,6 +64,7 @@ export function AccountShellWrapper({
       active={active}
       currency={currency}
       currencyOptions={currencyOptions}
+      themeToggle={themeToggle}
       onCurrencyChange={(c) => {
         document.cookie = `${CURRENCY_COOKIE}=${c}; path=/; max-age=31536000; samesite=lax`;
         void updateMyAccountSettings({ displayCurrency: c }).finally(() => router.refresh());

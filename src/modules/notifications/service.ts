@@ -10,6 +10,7 @@ import {
 } from "../../../drizzle/schema/notifications";
 import { customerProfiles } from "../../../drizzle/schema/users-ext";
 import type { EmitOptions, NotificationRecipient, NotificationsService } from "./contracts";
+import { channelEnabled } from "./preferences";
 import { renderNotification } from "./templates";
 import type {
   EmitResult,
@@ -25,6 +26,7 @@ import type {
   NotificationType,
   PollNotificationsInput,
   PollNotificationsResult,
+  UpdateCategoryPreferenceInput,
   UpdateNotificationPreferencesInput,
 } from "./types";
 
@@ -111,6 +113,7 @@ export class DefaultNotificationsService implements NotificationsService {
             name: u.name,
             roles: ["customer"],
             preferences,
+            prefs: rawPrefs ?? null,
           });
         }
       }
@@ -128,27 +131,26 @@ export class DefaultNotificationsService implements NotificationsService {
       const canEmail =
         (!isAdmin || type === "lead.overdue_digest") && (!channels || channels.includes("email"));
 
-      const [inserted] = await tx
-        .insert(notifications)
-        .values({
-          userId: r.userId,
-          type,
-          title: rendered.title,
-          body: rendered.body,
-          link: rendered.link,
-          payload,
-          channelState: { inapp: "sent" },
-        })
-        .returning();
+      // P14-12b: per-category switches. Transactional types ignore them (see preferences.ts).
+      if (channelEnabled(type, "inapp", r.prefs)) {
+        const [inserted] = await tx
+          .insert(notifications)
+          .values({
+            userId: r.userId,
+            type,
+            title: rendered.title,
+            body: rendered.body,
+            link: rendered.link,
+            payload,
+            channelState: { inapp: "sent" },
+          })
+          .returning();
 
-      if (!inserted) throw new AppError(ErrorCode.INTERNAL, "Failed to insert notification");
-      notificationIds.push(inserted.id);
+        if (!inserted) throw new AppError(ErrorCode.INTERNAL, "Failed to insert notification");
+        notificationIds.push(inserted.id);
+      }
 
-      if (canEmail && rendered.emailTemplate) {
-        if (type === "product.updated" && r.preferences?.email.productUpdates === false) {
-          // opted out
-          continue;
-        }
+      if (canEmail && rendered.emailTemplate && channelEnabled(type, "email", r.prefs)) {
 
         const [outboxRow] = await tx
           .insert(emailOutbox)
@@ -301,26 +303,28 @@ export class DefaultNotificationsService implements NotificationsService {
       throw new AppError(ErrorCode.UNAUTHENTICATED, "Authentication required");
     }
 
+    // Merge over the stored JSON so per-category switches survive this legacy toggle.
+    const [row] = await this.db
+      .select({ p: customerProfiles.notificationPrefs })
+      .from(customerProfiles)
+      .where(eq(customerProfiles.userId, ctx.userId))
+      .limit(1);
+    const prefs = {
+      email: true,
+      inapp: true,
+      ...row?.p,
+      emailProductUpdates: input.email.productUpdates,
+    };
+    prefs.categories = {
+      ...prefs.categories,
+      marketing: { ...prefs.categories?.marketing, email: input.email.productUpdates },
+    };
     await this.db
       .insert(customerProfiles)
-      .values({
-        userId: ctx.userId,
-        notificationPrefs: {
-          email: true,
-          inapp: true,
-          emailProductUpdates: input.email.productUpdates,
-        },
-      })
+      .values({ userId: ctx.userId, notificationPrefs: prefs })
       .onConflictDoUpdate({
         target: customerProfiles.userId,
-        set: {
-          notificationPrefs: {
-            email: true,
-            inapp: true,
-            emailProductUpdates: input.email.productUpdates,
-          },
-          updatedAt: new Date(),
-        },
+        set: { notificationPrefs: prefs, updatedAt: new Date() },
       });
 
     return {
@@ -329,6 +333,36 @@ export class DefaultNotificationsService implements NotificationsService {
         productUpdates: input.email.productUpdates,
       },
     };
+  }
+
+  /** P14-12b: flip one category + channel switch, keeping every other stored key. */
+  async updateCategoryPreference(
+    ctx: RequestContext,
+    input: UpdateCategoryPreferenceInput,
+  ): Promise<{ category: string; channel: string; enabled: boolean }> {
+    if (!ctx.userId) {
+      throw new AppError(ErrorCode.UNAUTHENTICATED, "Authentication required");
+    }
+    const [row] = await this.db
+      .select({ p: customerProfiles.notificationPrefs })
+      .from(customerProfiles)
+      .where(eq(customerProfiles.userId, ctx.userId))
+      .limit(1);
+    const prefs = { email: true, inapp: true, ...row?.p };
+    prefs.categories = {
+      ...prefs.categories,
+      [input.category]: { ...prefs.categories?.[input.category], [input.channel]: input.enabled },
+    };
+    if (input.category === "marketing" && input.channel === "email")
+      prefs.emailProductUpdates = input.enabled;
+    await this.db
+      .insert(customerProfiles)
+      .values({ userId: ctx.userId, notificationPrefs: prefs })
+      .onConflictDoUpdate({
+        target: customerProfiles.userId,
+        set: { notificationPrefs: prefs, updatedAt: new Date() },
+      });
+    return input;
   }
 
   private toItem(row: Notification): NotificationItem {
@@ -362,5 +396,6 @@ export function createNotImplementedNotificationsService(): NotificationsService
     markAllRead: "async",
     getNotificationPreferences: "async",
     updateNotificationPreferences: "async",
+    updateCategoryPreference: "async",
   });
 }

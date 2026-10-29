@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/sheet";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
+import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { cn } from "@/components/ui/_utils";
 import { buildGreeting, mapMenuMessagesToChat, mapMenuNodesToChips } from "@/lib/account/chat-view";
 import {
@@ -597,16 +598,8 @@ export function ChatScreen({
           </li>
         ) : null}
         {streaming ? (
-          <li
-            className="flex items-center gap-2 text-caption text-fg-muted"
-            aria-label="Assistant is typing"
-          >
-            <span aria-hidden className="flex gap-1">
-              <span className="size-1.5 animate-pulse rounded-full bg-fg-subtle" />
-              <span className="size-1.5 animate-pulse rounded-full bg-fg-subtle [animation-delay:150ms]" />
-              <span className="size-1.5 animate-pulse rounded-full bg-fg-subtle [animation-delay:300ms]" />
-            </span>
-            Thinking…
+          <li>
+            <TypingIndicator />
           </li>
         ) : null}
         {pendingLead ? (

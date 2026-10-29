@@ -20,7 +20,7 @@ import {
 export const citext = customType<{ data: string }>({ dataType: () => "citext" });
 
 export const userStatus = pgEnum("user_status", ["active", "suspended", "deleted"]);
-export const themePref = pgEnum("theme_pref", ["dark-cinematic", "light-editorial"]);
+export const themePref = pgEnum("theme_pref", ["dark-cinematic", "light-editorial", "auto"]);
 
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 

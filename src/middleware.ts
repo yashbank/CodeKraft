@@ -8,7 +8,6 @@ import { inlineThemeScript } from "@/lib/theme";
 const ADMIN_HOST = process.env.ADMIN_HOST ?? "";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "";
 const APP_ENV = process.env.APP_ENV ?? "local";
-const LIGHT_ENABLED = process.env.FEATURE_THEME_LIGHT_EDITORIAL === "true";
 
 function makeNonce(): string {
   const bytes = new Uint8Array(16);
@@ -29,7 +28,7 @@ async function sha256Base64(input: string): Promise<string> {
 // allow-list it once instead of making the layout dynamic just to apply a nonce.
 let themeScriptHashPromise: Promise<string> | null = null;
 function getThemeScriptHash(): Promise<string> {
-  themeScriptHashPromise ??= sha256Base64(inlineThemeScript(LIGHT_ENABLED));
+  themeScriptHashPromise ??= sha256Base64(inlineThemeScript());
   return themeScriptHashPromise;
 }
 
@@ -175,6 +174,6 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|icon.svg|robots.txt|sitemap.xml|brand/|noise.png).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icon.svg|robots.txt|sitemap.xml|manifest.webmanifest|brand/|noise.png).*)",
   ],
 };

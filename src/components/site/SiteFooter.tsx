@@ -29,7 +29,7 @@ export function SiteFooter({
   const siteName = useSiteName();
   const explore = SITE_NAV.filter((i) => i.href !== "/contact");
   return (
-    <footer className="border-t border-border bg-surface">
+    <footer className="border-t border-border bg-surface print:hidden">
       <Container className="py-12 lg:py-16">
         <div className="grid gap-10 md:grid-cols-4 md:gap-8">
           <div className="space-y-4">
