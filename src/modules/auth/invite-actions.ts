@@ -55,7 +55,9 @@ export async function createCustomerTempPassword(raw: unknown) {
 /** Invite (no password yet) or reset (has one) link for an existing user; replaces any earlier link. */
 export async function generateAccessLink(raw: unknown) {
   return run(async () => {
-    const input = z.strictObject({ userId }).parse(raw);
+    const input = z
+      .strictObject({ userId, purpose: z.enum(["invite", "reset"]).optional() })
+      .parse(raw);
     const { token, purpose, expiresAt } = await generateUserLink(
       await getAdminRequestContext(),
       input,

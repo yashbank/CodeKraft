@@ -113,10 +113,13 @@ export async function createCustomerInvite(
   return { token, expiresAt: new Date(Date.now() + INVITE_TTL_MS) };
 }
 
-/** Link for an existing user: 'invite' while they have no password yet, otherwise 'reset'. Regenerating revokes the previous link. */
+/**
+ * Link for an existing user. Default: 'invite' while they have no password yet, otherwise 'reset'
+ * (1 hour); pass `purpose: "reset"` to force a reset link. Regenerating revokes the previous link.
+ */
 export async function generateUserLink(
   ctx: RequestContext,
-  input: { userId: string },
+  input: { userId: string; purpose?: TokenPurpose },
   db: Db = getDb(),
 ): Promise<{ token: string; purpose: TokenPurpose; expiresAt: Date }> {
   const { user, roles } = await assertCanManage(ctx, db, input.userId);
@@ -125,7 +128,7 @@ export async function generateUserLink(
     .from(accounts)
     .where(and(eq(accounts.userId, user.id), eq(accounts.providerId, "credential")))
     .limit(1);
-  const purpose: TokenPurpose = cred ? "reset" : "invite";
+  const purpose: TokenPurpose = input.purpose ?? (cred ? "reset" : "invite");
   const token = await issueToken(db, {
     purpose,
     email: String(user.email).toLowerCase(),
