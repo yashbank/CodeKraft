@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const ok = (data: unknown) => ({ ok: true, data });
 vi.mock("@/lib/authz/context", () => ({ anonymousContext: () => ({}) }));
+vi.mock("@/lib/display-currency", () => ({
+  getDisplayCurrency: async () => ({ currency: "INR", base: "INR", enabled: ["INR"] }),
+}));
 vi.mock("@/modules/catalog/queries", () => ({
   getProductBySlugQuery: vi.fn(),
   listProductsQuery: vi.fn(),
