@@ -94,6 +94,8 @@ export default async function LandingRoute() {
       poster: whoChapter?.media.poster
         ? { url: whoChapter.media.poster.url, alt: whoChapter.media.poster.alt || whoChapter.title }
         : null,
+      nodeLabel: whoChapter?.media.nodeLabel ?? undefined,
+      nodeStyle: whoChapter?.media.nodeStyle ?? undefined,
     },
     build: chapterCopy(chaptersByKey.get("build")),
     sell: chapterCopy(chaptersByKey.get("sell")),

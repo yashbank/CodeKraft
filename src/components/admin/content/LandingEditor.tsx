@@ -115,7 +115,17 @@ export function LandingEditor({
       title: String(data.get("title") ?? "").trim(),
       subtitle: String(data.get("subtitle") ?? "").trim() || undefined,
       bodyJson: fromPlainText(String(data.get("body") ?? "")),
-      media: { posterMediaId: pendingPosterMediaId ?? chapter.posterMediaId },
+      media: {
+        posterMediaId: pendingPosterMediaId ?? chapter.posterMediaId,
+        ...(chapter.key === "who"
+          ? {
+              nodeLabel: String(data.get("node-label") ?? "").trim(),
+              ...(str("node-style") && str("node-style") !== "default"
+                ? { nodeStyle: str("node-style") as "pill" | "terminal" | "outline" }
+                : {}),
+            }
+          : {}),
+      },
       cta: { primary, ...(secondary ? { secondary } : {}) },
       position: chapters.indexOf(chapter),
       published: canPublish ? published : chapter.published,
@@ -202,6 +212,36 @@ export function LandingEditor({
               </Button>
             </div>
           </Field>
+        ) : null}
+        {chapter.key === "who" ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              id="ch-node-label"
+              label="Image label"
+              optional
+              hint={`${help("who", "node-label")} 40 chars.`}
+            >
+              <Input
+                id="ch-node-label"
+                name="node-label"
+                maxLength={40}
+                defaultValue={chapter.nodeLabel ?? "Architecture Node"}
+              />
+            </Field>
+            <Field id="ch-node-style" label="Image label style" optional hint="Look of the label.">
+              <Select name="node-style" defaultValue={chapter.nodeStyle ?? "default"}>
+                <SelectTrigger id="ch-node-style" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper">
+                  <SelectItem value="default">Default (plain caps)</SelectItem>
+                  <SelectItem value="pill">Pill</SelectItem>
+                  <SelectItem value="terminal">Terminal</SelectItem>
+                  <SelectItem value="outline">Outline</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
         ) : null}
         <Field
           id="ch-eyebrow"
