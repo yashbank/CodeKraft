@@ -17,20 +17,15 @@ async function openTheme(page: Page) {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto(`${ADMIN}/admin/settings`);
   await page.getByRole("button", { name: "Theme", exact: true }).click();
-  await expect(page.getByRole("group", { name: "Accent palette" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Accent palette", exact: true })).toBeVisible();
 }
 
-/** Open "Show all" for a group, optionally search, pick an option; the dialog/sheet closes. */
-async function pick(page: Page, group: RegExp, option: string, search?: string) {
-  await page.getByRole("button", { name: group }).click();
-  const modal = page.getByRole("dialog");
-  await expect(modal).toBeVisible();
-  if (search) {
-    await modal.getByRole("searchbox").fill(search);
-    await expect(modal.getByRole("button", { name: option })).toBeVisible();
-  }
-  await modal.getByRole("button", { name: option }).first().click();
-  await expect(modal).toBeHidden();
+/** P14-07: every group is a searchable dropdown; open it, optionally search, pick an option. */
+async function pick(page: Page, group: string, option: string, search?: string) {
+  await page.getByRole("combobox", { name: group, exact: true }).click();
+  if (search) await page.getByPlaceholder(/Search \d+ options/).fill(search);
+  await page.getByRole("option", { name: option, exact: true }).first().click();
+  await expect(page.getByRole("listbox")).toBeHidden();
 }
 
 const rootVar = (page: Page, name: string) =>
@@ -46,9 +41,9 @@ test.describe("R9-08 theme options", () => {
     await loginAs(page, "super_admin");
     await openTheme(page);
 
-    await pick(page, /Show all accent palette/i, "Sunset", "sun");
-    await pick(page, /Show all font pairing/i, "Poppins", "pop");
-    await pick(page, /Show all corner radius/i, "Pill");
+    await pick(page, "Accent palette", "Sunset", "sun");
+    await pick(page, "Font pairing", "Poppins", "pop");
+    await pick(page, "Corner radius", "Pill");
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText(/saved/i).first()).toBeVisible();
 
@@ -70,7 +65,7 @@ test.describe("R9-08 theme options", () => {
     issues.assertClean();
   });
 
-  test("dialog / sheet fits at 375, 768, 1280 and Esc closes it", async ({ page }) => {
+  test("dropdown fits at 375, 768, 1280 and Esc closes it", async ({ page }) => {
     await loginAs(page, "super_admin");
     await openTheme(page);
     for (const w of WIDTHS) {
@@ -82,26 +77,24 @@ test.describe("R9-08 theme options", () => {
         await expect(page.getByText(/designed for laptops/i)).toBeVisible();
         continue;
       }
-      await page.getByRole("button", { name: /Show all accent palette/i }).click();
-      const modal = page.getByRole("dialog");
-      await expect(modal).toBeVisible();
-      const box = await modal.boundingBox();
+      const trigger = page.getByRole("combobox", { name: "Accent palette", exact: true });
+      await trigger.click();
+      const list = page.getByRole("listbox");
+      await expect(list).toBeVisible();
+      const box = await list.boundingBox();
       expect(box!.x).toBeGreaterThanOrEqual(-1);
       expect(box!.x + box!.width).toBeLessThanOrEqual(w + 1);
       await expectNoOverflow(page);
       await page.keyboard.press("Escape");
-      await expect(modal).toBeHidden();
-      await expect(page.getByRole("button", { name: /Show all accent palette/i })).toBeFocused();
+      await expect(list).toBeHidden();
+      await expect(trigger).toBeFocused();
     }
   });
 
   test("card padding option changes the padding cards use", async ({ page }) => {
     await loginAs(page, "super_admin");
     await openTheme(page);
-    await page
-      .getByRole("radiogroup", { name: "Card padding" })
-      .getByRole("radio", { name: /Comfortable/ })
-      .click();
+    await pick(page, "Card padding", "Comfortable");
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText(/saved/i).first()).toBeVisible();
     const pad = async () => {
@@ -118,13 +111,13 @@ test.describe("R9-08 theme options", () => {
     await expect.poll(pad, { timeout: 30_000 }).toEqual(["comfortable", "32px"]);
   });
 
-  test("inline lists show at most 3 options", async ({ page }) => {
+  test("every group is a searchable dropdown with plenty of options", async ({ page }) => {
     await loginAs(page, "super_admin");
     await openTheme(page);
     for (const g of ["Accent palette", "Font pairing", "Corner radius", "Borders"]) {
-      const n = await page.getByRole("radiogroup", { name: g }).getByRole("radio").count();
-      expect(n).toBeGreaterThan(0);
-      expect(n).toBeLessThanOrEqual(3);
+      await page.getByRole("combobox", { name: g, exact: true }).click();
+      expect(await page.getByRole("option").count()).toBeGreaterThanOrEqual(20);
+      await page.keyboard.press("Escape");
     }
   });
 });

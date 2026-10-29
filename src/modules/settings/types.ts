@@ -10,6 +10,7 @@ import type { FlagKey } from "@/lib/feature-flags";
 import type { PaletteId } from "@/lib/palettes";
 import type { BorderId, DensityId, FontId, LayoutId, PatternId, RadiusId } from "@/lib/ui-style";
 import type { ThemeName } from "@/lib/theme";
+import type { StudioExtras, ThemePreset } from "@/lib/theme-studio";
 import type { PaymentMethodValue } from "../offerings/types";
 
 export type { JsonValue, SiteSetting } from "../../../drizzle/schema/settings";
@@ -96,6 +97,10 @@ export interface SiteSettings {
   uiPattern: PatternId;
   uiLayout: LayoutId;
   uiDensity: DensityId;
+  /** P14-07 theme studio additions (heading/body font, shadow, button, card); defaults = unchanged site. */
+  themeStudio: StudioExtras;
+  /** P14-07 saved theme presets. */
+  themePresets: ThemePreset[];
   aiModel: string;
   aiDailyPlatformCap: number;
   aiDailyUserCap: number;
@@ -131,6 +136,8 @@ export const SITE_SETTING_KEYS: Readonly<Record<SiteSettingField, string>> = Obj
   uiPattern: "ui_pattern",
   uiLayout: "ui_layout",
   uiDensity: "ui_density",
+  themeStudio: "theme_studio",
+  themePresets: "theme_presets",
   aiModel: "ai_model",
   aiDailyPlatformCap: "ai_daily_platform_cap",
   aiDailyUserCap: "ai_daily_user_cap",
