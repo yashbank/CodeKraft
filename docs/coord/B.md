@@ -32,6 +32,7 @@ Updated: 2026-10-29
 - P8-03 | ready | branch feat/p8-03-remove-test-copy | vitest tests/unit/site/no-test-copy.test.tsx: 5 pass
 - P8-04 | ready | branch feat/p8-04-system-health | vitest tests/unit/admin/system-health.test.ts: 7 pass; dashboard-widgets-data-sources: 45 pass
 - P9-02 | ready | branch feat/p9-02-expense-fx | vitest tests/unit/modules/expense-rate.test.ts: 8 pass; unit/modules+static+admin: 260 pass | MIGRATION 0007
+- P9-01 | ready | branch feat/p9-01-currency | vitest tests/unit: 1086 pass (display-currency + display-currency-server)
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
 - [open] R2 private bucket CORS must allow PUT from the admin origin | P2-01 browser uploads straight to R2 | upload a .dmg on a product version, it completes and appears
@@ -62,3 +63,4 @@ Updated: 2026-10-29
 - 2026-10-29 P8-03: The only customer-facing test copy was the checkout Razorpay hint 'test mode', now 'Pay instantly by card or UPI'. The inquiry form had none. The admin '(test mode only)' setting label is kept.
 - 2026-10-29 P8-04: Checks ran in sequence in one try/catch, so one failure emptied the widget. Now parallel checks, each with its own 3 s timeout: DB latency, storage HEAD, email sender, cron last run (warn after 36 h), errors in the last 24 h. Never empty. Please run the integration test widget-loaders.test.ts in the gate.
 - 2026-10-29 P9-02: MIGRATION 0007_expense_fx_lock.sql (additive: nullable expenses.fx_rate_to_inr, fx_rate_source, fx_rate_at). The rate is locked on the expense, with fallback live -> stored (<7 days, flagged) -> manual rate required, never 1:1. The ledger uses the locked rate with minor-unit-aware conversion. The rate line shows on the sheet and each row. Expenses are immutable, so there is no edit/refresh UI (the resolver supports it).
+- 2026-10-29 P9-01: Enabled-only currency selector in the site header and account (in the phone menu sheet). Order: user.displayCurrency, then the ck_currency cookie, then base. Prices on home, products and product detail show converted with '≈'. Checkout keeps the charge currency and adds '≈ amount, you will be charged in X'. Price-free pages stay static. Past orders and invoices keep their charged currency.
