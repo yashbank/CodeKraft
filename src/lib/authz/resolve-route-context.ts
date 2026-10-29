@@ -2,6 +2,8 @@
  * Resolve RequestContext / Context from Next.js route request headers — docs/06 §1.1.
  */
 import { buildContext, anonymousContext, type Context } from "@/lib/authz/context";
+import { assertNoPasswordChange } from "@/lib/authz/must-change";
+import { AppError, ErrorCode } from "@/lib/errors";
 import { getSession } from "@/modules/auth/service";
 import { userRoles } from "../../../drizzle/schema/auth";
 import { eq } from "drizzle-orm";
@@ -31,6 +33,7 @@ export async function resolveRouteContext(req: Request): Promise<Context> {
       return anonymousContext({ ip, userAgent });
     }
 
+    assertNoPasswordChange(session);
     const { db } = await import("@/lib/db");
     const roleRows = await db
       .select({ role: userRoles.roleKey })
@@ -46,7 +49,9 @@ export async function resolveRouteContext(req: Request): Promise<Context> {
       ip,
       userAgent,
     });
-  } catch {
+  } catch (err) {
+    // 403 PASSWORD_CHANGE_REQUIRED must reach the route handler, not degrade to anonymous.
+    if (err instanceof AppError && err.code === ErrorCode.PASSWORD_CHANGE_REQUIRED) throw err;
     return anonymousContext({ ip, userAgent });
   }
 }
