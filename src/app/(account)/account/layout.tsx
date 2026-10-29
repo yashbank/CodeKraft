@@ -3,6 +3,9 @@ import { getSession } from "@/modules/auth/service";
 import { mapNotificationItem } from "@/lib/account/notifications-view";
 import { listNotificationsQuery } from "@/modules/notifications/queries";
 import { getDisplayCurrency } from "@/lib/display-currency";
+import { ThemeSync } from "@/components/site/ThemeSync";
+import { getThemeConfig } from "@/lib/site-brand";
+import { isThemePref } from "@/lib/theme";
 import { AccountShellWrapper } from "@/components/account/AccountShellWrapper";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +22,8 @@ export default async function AccountAreaLayout({ children }: { children: React.
     await getSiteRequestContext(),
   );
 
-  const display = await getDisplayCurrency();
+  const [display, { themeToggle }] = await Promise.all([getDisplayCurrency(), getThemeConfig()]);
+  const themePref = (session.user as { themePref?: string | null }).themePref;
 
   const name: string =
     session.user.name ||
@@ -35,6 +39,7 @@ export default async function AccountAreaLayout({ children }: { children: React.
 
   return (
     <AccountShellWrapper
+      themeToggle={themeToggle}
       currency={display.currency}
       currencyOptions={display.enabled}
       notifications={
@@ -48,6 +53,7 @@ export default async function AccountAreaLayout({ children }: { children: React.
         initials,
       }}
     >
+      {themeToggle ? <ThemeSync pref={isThemePref(themePref) ? themePref : null} /> : null}
       {children}
     </AccountShellWrapper>
   );

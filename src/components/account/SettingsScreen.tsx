@@ -25,7 +25,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Currency } from "@/lib/money";
-import { updateMyNotificationPreferences } from "@/modules/notifications/site-mutations";
+import { applyThemePref } from "@/lib/theme";
+import { updateMyCategoryPreference } from "@/modules/notifications/site-mutations";
 import {
   changeMyPassword,
   deleteMyAccount,
@@ -49,6 +50,24 @@ const EVENT_LABEL: Record<AuthEvent["kind"], string> = {
   password_reset: "Password reset",
   session_replaced: "Session replaced by a new sign-in",
 };
+
+const NOTIFICATION_ROWS = [
+  {
+    category: "orders",
+    label: "Orders and delivery",
+    hint: "Order, delivery and subscription reminders.",
+  },
+  {
+    category: "queries",
+    label: "Queries and support",
+    hint: "Replies to your questions and chats.",
+  },
+  {
+    category: "marketing",
+    label: "Product updates",
+    hint: "New versions and news for products you own.",
+  },
+] as const;
 
 /**
  * SCR-ACC-09 — profile & settings: vertical tabs (Profile · Preferences · Security · Notifications ·
@@ -80,7 +99,7 @@ export function SettingsScreen({
   const [theme, setTheme] = React.useState(profile.themePref ?? "dark-cinematic");
   const [reduce, setReduce] = React.useState(profile.reduceMotion);
   const [newPw, setNewPw] = React.useState("");
-  const [updates, setUpdates] = React.useState(profile.emailProductUpdates);
+  const [cats, setCats] = React.useState(profile.notificationCategories);
   const [savingProfile, setSavingProfile] = React.useState(false);
   const [signingOutEverywhere, setSigningOutEverywhere] = React.useState(false);
   const [newEmail, setNewEmail] = React.useState("");
@@ -335,6 +354,7 @@ export function SettingsScreen({
                     onValueChange={async (v) => {
                       const next = v as typeof theme;
                       setTheme(next);
+                      applyThemePref(next);
                       const result = await updateMyAccountSettings({ themePref: next });
                       if (!result.ok) {
                         toast.error(result.error.message);
@@ -355,6 +375,12 @@ export function SettingsScreen({
                       <RadioGroupItem id="th-light" value="light-editorial" />
                       <Label htmlFor="th-light" className="font-medium">
                         Light editorial
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem id="th-auto" value="auto" />
+                      <Label htmlFor="th-auto" className="font-medium">
+                        Match my device
                       </Label>
                     </div>
                   </RadioGroup>
@@ -563,49 +589,62 @@ export function SettingsScreen({
 
           <TabsContent value="notifications">
             <div className="space-y-6">
-              <h2 className="text-h3 text-fg">Email notifications</h2>
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <Label htmlFor="nt-orders" className="font-semibold">
-                    Order and payment updates
-                  </Label>
-                  <p className="text-caption text-fg-muted">
-                    Always on — receipts, confirmations and delivery notices are part of your
-                    purchase.
-                  </p>
-                </div>
-                <Switch id="nt-orders" checked disabled aria-readonly />
-              </div>
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <Label htmlFor="nt-updates" className="font-semibold">
-                    Product updates for products you own
-                  </Label>
-                  <p className="text-caption text-fg-muted">New versions and changelogs.</p>
-                </div>
-                <Switch
-                  id="nt-updates"
-                  checked={updates}
-                  disabled={savingNotificationPref}
-                  onCheckedChange={async (v) => {
-                    setUpdates(v);
-                    setSavingNotificationPref(true);
-                    const result = await updateMyNotificationPreferences({
-                      email: { orderUpdates: true, productUpdates: v },
-                    });
-                    setSavingNotificationPref(false);
-                    if (!result.ok) {
-                      setUpdates(!v);
-                      toast.error(result.error.message);
-                      return;
-                    }
-                    toast.success("Preference saved");
-                  }}
-                />
-              </div>
-              <p className="text-caption text-fg-subtle">
-                In-app notifications are always on. There is no marketing email.
+              <h2 className="text-h3 text-fg">Notifications</h2>
+              <p className="text-body-sm text-fg-muted">
+                Choose how we reach you for each kind of update. Receipts, payment, refund and
+                security notices are always sent.
               </p>
+              <div className="divide-y divide-border rounded-lg border border-border">
+                {NOTIFICATION_ROWS.map((row) => (
+                  <div
+                    key={row.category}
+                    className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 p-4"
+                  >
+                    <div className="min-w-0 flex-1 basis-56">
+                      <p className="font-semibold text-fg">{row.label}</p>
+                      <p className="text-caption text-fg-muted">{row.hint}</p>
+                    </div>
+                    <div className="flex items-center gap-6">
+                      {(["email", "inapp"] as const).map((channel) => {
+                        const id = `nt-${row.category}-${channel}`;
+                        return (
+                          <div key={channel} className="flex items-center gap-2">
+                            <Switch
+                              id={id}
+                              checked={cats[row.category][channel]}
+                              disabled={savingNotificationPref}
+                              onCheckedChange={async (v) => {
+                                const prev = cats;
+                                setCats({
+                                  ...cats,
+                                  [row.category]: { ...cats[row.category], [channel]: v },
+                                });
+                                setSavingNotificationPref(true);
+                                const result = await updateMyCategoryPreference({
+                                  category: row.category,
+                                  channel,
+                                  enabled: v,
+                                });
+                                setSavingNotificationPref(false);
+                                if (!result.ok) {
+                                  setCats(prev);
+                                  toast.error(result.error.message);
+                                  return;
+                                }
+                                toast.success("Preference saved");
+                              }}
+                            />
+                            <Label htmlFor={id} className="text-body-sm">
+                              {channel === "email" ? "Email" : "In-app"}
+                              <span className="sr-only"> for {row.label}</span>
+                            </Label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </TabsContent>
 

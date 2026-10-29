@@ -34,7 +34,7 @@ import type {
 } from "./contracts";
 import type { z } from "zod";
 import type { Currency } from "@/lib/money";
-import type { ThemeName } from "@/lib/theme";
+import type { ThemePref } from "@/lib/theme";
 
 export function toUserView(user: User): UserView {
   return {
@@ -46,7 +46,7 @@ export function toUserView(user: User): UserView {
     phoneNumber: user.phoneNumber,
     status: user.status,
     displayCurrency: (user.displayCurrency ?? "INR") as Currency,
-    themePref: (user.themePref as ThemeName) ?? null,
+    themePref: (user.themePref as ThemePref) ?? null,
     twoFactorEnabled: user.twoFactorEnabled,
     createdAt: user.createdAt.toISOString(),
   };

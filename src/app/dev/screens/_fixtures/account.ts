@@ -36,6 +36,11 @@ export const customer: CustomerProfile = {
   themePref: null,
   reduceMotion: false,
   emailProductUpdates: true,
+  notificationCategories: {
+    orders: { email: true, inapp: true },
+    queries: { email: true, inapp: true },
+    marketing: { email: true, inapp: true },
+  },
   billing: {
     name: "Pravin Deshmukh",
     company: "iauro Systems Pvt Ltd",

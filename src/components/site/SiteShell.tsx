@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { SiteContact } from "@/lib/site-brand";
+import { CookieNotice } from "./CookieNotice";
 import { SiteFooter } from "./SiteFooter";
 import { SiteHeader, type SiteHeaderProps } from "./SiteHeader";
 
@@ -21,6 +22,7 @@ export function SiteShell({
         {children}
       </main>
       <SiteFooter themeToggleEnabled={themeToggleEnabled} contact={contact} />
+      <CookieNotice />
     </div>
   );
 }

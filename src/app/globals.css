@@ -25,3 +25,44 @@
     transform: translateY(var(--ck-card-hy));
   }
 }
+
+/* P14-12b print: invoices, order pages, blog and legal print as plain black-on-white documents.
+   Site header/footer and the account sidebar/top bar carry `print:hidden`; this covers the rest. */
+@media print {
+  html,
+  body,
+  [data-app] {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  [data-app] :where(h1, h2, h3, h4, p, li, td, th, dt, dd, span, small) {
+    color: #000 !important;
+  }
+  button,
+  [role="dialog"],
+  [data-sonner-toaster],
+  [data-slot="sidebar"],
+  [data-slot="sidebar-container"],
+  [data-print-hide] {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  /* Show where links go on reading pages (blog posts, legal text). */
+  :is(article, [data-print-urls]) a[href^="http"]::after,
+  :is(article, [data-print-urls]) a[href^="/"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.85em;
+    word-break: break-all;
+  }
+  a {
+    color: #000 !important;
+    text-decoration: underline;
+  }
+  tr,
+  img {
+    break-inside: avoid;
+  }
+}

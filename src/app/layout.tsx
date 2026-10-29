@@ -27,8 +27,6 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export const viewport: Viewport = { themeColor: THEME_COLOR[DEFAULT_THEME] };
 
-const LIGHT_ENABLED = process.env.FEATURE_THEME_LIGHT_EDITORIAL === "true";
-
 /**
  * Root layout stays static (no cookies()/headers()) so public routes can be ISR-cached (docs/08 §10).
  * The ≤300-byte inline script applies the visitor's cookie theme before first paint; dynamic
@@ -38,8 +36,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const [siteName, siteLogo] = await Promise.all([getSiteName(), getSiteLogo()]);
   const { defaultTheme, palette, ui, studio = DEFAULT_STUDIO_EXTRAS } = await getThemeConfig();
   const fontsHref = studioFontsHref(studio);
-  // An admin who picks light-editorial as the default has opted in, so it needs no env flag.
-  const lightEnabled = LIGHT_ENABLED || defaultTheme === "light-editorial";
   return (
     <html
       lang="en"
@@ -56,7 +52,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: inlineThemeScript(lightEnabled) }} />
+        <script dangerouslySetInnerHTML={{ __html: inlineThemeScript() }} />
         <style
           dangerouslySetInnerHTML={{
             __html: paletteCss(palette) + uiStyleCss(ui) + studioCss(studio),

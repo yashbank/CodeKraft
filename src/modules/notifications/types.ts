@@ -118,6 +118,16 @@ export const notificationPreferencesSchema = z
 export type NotificationPreferences = z.infer<typeof notificationPreferencesSchema>;
 
 export const updateNotificationPreferencesSchema = notificationPreferencesSchema;
+
+/** P14-12b: flip one category + channel switch (`PREF_CATEGORIES` x `PREF_CHANNELS`). */
+export const updateCategoryPreferenceSchema = z
+  .object({
+    category: z.enum(["orders", "queries", "marketing"]),
+    channel: z.enum(["email", "inapp"]),
+    enabled: z.boolean(),
+  })
+  .strict();
+export type UpdateCategoryPreferenceInput = z.infer<typeof updateCategoryPreferenceSchema>;
 export type UpdateNotificationPreferencesInput = z.infer<
   typeof updateNotificationPreferencesSchema
 >;

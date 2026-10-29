@@ -16,6 +16,7 @@ export function RichText({
 }) {
   return (
     <div
+      data-print-urls
       className={cn(
         "text-fg-muted [&_a]:text-accent-text [&_a]:underline-offset-2 [&_a:hover]:underline",
         size === "lg" ? "text-body-lg" : "text-body",

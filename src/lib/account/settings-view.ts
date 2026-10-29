@@ -19,6 +19,7 @@ import type {
   CustomerProfile,
   SessionInfo,
 } from "@/components/account/types";
+import { resolveCategoryPrefs } from "@/modules/notifications/preferences";
 import type { CustomerProfileView, Me, SessionView, UserView } from "@/modules/users/types";
 
 function initials(name: string): string {
@@ -62,6 +63,7 @@ export function mapCustomerProfile(
     billing,
     phone: user.phoneNumber ?? undefined,
     emailProductUpdates: profile.notificationPrefs?.emailProductUpdates ?? true,
+    notificationCategories: resolveCategoryPrefs(profile.notificationPrefs),
   };
 }
 

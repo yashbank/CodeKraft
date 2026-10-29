@@ -87,7 +87,7 @@ import {
 import { listPartners, updatePartner } from "./partners";
 import { createPartner, ensureSuperAdminPartners, listPartnerCandidates } from "./partner-create";
 import type { Currency } from "@/lib/money";
-import type { ThemeName } from "@/lib/theme";
+import type { ThemePref } from "@/lib/theme";
 
 /** Preserved for freeze and contract tests (PHASE-02 P2.8). */
 export function createNotImplementedUsersService(): UsersService {
@@ -323,7 +323,7 @@ export class DefaultUsersService implements UsersService {
       updateSet.displayCurrency = input.displayCurrency;
     }
     if (input.themePref !== undefined) {
-      updateSet.themePref = input.themePref as "dark-cinematic" | "light-editorial" | null;
+      updateSet.themePref = input.themePref as ThemePref | null;
     }
 
     const [updated] = await database
@@ -339,7 +339,7 @@ export class DefaultUsersService implements UsersService {
     return {
       settings: {
         displayCurrency: (updated.displayCurrency ?? "INR") as Currency,
-        themePref: (updated.themePref as ThemeName) ?? null,
+        themePref: (updated.themePref as ThemePref) ?? null,
       },
     };
   }

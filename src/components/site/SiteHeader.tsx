@@ -82,7 +82,7 @@ export function SiteHeader({
       <header
         data-scrolled={scrolled ? "true" : "false"}
         className={cn(
-          "sticky top-(--site-header-top,0px) z-(--ck-z-header) w-full transition-[background-color,border-color,backdrop-filter] duration-(--ck-motion-duration-md) ease-standard",
+          "print:hidden sticky top-(--site-header-top,0px) z-(--ck-z-header) w-full transition-[background-color,border-color,backdrop-filter] duration-(--ck-motion-duration-md) ease-standard",
           scrolled
             ? "border-b border-border bg-glass backdrop-blur-header backdrop-saturate-[var(--ck-glass-saturate)]"
             : "border-b border-transparent bg-transparent",

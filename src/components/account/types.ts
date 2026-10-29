@@ -6,6 +6,8 @@
 import type { AttachmentView } from "@/lib/attachments";
 import type { Currency, Money } from "@/lib/money";
 import type { StatusValue } from "@/lib/status-tone";
+import type { ThemePref } from "@/lib/theme";
+import type { PrefCategory, PrefChannel } from "@/modules/notifications/preferences";
 
 export type DeliveryType = StatusValue<"entitlements.delivery_type">;
 export type EntitlementStatus = StatusValue<"entitlements.status">;
@@ -44,11 +46,13 @@ export interface CustomerProfile {
   /** Two-letter initials for the avatar fallback. */
   initials: string;
   displayCurrency: Currency;
-  themePref: "dark-cinematic" | "light-editorial" | null;
+  themePref: ThemePref | null;
   reduceMotion: boolean;
   billing: BillingDetails;
   phone?: string;
   emailProductUpdates: boolean;
+  /** P14-12b: per-category email / in-app switches (resolved, default on). */
+  notificationCategories: Record<PrefCategory, Record<PrefChannel, boolean>>;
 }
 
 export interface ReleaseFile {
