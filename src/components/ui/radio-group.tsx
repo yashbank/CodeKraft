@@ -56,7 +56,7 @@ function RadioGroupCard({
     <RadioGroupPrimitive.Item
       data-slot="radio-group-card"
       className={cn(
-        "group flex w-full items-start gap-3 rounded-lg border border-border bg-surface p-4 text-left text-fg transition-[color,background-color,border-color] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-accent data-[state=checked]:bg-accent-soft",
+        "group flex w-full min-w-0 items-start gap-3 overflow-hidden rounded-lg border border-border bg-surface p-4 text-left text-fg transition-[color,background-color,border-color] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-accent data-[state=checked]:bg-accent-soft",
         className,
       )}
       {...props}
