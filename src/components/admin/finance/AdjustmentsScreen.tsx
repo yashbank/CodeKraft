@@ -33,6 +33,8 @@ import { parseMinor } from "@/lib/money";
 import { proposeAdjustment } from "@/modules/finance/admin-mutations";
 import { ApprovalGateNotice, Banner } from "../Banner";
 import { FilterChips } from "../FilterChips";
+import { filterAdjustmentRows } from "@/lib/admin/finance-filters";
+import { useUrlFilters } from "./use-url-filters";
 import { formatDateTime, inr } from "../format";
 import { MoneyCell } from "../MoneyCell";
 import { PageHeader } from "../PageHeader";
@@ -80,7 +82,9 @@ export function AdjustmentsScreen({
   const router = useRouter();
   const [view, setView] = React.useState(initialView);
   const [submitting, setSubmitting] = React.useState(false);
-  const [status, setStatus] = React.useState<AdjustmentRow["status"] | null>(null);
+  const uf = useUrlFilters();
+  const status = (uf.get("status") || null) as AdjustmentRow["status"] | null;
+  const setStatus = (v: AdjustmentRow["status"] | null) => uf.set("status", v ?? "");
   const [lines, setLines] = React.useState<DraftLine[]>([
     { id: 1, partyType: "bank", amount: "", memo: "", order: prefillRef ?? "" },
     { id: 2, partyType: "company", amount: "", memo: "" },
@@ -100,9 +104,9 @@ export function AdjustmentsScreen({
     const k = l.partyType === "partner" ? (l.partner ?? "Partner") : PARTY_LABEL[l.partyType];
     return m.set(k, (m.get(k) ?? 0) + minor(l.amount));
   }, new Map<string, number>());
-  const rows = adjustments
-    .filter((a) => (status ? a.status === status : true))
-    .sort((a, b) => (a.status === "pending" ? -1 : b.status === "pending" ? 1 : 0));
+  const rows = filterAdjustmentRows(adjustments, { status: status ?? undefined }).sort((a, b) =>
+    a.status === "pending" ? -1 : b.status === "pending" ? 1 : 0,
+  );
   const setLine = (id: number, patch: Partial<DraftLine>) =>
     setLines((ls) => ls.map((l) => (l.id === id ? { ...l, ...patch } : l)));
   const canSubmit = reason.trim().length >= 20 && !allZero && (net === 0 || justify);

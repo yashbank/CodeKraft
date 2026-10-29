@@ -29,6 +29,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/components/ui/_utils";
 import { STATUS_ENUMS } from "@/lib/status-tone";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
+import { UrlSelect } from "./UrlSelect";
+import { useUrlFilters, useUrlSearch } from "./use-url-filters";
+import { currencySchema } from "@/modules/_shared/zod";
 import { EmptyState } from "../EmptyState";
 import { drCr, formatDateTime, inr, ledgerTotals, money, timeAgo } from "../format";
 import { MoneyCell } from "../MoneyCell";
@@ -50,7 +53,11 @@ export interface LedgerScreenProps {
   ownPartnerName?: string | null;
   /** All-time labelled finance metrics (modules/finance/metrics.ts); omitted without reports access. */
   summary?: FinanceSummaryView | null;
+  /** Partner filter options (id -> display name). */
+  partners?: Array<{ id: string; name: string }>;
 }
+
+const LEDGER_PARAMS = ["from", "to", "type", "party", "partner", "ccy", "q"];
 
 /**
  * SCR-ADM-17 — the immutable journal (BR-17). Summary strip, dense table with type chips, signed
@@ -67,11 +74,13 @@ export function LedgerScreen({
   isSuperAdmin,
   ownPartnerName = null,
   summary = null,
+  partners = [],
 }: LedgerScreenProps) {
-  const [type, setType] = React.useState<string>("all");
+  const f = useUrlFilters();
+  const [search, setSearch] = useUrlSearch();
   const [currency, setCurrency] = React.useState<"native" | "inr">("native");
   const [expanded, setExpanded] = React.useState<number | null>(null);
-  const rows = entries.filter((e) => (type === "all" ? true : e.type === type));
+  const rows = entries; // filtered server-side by the URL params
   const { credits, debits, net } = ledgerTotals(rows.map((e) => e.amountInr));
 
   return (
@@ -109,59 +118,70 @@ export function LedgerScreen({
       />
       <DataToolbar
         searchId="ledger-order"
-        searchPlaceholder="Order no…"
+        searchPlaceholder="Order no (CK-ORD-000123)…"
         searchLabel="Order number"
+        searchValue={search}
+        onSearchChange={setSearch}
         filters={
           <>
             <ToolbarField id="ledger-from" label="From">
-              <Input id="ledger-from" type="date" className="h-8 w-40" />
+              <Input
+                id="ledger-from"
+                type="date"
+                className="h-8 w-40"
+                value={f.get("from")}
+                max={f.get("to") || undefined}
+                onChange={(e) => f.set("from", e.target.value)}
+              />
             </ToolbarField>
             <ToolbarField id="ledger-to" label="To">
-              <Input id="ledger-to" type="date" className="h-8 w-40" />
+              <Input
+                id="ledger-to"
+                type="date"
+                className="h-8 w-40"
+                value={f.get("to")}
+                min={f.get("from") || undefined}
+                onChange={(e) => f.set("to", e.target.value)}
+              />
             </ToolbarField>
-            <ToolbarField id="ledger-type" label="Entry type">
-              <Select value={type} onValueChange={setType}>
-                <SelectTrigger id="ledger-type" size="sm" className="w-44">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All types</SelectItem>
-                  {STATUS_ENUMS["ledger_entries.entry_type"].map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t.replace(/_/g, " ")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </ToolbarField>
-            <ToolbarField id="ledger-party" label="Party type">
-              <Select>
-                <SelectTrigger id="ledger-party" size="sm" className="w-36">
-                  <SelectValue placeholder="Any" />
-                </SelectTrigger>
-                <SelectContent>
-                  {["company", "partner", "tax_authority", "gateway", "bank", "customer"].map(
-                    (p) => (
-                      <SelectItem key={p} value={p}>
-                        {p.replace("_", " ")}
-                      </SelectItem>
-                    ),
-                  )}
-                </SelectContent>
-              </Select>
-            </ToolbarField>
-            <ToolbarField id="ledger-partner" label="Partner">
-              <Select>
-                <SelectTrigger id="ledger-partner" size="sm" className="w-36">
-                  <SelectValue placeholder="Any" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="p-priya">Priya Nair</SelectItem>
-                  <SelectItem value="p-arjun">Arjun Mehta</SelectItem>
-                </SelectContent>
-              </Select>
-            </ToolbarField>
-            <ToolbarField id="ledger-currency" label="Currency">
+            <UrlSelect
+              id="ledger-type"
+              label="Entry type"
+              param="type"
+              f={f}
+              width="w-44"
+              anyLabel="All types"
+            >
+              {STATUS_ENUMS["ledger_entries.entry_type"].map((t) => (
+                <SelectItem key={t} value={t}>
+                  {t.replace(/_/g, " ")}
+                </SelectItem>
+              ))}
+            </UrlSelect>
+            <UrlSelect id="ledger-party" label="Party type" param="party" f={f} width="w-36">
+              {["company", "partner", "tax_authority", "gateway", "bank", "customer"].map((p) => (
+                <SelectItem key={p} value={p}>
+                  {p.replace("_", " ")}
+                </SelectItem>
+              ))}
+            </UrlSelect>
+            {partners.length > 0 ? (
+              <UrlSelect id="ledger-partner" label="Partner" param="partner" f={f} width="w-36">
+                {partners.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </UrlSelect>
+            ) : null}
+            <UrlSelect id="ledger-ccy" label="Currency" param="ccy" f={f} width="w-28">
+              {currencySchema.options.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </UrlSelect>
+            <ToolbarField id="ledger-currency" label="Show amounts in">
               <Select value={currency} onValueChange={(v) => setCurrency(v as typeof currency)}>
                 <SelectTrigger id="ledger-currency" size="sm" className="w-28">
                   <SelectValue />
@@ -172,6 +192,11 @@ export function LedgerScreen({
                 </SelectContent>
               </Select>
             </ToolbarField>
+            {f.active(LEDGER_PARAMS) ? (
+              <Button variant="ghost" size="sm" onClick={() => f.clear(LEDGER_PARAMS)}>
+                Clear filters
+              </Button>
+            ) : null}
           </>
         }
       />

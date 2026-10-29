@@ -2,6 +2,7 @@ import { Banner } from "@/components/admin/Banner";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { LedgerScreen } from "@/components/admin/finance/LedgerScreen";
 import { getAdminRequestContext } from "@/lib/authz/admin-request-context";
+import { parseLedgerFilters, type SearchParams } from "@/lib/admin/finance-filters";
 import { mapLedgerEntries } from "@/lib/admin/finance-view";
 import { can } from "@/lib/authz/assert";
 import { getFinanceSummary } from "@/modules/finance/metrics";
@@ -10,14 +11,19 @@ import { listPartnersQuery } from "@/modules/users/queries";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminLedgerPage() {
+export default async function AdminLedgerPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const filters = parseLedgerFilters(await searchParams);
   const ctx = await getAdminRequestContext();
   const now = new Date().toISOString();
 
   const [ledgerResult, partnersResult] = await Promise.all([
     // The list cap is 100 (`LIST_LIMIT_MAX`); a larger limit fails validation and used to render
     // an empty ledger with no error.
-    listLedgerEntriesQuery({ limit: 100 }, ctx),
+    listLedgerEntriesQuery({ filters, limit: 100 }, ctx),
     // `listPartners` needs `finance.ledger.read_all` or `users.admin.manage`; an admin without
     // either still gets the page, just with short partner ids instead of names (see finance-view).
     listPartnersQuery({ limit: 100 }, ctx).catch(() => ({ ok: false as const })),
@@ -63,6 +69,7 @@ export default async function AdminLedgerPage() {
       approvalsHref="/admin/approvals"
       isSuperAdmin={ctx.roles.includes("super_admin")}
       summary={summary}
+      partners={[...partnerNames].map(([id, name]) => ({ id, name }))}
       ownPartnerName={ctx.partnerId ? (partnerNames.get(ctx.partnerId) ?? null) : null}
     />
   );

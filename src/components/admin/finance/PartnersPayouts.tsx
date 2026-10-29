@@ -45,6 +45,8 @@ import { createPartner, ensureSuperAdminPartners } from "@/modules/users/admin-m
 import { ApprovalGateNotice } from "../Banner";
 import { Sparkline } from "../charts/Sparkline";
 import { FilterChips } from "../FilterChips";
+import { filterPayoutRows } from "@/lib/admin/finance-filters";
+import { useUrlFilters } from "./use-url-filters";
 import { formatDate, formatDateTime, initials, inr, money } from "../format";
 import { MoneyCell } from "../MoneyCell";
 import { PageHeader } from "../PageHeader";
@@ -90,7 +92,9 @@ export function PartnersPayouts({
   const [partnerId, setPartnerId] = React.useState(partners[0]?.id ?? "");
   const [currency, setCurrency] = React.useState<Currency>("INR");
   const [amount, setAmount] = React.useState("");
-  const [status, setStatus] = React.useState<PayoutRow["status"] | null>(null);
+  const uf = useUrlFilters();
+  const status = (uf.get("status") || null) as PayoutRow["status"] | null;
+  const setStatus = (v: PayoutRow["status"] | null) => uf.set("status", v ?? "");
   const [selectedHistory, setSelectedHistory] = React.useState(partners[0]?.id ?? "");
   const [addOpen, setAddOpen] = React.useState(false);
   const [addUserId, setAddUserId] = React.useState("");
@@ -107,7 +111,10 @@ export function PartnersPayouts({
     }
   })();
   const over = partner && Number.isFinite(amountMinor) ? amountMinor - partner.balanceInr : 0;
-  const rows = payouts.filter((p) => (status ? p.status === status : true));
+  const rows = filterPayoutRows(payouts, {
+    status: status ?? undefined,
+    partner: partners.find((p) => p.id === uf.get("partner"))?.name,
+  });
   const historyPartner = partners.find((p) => p.id === selectedHistory);
 
   const openDialog = (id?: string) => {
@@ -222,7 +229,7 @@ export function PartnersPayouts({
           </div>
         }
       />
-      <Tabs defaultValue={initialTab}>
+      <Tabs defaultValue={uf.active(["status", "partner"]) ? "payouts" : initialTab}>
         <TabsList>
           <TabsTrigger value="partners">Partner balances</TabsTrigger>
           <TabsTrigger value="payouts">Payouts ({payouts.length})</TabsTrigger>
@@ -456,11 +463,15 @@ export function PartnersPayouts({
               onChange={setStatus}
             />
             {partners.length > 0 ? (
-              <Select>
+              <Select
+                value={uf.get("partner") || "all"}
+                onValueChange={(v) => uf.set("partner", v)}
+              >
                 <SelectTrigger size="sm" className="w-40" aria-label="Partner filter">
-                  <SelectValue placeholder="Any partner" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">Any partner</SelectItem>
                   {partners.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}
