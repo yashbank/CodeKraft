@@ -8,7 +8,12 @@ import { ADMIN, SITE, atWidths, loginAs, q, trackIssues } from "./helpers";
 
 const SLUG = "resume-portfolio-website";
 
-test("USD expense converts at the trusted rate; storefront USD matches", async ({ page }) => {
+test("USD expense converts at the trusted rate; storefront USD matches", async ({
+  page,
+  isMobile,
+}) => {
+  // Expenses render only a LaptopNotice below 1024px (docs/07 §3.4); the 375 storefront runs on desktop.
+  test.skip(isMobile, "admin finance is laptop-only (LaptopNotice below lg)");
   const issues = trackIssues(page);
   const today = new Date().toISOString().slice(0, 10);
   // admin override for today wins over the live provider: INR->USD 0.0125, USD->INR 80
