@@ -82,7 +82,7 @@ export function mapEntitlementSummary(e: EntitlementView): EntitlementSummary {
     orderNumber: e.orderNo ?? "Manual grant",
     invoiceNumber: e.invoiceNo ?? undefined,
     updatePolicy: e.updatePolicy,
-    versionOwned: e.versions[e.versions.length - 1]?.version,
+    versionOwned: e.versions[0]?.version,
     stepsDone: e.serviceProgress?.filter((s) => s.doneAt !== null).length,
     stepsTotal: e.serviceProgress?.length,
   };
