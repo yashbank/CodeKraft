@@ -61,6 +61,7 @@ import {
 } from "@/lib/ui-style";
 import { uploadMediaFile } from "@/lib/admin/media-upload";
 import { updateRazorpaySettings, updateSettings } from "@/modules/settings/admin-mutations";
+import { sendTestEmail } from "@/modules/settings/email-test";
 import { testRazorpayConnection } from "@/modules/settings/razorpay-test-connection";
 import { Banner } from "../Banner";
 import { DangerZoneSection } from "./DangerZoneSection";
@@ -359,6 +360,7 @@ const SAVEABLE_SECTIONS: readonly string[] = [
   "ai",
   "retention",
   "theme",
+  "notifications",
 ];
 
 /** Flags for integrations that have no provider in this build — hidden instead of teased. */
@@ -377,7 +379,7 @@ const SECTIONS = [
   ["payment-methods", "Payment methods"],
   ["theme", "Theme"],
   ["ai", "AI"],
-  ["notifications", "Notifications"],
+  ["notifications", "Email & notifications"],
   ["flags", "Feature flags"],
   ["retention", "Retention"],
   ["fulfilment", "Fulfilment guide"],
@@ -402,6 +404,8 @@ function mapSettingsFieldErrors(fe: Record<string, string[]> | undefined): Recor
   if (!fe) return out;
   const idFor = (path: string): string | undefined => {
     if (path === "patch.siteName") return "st-site";
+    if (path === "patch.emailFromName") return "em-from-name";
+    if (path === "patch.emailFromAddress") return "em-from-address";
     if (path === "patch.baseCurrency") return "st-base";
     if (path === "patch.enabledCurrencies") return "st-currencies";
     if (path === "patch.upiVpa" || path === "upiVpa") return "st-vpa";
@@ -655,6 +659,7 @@ export function SettingsScreen({
     density: s.theme.density,
   } as UiStyle);
   const [saving, setSaving] = React.useState(false);
+  const [sendingTest, setSendingTest] = React.useState(false);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const saveable = SAVEABLE_SECTIONS.includes(section);
   const title = SECTIONS.find(([k]) => k === section)?.[1] ?? "";
@@ -674,6 +679,22 @@ export function SettingsScreen({
       layout: s.theme.layout,
       density: s.theme.density,
     } as UiStyle);
+  }
+
+  async function handleTestEmail() {
+    setSendingTest(true);
+    try {
+      const res = await sendTestEmail();
+      if (!res.ok) return void toast.error(res.error.message);
+      toast.success(
+        res.data.delivered
+          ? `Test email sent to ${res.data.to}`
+          : `Test email queued in the outbox for ${res.data.to}`,
+        { description: `From ${res.data.from}` },
+      );
+    } finally {
+      setSendingTest(false);
+    }
   }
 
   async function saveFlag(key: string, value: boolean) {
@@ -754,6 +775,11 @@ export function SettingsScreen({
         aiDailyPlatformCap: Number(val("st-cap")),
         aiDailyUserCap: Number(val("st-user-cap")),
         chatTimeoutMs: Math.round(Number(val("st-timeout")) * 1000),
+      };
+    } else if (section === "notifications") {
+      patch = {
+        emailFromName: val("em-from-name") || null,
+        emailFromAddress: val("em-from-address") || null,
       };
     } else if (section === "retention") {
       patch = {
@@ -1252,14 +1278,54 @@ export function SettingsScreen({
                 only. WhatsApp is controlled by the &ldquo;whatsapp_channel&rdquo; feature flag
                 (currently {s.notifications.whatsapp ? "on" : "off"}).
               </p>
-              <Field id="nt-sender" label="Email sender" hint="Set by the hosting environment.">
-                <Input
-                  id="nt-sender"
-                  readOnly
-                  value={s.notifications.sender}
-                  className="font-mono"
-                />
-              </Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field
+                  id="em-from-name"
+                  label="From name"
+                  hint="Shown as the sender name. Blank uses the site name."
+                  error={fieldErrors["em-from-name"]}
+                >
+                  <Input
+                    id="em-from-name"
+                    maxLength={80}
+                    defaultValue={s.notifications.fromName}
+                    disabled={ro}
+                  />
+                </Field>
+                <Field
+                  id="em-from-address"
+                  label="From address"
+                  hint="Blank uses the hosting default."
+                  error={fieldErrors["em-from-address"]}
+                >
+                  <Input
+                    id="em-from-address"
+                    type="email"
+                    defaultValue={s.notifications.fromAddress}
+                    className="font-mono"
+                    disabled={ro}
+                  />
+                </Field>
+              </div>
+              <p className="text-body-sm text-fg-muted">
+                Hosting default: <span className="font-mono">{s.notifications.sender}</span> (
+                {s.notifications.transport} transport). Real delivery still needs a verified sending
+                domain in Resend; until then mail only reaches the Resend account owner.
+              </p>
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  loading={sendingTest}
+                  disabled={ro}
+                  onClick={() => void handleTestEmail()}
+                >
+                  Send test email
+                </Button>
+                <span className="text-caption text-fg-muted">
+                  Sends to your own address. Save first to test new values.
+                </span>
+              </div>
             </>
           ) : null}
 

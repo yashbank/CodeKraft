@@ -29,6 +29,7 @@ const siteNameMock = vi.fn(async () => "CodeKraft");
 vi.mock("@/lib/site-brand", () => ({
   getSiteName: () => siteNameMock(),
   getSiteLogo: async () => null,
+  getStoredEmailFrom: async () => null,
 }));
 
 async function load(transport: string) {

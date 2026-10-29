@@ -147,6 +147,30 @@ export async function getSiteLogo(): Promise<string | null> {
   }
 }
 
+async function readStoredEmailFrom(): Promise<string | null> {
+  try {
+    const { settingsService } = await import("@/modules/settings/service");
+    const s = await settingsService.load();
+    const { formatFrom } = await import("./email/from");
+    return formatFrom(s.emailFromName, s.emailFromAddress, normaliseSiteName(s.siteName));
+  } catch {
+    return null;
+  }
+}
+
+/** P14-04: admin-set `"Name <addr>"` sender, or null (callers fall back to EMAIL_FROM). */
+export async function getStoredEmailFrom(): Promise<string | null> {
+  try {
+    const { unstable_cache } = await import("next/cache");
+    return await unstable_cache(readStoredEmailFrom, ["site-brand:email-from"], {
+      tags: ["settings"],
+      revalidate: 300,
+    })();
+  } catch {
+    return readStoredEmailFrom();
+  }
+}
+
 export async function getSiteName(): Promise<string> {
   try {
     const { unstable_cache } = await import("next/cache");

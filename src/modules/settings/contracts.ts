@@ -17,6 +17,7 @@ import {
   PATTERN_IDS,
   RADIUS_IDS,
 } from "@/lib/ui-style";
+import { emailFromAddressSchema, emailFromNameSchema } from "@/lib/email/from";
 import { THEMES } from "@/lib/theme";
 import { bpsSchema, currencySchema } from "@/modules/_shared/zod";
 import { text } from "../catalog/contracts";
@@ -113,6 +114,8 @@ export const siteSettingsSchema = z.strictObject({
     .max(2048)
     .regex(/^(https:\/\/|\/)/, "logo must be an https URL")
     .nullable(),
+  emailFromName: emailFromNameSchema.nullable(),
+  emailFromAddress: emailFromAddressSchema.nullable(),
   baseCurrency: currencySchema,
   enabledCurrencies: z.array(currencySchema).min(1).max(5),
   taxRateBps: bpsSchema,
@@ -146,6 +149,8 @@ export const siteSettingsSchema = z.strictObject({
 export const SITE_SETTINGS_DEFAULTS: SiteSettings = Object.freeze({
   siteName: "CodeKraft",
   siteLogo: null,
+  emailFromName: null,
+  emailFromAddress: null,
   baseCurrency: "INR",
   enabledCurrencies: ["INR", "USD", "EUR", "GBP", "CAD"],
   taxRateBps: 0,

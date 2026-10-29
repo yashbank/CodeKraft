@@ -981,6 +981,11 @@ export interface SettingsData {
     digestEnabled: boolean;
     digestTime: string;
     sender: string;
+    /** P14-04: admin-set "From" (blank = use `sender`). */
+    fromName: string;
+    fromAddress: string;
+    /** Active EMAIL_TRANSPORT (log / outbox / resend). */
+    transport: string;
   };
   flags: FeatureFlagRow[];
   retention: { chatMonths: number; recordYears: number; nextPurgeAt: string; lastRunAt: string };
