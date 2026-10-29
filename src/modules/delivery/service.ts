@@ -825,6 +825,7 @@ export class DefaultDeliveryService implements DeliveryService {
       grantedManuallyBy: ent.grantedManuallyBy,
       openTasks: openTasks.length,
       adminActions: actions,
+      refunded: ent.revokeReason === "refund",
       createdAt: ent.createdAt.toISOString(),
     };
   }

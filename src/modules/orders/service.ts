@@ -1093,6 +1093,7 @@ export class DefaultOrdersService implements OrdersService {
       deliveryType: e.deliveryType,
       status: e.status,
       orderItemId,
+      refunded: e.revokeReason === "refund",
       provisioningState: e.provisioningState,
       accessStartsAt: e.accessStartsAt.toISOString(),
       accessEndsAt: e.accessEndsAt ? e.accessEndsAt.toISOString() : null,

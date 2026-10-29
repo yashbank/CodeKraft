@@ -966,7 +966,12 @@ export const ORDER_DETAIL: OrderDetailData = {
       total: inr(1179882),
       ownershipVersion: "v2",
       deliveryType: "saas",
-      entitlement: { status: "pending", provisioning: "pending", accessEnds: "2027-09-25" },
+      entitlement: {
+        id: "ent-1",
+        status: "pending",
+        provisioning: "pending",
+        accessEnds: "2027-09-25",
+      },
     },
   ],
   ledger: [],
@@ -1038,6 +1043,7 @@ export const ORDER_DETAIL_PAID: OrderDetailData = {
       ownershipVersion: "v2",
       deliveryType: "download",
       entitlement: {
+        id: "ent-2",
         status: "active",
         downloadsUsed: 2,
         downloadCap: 5,

@@ -86,9 +86,24 @@ describe("entitlementStatus: delivery type x lifecycle state", () => {
     expect(r.label).toBe("Active — service started 1 Mar 2026, expires 1 Apr 2026");
   });
 
-  it("refunded order shows Refunded unless already revoked", () => {
+  it("refund-revoked shows Refunded, plain revoke shows Revoked", () => {
     const base = { status: "active", provisioningState: "done", refunded: true } as const;
     expect(entitlementStatus(base).chip).toBe("Refunded");
-    expect(entitlementStatus({ ...base, status: "revoked" }).chip).toBe("Revoked");
+    expect(entitlementStatus({ ...base, status: "revoked" }).chip).toBe("Refunded");
+    expect(entitlementStatus({ status: "revoked", provisioningState: "done" }).chip).toBe(
+      "Revoked",
+    );
+  });
+
+  it("refund-revoked row reads Refunded on both sides", () => {
+    const c = entitlementStatusLine(
+      mapEntitlementSummary({ ...customer("download", "revoked", "n/a", END), refunded: true }),
+    );
+    const a = entitlementStatus(
+      adminStatusInput(
+        mapEntitlementRow({ ...admin("download", "revoked", "n/a", END), refunded: true }),
+      ),
+    ).label;
+    expect([c, a]).toEqual(["Refunded", "Refunded"]);
   });
 });

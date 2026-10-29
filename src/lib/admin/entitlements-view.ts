@@ -31,6 +31,7 @@ export function adminStatusInput(e: EntitlementRow): EntitlementStatusInput {
     startsAt: e.accessStarts,
     endsAt: e.accessEnds,
     subscriptionPeriodEnd: e.subscription?.periodEnd,
+    refunded: e.refunded,
   };
 }
 
@@ -42,6 +43,7 @@ export function mapEntitlementRow(e: EntitlementAdminRow): EntitlementRow {
     offering: e.offering.name,
     type: e.deliveryType,
     status: e.status,
+    refunded: e.refunded,
     accessStarts: e.accessStartsAt,
     accessEnds: e.accessEndsAt ?? undefined,
     subscription: undefined,

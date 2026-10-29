@@ -38,6 +38,8 @@ function mapItemEntitlement(
 ): OrderItemDetail["entitlement"] {
   if (!x) return undefined;
   return {
+    id: x.entitlementId,
+    refunded: x.refunded,
     status: x.status as StatusValue<"entitlements.status">,
     accessStarts: x.accessStartsAt,
     accessEnds: x.accessEndsAt ?? undefined,

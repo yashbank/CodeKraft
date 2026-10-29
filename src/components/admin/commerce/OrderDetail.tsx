@@ -6,6 +6,8 @@ import * as React from "react";
 import { CircleCheckIcon, CircleIcon, DownloadIcon, LockIcon } from "lucide-react";
 import { toast } from "sonner";
 
+import { markDelivered, setLicenseKey } from "@/modules/delivery/admin-mutations";
+import { resetDownloadCount, revokeEntitlement } from "@/modules/entitlements/admin-mutations";
 import { confirmPayment, failPayment, proposeRefund } from "@/modules/payments/admin-mutations";
 
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +48,7 @@ function entStatusInput(ent: NonNullable<OrderItemDetail["entitlement"]>) {
     provisioningState: ent.provisioning ?? "n/a",
     startsAt: ent.accessStarts,
     endsAt: ent.accessEnds,
+    refunded: ent.refunded,
   };
 }
 import { KeyValue } from "../KeyValue";
@@ -100,6 +103,8 @@ export function OrderDetail({
   const [failReason, setFailReason] = React.useState("");
   const [failBusy, setFailBusy] = React.useState(false);
   const [revokeOpen, setRevokeOpen] = React.useState(false);
+  const [revokeEntId, setRevokeEntId] = React.useState<string | null>(null);
+  const [revokeReason, setRevokeReason] = React.useState("");
 
   async function handleConfirmPayment(result: {
     receivedMinor: number;
@@ -439,7 +444,13 @@ export function OrderDetail({
                           {entitlementStatus(entStatusInput(it.entitlement)).label}
                         </span>
                       </div>
-                      <EntitlementPanel item={it} onRevoke={() => setRevokeOpen(true)} />
+                      <EntitlementPanel
+                        item={it}
+                        onRevoke={() => {
+                          setRevokeEntId(it.entitlement?.id ?? null);
+                          setRevokeOpen(true);
+                        }}
+                      />
                     </div>
                   ) : null,
                 )}
@@ -814,7 +825,14 @@ export function OrderDetail({
             </DialogDescription>
           </DialogHeader>
           <Field id="rv-reason" label="Reason" required>
-            <Textarea id="rv-reason" rows={2} required aria-required />
+            <Textarea
+              id="rv-reason"
+              rows={2}
+              required
+              aria-required
+              value={revokeReason}
+              onChange={(e) => setRevokeReason(e.target.value)}
+            />
           </Field>
           <DialogFooter>
             <DialogClose asChild>
@@ -822,9 +840,21 @@ export function OrderDetail({
             </DialogClose>
             <Button
               variant="destructive"
-              onClick={() => {
-                toast.success("Access revoked · revoke task created");
+              disabled={!revokeEntId || revokeReason.trim().length < 3}
+              onClick={async () => {
+                if (!revokeEntId) return;
+                const r = await revokeEntitlement({
+                  entitlementId: revokeEntId,
+                  reason: revokeReason.trim(),
+                });
+                if (!r.ok) {
+                  toast.error(r.error.message);
+                  return;
+                }
+                toast.success("Access revoked");
                 setRevokeOpen(false);
+                setRevokeReason("");
+                router.refresh();
               }}
             >
               Revoke access
@@ -877,10 +907,27 @@ function EntitlementPanel({
   onRevoke: () => void;
 }) {
   const ent = item.entitlement;
-  const [keyVisible, setKeyVisible] = React.useState(false);
+  const router = useRouter();
+  const [key, setKey] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
   if (!ent) return null;
   const steps = ent.steps ?? [];
   const done = steps.filter((s) => s.done).length;
+  // Every control calls the same action the Entitlements screen uses.
+  const run = async (
+    fn: () => Promise<{ ok: boolean; error?: { message: string } }>,
+    okMsg: string,
+  ) => {
+    setBusy(true);
+    const r = await fn();
+    setBusy(false);
+    if (!r.ok) {
+      toast.error(r.error?.message ?? "Failed");
+      return;
+    }
+    toast.success(okMsg);
+    router.refresh();
+  };
   return (
     <div className="space-y-3 text-body-sm">
       {item.deliveryType === "download" ? (
@@ -891,57 +938,60 @@ function EntitlementPanel({
               {ent.downloadsUsed ?? 0}/{ent.downloadCap ?? "∞"}
             </span>
           </span>
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            onClick={() =>
+              run(() => resetDownloadCount({ entitlementId: ent.id }), "Download count reset")
+            }
+          >
             Reset count
           </Button>
         </div>
       ) : null}
-      {item.deliveryType === "license" || item.deliveryType === "download" ? (
-        <div className="flex flex-wrap items-end gap-2">
-          <Field
-            id={`key-${item.id}`}
-            label="License key"
-            hint="Customer is notified with a link to the dashboard only — the key is never in the email."
-          >
-            <div className="flex gap-2">
-              <Input
-                id={`key-${item.id}`}
-                type={keyVisible ? "text" : "password"}
-                defaultValue={ent.keyIssued ? "XXXX-XXXX-XXXX-XXXX" : ""}
-                className="w-64 font-mono"
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-pressed={keyVisible}
-                onClick={() => setKeyVisible((v) => !v)}
-              >
-                {keyVisible ? "Hide" : "Reveal"}
-              </Button>
-              <Button variant="secondary" size="sm">
-                {ent.keyIssued ? "Rotate key" : "Save"}
-              </Button>
-            </div>
-          </Field>
-        </div>
+      {item.deliveryType === "license" ? (
+        <Field
+          id={`key-${item.id}`}
+          label="License key"
+          hint="Customer is notified with a link to the dashboard only — the key is never in the email."
+        >
+          <div className="flex gap-2">
+            <Input
+              id={`key-${item.id}`}
+              type="password"
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              placeholder={ent.keyIssued ? "Issued — enter a new key to rotate" : ""}
+              className="w-64 font-mono"
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={busy || key.trim().length < 8}
+              onClick={() =>
+                run(
+                  () =>
+                    setLicenseKey({
+                      entitlementId: ent.id,
+                      licenseKey: key.trim(),
+                      notifyEmail: true,
+                    }),
+                  "Licence key saved",
+                ).then(() => setKey(""))
+              }
+            >
+              {ent.keyIssued ? "Rotate key" : "Save"}
+            </Button>
+          </div>
+        </Field>
       ) : null}
       {item.deliveryType === "saas" || item.deliveryType === "hosted" ? (
-        <div className="space-y-2">
-          <Field id={`prov-note-${item.id}`} label="Provisioning notes">
-            <Textarea
-              id={`prov-note-${item.id}`}
-              rows={2}
-              placeholder="Workspace URL, owner email…"
-            />
-          </Field>
-          <div className="flex items-center gap-2">
-            <Checkbox id={`cred-${item.id}`} />
-            <Label htmlFor={`cred-${item.id}`}>Credentials sent to customer</Label>
-          </div>
-          <Button size="sm" variant="secondary" disabled={ent.provisioning === "done"}>
-            {ent.provisioning === "done" ? "Provisioned" : "Mark provisioned"}
-          </Button>
-        </div>
+        <p className="text-caption text-fg-muted">
+          {ent.provisioning === "done"
+            ? "Provisioned."
+            : "Complete the provision task in Entitlements to activate this."}
+        </p>
       ) : null}
       {item.deliveryType === "service" ? (
         <div className="space-y-2">
@@ -951,17 +1001,14 @@ function EntitlementPanel({
             aria-valuetext={`${done} of ${steps.length} steps`}
           />
           <ul className="space-y-1">
-            {steps.map((s, i) => (
+            {steps.map((s) => (
               <li key={s.title} className="flex h-11 items-center gap-3">
-                <Checkbox id={`step-${item.id}-${i}`} defaultChecked={s.done} />
-                <Label htmlFor={`step-${item.id}-${i}`} className="flex-1 font-normal">
-                  {s.done ? (
-                    <CircleCheckIcon aria-hidden className="mr-1 inline size-4 text-success" />
-                  ) : (
-                    <CircleIcon aria-hidden className="mr-1 inline size-4 text-fg-subtle" />
-                  )}
-                  {s.title}
-                </Label>
+                {s.done ? (
+                  <CircleCheckIcon aria-hidden className="size-4 text-success" />
+                ) : (
+                  <CircleIcon aria-hidden className="size-4 text-fg-subtle" />
+                )}
+                <span className="flex-1">{s.title}</span>
                 <span className="text-caption text-fg-muted">
                   {s.done ? `${s.doneBy} · ${s.doneAt ? formatDateTime(s.doneAt) : ""}` : ""}
                 </span>
@@ -971,16 +1018,18 @@ function EntitlementPanel({
         </div>
       ) : null}
       {item.deliveryType === "custom" ? (
-        <Button size="sm" variant="secondary">
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={busy || ent.status !== "active"}
+          onClick={() => run(() => markDelivered({ entitlementId: ent.id }), "Marked delivered")}
+        >
           Mark delivered
         </Button>
       ) : null}
       <div className="flex flex-wrap gap-2 border-t border-border pt-3">
-        <Button variant="outline" size="sm" onClick={onRevoke}>
+        <Button variant="outline" size="sm" onClick={onRevoke} disabled={ent.status === "revoked"}>
           Revoke access
-        </Button>
-        <Button variant="outline" size="sm">
-          Extend access
         </Button>
       </div>
     </div>

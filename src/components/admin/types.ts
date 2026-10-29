@@ -327,6 +327,8 @@ export interface OrderItemDetail {
   ownershipVersion?: string;
   deliveryType: StatusValue<"entitlements.delivery_type">;
   entitlement?: {
+    id: string;
+    refunded?: boolean;
     status: StatusValue<"entitlements.status">;
     accessStarts?: string;
     accessEnds?: string;
@@ -478,6 +480,7 @@ export interface EntitlementRow {
   offering: string;
   type: StatusValue<"entitlements.delivery_type">;
   status: StatusValue<"entitlements.status">;
+  refunded?: boolean;
   accessStarts?: string;
   accessEnds?: string;
   subscription?: {

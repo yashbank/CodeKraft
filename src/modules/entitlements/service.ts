@@ -953,6 +953,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
       orderNo,
       invoiceNo,
       grantedAt: ent.createdAt.toISOString(),
+      refunded: ent.revokeReason === "refund",
       instructionsHtml: null,
       versions: [],
       downloads: "downloads" in cView ? cView.downloads : undefined,
@@ -1020,6 +1021,7 @@ export class DefaultEntitlementsService implements EntitlementsService {
       openTasks: openTasks.length,
       adminActions: actions,
       ...(serviceSteps ? { serviceSteps } : {}),
+      refunded: ent.revokeReason === "refund",
       createdAt: ent.createdAt.toISOString(),
     };
   }

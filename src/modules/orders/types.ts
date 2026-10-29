@@ -340,6 +340,7 @@ export interface OrderDetail {
     status: string;
     /** Admin order view only (getOrderAdmin). */
     orderItemId?: string;
+    refunded?: boolean;
     provisioningState?: "n/a" | "pending" | "done";
     accessStartsAt?: string;
     accessEndsAt?: string | null;

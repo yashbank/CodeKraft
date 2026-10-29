@@ -17,6 +17,7 @@ export function entitlementStatusInput(e: EntitlementSummary): EntitlementStatus
     startsAt: e.accessStartsAt,
     endsAt: e.accessEndsAt,
     subscriptionPeriodEnd: e.subscription?.currentPeriodEnd,
+    refunded: e.refunded,
   };
 }
 

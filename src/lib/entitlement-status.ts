@@ -14,7 +14,7 @@ export interface EntitlementStatusInput {
   endsAt?: string | null;
   /** Subscription period end wins over `endsAt` (renewals move the period first). */
   subscriptionPeriodEnd?: string | null;
-  /** Order refunded (full) while the entitlement row is still not revoked. */
+  /** Revoked by a full refund (revoke_reason = "refund"). */
   refunded?: boolean;
 }
 
@@ -36,11 +36,11 @@ export interface EntitlementStatusLabel {
 export function entitlementStatus(i: EntitlementStatusInput): EntitlementStatusLabel {
   const end = i.subscriptionPeriodEnd ?? i.endsAt ?? null;
   const endText = end ? formatDate(end) : null;
-  if (i.status === "revoked") {
-    return { phase: "revoked", chip: "Revoked", label: "Access revoked", tone: "danger" };
-  }
   if (i.refunded) {
     return { phase: "refunded", chip: "Refunded", label: "Refunded", tone: "neutral" };
+  }
+  if (i.status === "revoked") {
+    return { phase: "revoked", chip: "Revoked", label: "Access revoked", tone: "danger" };
   }
   if (i.status === "expired") {
     return {
