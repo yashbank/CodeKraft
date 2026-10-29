@@ -14,7 +14,7 @@ import {
   defaultLayoutFor,
   permitWidgets,
 } from "@/components/admin/dashboard/role-widgets";
-import { getAdminWidgetLayout } from "@/modules/dashboard-widgets/admin-layout";
+import { getAdminWidgetEntries } from "@/modules/dashboard-widgets/admin-layout";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +34,12 @@ export default async function AdminDashboardRoute({
   const isSuperAdmin = ctx.roles.includes("super_admin");
   const firstName = session?.user.name?.split(" ")[0] || "there";
   // R8-10 — the admin's own saved widget selection/order (null → default layout).
-  const savedLayout = await getAdminWidgetLayout(ctx.userId).catch(() => null);
+  const saved = await getAdminWidgetEntries(ctx.userId).catch(() => null);
+  const savedLayout = saved?.map((e) => e.key) ?? null;
+  // P14-09 — per-widget visual styles saved with the layout.
+  const styles = Object.fromEntries(
+    (saved ?? []).flatMap((e) => (e.style ? [[e.key, e.style]] : [])),
+  );
   // P14-01 — a saved widget the role may not have is dropped here, so it is neither rendered nor queried.
   const allowed = allowedWidgetKeys(ctx.roles);
   const layout = permitWidgets(savedLayout ?? defaultLayoutFor(allowed), ctx.roles);
@@ -52,6 +57,7 @@ export default async function AdminDashboardRoute({
         data={data}
         layout={layout}
         allowed={allowed}
+        styles={styles}
         isSuperAdmin={isSuperAdmin}
         greeting={`Welcome back, ${firstName}`}
         dateLabel={`FY ${fyFor(new Date())} · ${new Date().toLocaleDateString("en-IN", {

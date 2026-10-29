@@ -17,7 +17,7 @@ export const saveAdminWidgetLayoutAction = defineAction({
   handler: async (input, ctx) => {
     // P14-01 — role allow-list, enforced here and not only in the UI.
     const allowed = allowedWidgetKeys(ctx.roles);
-    if (input.widgets.some((k) => !allowed.includes(k)))
+    if (input.widgets.some((w) => !allowed.includes(w.key)))
       throw new AppError(ErrorCode.VALIDATION, "Widget not available for your role");
     return { widgets: await saveAdminWidgetLayout(ctx.userId, input.widgets) };
   },
