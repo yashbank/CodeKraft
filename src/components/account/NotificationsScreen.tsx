@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -21,7 +22,7 @@ import {
   markAllMyNotificationsRead,
   markMyNotificationRead,
 } from "@/modules/notifications/site-mutations";
-import { applyRead, countUnread } from "@/lib/notifications/read-state";
+import { applyRead, countUnread, readThenOpen } from "@/lib/notifications/read-state";
 import { EmptyState } from "./EmptyState";
 import { dayLabel, formatDateTime, relativeTime } from "./format";
 import type { NotificationItem, NotificationType } from "./types";
@@ -46,6 +47,7 @@ export function NotificationsScreen({
   links: { settings: string };
   loading?: boolean;
 }) {
+  const router = useRouter();
   const [items, setItems] = React.useState(initial);
   const [tab, setTab] = React.useState<"all" | "unread">("all");
   const [type, setType] = React.useState<NotificationType | null>(null);
@@ -63,10 +65,16 @@ export function NotificationsScreen({
 
   function markRead(id: string) {
     setItems((prev) => applyRead(prev, new Set([id])));
-    void markMyNotificationRead({ notificationIds: [id] }).then((result) => {
+    return markMyNotificationRead({ notificationIds: [id] }).then((result) => {
       if (!result.ok) toast.error(result.error.message);
     });
   }
+  const open = (e: React.MouseEvent, n: NotificationItem) =>
+    void readThenOpen(
+      e,
+      () => (n.read ? Promise.resolve() : markRead(n.id)),
+      () => router.push(n.href),
+    );
 
   return (
     <div className="space-y-6">
@@ -165,7 +173,7 @@ export function NotificationsScreen({
                       <div className="min-w-0 flex-1">
                         <Link
                           href={n.href}
-                          onClick={() => markRead(n.id)}
+                          onClick={(e) => open(e, n)}
                           className={cn(
                             "block text-body text-fg hover:underline",
                             !n.read && "font-semibold",
@@ -181,7 +189,7 @@ export function NotificationsScreen({
                       </div>
                       {n.actionLabel ? (
                         <Button size="sm" variant="secondary" className="shrink-0" asChild>
-                          <Link href={n.href} onClick={() => markRead(n.id)}>
+                          <Link href={n.href} onClick={(e) => open(e, n)}>
                             {n.actionLabel}
                           </Link>
                         </Button>

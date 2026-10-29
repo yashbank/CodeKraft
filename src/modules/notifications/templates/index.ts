@@ -130,7 +130,7 @@ export function renderNotification(
       return {
         title: `Approval Required: ${p.kind ?? "Dual Approval Request"}`,
         body: `${p.requesterName ?? "An administrator"} submitted an action requiring your review.`,
-        link: p.approvalId ? `/admin/approvals/${p.approvalId}` : "/admin/approvals",
+        link: p.approvalId ? `/admin/approvals?id=${p.approvalId}` : "/admin/approvals",
         emailTemplate: null, // admin in-app only
         emailPriority: 1,
       };
@@ -139,7 +139,7 @@ export function renderNotification(
       return {
         title: `Approval Granted: ${p.kind ?? "Request"}`,
         body: `Your request has been approved by ${p.approverName ?? "admin"}.`,
-        link: p.approvalId ? `/admin/approvals/${p.approvalId}` : "/admin/approvals",
+        link: p.approvalId ? `/admin/approvals?id=${p.approvalId}` : "/admin/approvals",
         emailTemplate: null,
         emailPriority: 5,
       };
@@ -148,7 +148,7 @@ export function renderNotification(
       return {
         title: `Approval Rejected: ${p.kind ?? "Request"}`,
         body: `Your request was rejected. Reason: ${p.reason ?? "None specified"}.`,
-        link: p.approvalId ? `/admin/approvals/${p.approvalId}` : "/admin/approvals",
+        link: p.approvalId ? `/admin/approvals?id=${p.approvalId}` : "/admin/approvals",
         emailTemplate: null,
         emailPriority: 5,
       };
@@ -186,7 +186,12 @@ export function renderNotification(
       return {
         title: `New Support Query: ${p.subject ?? "Support Request"}`,
         body: `${p.guestEmail ?? p.userName ?? "User"}: ${p.preview ?? "New query opened"}`,
-        link: "/admin/queries",
+        link:
+          p.audience === "customer"
+            ? `/account/queries/${p.queryId ?? ""}`
+            : p.queryId
+              ? `/admin/queries/${p.queryId}`
+              : "/admin/queries",
         emailTemplate: null,
         emailPriority: 5,
       };
@@ -195,7 +200,7 @@ export function renderNotification(
       return {
         title: `Support Reply: ${p.subject ?? "Your Query"}`,
         body: "A support team member has replied to your query.",
-        link: "/account/queries",
+        link: p.queryId ? `/account/queries/${p.queryId}` : "/account/queries",
         emailTemplate: "query-reply",
         emailPriority: 5,
       };
@@ -204,7 +209,7 @@ export function renderNotification(
       return {
         title: `Customer Reply: ${p.subject ?? "Query"}`,
         body: `${p.customerName ?? "Customer"} has replied to query thread #${p.queryId ?? ""}.`,
-        link: "/admin/queries",
+        link: p.queryId ? `/admin/queries/${p.queryId}` : "/admin/queries",
         emailTemplate: null,
         emailPriority: 5,
       };
@@ -249,7 +254,7 @@ export function renderNotification(
       return {
         title: "Chat Daily Limit Reached",
         body: "Daily AI chatbot usage capacity has been reached. System is operating in menu fallback mode.",
-        link: "/admin/analytics",
+        link: "/admin/chatbot",
         emailTemplate: null,
         emailPriority: 5,
       };

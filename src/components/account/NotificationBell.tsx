@@ -2,10 +2,14 @@
 
 import { BellIcon, BellOffIcon } from "lucide-react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/components/ui/_utils";
+import { readThenOpen } from "@/lib/notifications/read-state";
+import { markMyNotificationRead } from "@/modules/notifications/site-mutations";
 import { relativeTime } from "./format";
 import type { NotificationItem } from "./types";
 
@@ -26,10 +30,15 @@ export function NotificationBell({
   viewAllHref: string;
   onMarkAllRead?: () => void;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [open, setOpen] = React.useState(false);
+  // The shell persists across routes, so close the popup whenever the route changes.
+  React.useEffect(() => setOpen(false), [pathname]);
   const recent = items.slice(0, 8);
   const count = unreadCount > 99 ? "99+" : String(unreadCount);
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
@@ -71,6 +80,19 @@ export function NotificationBell({
               <li key={n.id}>
                 <Link
                   href={n.href}
+                  onClick={(e) => {
+                    void readThenOpen(
+                      e,
+                      () =>
+                        n.read
+                          ? Promise.resolve()
+                          : markMyNotificationRead({ notificationIds: [n.id] }),
+                      () => {
+                        setOpen(false);
+                        router.push(n.href);
+                      },
+                    );
+                  }}
                   className="flex gap-3 px-4 py-3 hover:bg-accent-soft focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
                 >
                   <span
@@ -101,7 +123,11 @@ export function NotificationBell({
           </ul>
         )}
         <div className="border-t border-border px-4 py-2 text-right">
-          <Link href={viewAllHref} className="text-body-sm text-accent-text hover:underline">
+          <Link
+            href={viewAllHref}
+            onClick={() => setOpen(false)}
+            className="text-body-sm text-accent-text hover:underline"
+          >
             View all
           </Link>
         </div>
