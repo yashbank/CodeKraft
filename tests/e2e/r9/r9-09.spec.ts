@@ -36,7 +36,7 @@ test("USD expense converts at the trusted rate; storefront USD matches", async (
   await page.getByLabel("Amount").fill("10");
   await page.locator("#ex-currency").click();
   await page.getByRole("option", { name: "USD" }).click();
-  await expect(page.getByText(/1 USD = 80\.00 INR/)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(/1 USD = 80\.00 INR/).first()).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: "Record", exact: true }).click();
 
   const row = page.getByRole("row", { name: new RegExp(desc) });
