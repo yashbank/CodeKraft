@@ -1,9 +1,11 @@
 "use client";
 
+import { SavedViews } from "../SavedViews";
+import { ExportCsvLink } from "../ExportCsvLink";
 import Link from "next/link";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { DownloadIcon, PaperclipIcon, PlusIcon, ReceiptIcon, UploadIcon } from "lucide-react";
+import { PaperclipIcon, PlusIcon, ReceiptIcon, UploadIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -153,9 +155,8 @@ export function ExpensesScreen({
         description="Record costs against products (shared by that product's split) or the company so reports show profit, not just revenue."
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={() => toast("Export queued")}>
-              <DownloadIcon aria-hidden /> Export CSV
-            </Button>
+            <SavedViews screen="expenses" />
+            <ExportCsvLink kind="expenses" />
             <Button size="sm" onClick={() => setOpen(true)}>
               <PlusIcon aria-hidden /> Record expense
             </Button>

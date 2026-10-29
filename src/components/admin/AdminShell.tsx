@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import {
   BellIcon,
@@ -46,14 +47,6 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import {
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -91,6 +84,9 @@ import { cn } from "@/components/ui/_utils";
 import { applyRead, countUnread } from "@/lib/notifications/read-state";
 import { initials, timeAgo } from "./format";
 import { LaptopNotice } from "./LaptopNotice";
+import { AdminCommandPalette } from "./AdminCommandPalette";
+import { AdminUserIdContext } from "./SavedViews";
+import { isPaletteShortcut, quickActionsFor } from "@/lib/admin/palette";
 import { useSiteLogo, useSiteName } from "@/components/brand/site-brand";
 import type { AdminNotification, AdminUserRef, SearchItem } from "./types";
 
@@ -275,6 +271,26 @@ export function AdminShell({
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const siteName = useSiteName();
   const logo = useSiteLogo();
+  const router = useRouter();
+  const paletteItems = React.useMemo<SearchItem[]>(
+    () => [
+      ...quickActionsFor(user.role, href),
+      ...ADMIN_NAV.flatMap((g) =>
+        g.items.flatMap((i) =>
+          "children" in i
+            ? i.children.map((c) => ({ label: c.label, hint: i.label, route: c.route }))
+            : [{ label: i.label, hint: g.label, route: i.route }],
+        ),
+      ).map((n) => ({
+        group: "Go to" as const,
+        label: n.label,
+        hint: n.hint,
+        href: href(n.route),
+      })),
+      ...searchItems,
+    ],
+    [user.role, href, searchItems],
+  );
   const [paletteOpen, setPaletteOpen] = React.useState(false);
   const [paletteQuery, setPaletteQuery] = React.useState("");
   const [remoteItems, setRemoteItems] = React.useState<SearchItem[]>([]);
@@ -305,7 +321,7 @@ export function AdminShell({
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      if (isPaletteShortcut(e)) {
         e.preventDefault();
         setPaletteOpen((v) => !v);
       }
@@ -319,319 +335,298 @@ export function AdminShell({
     environment === "production" ? "danger" : environment === "staging" ? "warning" : "neutral";
 
   return (
-    <SidebarProvider
-      open={open}
-      onOpenChange={setOpen}
-      style={{ "--admin-top": stickyTop } as React.CSSProperties}
-      className="bg-canvas text-fg"
-      data-app="admin"
-    >
-      <aside
-        aria-label="Admin navigation"
-        data-state={open ? "expanded" : "collapsed"}
-        data-collapsible={open ? "" : "icon"}
-        className={cn(
-          "group sticky top-(--admin-top) hidden h-[calc(100svh-var(--admin-top))] w-(--sidebar-width) shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground transition-[width] duration-(--ck-motion-duration-md) ease-standard lg:flex",
-          "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
-          !open && "w-(--sidebar-width-icon)",
-        )}
+    <AdminUserIdContext.Provider value={user.id}>
+      <SidebarProvider
+        open={open}
+        onOpenChange={setOpen}
+        style={{ "--admin-top": stickyTop } as React.CSSProperties}
+        className="bg-canvas text-fg"
+        data-app="admin"
       >
-        <SidebarHeader className="h-14 flex-row items-center justify-between border-b border-border px-3">
-          <Link
-            href={href("/dashboard")}
-            className="flex items-center gap-2 font-display text-body font-semibold"
-          >
-            {logo ? (
-              // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded URL
-              <img src={logo} alt={siteName} className="size-7 rounded-sm object-contain" />
-            ) : (
-              <span
-                aria-hidden
-                className="grid size-7 place-items-center rounded-sm bg-accent font-mono text-caption text-accent-fg"
-              >
-                {siteName.slice(0, 1).toUpperCase()}
-              </span>
-            )}
-            <span className="group-data-[collapsible=icon]:hidden">
-              {siteName} <span className="text-fg-muted">Admin</span>
-            </span>
-          </Link>
-        </SidebarHeader>
-        <SidebarContent className="py-2">
-          {ADMIN_NAV.map((group) => (
-            <SidebarGroup key={group.label} className="py-1">
-              <SidebarGroupLabel className="text-overline tracking-wider uppercase">
-                {group.label}
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {group.items.map((item) =>
-                    "children" in item ? (
-                      <NavParentItem key={item.label} item={item} active={active} href={href} />
-                    ) : (
-                      <SidebarMenuItem key={item.route}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={isActive(item.route)}
-                          tooltip={item.label}
-                        >
-                          <Link
-                            href={href(item.route)}
-                            aria-current={isActive(item.route) ? "page" : undefined}
-                          >
-                            <item.icon aria-hidden />
-                            <span>{item.label}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                        {item.badge === "approvals" && pendingApprovals > 0 ? (
-                          <SidebarMenuBadge className="rounded-full bg-danger px-1.5 text-danger-fg">
-                            {pendingApprovals}
-                            <span className="sr-only"> pending approvals</span>
-                          </SidebarMenuBadge>
-                        ) : null}
-                        {item.badge === "notifications" && unread > 0 ? (
-                          <SidebarMenuBadge className="rounded-full bg-accent-soft px-1.5 text-accent-text">
-                            {unread}
-                            <span className="sr-only"> unread notifications</span>
-                          </SidebarMenuBadge>
-                        ) : null}
-                      </SidebarMenuItem>
-                    ),
-                  )}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          ))}
-        </SidebarContent>
-        <SidebarFooter className="border-t border-border">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="justify-start"
-            onClick={() => setOpen((v) => !v)}
-            aria-pressed={!open}
-            aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
-          >
-            <PanelLeftIcon aria-hidden />
-            <span className="group-data-[collapsible=icon]:hidden">Collapse</span>
-          </Button>
-        </SidebarFooter>
-      </aside>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-(--admin-top) z-(--ck-z-header) flex h-14 items-center gap-2 border-b border-border bg-canvas px-3 lg:px-4">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="lg:hidden"
-            aria-label="Open navigation"
-            onClick={() => setMobileOpen(true)}
-          >
-            <MenuIcon aria-hidden />
-          </Button>
-          <div className="min-w-0 flex-1">
-            {breadcrumbs && breadcrumbs.length > 0 ? (
-              <Breadcrumb className="hidden lg:block">
-                <BreadcrumbList>
-                  {breadcrumbs.map((crumb, i) => {
-                    const last = i === breadcrumbs.length - 1;
-                    return (
-                      <React.Fragment key={`${crumb.label}-${i}`}>
-                        <BreadcrumbItem>
-                          {last || !crumb.href ? (
-                            <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-                          ) : (
-                            <BreadcrumbLink asChild>
-                              <Link href={crumb.href}>{crumb.label}</Link>
-                            </BreadcrumbLink>
-                          )}
-                        </BreadcrumbItem>
-                        {last ? null : <BreadcrumbSeparator />}
-                      </React.Fragment>
-                    );
-                  })}
-                </BreadcrumbList>
-              </Breadcrumb>
-            ) : null}
-            <span className="truncate text-body font-semibold lg:hidden">{title}</span>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="hidden max-w-80 shrink justify-start gap-2 text-fg-muted md:inline-flex"
-            onClick={() => setPaletteOpen(true)}
-            aria-keyshortcuts="Meta+K Control+K"
-          >
-            <SearchIcon aria-hidden />
-            <span className="flex-1 truncate text-left">Search products, orders, customers…</span>
-            <kbd className="rounded-xs border border-border px-1.5 font-mono text-caption text-fg-subtle">
-              ⌘K
-            </kbd>
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="md:hidden"
-            aria-label="Search"
-            onClick={() => setPaletteOpen(true)}
-          >
-            <SearchIcon aria-hidden />
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="sm" className="hidden lg:inline-flex">
-                <PlusIcon aria-hidden /> Create <ChevronDownIcon aria-hidden className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {CREATE_ITEMS.map((c) => (
-                <DropdownMenuItem key={c.label} asChild>
-                  <Link href={href(c.route)}>{c.label}</Link>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Badge tone={envTone} className="hidden capitalize sm:inline-flex" dot>
-            {environment}
-          </Badge>
-          <NotificationBell
-            notifications={notifications}
-            readIds={readIds}
-            now={now}
-            unread={unread}
-            onMarkAll={() => {
-              setReadIds(new Set(notifications.map((n) => n.id)));
-              onMarkAllRead?.();
-            }}
-            onRead={(id) => {
-              setReadIds((s) => new Set([...s, id]));
-              onMarkRead?.(id);
-            }}
-            viewAllHref={href("/notifications")}
-          />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                aria-label={`Account menu for ${user.name}`}
-              >
-                <Avatar>
-                  <AvatarFallback>{initials(user.name)}</AvatarFallback>
-                </Avatar>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel className="flex flex-col">
-                <span>{user.name}</span>
-                <span className="text-caption font-normal text-fg-muted">{user.email}</span>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href={href("/admin-users")}>Profile</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href={href("/admin-users")}>
-                  <KeyRoundIcon aria-hidden /> Security (TOTP)
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/auth/login">
-                  <LogOutIcon aria-hidden /> Sign out
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </header>
-
-        <main id="admin-main" className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 lg:px-6">
-          {readMostly ? (
-            children
-          ) : (
-            <>
-              <div className="lg:hidden">
-                <LaptopNotice
-                  title={title}
-                  summary={summary}
-                  approvalsHref={href("/approvals")}
-                  notificationsHref={href("/notifications")}
-                />
-              </div>
-              <div className="hidden lg:block">{children}</div>
-            </>
+        <aside
+          aria-label="Admin navigation"
+          data-state={open ? "expanded" : "collapsed"}
+          data-collapsible={open ? "" : "icon"}
+          className={cn(
+            "group sticky top-(--admin-top) hidden h-[calc(100svh-var(--admin-top))] w-(--sidebar-width) shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground transition-[width] duration-(--ck-motion-duration-md) ease-standard lg:flex",
+            "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
+            !open && "w-(--sidebar-width-icon)",
           )}
-        </main>
-      </div>
-
-      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="lg:w-80">
-          <SheetHeader>
-            <SheetTitle>{siteName} Admin</SheetTitle>
-            <SheetDescription>
-              On a phone or tablet only approvals, payment confirmation and notifications are
-              available.
-            </SheetDescription>
-          </SheetHeader>
-          <nav aria-label="Read-mostly destinations" className="flex flex-col gap-1 px-4">
-            {READ_MOSTLY_NAV.map((item) => (
-              <Link
-                key={item.route}
-                href={href(item.route)}
-                aria-current={isActive(item.route) ? "page" : undefined}
-                className={cn(
-                  "flex h-11 items-center gap-3 rounded-md px-3 text-body hover:bg-accent-soft",
-                  isActive(item.route) && "bg-accent-soft text-accent-text",
-                )}
-                onClick={() => setMobileOpen(false)}
-              >
-                <item.icon aria-hidden className="size-5" />
-                {item.label}
-              </Link>
+        >
+          <SidebarHeader className="h-14 flex-row items-center justify-between border-b border-border px-3">
+            <Link
+              href={href("/dashboard")}
+              className="flex items-center gap-2 font-display text-body font-semibold"
+            >
+              {logo ? (
+                // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded URL
+                <img src={logo} alt={siteName} className="size-7 rounded-sm object-contain" />
+              ) : (
+                <span
+                  aria-hidden
+                  className="grid size-7 place-items-center rounded-sm bg-accent font-mono text-caption text-accent-fg"
+                >
+                  {siteName.slice(0, 1).toUpperCase()}
+                </span>
+              )}
+              <span className="group-data-[collapsible=icon]:hidden">
+                {siteName} <span className="text-fg-muted">Admin</span>
+              </span>
+            </Link>
+          </SidebarHeader>
+          <SidebarContent className="py-2">
+            {ADMIN_NAV.map((group) => (
+              <SidebarGroup key={group.label} className="py-1">
+                <SidebarGroupLabel className="text-overline tracking-wider uppercase">
+                  {group.label}
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {group.items.map((item) =>
+                      "children" in item ? (
+                        <NavParentItem key={item.label} item={item} active={active} href={href} />
+                      ) : (
+                        <SidebarMenuItem key={item.route}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={isActive(item.route)}
+                            tooltip={item.label}
+                          >
+                            <Link
+                              href={href(item.route)}
+                              aria-current={isActive(item.route) ? "page" : undefined}
+                            >
+                              <item.icon aria-hidden />
+                              <span>{item.label}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                          {item.badge === "approvals" && pendingApprovals > 0 ? (
+                            <SidebarMenuBadge className="rounded-full bg-danger px-1.5 text-danger-fg">
+                              {pendingApprovals}
+                              <span className="sr-only"> pending approvals</span>
+                            </SidebarMenuBadge>
+                          ) : null}
+                          {item.badge === "notifications" && unread > 0 ? (
+                            <SidebarMenuBadge className="rounded-full bg-accent-soft px-1.5 text-accent-text">
+                              {unread}
+                              <span className="sr-only"> unread notifications</span>
+                            </SidebarMenuBadge>
+                          ) : null}
+                        </SidebarMenuItem>
+                      ),
+                    )}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
             ))}
-          </nav>
-        </SheetContent>
-      </Sheet>
+          </SidebarContent>
+          <SidebarFooter className="border-t border-border">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="justify-start"
+              onClick={() => setOpen((v) => !v)}
+              aria-pressed={!open}
+              aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
+            >
+              <PanelLeftIcon aria-hidden />
+              <span className="group-data-[collapsible=icon]:hidden">Collapse</span>
+            </Button>
+          </SidebarFooter>
+        </aside>
 
-      <CommandDialog
-        open={paletteOpen}
-        onOpenChange={setPaletteOpen}
-        title="Search"
-        description="Products, orders by number, customers by email, leads by name"
-      >
-        <CommandInput
-          placeholder="Search products, orders, customers, leads…"
-          value={paletteQuery}
-          onValueChange={setPaletteQuery}
-        />
-        <CommandList>
-          <CommandEmpty>No results.</CommandEmpty>
-          {(["Products", "Orders", "Customers", "Leads", "Go to"] as const).map((group) => {
-            const items = [...searchItems, ...remoteItems].filter((s) => s.group === group);
-            if (items.length === 0) return null;
-            return (
-              <CommandGroup key={group} heading={group}>
-                {items.map((s) => (
-                  <CommandItem
-                    key={`${group}-${s.label}`}
-                    asChild
-                    value={`${group} ${s.label} ${s.hint ?? ""}${remoteItems.includes(s) ? ` ${paletteQuery}` : ""}`}
-                  >
-                    <Link href={s.href} onClick={() => setPaletteOpen(false)}>
-                      <span>{s.label}</span>
-                      {s.hint ? (
-                        <span className="ml-auto text-caption text-fg-muted">{s.hint}</span>
-                      ) : null}
-                    </Link>
-                  </CommandItem>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-(--admin-top) z-(--ck-z-header) flex h-14 items-center gap-2 border-b border-border bg-canvas px-3 lg:px-4">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="lg:hidden"
+              aria-label="Open navigation"
+              onClick={() => setMobileOpen(true)}
+            >
+              <MenuIcon aria-hidden />
+            </Button>
+            <div className="min-w-0 flex-1">
+              {breadcrumbs && breadcrumbs.length > 0 ? (
+                <Breadcrumb className="hidden lg:block">
+                  <BreadcrumbList>
+                    {breadcrumbs.map((crumb, i) => {
+                      const last = i === breadcrumbs.length - 1;
+                      return (
+                        <React.Fragment key={`${crumb.label}-${i}`}>
+                          <BreadcrumbItem>
+                            {last || !crumb.href ? (
+                              <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                            ) : (
+                              <BreadcrumbLink asChild>
+                                <Link href={crumb.href}>{crumb.label}</Link>
+                              </BreadcrumbLink>
+                            )}
+                          </BreadcrumbItem>
+                          {last ? null : <BreadcrumbSeparator />}
+                        </React.Fragment>
+                      );
+                    })}
+                  </BreadcrumbList>
+                </Breadcrumb>
+              ) : null}
+              <span className="truncate text-body font-semibold lg:hidden">{title}</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="hidden max-w-80 shrink justify-start gap-2 text-fg-muted md:inline-flex"
+              onClick={() => setPaletteOpen(true)}
+              aria-keyshortcuts="Meta+K Control+K"
+            >
+              <SearchIcon aria-hidden />
+              <span className="flex-1 truncate text-left">Search products, orders, customers…</span>
+              <kbd className="rounded-xs border border-border px-1.5 font-mono text-caption text-fg-subtle">
+                ⌘K
+              </kbd>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="md:hidden"
+              aria-label="Search"
+              onClick={() => setPaletteOpen(true)}
+            >
+              <SearchIcon aria-hidden />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="sm" className="hidden lg:inline-flex">
+                  <PlusIcon aria-hidden /> Create <ChevronDownIcon aria-hidden className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {CREATE_ITEMS.map((c) => (
+                  <DropdownMenuItem key={c.label} asChild>
+                    <Link href={href(c.route)}>{c.label}</Link>
+                  </DropdownMenuItem>
                 ))}
-              </CommandGroup>
-            );
-          })}
-        </CommandList>
-      </CommandDialog>
-      <Toaster />
-    </SidebarProvider>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Badge tone={envTone} className="hidden capitalize sm:inline-flex" dot>
+              {environment}
+            </Badge>
+            <NotificationBell
+              notifications={notifications}
+              readIds={readIds}
+              now={now}
+              unread={unread}
+              onMarkAll={() => {
+                setReadIds(new Set(notifications.map((n) => n.id)));
+                onMarkAllRead?.();
+              }}
+              onRead={(id) => {
+                setReadIds((s) => new Set([...s, id]));
+                onMarkRead?.(id);
+              }}
+              viewAllHref={href("/notifications")}
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  aria-label={`Account menu for ${user.name}`}
+                >
+                  <Avatar>
+                    <AvatarFallback>{initials(user.name)}</AvatarFallback>
+                  </Avatar>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="flex flex-col">
+                  <span>{user.name}</span>
+                  <span className="text-caption font-normal text-fg-muted">{user.email}</span>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href={href("/admin-users")}>Profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={href("/admin-users")}>
+                    <KeyRoundIcon aria-hidden /> Security (TOTP)
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/auth/login">
+                    <LogOutIcon aria-hidden /> Sign out
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </header>
+
+          <main id="admin-main" className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 lg:px-6">
+            <div key={active} className="admin-page-enter">
+              {readMostly ? (
+                children
+              ) : (
+                <>
+                  <div className="lg:hidden">
+                    <LaptopNotice
+                      title={title}
+                      summary={summary}
+                      approvalsHref={href("/approvals")}
+                      notificationsHref={href("/notifications")}
+                    />
+                  </div>
+                  <div className="hidden lg:block">{children}</div>
+                </>
+              )}
+            </div>
+          </main>
+        </div>
+
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetContent side="left" className="lg:w-80">
+            <SheetHeader>
+              <SheetTitle>{siteName} Admin</SheetTitle>
+              <SheetDescription>
+                On a phone or tablet only approvals, payment confirmation and notifications are
+                available.
+              </SheetDescription>
+            </SheetHeader>
+            <nav aria-label="Read-mostly destinations" className="flex flex-col gap-1 px-4">
+              {READ_MOSTLY_NAV.map((item) => (
+                <Link
+                  key={item.route}
+                  href={href(item.route)}
+                  aria-current={isActive(item.route) ? "page" : undefined}
+                  className={cn(
+                    "flex h-11 items-center gap-3 rounded-md px-3 text-body hover:bg-accent-soft",
+                    isActive(item.route) && "bg-accent-soft text-accent-text",
+                  )}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <item.icon aria-hidden className="size-5" />
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          </SheetContent>
+        </Sheet>
+
+        <AdminCommandPalette
+          open={paletteOpen}
+          onOpenChange={setPaletteOpen}
+          query={paletteQuery}
+          onQueryChange={setPaletteQuery}
+          items={paletteItems}
+          remoteItems={remoteItems}
+          onNavigate={(to) => {
+            setPaletteOpen(false);
+            router.push(to);
+          }}
+        />
+        <Toaster />
+      </SidebarProvider>
+    </AdminUserIdContext.Provider>
   );
 }
 

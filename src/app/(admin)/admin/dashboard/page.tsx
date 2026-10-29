@@ -1,3 +1,5 @@
+import { SetupChecklist } from "@/components/admin/dashboard/SetupChecklist";
+import { loadSetupChecklist } from "@/lib/admin/setup-checklist-data";
 import { AdminDashboard } from "@/components/admin/dashboard/AdminDashboard";
 import { getAdminRequestContext } from "@/lib/authz/admin-request-context";
 import { getSession } from "@/modules/auth/service";
@@ -29,21 +31,27 @@ export default async function AdminDashboardRoute({
   // R8-10 — the admin's own saved widget selection/order (null → default layout).
   const savedLayout = await getAdminWidgetLayout(ctx.userId).catch(() => null);
 
-  const data = await loadDashboardData(ctx, range);
+  const [data, checklist] = await Promise.all([
+    loadDashboardData(ctx, range),
+    isSuperAdmin ? loadSetupChecklist(ctx) : Promise.resolve([]),
+  ]);
 
   return (
-    <AdminDashboard
-      key={(savedLayout ?? []).join(",")}
-      data={data}
-      layout={savedLayout ?? undefined}
-      isSuperAdmin={isSuperAdmin}
-      greeting={`Welcome back, ${firstName}`}
-      dateLabel={`FY ${fyFor(new Date())} · ${new Date().toLocaleDateString("en-IN", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        timeZone: "Asia/Kolkata",
-      })}`}
-    />
+    <>
+      {checklist.length > 0 ? <SetupChecklist items={checklist} userId={ctx.userId} /> : null}
+      <AdminDashboard
+        key={(savedLayout ?? []).join(",")}
+        data={data}
+        layout={savedLayout ?? undefined}
+        isSuperAdmin={isSuperAdmin}
+        greeting={`Welcome back, ${firstName}`}
+        dateLabel={`FY ${fyFor(new Date())} · ${new Date().toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          timeZone: "Asia/Kolkata",
+        })}`}
+      />
+    </>
   );
 }

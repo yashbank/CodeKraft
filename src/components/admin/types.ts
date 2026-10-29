@@ -37,7 +37,7 @@ export interface AdminNotification {
 }
 
 export interface SearchItem {
-  group: "Products" | "Orders" | "Customers" | "Leads" | "Go to";
+  group: "Products" | "Orders" | "Customers" | "Leads" | "Go to" | "Actions";
   label: string;
   hint?: string;
   href: string;

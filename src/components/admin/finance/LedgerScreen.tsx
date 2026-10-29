@@ -1,9 +1,10 @@
 "use client";
 
+import { SavedViews } from "../SavedViews";
+import { ExportCsvLink } from "../ExportCsvLink";
 import Link from "next/link";
 import * as React from "react";
-import { ChevronDownIcon, DownloadIcon, LockIcon, ScrollTextIcon } from "lucide-react";
-import { toast } from "sonner";
+import { ChevronDownIcon, LockIcon, ScrollTextIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -106,13 +107,8 @@ export function LedgerScreen({
             <Badge tone="neutral" dot>
               Last posted {timeAgo(lastPostedAt, now)}
             </Badge>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => toast("Export queued for the current filter (audited)")}
-            >
-              <DownloadIcon aria-hidden /> Export CSV
-            </Button>
+            <SavedViews screen="ledger" />
+            <ExportCsvLink kind="ledger" />
           </>
         }
       />

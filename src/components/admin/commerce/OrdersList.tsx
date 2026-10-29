@@ -1,5 +1,6 @@
 "use client";
 
+import { downloadCsv } from "@/lib/admin/csv";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -267,7 +268,33 @@ export function OrdersList({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => toast("Export queued — includes INR and native totals")}
+                onClick={() =>
+                  downloadCsv(
+                    "orders.csv",
+                    [
+                      "Order no",
+                      "Date",
+                      "Customer",
+                      "Email",
+                      "Items",
+                      "Total",
+                      "Currency",
+                      "Payment",
+                      "Status",
+                    ],
+                    rows.map((o) => [
+                      o.number,
+                      o.placedAt,
+                      o.customer.name,
+                      o.customer.email,
+                      o.items.join("; "),
+                      (o.total.amountMinor / 100).toFixed(2),
+                      o.total.currency,
+                      o.payment.status,
+                      o.status,
+                    ]),
+                  )
+                }
               >
                 <DownloadIcon aria-hidden /> Export CSV
               </Button>
