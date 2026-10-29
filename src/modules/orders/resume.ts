@@ -57,3 +57,30 @@ export async function findPendingCheckoutOrder(
     expiresAt: order.expiresAt.toISOString(),
   };
 }
+
+/**
+ * Order number of this customer's latest order for the offering that already has a submitted or
+ * confirmed payment (last 3 days). Used so a reload / gateway return after paying lands on the
+ * "Confirming your payment" screen instead of a 404 or "can't be purchased" dead end.
+ */
+export async function findRecentPaidOrderNo(
+  userId: string,
+  offeringId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ orderNo: orders.orderNo })
+    .from(orders)
+    .innerJoin(orderItems, eq(orders.id, orderItems.orderId))
+    .innerJoin(payments, eq(payments.orderId, orders.id))
+    .where(
+      and(
+        eq(orders.userId, userId),
+        eq(orderItems.offeringId, offeringId),
+        inArray(payments.status, ["submitted", "confirmed"]),
+        gt(orders.createdAt, new Date(Date.now() - 3 * 86_400_000)),
+      ),
+    )
+    .orderBy(desc(orders.createdAt))
+    .limit(1);
+  return row?.orderNo ?? null;
+}

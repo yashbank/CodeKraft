@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { GatewayInstructions } from "@/modules/payments/provider";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 const { submitPaymentReferenceMock } = vi.hoisted(() => ({ submitPaymentReferenceMock: vi.fn() }));
 vi.mock("@/modules/payments/customer-mutations", () => ({
   submitPaymentReference: submitPaymentReferenceMock,
