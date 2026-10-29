@@ -1,3 +1,4 @@
+import { getDisplayCurrency } from "@/lib/display-currency";
 import { OverviewScreen } from "@/components/account/OverviewScreen";
 import { getSession } from "@/modules/auth/service";
 import { mapEntitlementSummary } from "@/lib/account/purchases-view";
@@ -13,13 +14,14 @@ export const dynamic = "force-dynamic";
 export default async function AccountOverviewPage() {
   const { getSiteRequestContext } = await import("@/lib/authz/site-request-context");
   const [session, ctx] = await Promise.all([getSession(), getSiteRequestContext()]);
+  const { currency } = await getDisplayCurrency();
   const firstName = session?.user.name?.split(" ")[0] || "Customer";
 
   const [entitlementsResult, invoicesResult, queriesResult, wishlistResult] = await Promise.all([
     listMyEntitlementsQuery({ limit: 5 }, ctx),
     listMyInvoicesQuery({ limit: 5 }, ctx),
     listMyQueriesQuery({ limit: 5 }, ctx),
-    listMyWishlistQuery({ limit: 100, displayCurrency: "INR" }, ctx),
+    listMyWishlistQuery({ limit: 100, displayCurrency: currency }, ctx),
   ]);
 
   const entitlements = entitlementsResult.ok

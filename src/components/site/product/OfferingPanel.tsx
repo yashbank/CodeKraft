@@ -182,6 +182,7 @@ export function OfferingPanel({
                     <span className="text-body font-semibold text-fg">{o.name}</span>
                     <PriceBlock
                       amount={o.price}
+                      approx={o.priceApprox}
                       compareAt={o.compareAtPrice}
                       suffix={
                         o.billingInterval
@@ -237,7 +238,12 @@ export function OfferingPanel({
             <div className="flex justify-between gap-4">
               <dt className="text-fg-muted">Total</dt>
               <dd>
-                <PriceBlock amount={selected.price} fallback="Quoted privately" size="md" />
+                <PriceBlock
+                  amount={selected.price}
+                  approx={selected.priceApprox}
+                  fallback="Quoted privately"
+                  size="md"
+                />
               </dd>
             </div>
             <div className="flex justify-between gap-4">
@@ -322,6 +328,7 @@ export function OfferingPanel({
             </p>
             <PriceBlock
               amount={selected?.price}
+              approx={selected?.priceApprox}
               fallback={product.isComingSoon ? "Coming soon" : "Custom quote"}
               size="sm"
             />

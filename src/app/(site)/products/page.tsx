@@ -1,3 +1,4 @@
+import { getDisplayCurrency } from "@/lib/display-currency";
 import type { Metadata } from "next";
 
 import { anonymousContext } from "@/lib/authz/context";
@@ -34,9 +35,10 @@ interface PageProps {
 
 export default async function ProductsPage({ searchParams }: PageProps) {
   const { q } = await searchParams;
+  const { currency } = await getDisplayCurrency();
   const ctx = anonymousContext();
   const [productsResult, categoriesResult, session] = await Promise.all([
-    listProductsQuery({ limit: 100, displayCurrency: "INR" }, ctx),
+    listProductsQuery({ limit: 100, displayCurrency: currency }, ctx),
     listCategoriesQuery({}, ctx),
     getSession(),
   ]);
@@ -49,7 +51,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
     const { getSiteRequestContext } = await import("@/lib/authz/site-request-context");
     const wishlistCtx = await getSiteRequestContext();
     const wishlistResult = await listMyWishlistQuery(
-      { limit: 100, displayCurrency: "INR" },
+      { limit: 100, displayCurrency: currency },
       wishlistCtx,
     );
     if (wishlistResult.ok) wishlistedIds = wishlistResult.data.items.map((i) => i.productId);

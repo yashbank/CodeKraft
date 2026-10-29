@@ -119,6 +119,8 @@ export interface ProductCard {
   category: CategoryRef | null;
   tags: TagRef[];
   fromPrice: Money | null;
+  /** True when `fromPrice` is an FX conversion of the INR price (render with "≈"). */
+  fromPriceApprox?: boolean;
   compareAtPrice?: Money;
   purchaseModels: PurchaseModelValue[];
   deliveryTypes: DeliveryTypeValue[];

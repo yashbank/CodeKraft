@@ -147,7 +147,13 @@ export function ProductCard({
               Notify me when it launches
             </span>
           ) : (
-            <PriceBlock amount={p.fromPrice} compareAt={p.compareAtPrice} prefix="From" size="sm" />
+            <PriceBlock
+              amount={p.fromPrice}
+              approx={p.priceApprox}
+              compareAt={p.compareAtPrice}
+              prefix="From"
+              size="sm"
+            />
           )}
           <div className="flex items-center gap-1.5">
             {p.isNewVersion ? (
