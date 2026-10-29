@@ -51,7 +51,7 @@ Updated: 2026-10-29
 - R9-02 | ready | branch feat/r9-integration | r9-02 invoice refresh+PDF+print; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-03 | ready | branch feat/r9-integration | r9-03 fulfilment per type + guide; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-04 | ready | branch feat/r9-integration | r9-04 republish/schedule/delete/flags; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
-- R9-05 | doing | branch feat/r9-05
+- R9-05 | ready | branch feat/r9-integration | guard test + r9-05; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-06 | doing | branch feat/r9-06
 - R9-07 | doing | branch feat/r9-07
 - R9-08 | doing | branch feat/r9-08
