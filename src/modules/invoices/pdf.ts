@@ -4,7 +4,8 @@
  * No PDF library is installed, so this is a small hand-rolled PDF-1.4 writer (Helvetica, A4,
  * paginated, correct xref; valid for `media.sniff.verifyMagicBytes`).
  */
-import type { InvoiceProps } from "@/pdf/Invoice";
+import { inflateSync, deflateSync } from "node:zlib";
+import { DEFAULT_NOTE, PAYMENT_LABEL, type InvoiceProps } from "@/pdf/Invoice";
 import { toDecimalString } from "@/lib/money";
 import { getDocumentsBucketName, getStorageDriver } from "@/lib/storage";
 
@@ -12,7 +13,7 @@ const W = 595;
 const H = 842;
 const M = 40;
 
-/** Embeddable image: JPEG, or non-interlaced 8-bit RGB/gray PNG (raw IDAT, no re-encode). */
+/** Embeddable image: JPEG, or a decoded PNG (alpha flattened onto white, palette expanded). */
 export interface PdfImage {
   w: number;
   h: number;
@@ -39,11 +40,14 @@ class Canvas {
   private cur(): string[] {
     return this.pages.at(-1) ?? [];
   }
-  text(x: number, y: number, s: string, size = 9, bold = false, right = false): void {
+  text(x: number, y: number, s: string, size = 9, bold = false, right = false, rgb = "0 g"): void {
     const px = right ? x - textWidth(s, size) : x;
     this.cur().push(
-      `BT /${bold ? "F2" : "F1"} ${size} Tf ${px.toFixed(1)} ${y.toFixed(1)} Td (${pdfText(s)}) Tj ET`,
+      `${rgb} BT /${bold ? "F2" : "F1"} ${size} Tf ${px.toFixed(1)} ${y.toFixed(1)} Td (${pdfText(s)}) Tj ET`,
     );
+  }
+  rect(x: number, y: number, w: number, h: number, rgb: string): void {
+    this.cur().push(`${rgb} rg ${x} ${y} ${w} ${h} re f`);
   }
   rule(y: number, x1 = M, x2 = W - M): void {
     this.cur().push(`0.8 G ${x1} ${y} m ${x2} ${y} l S`);
@@ -153,26 +157,33 @@ export function buildInvoicePdf(inv: InvoiceProps, logo?: PdfImage | null): Buff
   const money = (n: number) => toDecimalString(n);
   const cur = inv.currency;
   const g = inv.gstBreakdown;
+  const acc = hexToRgb(inv.accent);
+  const fill = `${acc} rg`;
+  const WHITE = "1 g";
+  const INK = "0.07 0.09 0.15 rg";
+  const MUTED = "0.42 0.45 0.5 rg";
   let y = H - M;
 
+  // Accent band: logo (on a white tile) + title, invoice meta right-aligned in white.
+  c.rect(0, H - 100, W, 100, acc);
   let hx = M;
   if (logo) {
-    const h = 36;
-    const w = Math.min((logo.w / logo.h) * h, 160);
-    c.image(M, y - h + 10, w, h);
-    hx = M + w + 12;
+    const h = 44;
+    const w = Math.min((logo.w / logo.h) * h, 150);
+    c.rect(M - 4, H - 22 - h - 4, w + 8, h + 8, "1 1 1");
+    c.image(M, H - 22 - h, w, h);
+    hx = M + w + 20;
   }
-  c.text(hx, y - 8, "TAX INVOICE", 20, true);
-  y -= 34;
-  c.text(M, y, `Invoice No: ${inv.invoiceNo}`, 10);
-  c.text(W - M, y, `Date: ${inv.issuedAt}`, 10, false, true);
-  y -= 14;
-  if (inv.orderNo) {
-    c.text(M, y, `Order: ${inv.orderNo}`, 10);
-    y -= 14;
-  }
-  c.rule(y);
-  y -= 18;
+  c.text(hx, H - 52, "TAX INVOICE", 22, true, false, WHITE);
+  c.text(hx, H - 70, inv.seller.name, 10, false, false, WHITE);
+  c.text(W - M, H - 40, `Invoice No: ${inv.invoiceNo}`, 10, true, true, WHITE);
+  if (inv.orderNo) c.text(W - M, H - 55, `Order No: ${inv.orderNo}`, 10, false, true, WHITE);
+  c.text(W - M, H - 70, `Purchase Date: ${inv.issuedAt}`, 10, false, true, WHITE);
+  y = H - 122;
+  const status = PAYMENT_LABEL[inv.paymentStatus ?? "paid"];
+  c.rect(M, y - 4, textWidth(status, 9) + 20, 18, acc);
+  c.text(M + 10, y + 1, status, 9, true, false, WHITE);
+  y -= 30;
 
   const s = inv.seller;
   const b = inv.buyer;
@@ -191,24 +202,24 @@ export function buildInvoicePdf(inv: InvoiceProps, logo?: PdfImage | null): Buff
     ...(b.address ? wrap(b.address, 40) : []),
     b.gst_number ? `GSTIN: ${b.gst_number}` : "",
   ].filter(Boolean);
-  c.text(M, y, "Sold By", 9, true);
-  c.text(320, y, "Billed To", 9, true);
+  c.text(M, y, "SOLD BY", 8, true, false, fill);
+  c.text(320, y, "BILLED TO", 8, true, false, fill);
   const blockTop = y - 14;
-  sellerLines.forEach((l, i) => c.text(M, blockTop - i * 12, l, 9, i === 0));
-  buyerLines.forEach((l, i) => c.text(320, blockTop - i * 12, l, 9, i === 0));
-  y = blockTop - Math.max(sellerLines.length, buyerLines.length) * 12 - 12;
+  sellerLines.forEach((l, i) => c.text(M, blockTop - i * 12, l, 9, i === 0, false, INK));
+  buyerLines.forEach((l, i) => c.text(320, blockTop - i * 12, l, 9, i === 0, false, INK));
+  y = blockTop - Math.max(sellerLines.length, buyerLines.length) * 12 - 14;
 
   const rate = g ? ` (${g.rate_bps / 100}%)` : "";
   const head = () => {
-    c.text(M, y, "#", 9, true);
-    c.text(60, y, "Description", 9, true);
-    c.text(335, y, "Qty", 9, true, true);
-    c.text(400, y, "Unit Price", 9, true, true);
-    c.text(455, y, "Discount", 9, true, true);
-    c.text(510, y, `Tax${rate}`, 9, true, true);
-    c.text(W - M, y, "Total", 9, true, true);
-    c.rule(y - 5);
-    y -= 20;
+    c.rect(M, y - 6, W - 2 * M, 20, acc);
+    c.text(M + 6, y, "#", 9, true, false, WHITE);
+    c.text(66, y, "Description", 9, true, false, WHITE);
+    c.text(335, y, "Qty", 9, true, true, WHITE);
+    c.text(400, y, "Unit Price", 9, true, true, WHITE);
+    c.text(455, y, "Discount", 9, true, true, WHITE);
+    c.text(510, y, `Tax${rate}`, 9, true, true, WHITE);
+    c.text(W - M - 6, y, "Total", 9, true, true, WHITE);
+    y -= 24;
   };
   head();
   inv.lines.forEach((l, i) => {
@@ -218,14 +229,15 @@ export function buildInvoicePdf(inv: InvoiceProps, logo?: PdfImage | null): Buff
       y = H - M;
       head();
     }
-    c.text(M, y, String(i + 1), 9);
-    desc.forEach((d, k) => c.text(60, y - k * 11, d, 9));
-    c.text(335, y, String(l.quantity), 9, false, true);
-    c.text(400, y, money(l.unit_minor), 9, false, true);
-    c.text(455, y, money(l.discount_minor), 9, false, true);
-    c.text(510, y, money(l.tax_minor), 9, false, true);
-    c.text(W - M, y, money(l.total_minor), 9, false, true);
-    y -= desc.length * 11 + 5;
+    c.text(M + 6, y, String(i + 1), 9, false, false, INK);
+    desc.forEach((d, k) => c.text(66, y - k * 11, d, 9, false, false, INK));
+    c.text(335, y, String(l.quantity), 9, false, true, INK);
+    c.text(400, y, money(l.unit_minor), 9, false, true, INK);
+    c.text(455, y, money(l.discount_minor), 9, false, true, INK);
+    c.text(510, y, money(l.tax_minor), 9, false, true, INK);
+    c.text(W - M - 6, y, money(l.total_minor), 9, false, true, INK);
+    c.rule(y - desc.length * 11 + 4);
+    y -= desc.length * 11 + 6;
   });
 
   const rows: [string, string, boolean?][] = [["Subtotal:", `${cur} ${money(inv.subtotalMinor)}`]];
@@ -235,18 +247,31 @@ export function buildInvoicePdf(inv: InvoiceProps, logo?: PdfImage | null): Buff
     if (g.sgst_minor !== undefined) rows.push(["SGST:", `${cur} ${money(g.sgst_minor)}`]);
     if (g.igst_minor !== undefined) rows.push(["IGST:", `${cur} ${money(g.igst_minor)}`]);
   } else if (inv.taxMinor > 0) rows.push(["Tax:", `${cur} ${money(inv.taxMinor)}`]);
-  rows.push(["Total:", `${cur} ${money(inv.totalMinor)}`, true]);
-  if (y - rows.length * 15 < M) {
+  if (g && inv.taxMinor > 0) rows.push(["Total Tax:", `${cur} ${money(inv.taxMinor)}`]);
+  if (y - (rows.length + 4) * 15 < M) {
     c.newPage();
     y = H - M;
   }
-  c.rule(y + 8, 340);
-  for (const [label, value, bold] of rows) {
-    c.text(340, y - 6, label, bold ? 11 : 9, !!bold);
-    c.text(W - M, y - 6, value, bold ? 11 : 9, !!bold, true);
+  y -= 8;
+  for (const [label, value] of rows) {
+    c.text(340, y, label, 9, false, false, INK);
+    c.text(W - M - 6, y, value, 9, false, true, INK);
     y -= 15;
   }
+  c.rect(340, y - 8, W - M - 340, 24, acc);
+  c.text(346, y, "Grand Total:", 11, true, false, WHITE);
+  c.text(W - M - 6, y, `${cur} ${money(inv.totalMinor)}`, 11, true, true, WHITE);
+  y -= 36;
+  c.text(M, y, "Notes", 8, true, false, fill);
+  c.text(M, y - 12, inv.notes || DEFAULT_NOTE, 8, false, false, MUTED);
   return assemble(c.pages, logo);
+}
+
+/** "#rrggbb" to a PDF "r g b" triple; falls back to slate on bad input. */
+function hexToRgb(hex?: string): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex ?? "");
+  const n = parseInt(m?.[1] ?? "41507a", 16);
+  return [n >> 16, (n >> 8) & 255, n & 255].map((v) => (v / 255).toFixed(3)).join(" ");
 }
 
 /** Parses JPEG/PNG bytes into an embeddable image, or null when unsupported. */
@@ -271,28 +296,104 @@ export function parseLogo(buf: Buffer): PdfImage | null {
     }
     return null;
   }
-  if (buf.subarray(1, 4).toString() === "PNG") {
-    const depth = buf[24];
-    const type = buf[25]; // 0 gray, 2 RGB (no alpha/palette)
-    if (depth !== 8 || (type !== 0 && type !== 2) || buf[28] !== 0) return null;
-    const idat: Buffer[] = [];
-    for (let i = 8; i + 8 <= buf.length;) {
-      const len = buf.readUInt32BE(i);
-      if (buf.subarray(i + 4, i + 8).toString() === "IDAT") {
-        idat.push(buf.subarray(i + 8, i + 8 + len));
-      }
-      i += 12 + len;
-    }
+  if (buf.subarray(1, 4).toString() === "PNG") return parsePng(buf);
+  return null;
+}
+
+/**
+ * PNG to an embeddable RGB/gray image. 8-bit gray/RGB pass through untouched; alpha, palette,
+ * 16-bit and sub-byte images are decoded and re-encoded as 8-bit RGB with alpha flattened onto
+ * white. shortcut: Adam7-interlaced PNGs are unsupported (null), add a de-interlacer if seen.
+ */
+function parsePng(buf: Buffer): PdfImage | null {
+  const w = buf.readUInt32BE(16);
+  const h = buf.readUInt32BE(20);
+  const depth = buf[24] ?? 0;
+  const type = buf[25] ?? 0; // 0 gray, 2 RGB, 3 palette, 4 gray+alpha, 6 RGBA
+  if (buf[28] !== 0 || !w || !h) return null;
+  const idat: Buffer[] = [];
+  let plte: Buffer | null = null;
+  let trns: Buffer | null = null;
+  for (let i = 8; i + 8 <= buf.length;) {
+    const len = buf.readUInt32BE(i);
+    const kind = buf.subarray(i + 4, i + 8).toString();
+    const body = buf.subarray(i + 8, i + 8 + len);
+    if (kind === "IDAT") idat.push(body);
+    else if (kind === "PLTE") plte = body;
+    else if (kind === "tRNS") trns = body;
+    i += 12 + len;
+  }
+  const data = Buffer.concat(idat);
+  if ((type === 0 || type === 2) && depth === 8) {
     return {
-      w: buf.readUInt32BE(16),
-      h: buf.readUInt32BE(20),
+      w,
+      h,
       cs: type === 0 ? "DeviceGray" : "DeviceRGB",
       filter: "FlateDecode",
-      data: Buffer.concat(idat),
+      data,
       colors: type === 0 ? 1 : 3,
     };
   }
-  return null;
+  const ch = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[type];
+  if (!ch || (type === 3 && !plte) || ![1, 2, 4, 8, 16].includes(depth)) return null;
+  try {
+    const bpp = Math.max(1, (ch * depth) >> 3); // bytes per pixel for filtering
+    const stride = Math.ceil((w * ch * depth) / 8);
+    const raw = inflateSync(data);
+    const px = Buffer.alloc(stride * h);
+    for (let r = 0; r < h; r++) {
+      const f = raw[r * (stride + 1)] ?? 0;
+      for (let x = 0; x < stride; x++) {
+        const v = raw[r * (stride + 1) + 1 + x] ?? 0;
+        const a = x >= bpp ? (px[r * stride + x - bpp] ?? 0) : 0;
+        const b = r ? (px[(r - 1) * stride + x] ?? 0) : 0;
+        const c = r && x >= bpp ? (px[(r - 1) * stride + x - bpp] ?? 0) : 0;
+        const p = a + b - c;
+        const pa = Math.abs(p - a),
+          pb = Math.abs(p - b),
+          pc = Math.abs(p - c);
+        const paeth = pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+        px[r * stride + x] = (v + [0, a, b, (a + b) >> 1, paeth][f] ?? 0) & 255;
+      }
+    }
+    // sample n of row r, scaled to 0..255 (raw index for palette)
+    const sample = (r: number, n: number): number => {
+      if (depth === 8) return px[r * stride + n] ?? 0;
+      if (depth === 16) return px[r * stride + n * 2] ?? 0;
+      const bit = n * depth;
+      const byte = px[r * stride + (bit >> 3)] ?? 0;
+      const v = (byte >> (8 - depth - (bit & 7))) & ((1 << depth) - 1);
+      return type === 3 ? v : Math.round((v * 255) / ((1 << depth) - 1));
+    };
+    const pal = plte ?? Buffer.alloc(0);
+    const out = Buffer.alloc((w * 3 + 1) * h);
+    const flat = (c: number, a: number) => Math.round((c * a + 255 * (255 - a)) / 255);
+    for (let r = 0; r < h; r++) {
+      for (let x = 0; x < w; x++) {
+        let rgb: number[];
+        let a = 255;
+        if (type === 3) {
+          const i = sample(r, x);
+          rgb = [pal[i * 3] ?? 0, pal[i * 3 + 1] ?? 0, pal[i * 3 + 2] ?? 0];
+          a = trns?.[i] ?? 255;
+        } else if (type === 0 || type === 4) {
+          const g = sample(r, x * ch);
+          rgb = [g, g, g];
+          if (type === 4) a = sample(r, x * ch + 1);
+        } else {
+          rgb = [sample(r, x * ch), sample(r, x * ch + 1), sample(r, x * ch + 2)];
+          if (type === 6) a = sample(r, x * ch + 3);
+        }
+        const o = r * (w * 3 + 1) + 1 + x * 3;
+        out[o] = flat(rgb[0] ?? 0, a);
+        out[o + 1] = flat(rgb[1] ?? 0, a);
+        out[o + 2] = flat(rgb[2] ?? 0, a);
+      }
+    }
+    return { w, h, cs: "DeviceRGB", filter: "FlateDecode", data: deflateSync(out), colors: 3 };
+  } catch {
+    return null;
+  }
 }
 
 /** Fetches the snapshot logo (4s timeout); any failure or unsupported format yields null. */
