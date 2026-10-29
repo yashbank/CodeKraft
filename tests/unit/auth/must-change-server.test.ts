@@ -9,6 +9,10 @@ const completeForcedChange = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/modules/auth/invites", () => ({
   completeForcedChange: (...a: unknown[]) => completeForcedChange(...a),
 }));
+// R9-10: the admin context now looks up the caller's partner row.
+vi.mock("@/lib/db", () => ({
+  db: { select: () => ({ from: () => ({ where: () => ({ limit: async () => [] }) }) }) },
+}));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 
 import { getAdminRequestContext } from "@/lib/authz/admin-request-context";

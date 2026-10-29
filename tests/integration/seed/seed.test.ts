@@ -148,7 +148,7 @@ describe("runSeed({ mode: 'full' })", () => {
         .innerJoin(users, eq(users.id, partners.userId))
         .where(inArray(users.email, [...ADMIN_EMAILS]));
       expect(adminPartners.map((p) => p.displayName).sort()).toEqual(["CEO", "CFO"]);
-      expect(counts.users).toBe(6);
+      expect(counts.users).toBe(8);
       expect(counts.partners).toBe(3);
       const [partnerUser] = await db
         .select({ id: users.id })
@@ -321,7 +321,10 @@ describe("runAnonymise()", () => {
         .select({ email: users.email })
         .from(users)
         .where(inArray(users.email, [...Object.values(TEST_USER_EMAILS)]));
-      expect(customerEmails.map((u) => u.email)).toEqual([TEST_USER_EMAILS.partner]);
+      // partner/admin/staff are admin-role users, so they are kept; customers are anonymised away.
+      expect(customerEmails.map((u) => u.email).sort()).toEqual(
+        [TEST_USER_EMAILS.admin, TEST_USER_EMAILS.partner, TEST_USER_EMAILS.staff].sort(),
+      );
       const admins = await db
         .select({ email: users.email })
         .from(users)

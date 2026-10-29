@@ -99,8 +99,8 @@ describe("admin-created delivery tasks", () => {
   it("creates, maps to order/customer, lists by order, assigns, completes and fulfils", async () => {
     await truncateAll();
     const s = await seed("custom");
-    // custom auto-activates; make the order wait on the admin again.
-    await db.update(entitlements).set({ status: "pending" }).where(eq(entitlements.id, s.entId));
+    // R9-03: custom grants are pending with an auto-raised task; clear it to create our own.
+    await db.delete(deliveryTasks).where(eq(deliveryTasks.entitlementId, s.entId));
     await db.update(orders).set({ status: "paid" }).where(eq(orders.id, s.order.id));
 
     const task = await deliveryService.createDeliveryTask(s.ctx, {

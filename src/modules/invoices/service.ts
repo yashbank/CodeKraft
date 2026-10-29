@@ -582,7 +582,10 @@ export class DefaultInvoicesService implements InvoicesService {
       mediaId = mediaRow.id;
     }
 
-    await tx.update(invoices).set({ pdfMediaId: mediaId }).where(eq(invoices.id, invoice.id));
+    // invoices are append-only (BR-17): only link when the pointer actually changes.
+    if (invoice.pdfMediaId !== mediaId) {
+      await tx.update(invoices).set({ pdfMediaId: mediaId }).where(eq(invoices.id, invoice.id));
+    }
 
     return { pdfMediaId: mediaId };
   }
