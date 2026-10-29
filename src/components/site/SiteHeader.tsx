@@ -130,6 +130,7 @@ export function SiteHeader({
             {currency ? (
               <CurrencySwitcher
                 currency={currency}
+                signedIn={Boolean(session)}
                 options={currencyOptions}
                 className="w-[4.5rem]"
               />

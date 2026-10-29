@@ -218,6 +218,12 @@ export function AccountShell({
                     <NavList onNavigate={() => setDrawer(false)} />
                   </nav>
                   <div className="mt-auto border-t border-border p-4">
+                    <CurrencySelect
+                      value={currency}
+                      options={currencyOptions}
+                      onChange={onCurrencyChange}
+                      className="mb-3 w-full"
+                    />
                     <Link href="/" className="flex items-center gap-2 text-body-sm text-fg-muted">
                       <ArrowLeftIcon aria-hidden className="size-4" /> Back to site
                     </Link>

@@ -9,6 +9,7 @@ import { ResendVerificationButton } from "./ResendVerificationButton";
 import type { NotificationItem } from "./types";
 import { CURRENCY_COOKIE } from "@/lib/display-currency";
 import type { Currency } from "@/lib/money";
+import { updateMyAccountSettings } from "@/modules/users/site-mutations";
 import { markAllMyNotificationsRead } from "@/modules/notifications/site-mutations";
 
 /** Re-fetch server state (bell, badge, inbox share it) while the tab is visible. */
@@ -63,7 +64,7 @@ export function AccountShellWrapper({
       currencyOptions={currencyOptions}
       onCurrencyChange={(c) => {
         document.cookie = `${CURRENCY_COOKIE}=${c}; path=/; max-age=31536000; samesite=lax`;
-        router.refresh();
+        void updateMyAccountSettings({ displayCurrency: c }).finally(() => router.refresh());
       }}
       notifications={notifications}
       unreadCount={unreadCount}
