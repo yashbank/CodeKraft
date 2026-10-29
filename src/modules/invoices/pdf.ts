@@ -353,7 +353,7 @@ function parsePng(buf: Buffer): PdfImage | null {
           pb = Math.abs(p - b),
           pc = Math.abs(p - c);
         const paeth = pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
-        px[r * stride + x] = (v + [0, a, b, (a + b) >> 1, paeth][f] ?? 0) & 255;
+        px[r * stride + x] = (v + ([0, a, b, (a + b) >> 1, paeth][f] ?? 0)) & 255;
       }
     }
     // sample n of row r, scaled to 0..255 (raw index for palette)
