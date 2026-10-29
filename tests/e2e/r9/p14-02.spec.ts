@@ -167,10 +167,7 @@ test("Make partner row action on the users screen", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await loginAs(page, "super_admin");
   await page.goto(USERS);
-  await page
-    .getByLabel("Name or email…")
-    .fill(email)
-    .catch(() => undefined);
+  await page.getByPlaceholder("Name or email…").fill(email); // the search box has no label
   const row = page.locator("tr", { hasText: email });
   await row.getByRole("button", { name: /Actions for/ }).click();
   await page.getByRole("menuitem", { name: "Make partner" }).click();

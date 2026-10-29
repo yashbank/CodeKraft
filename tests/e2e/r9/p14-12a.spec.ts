@@ -141,6 +141,16 @@ test.describe("P14-12a admin extras", () => {
     // keyboard path
     await page.getByRole("button", { name: "Move New leads earlier" }).click();
     await expect.poll(order).toEqual(["open_queries", "new_leads", "conversion_rate"]);
+    // the save is a server action: reloading before it lands would read the previous order
+    await expect
+      .poll(async () => {
+        const [row] = await q<{ layout: Array<{ i: string }> }>(
+          `select layout from dashboard_layouts where user_id = $1`,
+          [uid],
+        );
+        return row?.layout.map((l) => l.i);
+      })
+      .toEqual(["open_queries", "new_leads", "conversion_rate"]);
     await page.reload();
     await expect
       .poll(order, { timeout: 60_000 })
