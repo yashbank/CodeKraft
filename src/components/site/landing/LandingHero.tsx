@@ -79,7 +79,12 @@ export function LandingHero({
           </div>
         </div>
         <div className="lg:col-span-6 lg:h-[min(70svh,720px)]">
-          <HeroPoster src={content.poster?.url} alt={content.poster?.alt} />
+          <HeroPoster
+            src={content.poster?.url}
+            alt={content.poster?.alt}
+            nodeLabel={content.nodeLabel}
+            nodeStyle={content.nodeStyle}
+          />
         </div>
         <a
           href="#build"

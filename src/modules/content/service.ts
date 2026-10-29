@@ -894,6 +894,8 @@ export class DefaultContentService implements ContentService {
           poster,
           videoEmbedUrl: c.media?.videoEmbedUrl ?? null,
           sceneVariant: c.media?.sceneVariant ?? null,
+          nodeLabel: c.media?.nodeLabel ?? null,
+          nodeStyle: c.media?.nodeStyle ?? null,
         },
         cta: c.cta,
         position: c.position,
@@ -1487,6 +1489,8 @@ export class DefaultContentService implements ContentService {
       published: boolean;
       poster?: string;
       posterMediaId?: string;
+      nodeLabel?: string;
+      nodeStyle?: "pill" | "terminal" | "outline";
       ctaPrimary?: { label: string; target: string };
       ctaSecondary?: { label: string; target: string };
     }> = [];
@@ -1509,6 +1513,8 @@ export class DefaultContentService implements ContentService {
         published: c.published,
         poster,
         posterMediaId: c.media?.posterMediaId ?? undefined,
+        nodeLabel: c.media?.nodeLabel,
+        nodeStyle: c.media?.nodeStyle,
         ctaPrimary: c.cta?.primary
           ? { label: c.cta.primary.label, target: c.cta.primary.href }
           : undefined,

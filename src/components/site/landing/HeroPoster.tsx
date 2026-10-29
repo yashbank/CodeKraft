@@ -1,6 +1,13 @@
 import Image from "next/image";
 import { cn } from "@/components/ui/_utils";
 
+const NODE_STYLE = {
+  default: "uppercase tracking-widest",
+  pill: "inline-block rounded-full bg-cyan-500/10 px-3 py-1 uppercase tracking-wider",
+  terminal: "font-mono tracking-normal",
+  outline: "inline-block rounded border border-cyan-400/60 px-2 py-0.5 uppercase tracking-wider",
+};
+
 /**
  * 3D Isometric architectural render hero showcase with ambient glow & glass borders.
  *
@@ -12,11 +19,16 @@ export function HeroPoster({
   className,
   src,
   alt,
+  nodeLabel,
+  nodeStyle,
 }: {
   className?: string;
   src?: string;
   alt?: string;
+  nodeLabel?: string;
+  nodeStyle?: "pill" | "terminal" | "outline";
 }) {
+  const label = nodeLabel ?? "Architecture Node";
   return (
     <div
       className={cn(
@@ -38,9 +50,18 @@ export function HeroPoster({
       <div className="absolute inset-x-0 bottom-0 p-6">
         <div className="flex items-center justify-between rounded-xl border border-white/10 bg-surface/80 p-4 backdrop-blur-md">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-cyan-400">
-              Architecture Node
-            </p>
+            {label ? (
+              <p
+                data-node-style={nodeStyle ?? "default"}
+                className={cn(
+                  "max-w-full break-words text-xs font-semibold text-cyan-400",
+                  NODE_STYLE[nodeStyle ?? "default"],
+                )}
+              >
+                {nodeStyle === "terminal" ? "> " : null}
+                {label}
+              </p>
+            ) : null}
             <p className="text-sm font-medium text-fg">Production Engine & Digital Assets</p>
           </div>
           <span className="flex size-2.5 rounded-full bg-cyan-400 animate-pulse" />
