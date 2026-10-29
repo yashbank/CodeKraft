@@ -268,7 +268,7 @@ export function AdminShell({
   children,
 }: AdminShellProps) {
   const href = React.useCallback((route: AdminRoute) => routes?.[route] ?? route, [routes]);
-  const nav = React.useMemo(() => filterAdminNav(ADMIN_NAV, [user.role]), [user.role]);
+  const nav = React.useMemo(() => filterAdminNav(ADMIN_NAV, [user.role ?? "admin"]), [user.role]);
   const [open, setOpen] = React.useState(true);
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const siteName = useSiteName();
