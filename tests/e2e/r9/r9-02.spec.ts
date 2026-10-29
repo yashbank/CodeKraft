@@ -17,6 +17,9 @@ test.describe("R9-02 invoices render from current settings", () => {
       `select value from site_settings where key='site_name'`,
     );
     const originalName = String(sn?.value ?? "CodeKraft");
+    const [sd] = await q<{ v: string }>(
+      `select value::text as v from site_settings where key='seller_details'`,
+    );
     const tag = String(Date.now());
     const buyerSnap = JSON.stringify({
       name: "Buyer",
@@ -55,12 +58,13 @@ test.describe("R9-02 invoices render from current settings", () => {
     const url = `${SITE}/account/invoices/${inv!.id}`;
     const setRefresh = (on: boolean) =>
       q(
-        `insert into site_settings (key, value) values ('refresh_old_invoices', $1::jsonb)
+        `insert into site_settings (key, value) values ('refresh_old_invoices', $1::text::jsonb)
          on conflict (key) do update set value = excluded.value`,
         [JSON.stringify(on)],
       );
 
-    const adminCtx = await browser.newContext();
+    // Admin settings is laptop-only (phones get a read-only notice), so the admin side is always desktop.
+    const adminCtx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const custCtx = await browser.newContext();
     const A = await adminCtx.newPage();
     const C = await custCtx.newPage();
@@ -76,6 +80,8 @@ test.describe("R9-02 invoices render from current settings", () => {
         timeout: 60_000,
       });
       await A.locator("#st-site").fill(NEW_NAME);
+      // The invoice seller name is the legal name (seller details), falling back to the site name.
+      await A.locator("#st-legal").fill(NEW_NAME);
       await A.getByRole("button", { name: "Save changes" }).click();
       await expect(A.getByText("Settings saved")).toBeVisible({ timeout: 30_000 });
 
@@ -113,6 +119,8 @@ test.describe("R9-02 invoices render from current settings", () => {
       await q(`update site_settings set value = to_jsonb($1::text) where key='site_name'`, [
         originalName,
       ]);
+      if (sd)
+        await q(`update site_settings set value=$1::text::jsonb where key='seller_details'`, [sd.v]);
       await q(`delete from invoices where id=$1`, [inv!.id]).catch(() => undefined);
       await q(`delete from orders where id=$1`, [order!.id]).catch(() => undefined);
       await adminCtx.close();
