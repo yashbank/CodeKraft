@@ -150,10 +150,16 @@ export function AdminDashboard({
     fy: "This FY",
   }[range];
 
-  const toggle = (key: WidgetKey, on: boolean) =>
+  const toggle = (key: WidgetKey, on: boolean) => {
     persist(
       on ? (enabled.includes(key) ? enabled : [...enabled, key]) : enabled.filter((k) => k !== key),
     );
+    // The server render only loaded data for widgets already enabled; fetch it for a new one.
+    if (on && !enabled.includes(key)) {
+      const title = WIDGET_LIBRARY.find((w) => w.key === key)?.title ?? key;
+      void refreshWidget(key, title);
+    }
+  };
 
   const definitions = enabled
     .map((k) => WIDGET_LIBRARY.find((w) => w.key === k))

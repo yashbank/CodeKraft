@@ -54,6 +54,12 @@ export function OptionPicker({
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const mobile = useIsMobile();
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  // No Dialog/SheetTrigger is used, so Radix has no trigger to hand focus back to on close.
+  const restoreFocus = (e: Event) => {
+    e.preventDefault();
+    triggerRef.current?.focus();
+  };
   const ids = options.map((o) => o.id);
   const shown = inlineIds(value, popular, ids).flatMap((id) => options.filter((o) => o.id === id));
   const q = query.trim().toLowerCase();
@@ -126,6 +132,7 @@ export function OptionPicker({
           type="button"
           variant="outline"
           size="sm"
+          ref={triggerRef}
           disabled={disabled}
           aria-haspopup="dialog"
           aria-label={`Show all ${label.toLowerCase()} (${options.length})`}
@@ -139,7 +146,11 @@ export function OptionPicker({
       </div>
       {mobile ? (
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetContent side="bottom" className="max-h-[88svh] gap-3 p-4">
+          <SheetContent
+            side="bottom"
+            className="max-h-[88svh] gap-3 p-4"
+            onCloseAutoFocus={restoreFocus}
+          >
             <SheetHeader className="p-0 pr-10">
               <SheetTitle>{title}</SheetTitle>
               <SheetDescription>{desc}</SheetDescription>
@@ -149,7 +160,11 @@ export function OptionPicker({
         </Sheet>
       ) : (
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent size="md" className="max-h-[90svh] overflow-hidden">
+          <DialogContent
+            size="md"
+            className="max-h-[90svh] overflow-hidden"
+            onCloseAutoFocus={restoreFocus}
+          >
             <DialogHeader className="pr-8">
               <DialogTitle>{title}</DialogTitle>
               <DialogDescription>{desc}</DialogDescription>

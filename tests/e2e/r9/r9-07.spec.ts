@@ -13,7 +13,12 @@ test.describe("R9-07 admin dashboard", () => {
     test.setTimeout(240_000);
     const issues = trackIssues(page);
     await loginAs(page, "super_admin");
+    await page.setViewportSize({ width: 1280, height: 900 }); // settings is laptop-only
     await page.goto(`${ADMIN}/admin/dashboard`);
+    // system_health is not in the default layout: add it from the widget library.
+    await page.getByRole("button", { name: "Customise" }).click();
+    await page.getByRole("switch", { name: "System health" }).check();
+    await page.keyboard.press("Escape");
 
     const health = page.locator('section[data-widget="system_health"]');
     await expect(health).toBeVisible({ timeout: 60_000 });
@@ -29,7 +34,7 @@ test.describe("R9-07 admin dashboard", () => {
 
     const before = await widgets.first().evaluate((el) => getComputedStyle(el).borderTopLeftRadius);
     await page.goto(`${ADMIN}/admin/settings`);
-    await page.getByRole("button", { name: "Theme" }).click();
+    await page.getByRole("button", { name: "Theme", exact: true }).click();
     await page.getByRole("radio", { name: "Round" }).click();
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("Settings saved")).toBeVisible({ timeout: 30_000 });
