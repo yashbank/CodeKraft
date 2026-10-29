@@ -45,13 +45,7 @@ export function mapQueryThreadToSummary(t: QueryThread): QuerySummary {
       authorName: m.authorKind === "admin" ? (m.author?.name ?? undefined) : undefined,
       body: toPlainText(m.bodyJson as never),
       at: m.createdAt,
-      attachments:
-        m.attachments.length > 0
-          ? m.attachments.map((a) => ({
-              name: a.name,
-              sizeLabel: `${Math.round(a.sizeBytes / 1024)} KB`,
-            }))
-          : undefined,
+      attachments: m.attachments.length > 0 ? m.attachments : undefined,
     })),
   };
 }

@@ -106,6 +106,7 @@ export const filesUploadIntents = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     /** Upload purpose selecting the MIME allow-list and size cap (docs/06 §3.5). */
     purpose: text("purpose").notNull(),
+    filename: text("filename"),
     mime: text("mime").notNull(),
     sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
     objectKey: text("object_key").notNull().unique(),

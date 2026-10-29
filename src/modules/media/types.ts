@@ -3,6 +3,7 @@
  * docs/09 TM-12 (MIME allow-list, size caps), A-1202.
  */
 import type { mediaKind, mediaVisibility } from "../../../drizzle/schema/media";
+import { ATTACHMENT_MAX_BYTES, ATTACHMENT_MIMES as CHAT_ATTACHMENT_MIMES } from "@/lib/attachments";
 import { enumTuple } from "../catalog/types";
 
 export type { Media } from "../../../drizzle/schema/media";
@@ -42,13 +43,18 @@ export const UPLOAD_PURPOSES = [
   "content_media",
   "expense_receipt",
   "query_attachment",
+  "chat_attachment",
   "avatar",
   "site_logo",
 ] as const;
 export type UploadPurpose = (typeof UPLOAD_PURPOSES)[number];
 
 /** Purposes a customer session may use (`media.upload` not required). */
-export const CUSTOMER_UPLOAD_PURPOSES: readonly UploadPurpose[] = ["query_attachment", "avatar"];
+export const CUSTOMER_UPLOAD_PURPOSES: readonly UploadPurpose[] = [
+  "query_attachment",
+  "chat_attachment",
+  "avatar",
+];
 
 const MB = 1024 * 1024;
 export const IMAGE_MIMES = [
@@ -118,6 +124,12 @@ export const UPLOAD_RULES: Readonly<Record<UploadPurpose, UploadRule>> = Object.
     visibility: "private",
   },
   query_attachment: { mimes: ATTACHMENT_MIMES, maxBytes: 20 * MB, visibility: "private" },
+  // P14-06: chat + query thread attachments (customer and admin); private, served by an authorised route.
+  chat_attachment: {
+    mimes: CHAT_ATTACHMENT_MIMES,
+    maxBytes: ATTACHMENT_MAX_BYTES,
+    visibility: "private",
+  },
   avatar: { mimes: IMAGE_MIMES, maxBytes: 10 * MB, visibility: "public" },
   // PNG/JPEG only: SVG is never accepted (TM-12) and the invoice PDF cannot embed WebP.
   site_logo: {

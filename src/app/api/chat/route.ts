@@ -6,6 +6,8 @@ import { NextResponse } from "next/server";
 import { resolveRouteContext } from "@/lib/authz/resolve-route-context";
 import { requireContext } from "@/lib/authz/context";
 import { ErrorCode, isAppError } from "@/lib/errors";
+import { getDb } from "@/lib/db";
+import { resolveOwnAttachments } from "@/modules/media/attachments";
 import { chatService } from "@/modules/chat/service";
 import { getLLMProvider } from "@/modules/chat/providers";
 import { encodeSse } from "@/modules/chat/sse";
@@ -30,6 +32,9 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
+
+    // P14-06: reject bad attachments with a clear 400 before the stream opens.
+    await resolveOwnAttachments(getDb(), authedCtx.userId, parse.data.attachments ?? []);
 
     const provider = getLLMProvider();
     const eventStream = chatService.sendMessage(authedCtx, parse.data, provider);

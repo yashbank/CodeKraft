@@ -4,6 +4,7 @@
  * (escalation), D-1002 (email on admin reply), FR-LEAD-09 (auto-close after 7 d).
  */
 import { z } from "zod";
+import { ATTACHMENT_MAX_FILES, type AttachmentView } from "@/lib/attachments";
 import { isoDateTimeSchema as isoDateTime, uuidSchema as uuid } from "@/modules/_shared/zod";
 
 export { uuidSchema as uuid, isoDateTimeSchema as isoDateTime } from "@/modules/_shared/zod";
@@ -25,8 +26,8 @@ export const queryBodySchema = z
   })
   .passthrough();
 
-/** ≤ 3 media ids uploaded via intent purpose `query_attachment` (docs/06 §3.5). */
-export const queryAttachmentsSchema = z.array(uuid).max(3);
+/** ≤ ATTACHMENT_MAX_FILES media ids uploaded via intent purpose `chat_attachment` (P14-06; was 3 `query_attachment`). */
+export const queryAttachmentsSchema = z.array(uuid).max(ATTACHMENT_MAX_FILES);
 
 /**
  * API-CHAT-01 `createQuery` — customer (`support.self`) with `source` dashboard/order, or a
@@ -220,13 +221,7 @@ export interface QueryMessageView {
   author: { id: string; name: string | null } | null;
   bodyJson: Record<string, unknown>;
   /** 5-minute signed URLs (docs/06 API-CHAT-02). */
-  attachments: Array<{
-    mediaId: string;
-    name: string;
-    sizeBytes: number;
-    url: string;
-    expiresAt: string;
-  }>;
+  attachments: AttachmentView[];
   createdAt: string;
 }
 

@@ -102,6 +102,11 @@ export const chatMessages = pgTable(
     content: text("content").notNull(),
     tokensIn: integer("tokens_in").notNull().default(0),
     tokensOut: integer("tokens_out").notNull().default(0),
+    /** Media ids of files attached to a user message (P14-06). */
+    attachments: uuid("attachments")
+      .array()
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
     retrievedChunkIds: uuid("retrieved_chunk_ids")
       .array()
       .notNull()

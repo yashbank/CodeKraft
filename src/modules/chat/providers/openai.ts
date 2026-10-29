@@ -1,5 +1,12 @@
 import { AppError, ErrorCode } from "@/lib/errors";
-import type { LLMEvent, LLMMessage, LLMProvider, LLMStopReason, LLMStreamOptions } from "../llm";
+import {
+  llmContentText,
+  type LLMEvent,
+  type LLMMessage,
+  type LLMProvider,
+  type LLMStopReason,
+  type LLMStreamOptions,
+} from "../llm";
 
 export interface OpenAIProviderConfig {
   apiKey: string;
@@ -35,7 +42,10 @@ export class OpenAIProvider implements LLMProvider {
         body: JSON.stringify({
           model,
           max_tokens: Math.min(opts.maxTokens, this.config.maxOutputTokens),
-          messages: [{ role: "system", content: system }, ...messages],
+          messages: [
+            { role: "system", content: system },
+            ...messages.map((m) => ({ role: m.role, content: llmContentText(m.content) })),
+          ],
           ...(opts.tools?.length && {
             tools: opts.tools.map((t) => ({
               type: "function",

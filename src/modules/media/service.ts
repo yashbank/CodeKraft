@@ -113,6 +113,7 @@ export class DefaultMediaService implements MediaService {
       id: intentId,
       userId: ctx.userId,
       purpose: input.purpose,
+      filename: input.filename,
       mime: input.mime,
       sizeBytes: input.sizeBytes,
       objectKey,
@@ -144,6 +145,10 @@ export class DefaultMediaService implements MediaService {
       .limit(1);
 
     if (!intent) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Upload intent not found");
+    }
+
+    if (intent.userId !== ctx.userId) {
       throw new AppError(ErrorCode.NOT_FOUND, "Upload intent not found");
     }
 
@@ -211,6 +216,7 @@ export class DefaultMediaService implements MediaService {
         bucket,
         objectKey: intent.objectKey,
         mime: intent.mime,
+        originalName: intent.filename,
         sizeBytes: head.contentLength,
         checksum,
         visibility,

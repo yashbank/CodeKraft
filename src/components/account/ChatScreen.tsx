@@ -13,6 +13,8 @@ import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
 
+import { AttachPicker, AttachmentList, useAttachments } from "@/components/attachments/Attachments";
+import type { AttachmentView } from "@/lib/attachments";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -183,6 +185,7 @@ export function ChatScreen({
     email?: string;
     need: string;
   } | null>(null);
+  const att = useAttachments();
   const logRef = React.useRef<HTMLOListElement>(null);
   const streaming = forcedStreaming || sending;
 
@@ -249,8 +252,8 @@ export function ChatScreen({
     }
   }
 
-  async function sendChatMessage(text: string) {
-    push({ role: "user", text });
+  async function sendChatMessage(text: string, files: AttachmentView[] = []) {
+    push({ role: "user", text, ...(files.length ? { attachments: files } : {}) });
     if (!conversationId) {
       push({
         role: "assistant",
@@ -273,8 +276,20 @@ export function ChatScreen({
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId, content: text }),
+        body: JSON.stringify({
+          conversationId,
+          content: text,
+          ...(files.length ? { attachments: files.map((f) => f.mediaId) } : {}),
+        }),
       });
+      if (res.status === 400) {
+        // Server-side attachment/validation error: show its message instead of "connection lost".
+        const body = (await res.json().catch(() => null)) as {
+          error?: { message?: string };
+        } | null;
+        patch((m) => ({ ...m, text: body?.error?.message ?? "That message couldn't be sent." }));
+        return;
+      }
       if (res.status === 403) {
         // R8-08: server-side verified-email gate -- swap to the verify prompt, not a retry.
         const body = (await res.json().catch(() => null)) as {
@@ -552,6 +567,7 @@ export function ChatScreen({
                     ) : null}
                   </div>
                 ) : null}
+                <AttachmentList items={m.attachments ?? []} className={cn(mine && "justify-end")} />
                 {m.card ? <DataCard card={m.card} /> : null}
                 {m.citations?.length ? (
                   <p className="flex flex-wrap gap-x-2 text-caption text-fg-muted">
@@ -645,12 +661,15 @@ export function ChatScreen({
         className="space-y-2 border-t border-border pt-3"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!draft.trim() || sending) return;
+          if ((!draft.trim() && att.items.length === 0) || sending || att.busy) return;
           const text = draft.trim();
+          const files = att.items;
           setDraft("");
-          void sendChatMessage(text);
+          att.clear();
+          void sendChatMessage(text, files);
         }}
       >
+        <AttachPicker att={att} disabled={capReached || emailUnverified || streaming} />
         <div className="flex items-end gap-2">
           <Button
             type="button"
@@ -705,7 +724,12 @@ export function ChatScreen({
               type="submit"
               size="icon-md"
               aria-label="Send"
-              disabled={capReached || emailUnverified || !draft.trim()}
+              disabled={
+                capReached ||
+                emailUnverified ||
+                att.busy ||
+                (!draft.trim() && att.items.length === 0)
+              }
             >
               <SendIcon aria-hidden />
             </Button>

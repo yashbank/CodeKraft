@@ -93,7 +93,7 @@ function mapMessage(
       m.authorKind === "customer" ? (m.author?.name ?? "Customer") : actorName(m.author, admins),
     at: m.createdAt,
     text: toPlainText(m.bodyJson as never),
-    attachments: m.attachments.length > 0 ? m.attachments.map((a) => a.name) : undefined,
+    attachments: m.attachments.length > 0 ? m.attachments : undefined,
   };
 }
 

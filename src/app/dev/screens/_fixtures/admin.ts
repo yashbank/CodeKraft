@@ -1671,7 +1671,15 @@ export const QUERY_THREAD: QueryThread = {
       author: "Priya Nair",
       at: "2026-09-22T15:45:00Z",
       text: "Hi Meera, sorry about that. I have raised a full refund of ₹1,178.82 for the duplicate order; you will get an email once it is approved (usually within one business day).",
-      attachments: ["refund-summary.pdf"],
+      attachments: [
+        {
+          mediaId: "00000000-0000-4000-8000-000000000002",
+          name: "refund-summary.pdf",
+          mime: "application/pdf",
+          sizeBytes: 48000,
+          url: "#",
+        },
+      ],
     },
     {
       id: "m5",

@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { BotIcon, ChevronDownIcon, PaperclipIcon, PlusIcon } from "lucide-react";
+import { BotIcon, ChevronDownIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
+import { AttachPicker, AttachmentList, useAttachments } from "@/components/attachments/Attachments";
 import { fromPlainText } from "@/modules/content/render";
 import {
   assignQuery,
@@ -112,6 +113,7 @@ export function QueriesInbox({
     };
   }, [selectedId, activeThread.query.id]);
 
+  const att = useAttachments();
   const send = async (resolve: boolean) => {
     if (!draft.trim()) return;
     setSubmitting(true);
@@ -119,6 +121,7 @@ export function QueriesInbox({
       queryId: selected.id,
       bodyJson: fromPlainText(draft.trim()),
       setStatus: resolve ? "resolved" : undefined,
+      attachments: att.ids,
     });
     setSubmitting(false);
     if (!result.ok) {
@@ -126,6 +129,7 @@ export function QueriesInbox({
       return;
     }
     setDraft("");
+    att.clear();
     toast.success(
       resolve ? "Reply sent and resolved — customer emailed" : "Reply sent — customer emailed",
     );
@@ -506,15 +510,7 @@ export function QueriesInbox({
                       </p>
                     ) : null}
                     <p>{m.text}</p>
-                    {m.attachments?.map((a) => (
-                      <p
-                        key={a}
-                        className="mt-1 inline-flex items-center gap-1 text-caption text-accent-text"
-                      >
-                        <PaperclipIcon aria-hidden className="size-3" />
-                        {a}
-                      </p>
-                    ))}
+                    <AttachmentList items={m.attachments ?? []} className="mt-1" />
                     <p className="mt-1 text-caption text-fg-muted">
                       {m.author} · <time dateTime={m.at}>{formatDateTime(m.at)}</time>
                     </p>
@@ -556,22 +552,20 @@ export function QueriesInbox({
               placeholder="Reply to the customer…"
             />
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="ghost" size="sm" disabled title="Attach files">
-                <PaperclipIcon aria-hidden /> Attach (3 × 10 MB)
-              </Button>
+              <AttachPicker att={att} disabled={submitting} />
               <span className="ml-auto flex gap-2">
                 <Button
                   size="sm"
                   variant="secondary"
                   onClick={() => void send(true)}
-                  disabled={!draft.trim() || submitting}
+                  disabled={!draft.trim() || submitting || att.busy}
                 >
                   Reply & resolve
                 </Button>
                 <Button
                   size="sm"
                   onClick={() => void send(false)}
-                  disabled={!draft.trim() || submitting}
+                  disabled={!draft.trim() || submitting || att.busy}
                 >
                   Reply
                 </Button>

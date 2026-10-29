@@ -41,6 +41,8 @@ export const media = pgTable(
     bucket: text("bucket").notNull(),
     objectKey: text("object_key").notNull().unique(),
     mime: text("mime").notNull(),
+    /** Uploader's original filename (chat/query attachments); null for older rows. */
+    originalName: text("original_name"),
     sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
     width: integer("width"),
     height: integer("height"),

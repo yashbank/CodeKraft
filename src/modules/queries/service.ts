@@ -1,4 +1,5 @@
 import { type SQL, and, asc, desc, eq, inArray, isNull, lt, notInArray, sql } from "drizzle-orm";
+import type { AttachmentView } from "@/lib/attachments";
 import type { Context, RequestContext } from "@/lib/authz/context";
 import { type Db, type DbOrTx, getDb } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
@@ -6,7 +7,9 @@ import { assertTurnstileVerified, verifyTurnstile } from "@/lib/turnstile";
 import { notificationsService } from "@/modules/notifications/service";
 import type { JobContext, JobOutcome } from "@/modules/analytics/types";
 import type { ListResult } from "@/modules/_shared/zod";
+import { loadAttachmentViews, resolveOwnAttachments } from "@/modules/media/attachments";
 import { users } from "../../../drizzle/schema/auth";
+import { chatMessages } from "../../../drizzle/schema/chat";
 import { orders } from "../../../drizzle/schema/commerce";
 import {
   type Query,
@@ -45,6 +48,7 @@ export class DefaultQueriesService implements QueriesService {
   }
 
   async createQuery(ctx: Context, input: CreateQueryInput): Promise<QueryCreateResult> {
+    await resolveOwnAttachments(this.db, ctx.userId, input.attachments ?? []);
     if (input.guestEmail) {
       const turnstileRes = await verifyTurnstile(input.turnstileToken ?? "");
       assertTurnstileVerified(turnstileRes);
@@ -204,6 +208,12 @@ export class DefaultQueriesService implements QueriesService {
 
     if (!query) throw new AppError(ErrorCode.INTERNAL, "Insert returned no row");
 
+    // P14-06: files the customer attached in the chat travel with the handoff.
+    const chatFiles = await tx
+      .select({ a: chatMessages.attachments })
+      .from(chatMessages)
+      .where(eq(chatMessages.conversationId, input.conversationId));
+
     await tx.insert(queryMessages).values({
       queryId: query.id,
       authorKind: "system",
@@ -217,7 +227,7 @@ export class DefaultQueriesService implements QueriesService {
           },
         ],
       },
-      attachments: [],
+      attachments: [...new Set(chatFiles.flatMap((c) => c.a))],
     });
 
     // R8-05/R8-06: a dedicated "customer asked for the team" alert that deep-links admins to the
@@ -334,6 +344,8 @@ export class DefaultQueriesService implements QueriesService {
       throw new AppError(ErrorCode.NOT_FOUND, "Query not found");
     }
 
+    await resolveOwnAttachments(this.db, ctx.userId, input.attachments ?? []);
+
     const isAdmin = ctx.roles.some((r) => ["admin", "super_admin"].includes(r));
     const isCustomer = !isAdmin;
 
@@ -411,8 +423,9 @@ export class DefaultQueriesService implements QueriesService {
       );
     }
 
+    const views = await loadAttachmentViews(this.db, msg.attachments);
     return {
-      message: this.toMessageView(msg, null),
+      message: this.toMessageView(msg, null, views),
       query: this.toQueryRow(updated, null),
     };
   }
@@ -592,6 +605,11 @@ export class DefaultQueriesService implements QueriesService {
       // list top-to-bottom as a conversation with the composer fixed at the bottom.
       .orderBy(asc(queryMessages.createdAt));
 
+    const views = await loadAttachmentViews(
+      this.db,
+      messages.flatMap((m) => m.msg.attachments),
+    );
+
     let customer: { id: string | null; name: string | null; email: string } | undefined;
     if (query.userId) {
       const u = await this.db.select().from(users).where(eq(users.id, query.userId)).limit(1);
@@ -617,25 +635,22 @@ export class DefaultQueriesService implements QueriesService {
 
     return {
       query: this.toQueryRow(query, assigneeName, customer, linkedOrder?.orderNo ?? null),
-      messages: messages.map((m) => this.toMessageView(m.msg, m.authorName)),
+      messages: messages.map((m) => this.toMessageView(m.msg, m.authorName, views)),
       linkedOrder,
     };
   }
 
-  private toMessageView(msg: QueryMessage, authorName: string | null): QueryMessageView {
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+  private toMessageView(
+    msg: QueryMessage,
+    authorName: string | null,
+    views: Map<string, AttachmentView>,
+  ): QueryMessageView {
     return {
       messageId: msg.id,
       authorKind: msg.authorKind,
       author: msg.authorId ? { id: msg.authorId, name: authorName } : null,
       bodyJson: msg.bodyJson as Record<string, unknown>,
-      attachments: (msg.attachments ?? []).map((id) => ({
-        mediaId: id,
-        name: "attachment",
-        sizeBytes: 1024,
-        url: `/api/files/query/${msg.queryId}/${id}`,
-        expiresAt,
-      })),
+      attachments: (msg.attachments ?? []).flatMap((id) => views.get(id) ?? []),
       createdAt: msg.createdAt.toISOString(),
     };
   }
