@@ -18,10 +18,33 @@ import {
   RADIUS_IDS,
 } from "@/lib/ui-style";
 import { THEMES } from "@/lib/theme";
+import { BUTTON_IDS, CARD_IDS, FONT_FAMILY_IDS, SHADOW_IDS } from "@/lib/theme-catalogue";
+import { DEFAULT_STUDIO_EXTRAS, MAX_PRESETS } from "@/lib/theme-studio";
 import { bpsSchema, currencySchema } from "@/modules/_shared/zod";
 import { text } from "../catalog/contracts";
 import { paymentMethodSchema } from "../offerings/contracts";
 import type { PublicSettings, SiteSettings } from "./types";
+
+const studioExtrasSchema = z.strictObject({
+  headingFont: z.enum(FONT_FAMILY_IDS),
+  bodyFont: z.enum(FONT_FAMILY_IDS),
+  shadow: z.enum(SHADOW_IDS),
+  button: z.enum(BUTTON_IDS),
+  card: z.enum(CARD_IDS),
+});
+const studioValuesSchema = studioExtrasSchema.extend({
+  palette: z.enum(PALETTE_IDS),
+  font: z.enum(FONT_IDS),
+  radius: z.enum(RADIUS_IDS),
+  border: z.enum(BORDER_IDS),
+  pattern: z.enum(PATTERN_IDS),
+  layout: z.enum(LAYOUT_IDS),
+  density: z.enum(DENSITY_IDS),
+});
+const themePresetSchema = z.strictObject({
+  name: z.string().trim().min(1).max(40),
+  values: studioValuesSchema,
+});
 
 export const themeNameSchema = z.enum(THEMES);
 export const flagKeySchema = z.enum(FLAG_KEYS);
@@ -134,6 +157,8 @@ export const siteSettingsSchema = z.strictObject({
   uiPattern: z.enum(PATTERN_IDS),
   uiLayout: z.enum(LAYOUT_IDS),
   uiDensity: z.enum(DENSITY_IDS),
+  themeStudio: studioExtrasSchema,
+  themePresets: z.array(themePresetSchema).max(MAX_PRESETS),
   aiModel: text(120),
   aiDailyPlatformCap: z.number().int().min(0).max(1_000_000),
   aiDailyUserCap: z.number().int().min(0).max(10_000),
@@ -167,6 +192,8 @@ export const SITE_SETTINGS_DEFAULTS: SiteSettings = Object.freeze({
   uiPattern: DEFAULT_UI_STYLE.pattern,
   uiLayout: DEFAULT_UI_STYLE.layout,
   uiDensity: DEFAULT_UI_STYLE.density,
+  themeStudio: DEFAULT_STUDIO_EXTRAS,
+  themePresets: [],
   aiModel: "claude-sonnet-5-5",
   aiDailyPlatformCap: 2000,
   aiDailyUserCap: 30,

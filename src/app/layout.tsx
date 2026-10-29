@@ -5,6 +5,7 @@ import { DEFAULT_ICON } from "@/lib/brand-constants";
 import { fontVariables } from "@/lib/fonts";
 import { paletteCss } from "@/lib/palettes";
 import { getSiteLogo, getSiteName, getThemeConfig } from "@/lib/site-brand";
+import { DEFAULT_STUDIO_EXTRAS, studioAttrs, studioCss, studioFontsHref } from "@/lib/theme-studio";
 import { uiStyleCss } from "@/lib/ui-style";
 import { DEFAULT_THEME, inlineThemeScript, THEME_COLOR } from "@/lib/theme";
 import "./globals.css";
@@ -35,7 +36,8 @@ const LIGHT_ENABLED = process.env.FEATURE_THEME_LIGHT_EDITORIAL === "true";
  */
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [siteName, siteLogo] = await Promise.all([getSiteName(), getSiteLogo()]);
-  const { defaultTheme, palette, ui } = await getThemeConfig();
+  const { defaultTheme, palette, ui, studio = DEFAULT_STUDIO_EXTRAS } = await getThemeConfig();
+  const fontsHref = studioFontsHref(studio);
   // An admin who picks light-editorial as the default has opted in, so it needs no env flag.
   const lightEnabled = LIGHT_ENABLED || defaultTheme === "light-editorial";
   return (
@@ -49,12 +51,25 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       data-pattern={ui.pattern}
       data-layout={ui.layout}
       data-density={ui.density}
+      {...studioAttrs(studio)}
       className={fontVariables}
       suppressHydrationWarning
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: inlineThemeScript(lightEnabled) }} />
-        <style dangerouslySetInnerHTML={{ __html: paletteCss(palette) + uiStyleCss(ui) }} />
+        <style
+          dangerouslySetInnerHTML={{
+            __html: paletteCss(palette) + uiStyleCss(ui) + studioCss(studio),
+          }}
+        />
+        {/* P14-07: admin-chosen Google fonts load on demand; the default site requests none. */}
+        {fontsHref ? (
+          <>
+            <link rel="preconnect" href="https://fonts.googleapis.com" />
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+            <link rel="stylesheet" href={fontsHref} />
+          </>
+        ) : null}
       </head>
       <body className="min-h-screen bg-canvas text-fg antialiased">
         <SiteBrandProvider siteName={siteName} siteLogo={siteLogo}>

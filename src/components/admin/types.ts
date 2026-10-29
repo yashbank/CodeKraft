@@ -4,6 +4,7 @@
  * shapes. Money is always `{ amountMinor, currency }` (lib/money); timestamps are ISO strings.
  */
 import type { Currency } from "@/lib/money";
+import type { StudioExtras, ThemePreset } from "@/lib/theme-studio";
 import type { StatusValue } from "@/lib/status-tone";
 import type { SellerDetails } from "@/modules/settings/types";
 
@@ -963,6 +964,8 @@ export interface SettingsData {
     pattern: string;
     layout: string;
     density: string;
+    studio: StudioExtras;
+    presets: ThemePreset[];
     lightEnabled: boolean;
   };
   ai: {

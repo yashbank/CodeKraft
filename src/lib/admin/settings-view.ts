@@ -176,6 +176,8 @@ export function mapSiteSettingsToSettingsData(settings: SiteSettings): SettingsD
       pattern: settings.uiPattern,
       layout: settings.uiLayout,
       density: settings.uiDensity,
+      studio: settings.themeStudio,
+      presets: settings.themePresets,
       lightEnabled: settings.flags.theme_light_editorial,
     },
     ai: {

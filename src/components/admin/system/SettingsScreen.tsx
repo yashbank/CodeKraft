@@ -40,25 +40,9 @@ import {
 import { cn } from "@/components/ui/_utils";
 import { CHAT_MODELS, chatModelOptionLabel } from "@/modules/chat/models";
 import { CURRENCIES } from "@/lib/money";
-import { PALETTES } from "@/lib/palettes";
-import { OptionPicker, type PickerOption } from "./OptionPicker";
-import {
-  BORDER_IDS,
-  DEFAULT_UI_STYLE,
-  DENSITY_IDS,
-  DENSITY_PAD,
-  FONT_IDS,
-  FONT_LABELS,
-  LAYOUT_IDS,
-  LAYOUT_LABELS,
-  LAYOUT_WIDTH,
-  PATTERN_IDS,
-  RADIUS_IDS,
-  borderValue,
-  patternProps,
-  uiStyleVars,
-  type UiStyle,
-} from "@/lib/ui-style";
+import { DEFAULT_STUDIO, type StudioValues } from "@/lib/theme-studio";
+import type { ThemeName } from "@/lib/theme";
+import { ThemeStudio } from "./theme-studio/ThemeStudio";
 import { uploadMediaFile } from "@/lib/admin/media-upload";
 import { updateRazorpaySettings, updateSettings } from "@/modules/settings/admin-mutations";
 import { testRazorpayConnection } from "@/modules/settings/razorpay-test-connection";
@@ -447,181 +431,6 @@ function mapSettingsFieldErrors(fe: Record<string, string[]> | undefined): Recor
 }
 
 /** SCR-ADM-29 — settings with a nine-section rail, 760 px forms, per-section save bar and AlertDialogs for dangerous changes. */
-const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
-
-/** Font / shape / background pickers with a live preview card (P11-01). */
-function UiStylePicker({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: UiStyle;
-  onChange: (v: UiStyle) => void;
-  disabled: boolean;
-}) {
-  const set = <K extends keyof UiStyle>(k: K, v: string) => onChange({ ...value, [k]: v });
-  const camel = (o: Record<string, string>) =>
-    Object.fromEntries(
-      Object.entries(o).map(([k, v]) => [k.replace(/-(\w)/g, (_, c) => c.toUpperCase()), v]),
-    );
-  const prev = "h-10 overflow-hidden rounded-md border border-border bg-canvas";
-  const theme =
-    typeof document === "undefined" ? undefined : document.documentElement.dataset.theme;
-  const fontOpt = (id: string): PickerOption => ({
-    id,
-    label: FONT_LABELS[id as keyof typeof FONT_LABELS],
-    preview: (
-      <span
-        aria-hidden
-        className="text-h4 block truncate"
-        style={{
-          ...uiStyleVars({ ...DEFAULT_UI_STYLE, font: id as UiStyle["font"] }),
-          fontFamily: "var(--ck-font-display)",
-        }}
-      >
-        Build something remarkable
-      </span>
-    ),
-  });
-  const radiusOpt = (id: string): PickerOption => ({
-    id,
-    label: id === "soft" ? "Soft (default)" : cap(id),
-    preview: (
-      <span
-        aria-hidden
-        className="bg-accent-soft block h-9 w-full border"
-        style={{
-          ...uiStyleVars({ ...DEFAULT_UI_STYLE, radius: id as UiStyle["radius"] }),
-          borderRadius: "var(--ck-radius-xl)",
-        }}
-      />
-    ),
-  });
-  const borderOpt = (id: string): PickerOption => ({
-    id,
-    label: cap(id),
-    preview: (
-      <span
-        aria-hidden
-        className="bg-surface block h-9 w-full rounded-md border-2"
-        style={{
-          borderColor:
-            borderValue(
-              id as UiStyle["border"],
-              theme === "light-editorial" ? "light-editorial" : "dark-cinematic",
-            ) ?? "var(--ck-color-border)",
-        }}
-      />
-    ),
-  });
-  const patternOpt = (id: string): PickerOption => ({
-    id,
-    label: id === "mesh" ? "Gradient mesh" : cap(id),
-    preview: (
-      <span
-        aria-hidden
-        className={cn(prev, "block w-full")}
-        style={camel(patternProps(id as UiStyle["pattern"]))}
-      />
-    ),
-  });
-  const layoutOpt = (id: string): PickerOption => ({
-    id,
-    label: LAYOUT_LABELS[id as keyof typeof LAYOUT_LABELS],
-    preview: (
-      <span aria-hidden className={cn(prev, "flex items-center justify-center")}>
-        <span
-          className="bg-accent-soft border-accent h-6 rounded-sm border"
-          style={{
-            width: `${Math.round((LAYOUT_WIDTH[id as keyof typeof LAYOUT_WIDTH] / 1440) * 100)}%`,
-          }}
-        />
-      </span>
-    ),
-  });
-  const densityOpt = (id: string): PickerOption => ({
-    id,
-    label: id === "normal" ? "Normal (default)" : cap(id),
-    preview: (
-      <span aria-hidden className={cn(prev, "flex items-center justify-center")}>
-        <span
-          className="bg-accent-soft border-accent rounded-sm border"
-          style={{ padding: `calc(${DENSITY_PAD[id as keyof typeof DENSITY_PAD]} / 3)` }}
-        >
-          <span className="bg-fg-muted block h-1 w-8 rounded-full" />
-        </span>
-      </span>
-    ),
-  });
-  const group = (
-    label: string,
-    k: keyof UiStyle,
-    ids: readonly string[],
-    opt: (id: string) => PickerOption,
-    popular: readonly string[],
-    searchable = false,
-  ) => (
-    <OptionPicker
-      label={label}
-      value={value[k]}
-      onChange={(v) => set(k, v)}
-      options={ids.map(opt)}
-      popular={popular}
-      searchable={searchable}
-      disabled={disabled}
-    />
-  );
-  const vars = uiStyleVars(value);
-  const bg = patternProps(value.pattern);
-  const style = {
-    ...vars,
-    ...Object.fromEntries(
-      Object.entries(bg).map(([k, v]) => [k.replace(/-(\w)/g, (_, c) => c.toUpperCase()), v]),
-    ),
-  } as React.CSSProperties;
-  return (
-    <div className="grid gap-4">
-      {group("Font pairing", "font", FONT_IDS, fontOpt, ["default", "grotesk-plex"], true)}
-      {group("Corner radius", "radius", RADIUS_IDS, radiusOpt, ["soft", "round"])}
-      {group("Borders", "border", BORDER_IDS, borderOpt, ["subtle", "defined"])}
-      {group("Background pattern", "pattern", PATTERN_IDS, patternOpt, ["none", "grid"])}
-      {group("Card padding", "density", DENSITY_IDS, densityOpt, ["normal", "comfortable"])}
-      {group("Site layout", "layout", LAYOUT_IDS, layoutOpt, ["standard", "wide"])}
-      <div
-        data-testid="ui-style-preview"
-        aria-label="Style preview"
-        role="group"
-        style={style}
-        className="bg-canvas grid gap-3 overflow-hidden rounded-lg border p-5"
-      >
-        <h3
-          className="text-h3"
-          style={{ fontFamily: "var(--ck-font-display)", fontWeight: "var(--ck-display-weight)" }}
-        >
-          Build something remarkable
-        </h3>
-        <p className="text-body-sm text-fg-muted" style={{ fontFamily: "var(--ck-font-body)" }}>
-          Preview of your font pairing, corners, borders and background.
-        </p>
-        <div className="flex flex-wrap gap-2" style={{ fontFamily: "var(--ck-font-body)" }}>
-          <span className="bg-accent-solid text-accent-fg rounded-md px-4 py-2 text-sm font-medium">
-            Primary
-          </span>
-          <span
-            className="rounded-md border px-4 py-2 text-sm"
-            style={
-              value.border === "defined"
-                ? { borderColor: "var(--ck-color-border-strong)" }
-                : undefined
-            }
-          >
-            Secondary
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function SettingsScreen({
   settings: s,
@@ -645,15 +454,19 @@ export function SettingsScreen({
   const [theme, setTheme] = React.useState(s.theme.defaultTheme);
   const [refreshInv, setRefreshInv] = React.useState(s.general.refreshOldInvoices);
   const [themeToggle, setThemeToggle] = React.useState(s.theme.toggle);
-  const [palette, setPalette] = React.useState(s.theme.palette);
-  const [ui, setUi] = React.useState<UiStyle>({
-    font: s.theme.font,
-    radius: s.theme.radius,
-    border: s.theme.border,
-    pattern: s.theme.pattern,
-    layout: s.theme.layout,
-    density: s.theme.density,
-  } as UiStyle);
+  const studioFromSaved = (): StudioValues =>
+    ({
+      ...DEFAULT_STUDIO,
+      palette: s.theme.palette,
+      font: s.theme.font,
+      radius: s.theme.radius,
+      border: s.theme.border,
+      pattern: s.theme.pattern,
+      layout: s.theme.layout,
+      density: s.theme.density,
+      ...s.theme.studio,
+    }) as StudioValues;
+  const [studio, setStudio] = React.useState<StudioValues>(studioFromSaved);
   const [saving, setSaving] = React.useState(false);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const saveable = SAVEABLE_SECTIONS.includes(section);
@@ -665,15 +478,7 @@ export function SettingsScreen({
     setEnabledCurrencies(s.currencies.enabled);
     setTheme(s.theme.defaultTheme);
     setThemeToggle(s.theme.toggle);
-    setPalette(s.theme.palette);
-    setUi({
-      font: s.theme.font,
-      radius: s.theme.radius,
-      border: s.theme.border,
-      pattern: s.theme.pattern,
-      layout: s.theme.layout,
-      density: s.theme.density,
-    } as UiStyle);
+    setStudio(studioFromSaved());
   }
 
   async function saveFlag(key: string, value: boolean) {
@@ -763,13 +568,20 @@ export function SettingsScreen({
       patch = {
         defaultTheme: theme as SiteSettings["defaultTheme"],
         themeToggle,
-        palette: palette as SiteSettings["palette"],
-        uiFont: ui.font,
-        uiRadius: ui.radius,
-        uiBorder: ui.border,
-        uiPattern: ui.pattern,
-        uiLayout: ui.layout,
-        uiDensity: ui.density,
+        palette: studio.palette,
+        uiFont: studio.font,
+        uiRadius: studio.radius,
+        uiBorder: studio.border,
+        uiPattern: studio.pattern,
+        uiLayout: studio.layout,
+        uiDensity: studio.density,
+        themeStudio: {
+          headingFont: studio.headingFont,
+          bodyFont: studio.bodyFont,
+          shadow: studio.shadow,
+          button: studio.button,
+          card: studio.card,
+        },
       };
     } else {
       return;
@@ -830,7 +642,10 @@ export function SettingsScreen({
           </ul>
         </nav>
         <form
-          className="max-w-[760px] space-y-6 tv:max-w-[900px]"
+          className={cn(
+            "space-y-6",
+            section === "theme" ? "max-w-[1100px]" : "max-w-[760px] tv:max-w-[900px]",
+          )}
           ref={formRef}
           onSubmit={(e) => e.preventDefault()}
           key={`${section}-${formVersion}`}
@@ -1142,32 +957,13 @@ export function SettingsScreen({
                   Let visitors switch theme from the site footer
                 </Label>
               </div>
-              <OptionPicker
-                label="Accent palette"
-                value={palette}
-                onChange={setPalette}
+              <ThemeStudio
+                values={studio}
+                onChange={setStudio}
+                theme={theme as ThemeName}
+                presets={s.theme.presets}
                 disabled={ro}
-                searchable
-                popular={["violet", "ocean", "emerald"]}
-                options={PALETTES.map((p) => ({
-                  id: p.id,
-                  label: p.label,
-                  preview: (
-                    <span
-                      aria-hidden
-                      className="border-border flex h-8 overflow-hidden rounded-sm border"
-                    >
-                      <span className="flex-1" style={{ background: p.dark }} />
-                      <span className="flex-1" style={{ background: p.light }} />
-                    </span>
-                  ),
-                }))}
               />
-              <p className="text-body-sm text-fg-muted">
-                Accent palette applies across the site, account and admin. Left swatch is used on
-                dark, right on light.
-              </p>
-              <UiStylePicker value={ui} onChange={setUi} disabled={ro} />
             </>
           ) : null}
 

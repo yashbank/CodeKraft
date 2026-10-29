@@ -2,6 +2,7 @@
  * Fixture data for the admin screen previews (/dev/screens/admin/*). INR amounts are paise.
  * Everything here is placeholder content; Phase 8 replaces it with Server Action results.
  */
+import { DEFAULT_STUDIO_EXTRAS } from "@/lib/theme-studio";
 import type {
   AdjustmentRow,
   AdminNotification,
@@ -3051,6 +3052,8 @@ export const SETTINGS: SettingsData = {
     pattern: "none",
     layout: "standard",
     density: "normal",
+    studio: DEFAULT_STUDIO_EXTRAS,
+    presets: [],
     lightEnabled: false,
   },
   ai: {
