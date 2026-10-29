@@ -40,7 +40,7 @@ export function SiteLogo({ className }: { className?: string }) {
   const logo = useSiteLogo();
   const name = useSiteName();
   // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded URL, arbitrary dimensions
-  if (logo) return <img src={logo} alt={name} className={cn("h-6 w-auto", className)} />;
+  if (logo) return <img src={logo} alt={name} className={cn("h-6 w-auto rounded-md", className)} />;
   return (
     <span
       className={cn(
