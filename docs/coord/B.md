@@ -25,6 +25,9 @@ Updated: 2026-10-29
 - P6-05 | ready | branch feat/p6-05-reset-site-data | MIGRATION 0006 (ALTER TYPE approval_type ADD VALUE site.reset) | vitest tests/unit/settings: 41 pass; FK order checked against migrated schema (throwaway local PG): all categories OK
 - P6-03 | ready | branch feat/p6-03-invoice-output (stacked on P6-02, merge P6-02 first) | vitest tests/unit/invoices + pdf: 21 pass
 - P6-04 | ready | branch feat/p6-04-ui-sweep (contains merged P6-01/02/03/05; merge it LAST) | e2e tests/e2e/flows/ui-sweep.spec.ts 6/6 pass (--workers=1); vitest tests/unit/site: 46 pass
+- P7-01 | doing | branch feat/p7-01-reset-ui-fix
+- P7-02 | doing | branch feat/p7-02-rounded-logos
+- P7-03 | doing | branch feat/p7-03-invoice-redesign
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
 - [open] R2 private bucket CORS must allow PUT from the admin origin | P2-01 browser uploads straight to R2 | upload a .dmg on a product version, it completes and appears
