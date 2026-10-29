@@ -40,4 +40,22 @@ describe("DangerZoneSection", () => {
     await u.type(input, "  Acme ");
     expect(btn).toBeEnabled();
   });
+
+  it("explains why Request is disabled and clears each reason as it is done", async () => {
+    const u = userEvent.setup();
+    URL.createObjectURL = vi.fn(() => "blob:x");
+    URL.revokeObjectURL = vi.fn();
+    render(<DangerZoneSection siteName="Acme" />);
+    const btn = screen.getByRole("button", { name: /request site reset/i });
+    const why = () => screen.getByTestId("reset-blockers").textContent ?? "";
+    expect(why()).toMatch(/select/i);
+    await u.click(screen.getByRole("checkbox", { name: /customers/i }));
+    await u.type(screen.getByLabelText(/to confirm/i), "Acme");
+    expect(btn).toBeDisabled();
+    expect(why()).toMatch(/download the backup/i);
+    expect(why()).not.toMatch(/site name/i);
+    await u.click(screen.getByRole("button", { name: /download backup/i }));
+    expect(btn).toBeEnabled();
+    expect(screen.queryByTestId("reset-blockers")).toBeNull();
+  });
 });
