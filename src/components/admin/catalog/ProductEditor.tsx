@@ -1099,7 +1099,12 @@ export function ProductEditor({
           </span>
         ) : null}
         <span className="ml-auto flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled title="Preview">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled
+            title="Preview is not available yet: view the product on the public site once published"
+          >
             <ExternalLinkIcon aria-hidden /> Preview
           </Button>
           {!isNew ? (
@@ -1136,7 +1141,6 @@ export function ProductEditor({
                     setLifecycleDialog("delete");
                   },
                 },
-                { label: "Duplicate as draft", separatorBefore: true, disabled: true },
               ]}
             />
           ) : null}
@@ -1160,6 +1164,7 @@ export function ProductEditor({
                 key={key}
                 value={key}
                 disabled={disabled}
+                title={disabled ? "Save the basics first" : undefined}
                 className="justify-start gap-2 data-[state=active]:bg-accent-soft data-[state=active]:text-accent-text"
                 aria-label={`${label}, ${complete[key] ? "complete" : "incomplete"}`}
               >
@@ -1371,7 +1376,12 @@ export function ProductEditor({
                   optional
                   hint="Industry tagging for this product."
                 >
-                  <Input id="p-industry" placeholder="Add industries" disabled />
+                  <Input
+                    id="p-industry"
+                    placeholder="Add industries"
+                    disabled
+                    title="Not available yet"
+                  />
                 </Field>
                 <Field id="p-tech" label="Tech stack" hint="Enter to add, click × to remove.">
                   <div className="flex min-h-10 flex-wrap items-center gap-1.5 rounded-md border border-border-strong bg-surface px-2 py-1">
@@ -1410,7 +1420,7 @@ export function ProductEditor({
                 optional
                 hint="System or technical requirements."
               >
-                <Textarea id="p-req" rows={3} disabled />
+                <Textarea id="p-req" rows={3} disabled title="Not available yet" />
               </Field>
               <Field
                 id="p-demo"
