@@ -3,8 +3,7 @@
  * 5xx / console errors / horizontal overflow, and access control redirects. Test titles are
  * `[role] route - what`; scripts/e2e/bugs-r9.ts turns failures into BUGS-R9.md from that shape.
  */
-import fs from "node:fs";
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import {
   ADMIN,
   SITE,
@@ -12,17 +11,14 @@ import {
   PASSWORD,
   baseFor,
   expectNoOverflow,
-  authFile,
+  loginAs,
   trackIssues,
 } from "./helpers";
 import type { Role } from "./helpers";
 
 // Reuse the cookies saved by r9-auth.setup.ts (single active session per user: never log in again).
 async function login(page: Page, role: Role) {
-  const st = JSON.parse(fs.readFileSync(authFile(role), "utf8")) as {
-    cookies: Parameters<BrowserContext["addCookies"]>[0];
-  };
-  await page.context().addCookies(st.cookies);
+  await loginAs(page, role);
 }
 
 /** Load `path` on the role's host; assert it stays there, renders a main region, and is clean. */
@@ -298,7 +294,8 @@ for (const role of ["customer", "super_admin", "admin", "staff"] as const satisf
             const stayed = new URL(page.url()).pathname === p;
             const body = (await page.locator("body").innerText()).toLowerCase();
             expect(
-              !stayed || /forbidden|not allowed|permission|don't have access|not found|403|404/.test(body),
+              !stayed ||
+                /forbidden|not allowed|permission|don't have access|not found|403|404/.test(body),
               `staff sees ${p}: ${body.slice(0, 120).replace(/\s+/g, " ")}`,
             ).toBe(true);
           });

@@ -53,7 +53,16 @@ export async function loginAs(page: Page, role: Role, fresh = false): Promise<vo
   if (!fresh && fs.existsSync(authFile(role))) {
     const state = JSON.parse(fs.readFileSync(authFile(role), "utf8")) as { cookies: Cookie[] };
     await page.context().addCookies(state.cookies);
-    await page.goto(base);
+    // Another spec may have form-logged this user in, which revokes the saved session: re-login.
+    const res = await page.request.get(`${base}/api/auth/get-session`);
+    const alive = res.ok() && !["", "null"].includes((await res.text()).trim());
+    if (alive) {
+      await page.goto(base);
+      return;
+    }
+    await page.context().clearCookies();
+    await loginAs(page, role, true);
+    await page.context().storageState({ path: authFile(role) });
     return;
   }
   for (let attempt = 0; ; attempt++) {
