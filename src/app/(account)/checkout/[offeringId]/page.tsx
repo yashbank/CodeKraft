@@ -4,11 +4,11 @@ import { notFound, redirect } from "next/navigation";
 import { CheckoutScreen, type CheckoutPageState } from "@/components/account/CheckoutScreen";
 import { mapCheckoutPreviewToOffering, mapProfileToBilling } from "@/lib/account/checkout-view";
 import { getSiteRequestContext } from "@/lib/authz/site-request-context";
-import { ErrorCode } from "@/lib/errors";
 import { getFlag } from "@/lib/feature-flags";
 import { getSession } from "@/modules/auth/service";
 import { previewCheckoutAction } from "@/modules/orders/actions";
-import { findPendingCheckoutOrder } from "@/modules/orders/resume";
+import { checkoutFallback } from "@/lib/account/payment-confirm";
+import { findPendingCheckoutOrder, findRecentPaidOrderNo } from "@/modules/orders/resume";
 import { settingsService } from "@/modules/settings/service";
 import { getMyProfileQuery } from "@/modules/users/queries";
 import { manualMethodAvailability } from "@/modules/payments/availability";
@@ -52,11 +52,15 @@ export default async function CheckoutPage({ params }: PageProps) {
     !!siteSettings.razorpaySettings?.keySecret;
 
   if (!previewResult.ok) {
-    if (previewResult.error.code === ErrorCode.NOT_FOUND) {
-      notFound();
-    }
-    const state: CheckoutPageState =
-      previewResult.error.code === ErrorCode.DUPLICATE_PURCHASE ? "duplicate" : "unavailable";
+    // R9-06: a customer who already paid/submitted lands on "Confirming your payment", never a
+    // 404 or the "Back to product" dead end.
+    const fallback = checkoutFallback(
+      previewResult.error.code,
+      await findRecentPaidOrderNo(ctx.userId, offeringId),
+    );
+    if (typeof fallback === "object") redirect(fallback.redirect);
+    if (fallback === "notFound") notFound();
+    const state: CheckoutPageState = fallback;
     // Only the offering's slug is needed for the "back to product" link in these states, and we
     // don't have it (the preview that would carry it is exactly what failed) -- fall back to the
     // purchases dashboard rather than guess a product URL.

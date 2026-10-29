@@ -39,3 +39,11 @@ export async function createOrder(raw: unknown) {
   const { createOrderAction } = await import("./actions");
   return withCtx(createOrderAction, raw);
 }
+
+/** Poll target for the "Confirming your payment" screen: stage + next-step inputs for one order. */
+export async function getPaymentConfirmStatus(orderNo: string) {
+  const { getMyOrderQuery } = await import("./queries");
+  const { toConfirmStatus } = await import("@/lib/account/payment-confirm");
+  const r = await withCtx(getMyOrderQuery, { orderNo });
+  return r.ok ? ({ ok: true, data: toConfirmStatus(r.data) } as const) : r;
+}

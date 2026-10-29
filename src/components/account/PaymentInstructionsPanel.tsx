@@ -24,6 +24,7 @@
  * wired" state, never a fake success.
  */
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -150,6 +151,11 @@ export function PaymentInstructionsPanel({
   const siteName = useSiteName();
   const [reference, setReference] = React.useState("");
   const [submitted, setSubmitted] = React.useState(false);
+  const router = useRouter();
+  // R9-06: once a reference/payment is submitted, hand over to the "Confirming your payment" screen.
+  React.useEffect(() => {
+    if (submitted) router.push(`/checkout/confirming/${orderNo}`);
+  }, [submitted, orderNo, router]);
   const [submitting, setSubmitting] = React.useState(false);
 
   const [rzpState, setRzpState] = React.useState<RazorpayFlowState>("idle");
