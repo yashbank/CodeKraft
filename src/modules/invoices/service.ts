@@ -40,6 +40,7 @@ import type {
 } from "./types";
 import { INVOICE_PDF_URL_TTL_SECONDS } from "./types";
 import { computeFy, nextCreditNoteNumber, nextInvoiceNumber } from "./numbering";
+import { PALETTES } from "@/lib/palettes";
 import { computeGstBreakdown } from "./gst";
 import { buildInvoicePdf, buildPdfBuffer, fetchLogo, uploadDocumentPdf } from "./pdf";
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
@@ -467,10 +468,18 @@ export class DefaultInvoicesService implements InvoicesService {
 
     const objectKey = `invoices/${invoice.fy}/${invoice.invoiceNo.replace(/\//g, "-")}.pdf`;
     const [order] = await tx
-      .select({ orderNo: orders.orderNo })
+      .select({ orderNo: orders.orderNo, status: orders.status })
       .from(orders)
       .where(eq(orders.id, invoice.orderId))
       .limit(1);
+    const { palette } = await settingsService.load(tx);
+    const accent = PALETTES.find((x) => x.id === palette)?.light;
+    const paymentStatus =
+      order?.status === "refunded" || order?.status === "partially_refunded"
+        ? "refunded"
+        : order?.status === "pending_payment"
+          ? "pending"
+          : "paid";
     // Renders from the stored snapshot, never current settings.
     const pdfBuf = buildInvoicePdf(
       {
@@ -486,6 +495,8 @@ export class DefaultInvoicesService implements InvoicesService {
         totalMinor: invoice.totalMinor,
         currency: invoice.currency,
         gstBreakdown: invoice.gstBreakdown,
+        paymentStatus,
+        accent,
       },
       await fetchLogo(invoice.sellerSnapshot.logo_url),
     );

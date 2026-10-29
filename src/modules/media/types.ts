@@ -119,9 +119,9 @@ export const UPLOAD_RULES: Readonly<Record<UploadPurpose, UploadRule>> = Object.
   },
   query_attachment: { mimes: ATTACHMENT_MIMES, maxBytes: 20 * MB, visibility: "private" },
   avatar: { mimes: IMAGE_MIMES, maxBytes: 10 * MB, visibility: "public" },
-  // Raster only: SVG is never accepted (TM-12).
+  // PNG/JPEG only: SVG is never accepted (TM-12) and the invoice PDF cannot embed WebP.
   site_logo: {
-    mimes: ["image/png", "image/jpeg", "image/webp"],
+    mimes: ["image/png", "image/jpeg"],
     maxBytes: 2 * MB,
     visibility: "public",
   },

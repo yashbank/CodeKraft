@@ -113,7 +113,7 @@ function SiteLogoField({ logo, ro }: { logo: string | null; ro: boolean }) {
             <Input
               id="st-logo"
               type="file"
-              accept="image/png,image/jpeg,image/webp"
+              accept="image/png,image/jpeg"
               onChange={onFile}
               disabled={busy}
               className="max-w-64"
@@ -127,8 +127,8 @@ function SiteLogoField({ logo, ro }: { logo: string | null; ro: boolean }) {
         ) : null}
       </div>
       <p className="text-body-sm text-fg-muted">
-        PNG, JPEG or WebP, up to 2 MB. Used in the header, footer, admin, emails, invoices and
-        browser tab icon.
+        PNG or JPEG, up to 2 MB. Used in the header, footer, admin, emails, invoices and browser tab
+        icon.
       </p>
     </div>
   );
