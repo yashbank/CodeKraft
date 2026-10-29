@@ -38,14 +38,15 @@ export interface PageMetaInput {
 export function pageMetadata(i: PageMetaInput): Metadata {
   const description = truncate(i.description);
   const url = absoluteUrl(i.path);
-  const images = i.images;
+  // Next treats an own `images` key (even undefined) as explicit and drops the opengraph-image file.
+  const images = i.images ? { images: i.images } : {};
   return {
     title: i.title,
     description,
     alternates: { canonical: url },
     robots: i.noindex ? NOINDEX : undefined,
-    openGraph: { type: i.type ?? "website", url, title: i.title, description, images },
-    twitter: { card: "summary_large_image", title: i.title, description, images },
+    openGraph: { type: i.type ?? "website", url, title: i.title, description, ...images },
+    twitter: { card: "summary_large_image", title: i.title, description, ...images },
   };
 }
 

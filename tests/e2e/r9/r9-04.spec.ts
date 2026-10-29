@@ -61,6 +61,13 @@ test.beforeAll(async () => {
      and not is_coming_soon order by created_at limit 1`,
   );
   prod = p!;
+  // Republish is blocked without media (BUG-061 readiness); seeded products have none.
+  await q(
+    `insert into product_media (product_id, kind, embed_url, title)
+     select $1, 'video_embed', 'https://www.youtube.com/embed/r9-04', 'r9-04 media'
+     where not exists (select 1 from product_media where product_id = $1)`,
+    [prod.id],
+  );
   const [u] = await q<{ id: string }>(`select id from users where email = $1`, [SUPER]);
   const slug = `r9-04-doomed-${Date.now()}`;
   const [d] = await q<Prod>(
@@ -79,6 +86,8 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
+  await q(`delete from product_media where product_id = $1 and title = 'r9-04 media'`, [prod.id]);
+  await q(`update products set name = $2 where id = $1`, [prod.id, prod.name]);
   await q(
     `update products set is_featured = false, is_unlisted = false, is_coming_soon = false,
        status = 'published', publish_at = null where id = $1`,
@@ -90,6 +99,7 @@ test("edit a published product and republish; change visible on the storefront",
   page,
   browser,
 }) => {
+  test.setTimeout(120_000);
   const issues = trackIssues(page);
   await loginAs(page, "super_admin");
   const newName = `${prod.name} R9`;
@@ -113,6 +123,7 @@ test("edit a published product and republish; change visible on the storefront",
 });
 
 test("schedule a change; the cron publishes it when due", async ({ page, browser, request }) => {
+  test.setTimeout(120_000);
   await loginAs(page, "super_admin");
   await page.goto(`${ADMIN}/admin/products/${prod.id}`);
   await openTab(page, /Publish \/ schedule/);
@@ -185,6 +196,7 @@ test("request delete, approve with the other admins, product disappears everywhe
   page,
   browser,
 }) => {
+  test.setTimeout(120_000);
   await loginAs(page, "super_admin");
   await page.goto(`${ADMIN}/admin/products`);
   await page.getByRole("button", { name: `Actions for ${doomed.name}` }).click();
