@@ -8,6 +8,7 @@
 import type { Currency } from "@/lib/money";
 import type { FlagKey } from "@/lib/feature-flags";
 import type { PaletteId } from "@/lib/palettes";
+import type { BorderId, FontId, PatternId, RadiusId } from "@/lib/ui-style";
 import type { ThemeName } from "@/lib/theme";
 import type { PaymentMethodValue } from "../offerings/types";
 
@@ -87,6 +88,10 @@ export interface SiteSettings {
   /** Show visitors the theme toggle. */
   themeToggle: boolean;
   palette: PaletteId;
+  uiFont: FontId;
+  uiRadius: RadiusId;
+  uiBorder: BorderId;
+  uiPattern: PatternId;
   aiModel: string;
   aiDailyPlatformCap: number;
   aiDailyUserCap: number;
@@ -115,6 +120,10 @@ export const SITE_SETTING_KEYS: Readonly<Record<SiteSettingField, string>> = Obj
   defaultTheme: "default_theme",
   themeToggle: "theme_toggle",
   palette: "theme_palette",
+  uiFont: "ui_font",
+  uiRadius: "ui_radius",
+  uiBorder: "ui_border",
+  uiPattern: "ui_pattern",
   aiModel: "ai_model",
   aiDailyPlatformCap: "ai_daily_platform_cap",
   aiDailyUserCap: "ai_daily_user_cap",

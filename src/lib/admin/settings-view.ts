@@ -169,6 +169,10 @@ export function mapSiteSettingsToSettingsData(settings: SiteSettings): SettingsD
       defaultTheme: settings.defaultTheme,
       toggle: settings.themeToggle,
       palette: settings.palette,
+      font: settings.uiFont,
+      radius: settings.uiRadius,
+      border: settings.uiBorder,
+      pattern: settings.uiPattern,
       lightEnabled: settings.flags.theme_light_editorial,
     },
     ai: {
