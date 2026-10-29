@@ -199,7 +199,7 @@ function RazorpaySection({
     const res = await testRazorpayConnection();
     setTesting(false);
     if (res.ok) {
-      setTestResult({ ok: true, message: "Connected — Razorpay accepted a test order." });
+      setTestResult({ ok: true, message: "Connected — Razorpay accepted the credentials." });
       toast.success("Razorpay connection OK");
     } else {
       setTestResult({ ok: false, message: res.error.message });
@@ -221,8 +221,7 @@ function RazorpaySection({
             onCheckedChange={(v) => setEnabled(v)}
           />
           <Label htmlFor="st-razorpay" id="pm-razorpay">
-            Razorpay enabled{" "}
-            <span className="text-caption font-normal text-fg-muted">(test mode only)</span>
+            Razorpay enabled
           </Label>
         </div>
         <Badge tone={enabled ? "success" : "ghost"} dot>
