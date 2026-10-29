@@ -144,3 +144,9 @@ export async function getSiteName(): Promise<string> {
     return readSiteName();
   }
 }
+
+/** Share-card images (openGraph/twitter): the uploaded site logo, or none. Merge into page metadata. */
+export async function getSiteShareImages(): Promise<string[] | undefined> {
+  const logo = await getSiteLogo();
+  return logo ? [logo] : undefined;
+}

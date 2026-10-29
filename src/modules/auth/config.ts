@@ -10,6 +10,8 @@ import { haveIBeenPwned, oneTimeToken, phoneNumber, twoFactor } from "better-aut
 import { getEnv } from "@/lib/env";
 import { getDb } from "@/lib/db";
 import { getFlag } from "@/lib/feature-flags";
+import { DEFAULT_SITE_NAME } from "@/lib/brand-constants";
+import { getSiteName } from "@/lib/site-brand";
 import * as schema from "../../../drizzle/schema/auth";
 import { hashPassword, verifyPassword } from "./hash";
 import { afterHook, beforeHook, type AuthHost } from "./hooks";
@@ -23,7 +25,8 @@ export const SESSION_ABSOLUTE_SECONDS: Record<AuthHost, number> = {
 };
 export const COOKIE_PREFIX: Record<AuthHost, string> = { site: "ck", admin: "ckadm" };
 
-export function createAuth(host: AuthHost, opts: { phoneOtp?: boolean } = {}) {
+export function createAuth(host: AuthHost, opts: { phoneOtp?: boolean; siteName?: string } = {}) {
+  const siteName = opts.siteName ?? DEFAULT_SITE_NAME;
   const env = getEnv();
   const baseURL = host === "admin" ? env.NEXT_PUBLIC_ADMIN_URL : env.BETTER_AUTH_URL;
   const secure = env.APP_ENV === "production" || baseURL.startsWith("https://");
@@ -34,7 +37,7 @@ export function createAuth(host: AuthHost, opts: { phoneOtp?: boolean } = {}) {
     // session, the admin host verifies it and sets its ckadm cookie, so admins sign in once.
     oneTimeToken({ expiresIn: 2 }),
     twoFactor({
-      issuer: "CodeKraft",
+      issuer: siteName,
       skipVerificationOnEnable: false,
       backupCodeOptions: { amount: 10 },
       twoFactorCookieMaxAge: 5 * 60,
@@ -62,7 +65,7 @@ export function createAuth(host: AuthHost, opts: { phoneOtp?: boolean } = {}) {
   ];
 
   return betterAuth({
-    appName: "CodeKraft",
+    appName: siteName,
     baseURL,
     basePath: "/api/auth",
     secret: env.BETTER_AUTH_SECRET,
@@ -145,10 +148,11 @@ const cache = new Map<AuthHost, Auth>();
 /** Cached per host; phone OTP plugin is registered only while the flag is on (D-1603). */
 export async function getAuth(host: AuthHost): Promise<Auth> {
   const phoneOtp = await getFlag("phone_otp");
-  const key = `${host}:${phoneOtp ? 1 : 0}` as AuthHost; // keyed by host+flag
+  const siteName = await getSiteName();
+  const key = `${host}:${phoneOtp ? 1 : 0}:${siteName}` as AuthHost; // keyed by host+flag+name (TOTP issuer)
   let auth = cache.get(key);
   if (!auth) {
-    auth = createAuth(host, { phoneOtp });
+    auth = createAuth(host, { phoneOtp, siteName });
     cache.set(key, auth);
   }
   return auth;

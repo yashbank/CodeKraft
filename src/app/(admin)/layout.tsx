@@ -5,6 +5,7 @@ import { audit } from "@/lib/audit-port";
 import { hasAdminClassRole, loadRoles } from "@/modules/auth/roles-port";
 import { getSession, hostFromHeaders } from "@/modules/auth/service";
 import { AdminForbidden } from "@/components/admin/AdminForbidden";
+import { DEFAULT_ADMIN_ICON } from "@/lib/brand-constants";
 import { getSiteLogo } from "@/lib/site-brand";
 import { redirectToLogin } from "@/lib/authz/login-redirect";
 
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 /** BUG-074: tinted favicon so admin tabs are distinguishable from the storefront. */
 export async function generateMetadata() {
-  return { icons: { icon: (await getSiteLogo()) ?? "/brand/admin-icon.svg" } };
+  return { icons: { icon: (await getSiteLogo()) ?? DEFAULT_ADMIN_ICON } };
 }
 
 /**

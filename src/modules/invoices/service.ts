@@ -1,4 +1,5 @@
 import { toDecimalString } from "@/lib/money";
+import { DEFAULT_SITE_NAME } from "@/lib/brand-constants";
 /**
  * Invoices service implementation (docs/06 §2.3 API-COM-11..13, API-PAY-06, BR-16, D-1501).
  */
@@ -51,7 +52,7 @@ export function buildSellerSnapshot(
 ): SellerSnapshot {
   const d = settings.sellerDetails;
   return {
-    name: d?.name || settings.siteName || "CodeKraft",
+    name: d?.name || settings.siteName || DEFAULT_SITE_NAME,
     address: d?.address
       ? `${d.address.line1}, ${d.address.city}, ${d.address.postalCode}`
       : "Address not set",

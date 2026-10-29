@@ -462,8 +462,10 @@ export class DefaultUsersService implements UsersService {
     const [u] = await database.select().from(users).where(eq(users.id, ctx.userId)).limit(1);
     if (!u) throw new AppError(ErrorCode.UNAUTHENTICATED, "User not found");
 
+    const { getSiteName } = await import("@/lib/site-brand");
+    const issuer = encodeURIComponent(await getSiteName());
     return {
-      totpUri: `otpauth://totp/CodeKraft:${encodeURIComponent(u.email)}?secret=JBSWY3DPEHPK3PXP&issuer=CodeKraft`,
+      totpUri: `otpauth://totp/${issuer}:${encodeURIComponent(u.email)}?secret=JBSWY3DPEHPK3PXP&issuer=${issuer}`,
       backupCodes: ["1111-2222", "3333-4444", "5555-6666", "7777-8888"],
     };
   }

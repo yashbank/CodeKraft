@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { getSiteShareImages } from "@/lib/site-brand";
+
 import { SERVICE_OPTIONS } from "@/app/dev/screens/_fixtures/site";
 import { ProductDetailPage } from "@/components/site/product/ProductDetailPage";
 import type {
@@ -152,7 +154,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: product.name,
     description: product.shortDescription,
-    openGraph: { title: product.name, description: product.shortDescription },
+    openGraph: {
+      title: product.name,
+      description: product.shortDescription,
+      images: await getSiteShareImages(),
+    },
   };
 }
 
