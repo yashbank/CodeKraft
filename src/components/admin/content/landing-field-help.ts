@@ -9,7 +9,8 @@ export type LandingFieldKey =
   | "cta1-target"
   | "cta2"
   | "cta2-target"
-  | "node-label";
+  | "node-label"
+  | "style";
 
 export const LANDING_FIELDS: LandingFieldKey[] = [
   "poster",
@@ -22,6 +23,7 @@ export const LANDING_FIELDS: LandingFieldKey[] = [
   "cta2",
   "cta2-target",
   "node-label",
+  "style",
 ];
 
 /** Section names as visitors see them on the landing page (Build / Sell / Proof / Talk to us). */
@@ -65,6 +67,8 @@ export function landingFieldHelp(chapter: LandingChapterKey, field: LandingField
       return hero
         ? "Shown as the small label on the card over the bottom of the hero image. Leave empty to hide it."
         : "Not shown in this section.";
+    case "style":
+      return `Changes the look of the ${s} only (font, border, spacing, tone). Left on Default, it looks exactly as before.`;
     case "cta2-target":
       return `Where the second button ${where} goes.`;
   }

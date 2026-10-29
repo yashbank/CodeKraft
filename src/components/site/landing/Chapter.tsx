@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/components/ui/_utils";
 
+import { sectionStyleCss, type SectionStyle } from "@/modules/content/section-style";
+
 import { Container } from "../Container";
 
 /**
@@ -17,6 +19,7 @@ export function Chapter({
   children,
   layout = "stack",
   className,
+  style,
 }: {
   id: string;
   eyebrow: string;
@@ -26,6 +29,8 @@ export function Chapter({
   /** `split` = sticky copy column + media column at lg. */
   layout?: "stack" | "split";
   className?: string;
+  /** Admin per-section look; absent = renders exactly as before. */
+  style?: SectionStyle;
 }) {
   const headingId = `${id}-title`;
   return (
@@ -33,13 +38,14 @@ export function Chapter({
       id={id}
       aria-labelledby={headingId}
       className={cn("scroll-mt-16 py-16 lg:flex lg:min-h-svh lg:items-center lg:py-24", className)}
+      style={sectionStyleCss(style)}
     >
       <Container
         className={cn("w-full", layout === "split" && "lg:grid lg:grid-cols-12 lg:gap-12")}
       >
         <div
           className={cn(
-            "space-y-4",
+            style?.gap ? "flex flex-col gap-[var(--sec-gap)]" : "space-y-4",
             layout === "split" ? "lg:sticky lg:top-28 lg:col-span-5 lg:self-start" : "max-w-3xl",
           )}
         >
@@ -51,7 +57,12 @@ export function Chapter({
           </h2>
           {body ? <p className="max-w-[55ch] text-body-lg text-fg-muted">{body}</p> : null}
         </div>
-        <div className={cn("mt-10", layout === "split" ? "lg:col-span-7 lg:mt-0" : "lg:mt-14")}>
+        <div
+          className={cn(
+            style?.gap ? "mt-[var(--sec-gap)]" : "mt-10",
+            layout === "split" ? "lg:col-span-7 lg:mt-0" : !style?.gap && "lg:mt-14",
+          )}
+        >
           {children}
         </div>
       </Container>

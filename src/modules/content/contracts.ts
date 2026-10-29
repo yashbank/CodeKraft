@@ -14,6 +14,7 @@ import {
 } from "@/modules/_shared/zod";
 import { httpUrlSchema, positionSchema, text } from "../catalog/contracts";
 import { embedUrlSchema } from "../media/contracts";
+import { sectionStyleSchema } from "./section-style";
 import {
   FAQ_SCOPES,
   FEATURED_PRODUCTS_MAX,
@@ -66,6 +67,7 @@ export const upsertLandingChapterSchema = z.strictObject({
     sceneVariant: text(40).optional(),
     nodeLabel: z.string().trim().max(40).optional(),
     nodeStyle: z.enum(["pill", "terminal", "outline"]).optional(),
+    style: sectionStyleSchema.optional(),
   }),
   cta: z.strictObject({ primary: ctaLinkSchema, secondary: ctaLinkSchema.optional() }),
   position: positionSchema,
