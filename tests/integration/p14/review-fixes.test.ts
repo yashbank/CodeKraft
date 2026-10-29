@@ -13,7 +13,7 @@ import { createUser } from "../../factories/users";
 import { migrateTestDb } from "../../setup/migrate";
 import { truncateAll } from "../../setup/db";
 
-const body = { type: "doc", content: [{ type: "paragraph", text: "Refund please." }] } as const;
+const body = { type: "doc" as const, content: [{ type: "paragraph", text: "Refund please." }] };
 const refund = (orderId: string) => ({
   source: "order" as const,
   subject: "Refund request",
