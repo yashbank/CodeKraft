@@ -16,6 +16,7 @@ test("r9-06 confirming screen, redirect, delivery action", async ({ browser }) =
   const adminCtx = await browser.newContext();
   const custCtx = await browser.newContext();
   const admin = await adminCtx.newPage();
+  await admin.setViewportSize({ width: 1280, height: 900 }); // admin settings/orders are laptop-only
   const cust = await custCtx.newPage();
   const issues = trackIssues(cust, [/razorpay/i]);
 

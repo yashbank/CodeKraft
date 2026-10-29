@@ -49,7 +49,8 @@ export function PaymentConfirmingScreen({ orderNo }: { orderNo: string }) {
     return () => clearInterval(t);
   }, [check]);
 
-  const known = !!status;
+  // Paid stays put so the delivery action is reachable; pending/failed hand off to invoices.
+  const known = !!status && status.stage !== "paid";
   React.useEffect(() => {
     if (!known) return;
     const t = setTimeout(() => router.replace(INVOICES), REDIRECT_MS);
