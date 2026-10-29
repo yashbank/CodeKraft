@@ -43,6 +43,9 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/components/ui/_utils";
 import { BarChart, StackedBarChart } from "../charts/BarChart";
+import { WidgetSkeleton } from "./WidgetSkeleton";
+import { dashboardRangeBounds, ledgerDrillHref } from "@/lib/admin/drill-links";
+import { AnimatedNumber } from "../use-count-up";
 import { Funnel } from "../charts/Funnel";
 import { Gauge } from "../charts/Gauge";
 import { Sparkline } from "../charts/Sparkline";
@@ -244,7 +247,11 @@ export function AdminDashboard({
               onMoveDown={index < definitions.length - 1 ? () => move(def.key, 1) : undefined}
               viewAllHref={VIEW_ALL[def.key] ? href(VIEW_ALL[def.key] as string) : undefined}
             >
-              <WidgetBody widget={def.key} data={data} />
+              {refreshing.has(def.key) ? (
+                <WidgetSkeleton />
+              ) : (
+                <WidgetBody widget={def.key} data={data} />
+              )}
             </WidgetFrame>
           ))}
         </div>
@@ -336,10 +343,23 @@ const VIEW_ALL: Partial<Record<WidgetKey, string>> = {
   expenses_vs_profit: "/finance/expenses",
 };
 
-function Stat({ value, delta, hint }: { value: string; delta?: string; hint?: string }) {
+function Stat({
+  value,
+  count,
+  delta,
+  hint,
+}: {
+  value: string;
+  /** Raw number behind `value`: counts up on first view instead of showing `value` directly. */
+  count?: number;
+  delta?: string;
+  hint?: string;
+}) {
   return (
     <div>
-      <div className="text-[28px] leading-tight font-semibold tnum">{value}</div>
+      <div className="text-[28px] leading-tight font-semibold tnum">
+        {count !== undefined ? <AnimatedNumber value={count} format={inr} /> : value}
+      </div>
       {delta ? (
         <div
           className={cn(
@@ -387,7 +407,12 @@ export function WidgetBody({ widget, data }: { widget: WidgetKey; data: Dashboar
       if (!hasValues(data.revenueByProduct)) return <NoData />;
       return (
         <BarChart
-          data={data.revenueByProduct}
+          data={data.revenueByProduct.map((d) => ({
+            ...d,
+            href: d.id
+              ? ledgerDrillHref({ product: d.id, ...dashboardRangeBounds(data.range) })
+              : undefined,
+          }))}
           formatValue={inr}
           colourByBar
           summary={`Revenue by product, highest ${data.revenueByProduct[0]?.label ?? "—"}.`}
@@ -410,6 +435,7 @@ export function WidgetBody({ widget, data }: { widget: WidgetKey; data: Dashboar
         <div className="flex items-end justify-between gap-3">
           <Stat
             value={inr(data.myShare.valueInr)}
+            count={data.myShare.valueInr}
             delta={data.myShare.delta}
             hint="Your allocations, net of refunds"
           />
@@ -421,7 +447,11 @@ export function WidgetBody({ widget, data }: { widget: WidgetKey; data: Dashboar
     case "outstanding_payouts":
       return (
         <>
-          <Stat value={inr(data.outstandingPayouts.totalInr)} hint="Across all partners" />
+          <Stat
+            value={inr(data.outstandingPayouts.totalInr)}
+            count={data.outstandingPayouts.totalInr}
+            hint="Across all partners"
+          />
           <QueueList items={data.outstandingPayouts.items} empty="Nothing outstanding" />
         </>
       );

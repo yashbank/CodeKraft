@@ -1,8 +1,16 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import * as React from "react";
+
 import { cn } from "@/components/ui/_utils";
+import { formatBarTooltip } from "./tooltip";
 
 export interface BarDatum {
   label: string;
   value: number;
+  /** Drill-down target; the bar becomes a keyboard-operable link. */
+  href?: string;
 }
 
 const SERIES_FILL = [
@@ -39,20 +47,33 @@ export function BarChart({
   caption: string;
   className?: string;
 }) {
+  const router = useRouter();
+  const [active, setActive] = React.useState<number | null>(null);
   const max = Math.max(1, ...data.map((d) => d.value));
+  const total = data.reduce((a, d) => a + d.value, 0);
   const w = 320;
   const gap = 8;
   const bw = data.length > 0 ? (w - gap * (data.length + 1)) / data.length : 0;
   const plotH = height;
   const gridLines = [0.25, 0.5, 0.75, 1];
   return (
-    <figure className={cn("w-full", className)}>
+    <figure className={cn("relative w-full", className)}>
+      {active !== null && data[active] ? (
+        <div
+          aria-hidden
+          data-testid="bar-tooltip"
+          className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 -translate-y-full rounded-md border border-border bg-elevated px-2 py-1 text-caption whitespace-nowrap text-fg shadow-3 tnum"
+          style={{ left: `${((gap + active * (bw + gap) + bw / 2) / w) * 100}%` }}
+        >
+          {formatBarTooltip(data[active].label, data[active].value, total, formatValue)}
+        </div>
+      ) : null}
       <svg
         viewBox={`0 0 ${w} ${plotH}`}
         preserveAspectRatio="none"
         style={{ height }}
         className="w-full"
-        role="img"
+        role="group"
         aria-label={summary}
       >
         {gridLines.map((g) => (
@@ -71,10 +92,47 @@ export function BarChart({
           const x = gap + i * (bw + gap);
           const fill = SERIES_FILL[(colourByBar ? i : series - 1) % SERIES_FILL.length];
           return (
-            <g key={`${d.label}-${i}`}>
-              <rect x={x} y={plotH - h} width={bw} height={h} rx={2} className={fill}>
-                <title>{`${d.label}: ${formatValue(d.value)}`}</title>
-              </rect>
+            <g
+              key={`${d.label}-${i}`}
+              tabIndex={0}
+              role={d.href ? "link" : "img"}
+              aria-label={formatBarTooltip(d.label, d.value, total, formatValue)}
+              data-active={active === i || undefined}
+              className={cn(
+                "outline-none focus-visible:[&>rect:last-child]:stroke-fg",
+                d.href && "cursor-pointer",
+              )}
+              onMouseEnter={() => setActive(i)}
+              onMouseLeave={() => setActive(null)}
+              onFocus={() => setActive(i)}
+              onBlur={() => setActive(null)}
+              onClick={d.href ? () => router.push(d.href as string) : undefined}
+              onKeyDown={
+                d.href
+                  ? (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        router.push(d.href as string);
+                      }
+                    }
+                  : undefined
+              }
+            >
+              {/* full-height hit area so thin bars are easy to hover */}
+              <rect x={x} y={0} width={bw} height={plotH} fill="transparent" />
+              <rect
+                x={x}
+                y={plotH - h}
+                width={bw}
+                height={h}
+                rx={2}
+                strokeWidth={2}
+                className={cn(
+                  fill,
+                  "transition-opacity",
+                  active !== null && active !== i && "opacity-60",
+                )}
+              />
             </g>
           );
         })}

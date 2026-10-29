@@ -8,13 +8,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SelectItem } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -27,6 +21,8 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/components/ui/_utils";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
+import { UrlSelect } from "./UrlSelect";
+import { useUrlFilters, useUrlSearch } from "./use-url-filters";
 import { formatDate, inr, money, percentFromBps } from "../format";
 import { MoneyCell } from "../MoneyCell";
 import { PageHeader } from "../PageHeader";
@@ -35,6 +31,8 @@ import type { AllocationRow } from "../types";
 
 export interface AllocationsScreenProps {
   rows: AllocationRow[];
+  /** Product filter options; defaults to the products present in `rows`. */
+  products?: string[];
   partners: string[];
   orderHref: string;
   ledgerHref: string;
@@ -44,9 +42,13 @@ export interface AllocationsScreenProps {
   ownPartnerName?: string | null;
 }
 
+const ALLOC_PARAMS = ["from", "to", "product", "partner", "version", "q"];
+
 /** SCR-ADM-18 — per-order-item money split with dynamic partner columns and a waterfall on row expand. */
+
 export function AllocationsScreen({
   rows,
+  products = [...new Set(rows.map((r) => r.product))].sort(),
   partners,
   orderHref,
   ledgerHref,
@@ -57,7 +59,12 @@ export function AllocationsScreen({
   const [expanded, setExpanded] = React.useState<string | null>(null);
   const sum = (f: (r: AllocationRow) => number) => rows.reduce((s, r) => s + f(r), 0);
   const partnerName = (n: string) => (isSuperAdmin || n === ownPartnerName ? n : "Other partner");
-  const products = [...new Set(rows.map((r) => r.product))].sort();
+  const f = useUrlFilters();
+  const [search, setSearch] = useUrlSearch();
+  // Keep the active choice selectable even when it filtered every row out.
+  const productOptions = [
+    ...new Set([...products, ...(f.get("product") ? [f.get("product")] : [])]),
+  ];
 
   return (
     <TooltipProvider>
@@ -73,53 +80,60 @@ export function AllocationsScreen({
       <DataToolbar
         searchId="alloc-order"
         searchPlaceholder="Order no…"
+        searchLabel="Order number"
+        searchValue={search}
+        onSearchChange={setSearch}
         filters={
           <>
             <ToolbarField id="alloc-from" label="From">
-              <Input id="alloc-from" type="date" className="h-8 w-40" />
+              <Input
+                id="alloc-from"
+                type="date"
+                className="h-8 w-40"
+                value={f.get("from")}
+                max={f.get("to") || undefined}
+                onChange={(e) => f.set("from", e.target.value)}
+              />
             </ToolbarField>
             <ToolbarField id="alloc-to" label="To">
-              <Input id="alloc-to" type="date" className="h-8 w-40" />
+              <Input
+                id="alloc-to"
+                type="date"
+                className="h-8 w-40"
+                value={f.get("to")}
+                min={f.get("from") || undefined}
+                onChange={(e) => f.set("to", e.target.value)}
+              />
             </ToolbarField>
-            <ToolbarField id="alloc-product" label="Product">
-              <Select>
-                <SelectTrigger id="alloc-product" size="sm" className="w-40">
-                  <SelectValue placeholder="Any" />
-                </SelectTrigger>
-                <SelectContent>
-                  {products.map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {p}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </ToolbarField>
-            <ToolbarField id="alloc-partner" label="Partner">
-              <Select>
-                <SelectTrigger id="alloc-partner" size="sm" className="w-40">
-                  <SelectValue placeholder="Any" />
-                </SelectTrigger>
-                <SelectContent>
-                  {partners.map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {p}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </ToolbarField>
-            <ToolbarField id="alloc-version" label="Ownership version">
-              <Select>
-                <SelectTrigger id="alloc-version" size="sm" className="w-32">
-                  <SelectValue placeholder="Any" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="v1">v1</SelectItem>
-                  <SelectItem value="v2">v2</SelectItem>
-                </SelectContent>
-              </Select>
-            </ToolbarField>
+            <UrlSelect id="alloc-product" label="Product" param="product" f={f}>
+              {productOptions.map((p) => (
+                <SelectItem key={p} value={p}>
+                  {p}
+                </SelectItem>
+              ))}
+            </UrlSelect>
+            <UrlSelect id="alloc-partner" label="Partner" param="partner" f={f}>
+              {partners.map((p) => (
+                <SelectItem key={p} value={p}>
+                  {p}
+                </SelectItem>
+              ))}
+            </UrlSelect>
+            <UrlSelect
+              id="alloc-version"
+              label="Ownership version"
+              param="version"
+              f={f}
+              width="w-32"
+            >
+              <SelectItem value="v1">v1</SelectItem>
+              <SelectItem value="v2">v2</SelectItem>
+            </UrlSelect>
+            {f.active(ALLOC_PARAMS) ? (
+              <Button variant="ghost" size="sm" onClick={() => f.clear(ALLOC_PARAMS)}>
+                Clear filters
+              </Button>
+            ) : null}
           </>
         }
       />

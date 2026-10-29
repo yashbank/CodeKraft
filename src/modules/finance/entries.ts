@@ -256,14 +256,21 @@ export async function listLedgerEntries(
   if (input.filters?.currency) {
     conditions.push(eq(ledgerEntries.currency, input.filters.currency));
   }
+  if (input.filters?.partyType) {
+    conditions.push(eq(ledgerEntries.partyType, input.filters.partyType));
+  }
   if (input.filters?.approvalRequestId) {
     conditions.push(eq(ledgerEntries.approvalRequestId, input.filters.approvalRequestId));
   }
   if (input.filters?.dateFrom) {
-    conditions.push(gte(ledgerEntries.createdAt, new Date(input.filters.dateFrom)));
+    conditions.push(
+      gte(ledgerEntries.createdAt, new Date(`${input.filters.dateFrom}T00:00:00.000Z`)),
+    );
   }
   if (input.filters?.dateTo) {
-    conditions.push(lte(ledgerEntries.createdAt, new Date(input.filters.dateTo)));
+    conditions.push(
+      lte(ledgerEntries.createdAt, new Date(`${input.filters.dateTo}T23:59:59.999Z`)),
+    );
   }
 
   // Scoping condition for non-read_all

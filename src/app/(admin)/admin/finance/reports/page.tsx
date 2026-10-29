@@ -1,3 +1,8 @@
+import {
+  filterReportByPartner,
+  parseReportFilters,
+  type SearchParams,
+} from "@/lib/admin/finance-filters";
 import { ReportsScreen } from "@/components/admin/finance/ReportsScreen";
 import { getAdminRequestContext } from "@/lib/authz/admin-request-context";
 import {
@@ -89,23 +94,26 @@ async function listAllLedgerEntries(
   return items;
 }
 
-function currentFyRange(): { dateFrom: string; dateTo: string } {
-  const now = new Date();
-  const fyStartYear = now.getUTCMonth() >= 3 ? now.getUTCFullYear() : now.getUTCFullYear() - 1;
-  return {
-    dateFrom: `${fyStartYear}-04-01`,
-    dateTo: now.toISOString().slice(0, 10),
-  };
-}
-
-export default async function AdminReportsPage() {
+export default async function AdminReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const { dateFrom, dateTo, granularity, currency, partnerId } = parseReportFilters(
+    await searchParams,
+  );
   const ctx = await getAdminRequestContext();
-  const { dateFrom, dateTo } = currentFyRange();
+  const reportOpts = {
+    dateFrom,
+    dateTo,
+    ...(granularity ? { granularity } : {}),
+    ...(currency ? { currency } : {}),
+  };
 
   const [reportResults, customerCreditsResult, partnersResult] = await Promise.all([
     Promise.all(
       REPORT_ORDER.map((key) =>
-        getReportQuery({ report: key as FinanceReportKey, dateFrom, dateTo }, ctx).catch(() => ({
+        getReportQuery({ report: key as FinanceReportKey, ...reportOpts }, ctx).catch(() => ({
           ok: false as const,
         })),
       ),
@@ -133,7 +141,10 @@ export default async function AdminReportsPage() {
         error: "This report could not be loaded. Try again; if it persists, check the server log.",
       };
     }
-    return mapReportResultToDefinition(result.data, REPORT_META[key]);
+    return mapReportResultToDefinition(
+      filterReportByPartner(result.data, partnerId),
+      REPORT_META[key],
+    );
   });
 
   const customerCredits =
@@ -153,9 +164,8 @@ export default async function AdminReportsPage() {
   const periodFrom = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const periodFromIso = periodFrom.toISOString().slice(0, 10);
   const periodToIso = now.toISOString().slice(0, 10);
-  // `dateTo` filters are `lte(createdAt, midnight of that date)` (date-only, not end-of-day), so
-  // querying up to *tomorrow* is what actually includes all of today's entries.
-  const queryDateToIso = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  // `dateTo` is inclusive of the whole (UTC) day, so the opening balance ends the day before.
+  const dayBeforePeriodIso = new Date(periodFrom.getTime() - 86_400_000).toISOString().slice(0, 10);
 
   let statement: StatementPreview = {
     partner: firstPartner?.displayName ?? "—",
@@ -172,11 +182,15 @@ export default async function AdminReportsPage() {
     // The list cap is 100 rows per request (`LIST_LIMIT_MAX`); a 500-row ask failed validation and
     // the statement silently summed zero lines. Walk the cursor so the totals cover every line.
     const [beforeEntries, inRangeEntries] = await Promise.all([
-      listAllLedgerEntries(ctx, { partnerId: firstPartner.id, dateTo: periodFromIso }, "seq:desc"),
+      listAllLedgerEntries(
+        ctx,
+        { partnerId: firstPartner.id, dateTo: dayBeforePeriodIso },
+        "seq:desc",
+      ),
       listAllLedgerEntries(ctx, {
         partnerId: firstPartner.id,
         dateFrom: periodFromIso,
-        dateTo: queryDateToIso,
+        dateTo: periodToIso,
       }),
     ]);
     const openingBalanceInrMinor = beforeEntries

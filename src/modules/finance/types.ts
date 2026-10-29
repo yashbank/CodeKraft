@@ -107,6 +107,7 @@ export const listLedgerEntriesInput = zListParams(
   z
     .object({
       entryType: z.array(z.enum(ENTRY_TYPES)).min(1).optional(),
+      partyType: z.enum(PARTY_TYPES).optional(),
       partnerId: zUuid.optional(),
       productId: zUuid.optional(),
       orderNo: zPublicOrderNo.optional(),

@@ -519,10 +519,12 @@ export function mapReportResultToDefinition(
   const valueCol =
     moneyOrCountCols.find((c) => c.key === "netMinor") ??
     moneyOrCountCols[moneyOrCountCols.length - 1];
+  const idCol = result.columns.find((c) => c.key === "productId");
   const series = valueCol
     ? result.rows.map((row) => ({
         label: String((labelCol && row[labelCol.key]) ?? ""),
         value: numericCell(row[valueCol.key]),
+        ...(idCol && typeof row[idCol.key] === "string" ? { id: row[idCol.key] as string } : {}),
       }))
     : [];
 
