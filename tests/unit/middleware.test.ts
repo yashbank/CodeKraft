@@ -153,6 +153,7 @@ describe("ISR twins for anonymous price pages (P15-02)", () => {
       await rewrite("http://localhost:3000/products", "__Secure-ck.session_token=abc"),
     ).toBeNull();
     expect(await rewrite("http://localhost:3000/products?q=crm")).toBeNull();
+    expect(await rewrite("http://localhost:3000/products?category=crm&sort=price_asc")).toBeNull();
     expect(await rewrite("http://localhost:3000/", undefined, "POST")).toBeNull();
   });
 

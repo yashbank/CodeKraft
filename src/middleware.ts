@@ -100,9 +100,10 @@ const TWIN_PATH = /^\/(products(\/[^/]+)?)?$/;
  * ISR-cached twin under /ssg (docs/08 §10); everyone else keeps the per-request dynamic route.
  */
 export function staticTwinPath(req: NextRequest): string | null {
-  const { pathname, searchParams } = req.nextUrl;
+  const { pathname, search } = req.nextUrl;
   if ((req.method !== "GET" && req.method !== "HEAD") || !TWIN_PATH.test(pathname)) return null;
-  if (searchParams.has("q")) return null; // search state is client-side only on the dynamic page
+  // The list keeps search/filter/sort/page state in the URL: any query string stays dynamic.
+  if (pathname === "/products" && search) return null;
   for (const c of req.cookies.getAll()) {
     if (c.name === CURRENCY_COOKIE || /ck\.session_(token|data)$/.test(c.name)) return null;
   }
