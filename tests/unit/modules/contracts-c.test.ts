@@ -386,7 +386,12 @@ describe("queries (API-CHAT-01..05, 14)", () => {
     });
     bad(
       queries.createQuerySchema,
-      { subject: "Hi there", bodyJson: DOC, source: "dashboard", attachments: [U1, U1, U1, U1] },
+      {
+        subject: "Hi there",
+        bodyJson: DOC,
+        source: "dashboard",
+        attachments: [U1, U1, U1, U1, U1, U1],
+      },
       "attachments",
     );
     bad(

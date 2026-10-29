@@ -3,6 +3,7 @@
  * Components are props-driven and never fetch; Phase 8 maps Server Action results onto these
  * shapes. Money is always `{ amountMinor, currency }` (lib/money); timestamps are ISO strings.
  */
+import type { AttachmentView } from "@/lib/attachments";
 import type { Currency } from "@/lib/money";
 import type { StatusValue } from "@/lib/status-tone";
 import type { SellerDetails } from "@/modules/settings/types";
@@ -607,7 +608,7 @@ export interface QueryMessage {
   at: string;
   text: string;
   internal?: boolean;
-  attachments?: string[];
+  attachments?: AttachmentView[];
 }
 
 export interface QueryThread {
@@ -631,6 +632,7 @@ export interface ConversationRow {
 export interface TranscriptTurn {
   role: "user" | "assistant" | "menu" | "system";
   text: string;
+  attachments?: AttachmentView[];
   sources?: string[];
   tokens?: number;
   latencyMs?: number;

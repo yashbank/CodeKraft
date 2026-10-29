@@ -3,6 +3,7 @@
  * ui/screens/user/SCR-AUTH-* and SCR-ACC-*). Components in `components/account` are props-driven
  * and render these shapes; Phase 7 maps rows from `modules/*` onto them. No fetching here.
  */
+import type { AttachmentView } from "@/lib/attachments";
 import type { Currency, Money } from "@/lib/money";
 import type { StatusValue } from "@/lib/status-tone";
 
@@ -245,7 +246,7 @@ export interface QueryMessage {
   authorName?: string;
   body: string;
   at: string;
-  attachments?: { name: string; sizeLabel: string }[];
+  attachments?: AttachmentView[];
 }
 
 export interface QuerySummary {
@@ -290,6 +291,7 @@ export interface ChatMessage {
   at: string;
   /** Kept partial message after a dropped stream ("Connection lost — Retry"). */
   interrupted?: boolean;
+  attachments?: AttachmentView[];
 }
 
 export type NotificationType = "orders" | "delivery" | "renewals" | "queries" | "product_updates";

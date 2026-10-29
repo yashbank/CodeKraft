@@ -475,7 +475,15 @@ export const queries: QuerySummary[] = [
         author: "customer",
         body: "The installer stops at 80% with error 0x8007. I'm on Windows 11 23H2.",
         at: "2026-09-24T16:10:00Z",
-        attachments: [{ name: "installer-screenshot.png", sizeLabel: "312 KB" }],
+        attachments: [
+          {
+            mediaId: "00000000-0000-4000-8000-000000000001",
+            name: "installer-screenshot.png",
+            mime: "image/png",
+            sizeBytes: 319488,
+            url: "#",
+          },
+        ],
       },
       {
         id: "m2",

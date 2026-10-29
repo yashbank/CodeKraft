@@ -19,6 +19,8 @@ import { queriesService } from "@/modules/queries/service";
 import type { JobContext, JobOutcome } from "@/modules/analytics/types";
 import type { ListResult } from "@/modules/_shared/zod";
 import { settingsService } from "@/modules/settings/service";
+import { loadAttachmentViews, resolveOwnAttachments } from "@/modules/media/attachments";
+import { buildUserContent, loadModelFiles } from "./attachments";
 import { chatCapGuard } from "./caps";
 import type { ChatService, LLMEvent, LLMProvider } from "./contracts";
 import { ROOT_MENU_NODES, resolveMenuIntent } from "./menus";
@@ -227,11 +229,15 @@ export class DefaultChatService implements ChatService {
       .from(chatMessages)
       .where(and(eq(chatMessages.conversationId, conv.id), eq(chatMessages.role, "user")));
 
+    // P14-06: only the caller's own completed uploads may be attached (count/type/size re-checked).
+    const files = await resolveOwnAttachments(this.db, ctx.userId, input.attachments ?? []);
+
     // Record user message
     await this.db.insert(chatMessages).values({
       conversationId: input.conversationId,
       role: "user",
       content: input.content,
+      attachments: files.map((f) => f.id),
     });
 
     // R8-06: tell admins (in-app) when a customer starts a real chat -- once per conversation,
@@ -277,7 +283,8 @@ export class DefaultChatService implements ChatService {
     let stopReason: Extract<LLMEvent, { type: "done" }>["stopReason"] = "end_turn";
 
     try {
-      const stream = provider.stream(systemPrompt, [{ role: "user", content: input.content }], {
+      const userContent = buildUserContent(input.content, await loadModelFiles(files));
+      const stream = provider.stream(systemPrompt, [{ role: "user", content: userContent }], {
         model: conv.model,
         maxTokens: 600,
         timeoutMs: chatTimeoutMs,
@@ -623,6 +630,10 @@ export class DefaultChatService implements ChatService {
       .where(eq(chatMessages.conversationId, conv.id))
       .orderBy(desc(chatMessages.createdAt));
 
+    const views = await loadAttachmentViews(
+      this.db,
+      msgs.flatMap((m) => m.attachments),
+    );
     const caps = await chatCapGuard.caps();
     return {
       conversation: {
@@ -644,6 +655,7 @@ export class DefaultChatService implements ChatService {
         tokensIn: m.tokensIn,
         tokensOut: m.tokensOut,
         retrievedChunks: [],
+        attachments: m.attachments.flatMap((id) => views.get(id) ?? []),
         createdAt: m.createdAt.toISOString(),
       })),
       usage: {

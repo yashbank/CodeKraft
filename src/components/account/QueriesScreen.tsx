@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRightIcon, MessageSquareIcon, PaperclipIcon, PlusIcon } from "lucide-react";
+import { ChevronRightIcon, MessageSquareIcon, PlusIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -31,6 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
 import { fromPlainText } from "@/modules/content/render";
+import { AttachPicker, AttachmentList, useAttachments } from "@/components/attachments/Attachments";
 import { createQuery, replyToMyQuery } from "@/modules/queries/customer-mutations";
 import { EmptyState } from "./EmptyState";
 import { formatDate, formatDateTime, relativeTime } from "./format";
@@ -50,13 +51,13 @@ const STATUS_LABEL: Record<QueryStatus, string> = {
  * The fixture-era "Related to" picker is dropped -- it listed two hardcoded orders/entitlements
  * that don't exist for the signed-in customer; this screen has no real order/entitlement list to
  * offer instead, so every query created here is `source: "dashboard"` with no `orderId`. Same for
- * attachments: `createQuery` takes already-uploaded media ids, and there's no upload endpoint
- * wired to this screen, so the file input is disabled rather than silently dropping picked files.
+ * attachments (P14-06): files upload through the media pipeline first; `createQuery` gets the ids.
  */
 export function NewQuerySheet({ trigger }: { trigger: React.ReactNode }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [pending, setPending] = React.useState(false);
+  const att = useAttachments();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -70,6 +71,7 @@ export function NewQuerySheet({ trigger }: { trigger: React.ReactNode }) {
       subject,
       bodyJson: fromPlainText(message),
       source: "dashboard",
+      attachments: att.ids,
     });
     setPending(false);
     if (result.ok) {
@@ -79,6 +81,7 @@ export function NewQuerySheet({ trigger }: { trigger: React.ReactNode }) {
           : "Query sent — we'll reply within a working day",
       );
       setOpen(false);
+      att.clear();
       form.reset();
       router.refresh();
     } else {
@@ -110,7 +113,8 @@ export function NewQuerySheet({ trigger }: { trigger: React.ReactNode }) {
             <Textarea id="nq-message" name="message" required maxLength={4000} rows={6} />
             <p className="text-caption text-fg-muted">Up to 4000 characters.</p>
           </div>
-          <Button type="submit" className="w-full" disabled={pending}>
+          <AttachPicker att={att} disabled={pending} />
+          <Button type="submit" className="w-full" disabled={pending || att.busy}>
             {pending ? "Sending…" : "Send"}
           </Button>
         </form>
@@ -293,6 +297,7 @@ export function QueryThreadScreen({
     sendError ? "Here's the log file you asked for — attached." : "",
   );
   const [sending, setSending] = React.useState(false);
+  const att = useAttachments();
   const closed = q.status === "closed";
 
   async function handleReply(e: React.FormEvent<HTMLFormElement>) {
@@ -300,13 +305,18 @@ export function QueryThreadScreen({
     const body = draft.trim();
     if (!body) return;
     setSending(true);
-    const result = await replyToMyQuery({ queryId: q.id, bodyJson: fromPlainText(body) });
+    const result = await replyToMyQuery({
+      queryId: q.id,
+      bodyJson: fromPlainText(body),
+      attachments: att.ids,
+    });
     setSending(false);
     if (!result.ok) {
       toast.error(result.error.message);
       return;
     }
     setDraft("");
+    att.clear();
     router.refresh();
   }
   async function handleResolve() {
@@ -392,18 +402,7 @@ export function QueryThreadScreen({
                 >
                   {m.body}
                 </div>
-                {m.attachments?.length ? (
-                  <ul className={cn("flex flex-wrap gap-2", mine && "justify-end")}>
-                    {m.attachments.map((a) => (
-                      <li key={a.name}>
-                        <Button variant="outline" size="sm">
-                          <PaperclipIcon aria-hidden /> {a.name}{" "}
-                          <span className="text-fg-subtle">· {a.sizeLabel}</span>
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
+                <AttachmentList items={m.attachments ?? []} className={cn(mine && "justify-end")} />
               </div>
             </li>
           );
@@ -435,10 +434,12 @@ export function QueryThreadScreen({
           maxLength={4000}
         />
         <div className="flex items-center justify-between gap-2">
-          <Button type="button" variant="ghost" size="sm" disabled={closed || sending}>
-            <PaperclipIcon aria-hidden /> Attach
-          </Button>
-          <Button type="submit" size="sm" disabled={closed || sending || draft.trim().length === 0}>
+          <AttachPicker att={att} disabled={closed || sending} />
+          <Button
+            type="submit"
+            size="sm"
+            disabled={closed || sending || att.busy || draft.trim().length === 0}
+          >
             {sending ? "Sending…" : "Send"}
           </Button>
         </div>

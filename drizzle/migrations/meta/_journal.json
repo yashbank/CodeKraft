@@ -64,6 +64,13 @@
       "when": 1791990000000,
       "tag": "0008_user_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792422000000,
+      "tag": "0012_message_attachments",
+      "breakpoints": true
     }
   ]
 }

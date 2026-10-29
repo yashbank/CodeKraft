@@ -58,6 +58,7 @@ export function mapTranscript(t: Transcript): { id: string; turns: TranscriptTur
       .map((m) => ({
         role: m.role,
         text: m.content,
+        ...(m.attachments?.length ? { attachments: m.attachments } : {}),
         ...(m.retrievedChunks.length > 0 ? { sources: m.retrievedChunks.map((c) => c.title) } : {}),
         ...(m.role === "assistant" ? { tokens: m.tokensIn + m.tokensOut } : {}),
       })),

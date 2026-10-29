@@ -4,6 +4,7 @@
  * D-1503 (12-month retention), MASTER_SPEC §7 "Chatbot contact menu".
  */
 import { z } from "zod";
+import { ATTACHMENT_MAX_FILES, type AttachmentView } from "@/lib/attachments";
 import { isoDateTimeSchema as isoDateTime, uuidSchema as uuid } from "@/modules/_shared/zod";
 
 export { uuidSchema as uuid, isoDateTimeSchema as isoDateTime } from "@/modules/_shared/zod";
@@ -140,12 +141,17 @@ export const sendMessageSchema = z
     content: z
       .string()
       .trim()
-      .min(1)
       .max(2000)
       // eslint-disable-next-line no-control-regex
       .transform((s) => s.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")),
+    /** P14-06: media ids from upload purpose `chat_attachment` (<= ATTACHMENT_MAX_FILES, re-checked server-side). */
+    attachments: z.array(uuid).max(ATTACHMENT_MAX_FILES).optional(),
   })
-  .strict();
+  .strict()
+  .refine((v) => v.content.length > 0 || (v.attachments?.length ?? 0) > 0, {
+    message: "Message is empty",
+    path: ["content"],
+  });
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;
 
 /** API-CHAT-09 `escalateConversation` — `STATE_INVALID` when already escalated. */
@@ -357,6 +363,7 @@ export interface TranscriptMessage {
   tokensIn: number;
   tokensOut: number;
   retrievedChunks: Array<{ chunkId: string; title: string; sourceType: KnowledgeSourceType }>;
+  attachments?: AttachmentView[];
   createdAt: string;
 }
 

@@ -1,4 +1,10 @@
-import type { LLMEvent, LLMMessage, LLMProvider, LLMStreamOptions } from "../llm";
+import {
+  llmContentText,
+  type LLMEvent,
+  type LLMMessage,
+  type LLMProvider,
+  type LLMStreamOptions,
+} from "../llm";
 
 export class FakeProvider implements LLMProvider {
   readonly id = "fake";
@@ -15,7 +21,7 @@ export class FakeProvider implements LLMProvider {
   ): AsyncIterable<LLMEvent> {
     this.lastRequest = { system, messages, opts };
 
-    const lastMsg = messages[messages.length - 1]?.content ?? "";
+    const lastMsg = llmContentText(messages[messages.length - 1]?.content ?? "");
 
     if (lastMsg.includes("trigger refusal")) {
       yield { type: "refusal", message: "I cannot fulfill this request." };

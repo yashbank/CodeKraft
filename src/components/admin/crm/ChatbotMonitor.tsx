@@ -1,5 +1,6 @@
 "use client";
 
+import { AttachmentList } from "@/components/attachments/Attachments";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -116,6 +117,7 @@ export function ChatbotMonitor({
         .map((m) => ({
           role: m.role,
           text: m.content,
+          ...(m.attachments?.length ? { attachments: m.attachments } : {}),
           ...(m.retrievedChunks.length > 0
             ? { sources: m.retrievedChunks.map((c) => c.title) }
             : {}),
@@ -338,6 +340,7 @@ export function ChatbotMonitor({
                       {t.role}
                     </span>
                     <p>{t.text}</p>
+                    <AttachmentList items={t.attachments ?? []} className="mt-1" />
                     {t.tokens !== undefined ? (
                       <p className="mt-1 font-mono text-caption opacity-70">
                         {t.tokens} tokens · {t.latencyMs} ms · {t.stopReason}
