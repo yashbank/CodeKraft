@@ -20,7 +20,9 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { caseStudySeo } from "@/lib/seo";
 import { Banner } from "../Banner";
+import { SeoPreview } from "../SeoPreview";
 import { DataToolbar } from "../DataToolbar";
 import { FilterChips } from "../FilterChips";
 import { formatDate, formatDateTime } from "../format";
@@ -608,13 +610,15 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
                   defaultValue={editing?.seoDescription}
                 />
               </Field>
-              <div className="rounded-md border border-border bg-canvas p-3">
-                <p className="text-caption text-fg-muted">OG preview</p>
-                <p className="text-body font-semibold">{editing?.title ?? "Title"}</p>
-                <p className="text-caption text-fg-muted">
-                  codekraft.dev/projects/{editing?.slug ?? "slug"}
-                </p>
-              </div>
+              <SeoPreview
+                input={caseStudySeo({
+                  slug: editing?.slug || "slug",
+                  title: editing?.title || "Title",
+                  resultHighlight: editing?.resultHighlight,
+                  seoTitle: editing?.seoTitle,
+                  seoDescription: editing?.seoDescription,
+                })}
+              />
             </TabsContent>
           </Tabs>
           <div className="mt-4 flex justify-end">
