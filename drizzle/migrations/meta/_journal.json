@@ -66,10 +66,10 @@
       "breakpoints": true
     },
     {
-      "idx": 12,
+      "idx": 9,
       "version": "7",
       "when": 1792422000000,
-      "tag": "0012_message_attachments",
+      "tag": "0009_message_attachments",
       "breakpoints": true
     }
   ]
