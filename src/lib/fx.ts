@@ -21,16 +21,17 @@ export interface FxProvider {
 
 export const FX_SOURCE_STATIC = "static";
 
-/** Sample rates (September 2026 order of magnitude); both directions listed explicitly. */
+/** Configured default rates (last-resort fallback); both directions listed explicitly. */
 export const STATIC_FX_TABLE: Readonly<Record<string, string>> = Object.freeze({
   "INR/USD": "0.01200000",
   "INR/EUR": "0.01100000",
   "INR/GBP": "0.00950000",
   "INR/CAD": "0.01630000",
-  "USD/INR": "83.50000000",
-  "EUR/INR": "90.90000000",
-  "GBP/INR": "105.25000000",
-  "CAD/INR": "61.35000000",
+  // exact 8dp inverses of the INR/X rows above (one direction-consistent default; R9-09)
+  "USD/INR": "83.33333333",
+  "EUR/INR": "90.90909091",
+  "GBP/INR": "105.26315789",
+  "CAD/INR": "61.34969325",
 });
 
 export class StaticFxProvider implements FxProvider {

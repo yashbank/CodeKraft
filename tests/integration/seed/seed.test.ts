@@ -254,7 +254,7 @@ describe("runSeed({ mode: 'full' })", () => {
         .select()
         .from(fxRates)
         .where(and(eq(fxRates.base, "USD"), eq(fxRates.quote, "INR")));
-      expect(usdInr[0]?.rate).toBe("83.50000000");
+      expect(usdInr[0]?.rate).toBe("83.33333333");
     },
     SLOW,
   );
