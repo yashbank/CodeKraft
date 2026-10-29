@@ -46,6 +46,21 @@ Updated: 2026-10-29
 - P12-03 | ready | branch feat/p12-03-seo | stacked on P11-03; vitest tests/unit+static: 1095 pass (seo 9)
 - P12-04 | ready | branch feat/p12-04-admin-extras | stacked on P9-04; vitest tests/unit+static: 1106 pass
 - P12-02 | ready | branch feat/p12-02-dead-button-audit | Fixes site 500 regression (client imported server display-currency; pure helpers moved to src/lib/currency-prefs.ts). Removed dead Duplicate actions, added disabled reasons. 0 overflow at 375/768/1280, 0 console errors. Branch = merge of all P7-P12 + fixes. tsc clean, vitest 1627/1627, e2e dead-buttons 7/7 (workers=1). Not audited: /admin/products, /admin/content/legal (dev restart).
+- R9-00 | doing | branch feat/r9-00
+- R9-01 | doing | branch feat/r9-01
+- R9-02 | doing | branch feat/r9-02
+- R9-03 | doing | branch feat/r9-03
+- R9-04 | doing | branch feat/r9-04
+- R9-05 | doing | branch feat/r9-05
+- R9-06 | doing | branch feat/r9-06
+- R9-07 | doing | branch feat/r9-07
+- R9-08 | doing | branch feat/r9-08
+- R9-09 | doing | branch feat/r9-09
+- R9-10 | doing | branch feat/r9-10
+- R9-11 | doing | branch feat/r9-11
+- R9-12 | doing | branch feat/r9-12
+- R9-13 | doing | branch feat/r9-13
+- R9-14 | doing | branch feat/r9-14
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
 - [open] R2 private bucket CORS must allow PUT from the admin origin | P2-01 browser uploads straight to R2 | upload a .dmg on a product version, it completes and appears
@@ -96,3 +111,4 @@ Or merge in this order: P7/P8/P9-01/P9-02/P11 branches → P9-03 → P9-04 → P
 Migrations (hand-written, additive): 0007_expense_fx_lock (journal idx 7), 0008_user_tokens (idx 8). If _journal.json conflicts, keep both entries.
 Required fix: P12-02 includes the fix for the site 500 caused by P9-01 x P12-03 (the client imported server display-currency).
 Mac A please: run the full gate, apply 0007/0008, then live-test login reset-password, Cmd+K, FX expenses, and the /admin/products + /admin/content/legal sweep.
+- 2026-10-29 Phase 13 started: R9-00 harness first, then R9-01..13 in parallel, R9-14 last.
