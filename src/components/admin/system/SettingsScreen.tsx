@@ -373,6 +373,8 @@ export interface SettingsScreenProps {
   initialSection?: SectionKey;
   chatbotHref: string;
   auditHref: string;
+  /** The exact name the server checks the reset confirmation against (getSiteName). */
+  resetSiteName?: string;
 }
 
 /** Maps zod dotted paths from `updateSettings` onto the General-section input ids. */
@@ -433,6 +435,7 @@ export function SettingsScreen({
   initialSection = "general",
   chatbotHref,
   auditHref,
+  resetSiteName,
 }: SettingsScreenProps) {
   const [section, setSection] = React.useState<SectionKey>(initialSection);
   const [dangerous, setDangerous] = React.useState<string | null>(null);
@@ -1125,7 +1128,7 @@ export function SettingsScreen({
           ) : null}
 
           {section === "danger" && isSuperAdmin ? (
-            <DangerZoneSection siteName={s.general.siteName} />
+            <DangerZoneSection siteName={resetSiteName ?? s.general.siteName} />
           ) : null}
 
           {saveable ? (

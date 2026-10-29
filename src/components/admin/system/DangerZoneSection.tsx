@@ -27,7 +27,8 @@ export function DangerZoneSection({ siteName }: { siteName: string }) {
   const [backedUp, setBackedUp] = React.useState(false);
   const [typed, setTyped] = React.useState("");
   const [busy, setBusy] = React.useState(false);
-  const categories = expandCategories(picked);
+  const categories = expandCategories(picked); // picked + their required dependencies
+  const implied = categories.filter((c) => !picked.includes(c));
 
   function toggle(c: ResetCategory, on: boolean) {
     setPicked((p) => (on ? [...p, c] : p.filter((x) => x !== c)));
@@ -59,7 +60,7 @@ export function DangerZoneSection({ siteName }: { siteName: string }) {
 
   async function request() {
     setBusy(true);
-    const res = await requestSiteResetAction({ categories, confirmName: typed });
+    const res = await requestSiteResetAction({ categories, confirmName: typed.trim() });
     setBusy(false);
     if (!res.ok) return void toast.error(res.error.message);
     toast.success("Reset requested", { description: "Another super admin must approve it." });
@@ -69,7 +70,7 @@ export function DangerZoneSection({ siteName }: { siteName: string }) {
     setTyped("");
   }
 
-  const canRequest = categories.length > 0 && backedUp && typed === siteName && !busy;
+  const canRequest = categories.length > 0 && backedUp && typed.trim() === siteName && !busy;
 
   return (
     <div className="space-y-4">
@@ -81,18 +82,17 @@ export function DangerZoneSection({ siteName }: { siteName: string }) {
         <legend className="text-body-sm font-medium">Data to delete</legend>
         {RESET_CATEGORIES.map((c) => (
           <label key={c} className="flex items-center gap-2 text-body-sm">
-            <Checkbox
-              checked={categories.includes(c)}
-              disabled={categories.includes(c) && !picked.includes(c)}
-              onCheckedChange={(v) => toggle(c, v === true)}
-            />
+            <Checkbox checked={picked.includes(c)} onCheckedChange={(v) => toggle(c, v === true)} />
             {RESET_CATEGORY_LABELS[c]}
-            {categories.includes(c) && !picked.includes(c) ? (
-              <span className="text-caption text-fg-muted">(required by your selection)</span>
-            ) : null}
           </label>
         ))}
       </fieldset>
+      {implied.length ? (
+        <p className="text-body-sm text-fg-muted">
+          Also removed because they depend on it:{" "}
+          {implied.map((c) => RESET_CATEGORY_LABELS[c]).join(", ")}
+        </p>
+      ) : null}
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
@@ -127,7 +127,9 @@ export function DangerZoneSection({ siteName }: { siteName: string }) {
         </ul>
       ) : null}
       <div className="space-y-1">
-        <Label htmlFor="reset-confirm">Type the site name ({siteName}) to confirm</Label>
+        <Label htmlFor="reset-confirm">
+          Type <strong>{siteName}</strong> to confirm
+        </Label>
         <Input
           id="reset-confirm"
           value={typed}
