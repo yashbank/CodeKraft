@@ -220,14 +220,13 @@ function useLiveOrderAlerts(): void {
         if (!body.ok || !body.data) return;
         sinceRef.current = body.data.serverTime;
         if (body.data.count === 0) return;
-        const first = body.data.latest[0];
+        const { count, latest } = body.data;
+        const first = latest[0];
         toast(orderAlertText(body.data), {
           action: {
             label: "Open",
             onClick: () =>
-              router.push(
-                body.data!.count === 1 && first ? `/admin/orders/${first.id}` : "/admin/orders",
-              ),
+              router.push(count === 1 && first ? `/admin/orders/${first.id}` : "/admin/orders"),
           },
         });
         router.refresh();

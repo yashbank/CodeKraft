@@ -20,8 +20,11 @@ export interface SettingsExportFile {
 }
 
 export function buildSettingsExport(settings: SiteSettings, now = new Date()): SettingsExportFile {
-  const copy: Record<string, unknown> = { ...settings };
-  for (const k of SECRET_SETTING_KEYS) delete copy[k];
+  const copy: Record<string, unknown> = Object.fromEntries(
+    Object.entries(settings).filter(
+      ([k]) => !(SECRET_SETTING_KEYS as readonly string[]).includes(k),
+    ),
+  );
   return {
     format: SETTINGS_EXPORT_FORMAT,
     version: SETTINGS_EXPORT_VERSION,

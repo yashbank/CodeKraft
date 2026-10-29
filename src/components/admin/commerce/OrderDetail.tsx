@@ -36,7 +36,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/components/ui/_utils";
 import { ActivityTimeline } from "../ActivityTimeline";
 import { ApprovalGateNotice, Banner } from "../Banner";
 import { EntitlementStatusChip } from "@/components/account/EntitlementStatusChip";
