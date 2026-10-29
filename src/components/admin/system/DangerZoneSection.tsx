@@ -70,7 +70,13 @@ export function DangerZoneSection({ siteName }: { siteName: string }) {
     setTyped("");
   }
 
-  const canRequest = categories.length > 0 && backedUp && typed.trim() === siteName && !busy;
+  // Each unmet requirement is listed so a disabled button is never a mystery (the backup is required).
+  const blockers = [
+    categories.length ? null : "Select the data to delete.",
+    backedUp ? null : "Download the backup (JSON) for this selection.",
+    typed.trim() === siteName ? null : "Type the exact site name.",
+  ].filter(Boolean);
+  const canRequest = blockers.length === 0 && !busy;
 
   return (
     <div className="space-y-4">
@@ -145,6 +151,13 @@ export function DangerZoneSection({ siteName }: { siteName: string }) {
       >
         Request site reset
       </Button>
+      {blockers.length ? (
+        <ul data-testid="reset-blockers" className="list-disc pl-5 text-caption text-fg-muted">
+          {blockers.map((b) => (
+            <li key={b}>{b}</li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }
