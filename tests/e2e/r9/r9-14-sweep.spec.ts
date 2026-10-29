@@ -48,7 +48,7 @@ test.beforeAll(async () => {
     );
     return o.id!;
   };
-  F.orderNo = "R914-PENDING";
+  F.orderNo = "CK-ORD-914001";
   F.order = await mkOrder(F.orderNo, "pending_payment");
   if (!(await one(`select 1 x from payments where order_id=$1`, [F.order])))
     await q(
@@ -56,7 +56,7 @@ test.beforeAll(async () => {
        values ($1,'manual_upi','submitted',100000,'INR','R914UTR', now())`,
       [F.order],
     );
-  const paid = await mkOrder("R914-PAID", "paid");
+  const paid = await mkOrder("CK-ORD-914002", "paid");
 
   let inv = await one(`select id from invoices where order_id=$1`, [paid]);
   inv ??= await one(
@@ -278,6 +278,8 @@ async function sweep(
     // Seed rows point at logo files that were never uploaded to local storage (seed artifact).
     if (s === 404 && /^\/api\/files\/public\/seed\//.test(u.pathname)) return;
     if (s === 401 && /\/api\/auth\/get-session/.test(u.pathname)) return;
+    // The session probe is capped at 30/min per IP; a sweep loads far more pages than a person.
+    if (s === 429 && /\/api\/auth\/get-session/.test(u.pathname)) return;
     issues.push(`${s} ${u.pathname}`);
   });
   for (const w of widths) {
