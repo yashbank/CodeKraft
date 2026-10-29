@@ -22,13 +22,7 @@ describe("Chat Integration (P6.6 & P6.7)", () => {
     await truncateAll();
   });
 
-  it("starts conversation requiring verified email and returns root menu", async () => {
-    // Unverified user -> throws EMAIL_UNVERIFIED
-    const unverifiedUser = await createUser({ email: "unverified@test.com", emailVerified: false });
-    await expect(
-      chatService.startConversation({ userId: unverifiedUser.id, roles: ["customer"] } as any, {}),
-    ).rejects.toThrowError(/verify your email/);
-
+  it("starts conversation (R9-13: unverified allowed) and returns root menu", async () => {
     // Verified user -> success
     const verifiedUser = await createUser({ email: "verified@test.com", emailVerified: true });
     const started = await chatService.startConversation(

@@ -356,26 +356,23 @@ test.describe("round 8 end to end", () => {
     });
 
     // ============================== STEP 1 ==============================
-    await step("1 unverified c3: banner, checkout/chat blocked (UI + API)", async () => {
+    await step("1 unverified c3: banner, checkout blocked, chat open (UI + API)", async () => {
       const p = C3p.page;
       await p.goto(`${SITE}/account`);
       await expect(p.getByText(/verify your email/i).first()).toBeVisible();
       await p.goto(`${SITE}/checkout/${offeringId}`);
       await expect(p.getByText(/Verify your email to continue/i)).toBeVisible();
       await expect(p.getByRole("button", { name: /Place order/ })).toHaveCount(0);
-      // chat UI
+      // R9-13: chat is open to unverified users (persisted, AI withheld); the API no longer 403s.
       await p.goto(`${SITE}/account/chat`);
-      await expect(p.getByText(/verify your email/i).first()).toBeVisible();
-      await expect(p.getByRole("button", { name: /Talk to the team/ })).toBeDisabled();
-      // chat API (server-side gate)
-      expectedStatuses = [403];
+      await expect(p.getByRole("button", { name: "Send" })).toBeVisible();
+      expectedStatuses = [404];
       const res = await C3p.ctx.request.post(`${SITE}/api/chat`, {
         data: { conversationId: "00000000-0000-4000-8000-000000000000", content: "hello" },
         headers: { "content-type": "application/json", origin: SITE },
       });
       expectedStatuses = [];
-      expect(res.status(), "chat API for unverified c3").toBe(403);
-      expect(await res.text()).toContain("EMAIL_UNVERIFIED");
+      expect(res.status(), "chat API unknown conversation for unverified c3").toBe(404);
     });
 
     // ============================== STEP 2 ==============================

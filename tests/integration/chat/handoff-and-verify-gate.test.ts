@@ -82,11 +82,7 @@ describe("chat handoff notifications + verified-email gate", () => {
         intent: "order_status",
       }),
     ).rejects.toMatchObject({ code: "EMAIL_UNVERIFIED" });
-    await expect(
-      chatService.escalateConversation(ctx, {
-        conversationId: "00000000-0000-4000-8000-000000000000",
-      }),
-    ).rejects.toMatchObject({ code: "EMAIL_UNVERIFIED" });
+    // R9-13: handoff is deliberately open to unverified customers (see r9-13 test).
   });
 
   it("assertEmailVerified: unverified customer blocked, verified passes, staff exempt", async () => {
