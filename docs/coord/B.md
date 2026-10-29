@@ -38,6 +38,7 @@ Updated: 2026-10-29
 - P9-04 | ready | branch feat/p9-04-ledger-layout (stacked on P9-03, merge P9-03 first) | vitest tests/unit: 1089 pass (partner-balance 4); e2e partners-payouts.spec.ts type-checked, needs purchase-path first
 - P11-01 | ready | branch feat/p11-01-ui-customization | vitest tests/unit: 1086 pass (new ui-style tests); widths checked in the P12-02 browser sweep
 - P11-02 | ready | branch feat/p11-02-hero-node-label | vitest tests/unit/content/hero-node-label.test.tsx: 3 pass; content suites pass
+- P11-03 | ready | branch feat/p11-03-logo-everywhere | vitest tests/unit + static: 1086 pass (logo-everywhere 6, no-hardcoded-brand 2)
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
 - [open] R2 private bucket CORS must allow PUT from the admin origin | P2-01 browser uploads straight to R2 | upload a .dmg on a product version, it completes and appears
@@ -74,3 +75,4 @@ Updated: 2026-10-29
 - 2026-10-29 P9-04: Ledger rebuilt: sticky header, type pills, debit red / credit green, page totals and running net. The table scrolls inside its card (min 640px). Secondary columns show at 1536px and up, otherwise in the expandable row. CSV export still only toasts (P12-04 adds it).
 - 2026-10-29 P11-01: Settings > Theme now has 6 font pairings (next/font, swap, fallback metrics), radius Sharp/Soft/Round, border Subtle/Defined, and background pattern None/Grid/Dots/Noise/Mesh. A live preview card is included. Applied site-wide from the root layout; defaults emit no CSS. Key/value settings only, no migration.
 - 2026-10-29 P11-02: Hero 'Architecture Node' label is editable in Landing > Who we are (max 40 chars; empty hides it). Styles: Default, Pill, Terminal, Outline. Stored in landing_chapters.media JSON, no migration.
+- 2026-10-29 P11-03: Logo now also on admin login (CK monogram removed), LaptopNotice, every email template (the render path never passed the logo), apple icon, and OG/Twitter share images (root, blog, product). 2FA issuer and auth appName use the site name. A static test blocks hard-coded brand paths and the CK monogram.
