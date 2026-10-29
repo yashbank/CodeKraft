@@ -7,7 +7,11 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const refresh = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh }) }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), refresh, replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => "/admin/finance/partners",
+}));
 vi.mock("@/modules/finance/admin-mutations", () => ({
   recordPayout: vi.fn(),
   exportStatement: vi.fn(),

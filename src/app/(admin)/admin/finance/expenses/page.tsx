@@ -1,6 +1,11 @@
 import { ExpensesScreen } from "@/components/admin/finance/ExpensesScreen";
 import { getAdminRequestContext } from "@/lib/authz/admin-request-context";
 import {
+  filterExpenseRows,
+  parseExpenseFilters,
+  type SearchParams,
+} from "@/lib/admin/finance-filters";
+import {
   buildExpenseLedgerIndex,
   buildPartnerNameMaps,
   mapExpenseToRow,
@@ -11,11 +16,28 @@ import { listPartnersQuery } from "@/modules/users/queries";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminExpensesPage() {
+export default async function AdminExpensesPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const filters = parseExpenseFilters(await searchParams);
   const ctx = await getAdminRequestContext();
 
   const [expensesResult, productsResult, partnersResult, expenseLedgerResult] = await Promise.all([
-    listExpensesQuery({ limit: 100 }, ctx),
+    listExpensesQuery(
+      {
+        limit: 100,
+        filters: {
+          ...(filters.from ? { dateFrom: filters.from } : {}),
+          ...(filters.to ? { dateTo: filters.to } : {}),
+          ...(filters.product && filters.product !== "company"
+            ? { productId: filters.product }
+            : {}),
+        },
+      },
+      ctx,
+    ),
     listProductsAdminQuery({ limit: 100 }, ctx).catch(() => ({ ok: false as const })),
     listPartnersQuery({ limit: 100 }, ctx).catch(() => ({ ok: false as const })),
     // Cross-referenced against `expenses.id` via `links.expenseId` to recover the ledger seq(s)
@@ -36,8 +58,9 @@ export default async function AdminExpensesPage() {
     expenseLedgerResult.ok ? expenseLedgerResult.data.items : [],
   );
 
-  const rows = expenses.map((exp) =>
-    mapExpenseToRow(exp, { productNames, userNames, ledgerIndex }),
+  const rows = filterExpenseRows(
+    expenses.map((exp) => mapExpenseToRow(exp, { productNames, userNames, ledgerIndex })),
+    filters,
   );
 
   return (

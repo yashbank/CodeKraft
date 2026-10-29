@@ -34,6 +34,8 @@ import { formatDateTime, inr } from "../format";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
 import { StatTile } from "../StatTile";
+import { useUrlFilters } from "./use-url-filters";
+import type { REPORT_PRESETS } from "@/lib/admin/finance-filters";
 import { SiteName } from "@/components/brand/site-brand";
 import type {
   CustomerCreditRow,
@@ -43,7 +45,13 @@ import type {
   StatementPreview,
 } from "../types";
 
-const PRESETS = ["This month", "Last month", "This FY", "Last FY", "Custom"];
+const PRESETS: Array<{ value: (typeof REPORT_PRESETS)[number]; label: string }> = [
+  { value: "this-month", label: "This month" },
+  { value: "last-month", label: "Last month" },
+  { value: "this-fy", label: "This FY" },
+  { value: "last-fy", label: "Last FY" },
+  { value: "custom", label: "Custom" },
+];
 
 export interface ReportsScreenPartner {
   id: string;
@@ -92,7 +100,8 @@ export function ReportsScreen({
   initialReport = "revenue_by_period",
 }: ReportsScreenProps) {
   const [key, setKey] = React.useState<ReportKey>(initialReport);
-  const [preset, setPreset] = React.useState("This FY");
+  const uf = useUrlFilters();
+  const preset = uf.get("preset") || "this-fy";
   const [stPartnerId, setStPartnerId] = React.useState(partners[0]?.id ?? "");
   const [stPeriod, setStPeriod] = React.useState("last");
   const [stFormat, setStFormat] = React.useState<"pdf" | "csv">("pdf");
@@ -204,29 +213,46 @@ export function ReportsScreen({
                 <div role="group" aria-label="Date range presets" className="flex flex-wrap gap-1">
                   {PRESETS.map((p) => (
                     <Button
-                      key={p}
+                      key={p.value}
                       size="sm"
-                      variant={preset === p ? "primary" : "outline"}
-                      aria-pressed={preset === p}
-                      onClick={() => setPreset(p)}
+                      variant={preset === p.value ? "primary" : "outline"}
+                      aria-pressed={preset === p.value}
+                      onClick={() => uf.set("preset", p.value === "this-fy" ? "all" : p.value)}
                     >
-                      {p}
+                      {p.label}
                     </Button>
                   ))}
                 </div>
-                {preset === "Custom" ? (
+                {preset === "custom" ? (
                   <>
                     <Field id="rp-from" label="From">
-                      <Input id="rp-from" type="date" className="h-8 w-40" />
+                      <Input
+                        id="rp-from"
+                        type="date"
+                        className="h-8 w-40"
+                        value={uf.get("from")}
+                        max={uf.get("to") || undefined}
+                        onChange={(e) => uf.set("from", e.target.value)}
+                      />
                     </Field>
                     <Field id="rp-to" label="To">
-                      <Input id="rp-to" type="date" className="h-8 w-40" />
+                      <Input
+                        id="rp-to"
+                        type="date"
+                        className="h-8 w-40"
+                        value={uf.get("to")}
+                        min={uf.get("from") || undefined}
+                        onChange={(e) => uf.set("to", e.target.value)}
+                      />
                     </Field>
                   </>
                 ) : null}
                 {key === "revenue_by_period" || key === "tax_collected" ? (
                   <Field id="rp-gran" label="Granularity">
-                    <Select defaultValue="month">
+                    <Select
+                      value={uf.get("gran") || "month"}
+                      onValueChange={(v) => uf.set("gran", v)}
+                    >
                       <SelectTrigger id="rp-gran" size="sm" className="w-28">
                         <SelectValue />
                       </SelectTrigger>
@@ -239,12 +265,12 @@ export function ReportsScreen({
                   </Field>
                 ) : null}
                 <Field id="rp-currency" label="Currency">
-                  <Select defaultValue="inr">
+                  <Select value={uf.get("ccy") || "INR"} onValueChange={(v) => uf.set("ccy", v)}>
                     <SelectTrigger id="rp-currency" size="sm" className="w-28">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="inr">INR</SelectItem>
+                      <SelectItem value="INR">INR</SelectItem>
                       <SelectItem value="native">Native</SelectItem>
                     </SelectContent>
                   </Select>
@@ -252,7 +278,10 @@ export function ReportsScreen({
                 {key === "revenue_by_partner" || key === "outstanding_payouts" ? (
                   <Field id="rp-partner" label="Partner">
                     <Select
-                      defaultValue={isSuperAdmin ? "all" : partners[0]?.id}
+                      value={
+                        uf.get("partner") || (isSuperAdmin ? "all" : (partners[0]?.id ?? "all"))
+                      }
+                      onValueChange={(v) => uf.set("partner", v)}
                       disabled={!isSuperAdmin}
                     >
                       <SelectTrigger id="rp-partner" size="sm" className="w-40">
