@@ -35,7 +35,15 @@ import { UrlSelect } from "./UrlSelect";
 import { useUrlFilters, useUrlSearch } from "./use-url-filters";
 import { currencySchema } from "@/modules/_shared/zod";
 import { EmptyState } from "../EmptyState";
-import { drCr, formatDateTime, inr, ledgerTotals, money, timeAgo } from "../format";
+import {
+  drCr,
+  formatDateTime,
+  inr,
+  ledgerTotals,
+  money,
+  runningBalances,
+  timeAgo,
+} from "../format";
 import { MoneyCell } from "../MoneyCell";
 import { PageHeader } from "../PageHeader";
 import { StatTile } from "../StatTile";
@@ -83,6 +91,10 @@ export function LedgerScreen({
   const [expanded, setExpanded] = React.useState<number | null>(null);
   const rows = entries; // filtered server-side by the URL params
   const { credits, debits, net } = ledgerTotals(rows.map((e) => e.amountInr));
+  // Balance in the displayed currency, after each row (rows are newest-first).
+  const balances = runningBalances(
+    rows.map((e) => (currency === "inr" ? e.amountInr : e.amount.amountMinor)),
+  );
 
   return (
     <TooltipProvider>
@@ -242,6 +254,7 @@ export function LedgerScreen({
                   <TableHead>Entry</TableHead>
                   <TableHead className="text-right">Debit</TableHead>
                   <TableHead className="text-right">Credit</TableHead>
+                  <TableHead className="text-right">Balance</TableHead>
                   <TableHead className="hidden 2xl:table-cell">Ccy</TableHead>
                   <TableHead className="hidden text-right 2xl:table-cell">Amount INR</TableHead>
                   <TableHead className="hidden 2xl:table-cell">Created by</TableHead>
@@ -251,7 +264,7 @@ export function LedgerScreen({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((e) => {
+                {rows.map((e, idx) => {
                   const open = expanded === e.seq;
                   const siblings = e.ref
                     ? entries.filter((s) => s.ref === e.ref && s.seq !== e.seq)
@@ -306,6 +319,12 @@ export function LedgerScreen({
                         </TableCell>
                         {amountCell(debit, "text-danger")}
                         {amountCell(credit, "text-success")}
+                        <TableCell
+                          data-testid="ledger-balance"
+                          className="py-1.5 text-right font-mono tnum"
+                        >
+                          {money({ amountMinor: balances[idx] ?? 0, currency: shown.currency })}
+                        </TableCell>
                         <TableCell className="hidden py-1.5 font-mono text-fg-muted 2xl:table-cell">
                           {e.amount.currency}
                         </TableCell>
@@ -339,7 +358,7 @@ export function LedgerScreen({
                       </TableRow>
                       {open ? (
                         <TableRow id={`posting-${e.seq}`} className="h-auto">
-                          <TableCell colSpan={10} className="bg-canvas whitespace-normal">
+                          <TableCell colSpan={11} className="bg-canvas whitespace-normal">
                             <dl className="mb-3 grid grid-cols-2 gap-x-6 gap-y-2 text-body-sm sm:grid-cols-4">
                               <div className="2xl:hidden">
                                 <dt className="text-caption text-fg-muted">Currency</dt>
@@ -450,6 +469,7 @@ export function LedgerScreen({
                   <TableCell className="py-1.5 text-right font-mono tnum text-success">
                     {inr(credits)}
                   </TableCell>
+                  <TableCell />
                   <TableCell colSpan={4} className="hidden 2xl:table-cell" />
                   <TableCell className="2xl:hidden" />
                 </TableRow>
@@ -467,6 +487,7 @@ export function LedgerScreen({
                     {net < 0 ? "−" : ""}
                     {inr(Math.abs(net))}
                   </TableCell>
+                  <TableCell />
                   <TableCell colSpan={4} className="hidden 2xl:table-cell" />
                   <TableCell className="2xl:hidden" />
                 </TableRow>

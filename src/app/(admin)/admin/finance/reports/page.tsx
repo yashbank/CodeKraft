@@ -152,8 +152,10 @@ export default async function AdminReportsPage({
       ? mapCustomerCreditRows(customerCreditsResult.data)
       : [];
 
-  const partnerViews =
-    "data" in partnersResult && partnersResult.ok ? partnersResult.data.items : [];
+  // The signed-in admin's own partner comes first: statements default to "mine", not whoever sorts first.
+  const partnerViews = (
+    "data" in partnersResult && partnersResult.ok ? partnersResult.data.items : []
+  ).sort((a, b) => Number(b.id === ctx.partnerId) - Number(a.id === ctx.partnerId));
   const { byPartnerId: partnerNames } = buildPartnerNameMaps(partnerViews);
   const firstPartner = partnerViews[0];
 

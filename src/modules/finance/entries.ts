@@ -3,7 +3,7 @@
  *
  * Implements `listLedgerEntries` and `getOrderAllocation` with permission and data-scoping checks.
  */
-import { and, desc, asc, eq, gte, inArray, lte, or, sql } from "drizzle-orm";
+import { and, desc, asc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import type { DbOrTx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { assertPermission, can } from "@/lib/authz/assert";
@@ -258,6 +258,18 @@ export async function listLedgerEntries(
   }
   if (input.filters?.partyType) {
     conditions.push(eq(ledgerEntries.partyType, input.filters.partyType));
+  }
+  if (input.filters?.search) {
+    const like = `%${input.filters.search.replace(/[\\%_]/g, "\\$&")}%`;
+    conditions.push(
+      or(
+        ilike(ledgerEntries.memo, like),
+        inArray(
+          ledgerEntries.orderId,
+          db.select({ id: orders.id }).from(orders).where(ilike(orders.orderNo, like)),
+        ),
+      ),
+    );
   }
   if (input.filters?.approvalRequestId) {
     conditions.push(eq(ledgerEntries.approvalRequestId, input.filters.approvalRequestId));

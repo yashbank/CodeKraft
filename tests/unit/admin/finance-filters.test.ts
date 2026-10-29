@@ -45,7 +45,7 @@ describe("ledger params -> query filter", () => {
   });
   it("drops garbage instead of failing validation, and swaps a reversed range", () => {
     expect(
-      parseLedgerFilters({ from: "2026-13-40", type: "nope", partner: "x", ccy: "ZZZ", q: "abc" }),
+      parseLedgerFilters({ from: "2026-13-40", type: "nope", partner: "x", ccy: "ZZZ" }),
     ).toEqual({});
     expect(parseLedgerFilters({ from: "2026-10-31", to: "2026-10-01" })).toEqual({
       dateFrom: "2026-10-01",

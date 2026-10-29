@@ -111,6 +111,8 @@ export const listLedgerEntriesInput = zListParams(
       partnerId: zUuid.optional(),
       productId: zUuid.optional(),
       orderNo: zPublicOrderNo.optional(),
+      /** Free text: matches the memo or (part of) the order number. */
+      search: z.string().trim().min(1).max(100).optional(),
       currency: zCurrency.optional(),
       approvalRequestId: zUuid.optional(),
       ...zDateRange,

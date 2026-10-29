@@ -43,6 +43,17 @@ export function ledgerTotals(amountsMinor: number[]): {
   return { debits, credits, net: credits - debits };
 }
 
+/** Balance after each row for rows listed newest-first: balance[i] = sum of rows i..end (oldest). */
+export function runningBalances(amountsNewestFirst: number[]): number[] {
+  const out: number[] = new Array(amountsNewestFirst.length);
+  let acc = 0;
+  for (let i = amountsNewestFirst.length - 1; i >= 0; i--) {
+    acc += amountsNewestFirst[i] ?? 0;
+    out[i] = acc;
+  }
+  return out;
+}
+
 /** `""` / malformed input (e.g. a never-run index timestamp) renders "—" instead of throwing RangeError. */
 const isValidDate = (iso: string) => !Number.isNaN(new Date(iso).getTime());
 

@@ -70,6 +70,8 @@ export function parseLedgerFilters(
     ...(product ? { productId: product } : {}),
     ...(ccy.success ? { currency: ccy.data } : {}),
     ...(q && ORDER_NO_RE.test(q) ? { orderNo: q } : {}),
+    // Anything that is not a full order number still narrows: memo / partial order number.
+    ...(q && !ORDER_NO_RE.test(q) ? { search: q.slice(0, 100) } : {}),
   };
 }
 
