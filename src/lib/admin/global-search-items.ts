@@ -56,3 +56,23 @@ export function customerItems(
       href: `/admin/customers/${c.user.id}`,
     }));
 }
+
+export function invoiceItems(
+  rows: Array<{
+    invoiceId: string;
+    invoiceNo: string;
+    orderNo: string;
+    buyer: { name: string; email: string };
+  }>,
+  q: string,
+): SearchItem[] {
+  return rows
+    .filter((i) => matchesQuery(q, i.invoiceNo, i.orderNo, i.buyer.name, i.buyer.email))
+    .slice(0, MAX_PER_GROUP)
+    .map((i) => ({
+      group: "Invoices",
+      label: i.invoiceNo,
+      hint: i.buyer.email,
+      href: `/admin/finance/invoices/${i.invoiceId}`,
+    }));
+}
