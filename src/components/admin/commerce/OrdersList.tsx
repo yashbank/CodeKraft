@@ -1,10 +1,10 @@
 "use client";
 
-import { downloadCsv } from "@/lib/admin/csv";
+import { ExportMenu } from "@/components/admin/ExportMenu";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { DownloadIcon, PlusIcon, ShoppingCartIcon } from "lucide-react";
+import { PlusIcon, ShoppingCartIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -265,39 +265,31 @@ export function OrdersList({
           description="Every release-1 order needs a human payment confirmation. The awaiting queue polls every 10 s."
           actions={
             <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  downloadCsv(
-                    "orders.csv",
-                    [
-                      "Order no",
-                      "Date",
-                      "Customer",
-                      "Email",
-                      "Items",
-                      "Total",
-                      "Currency",
-                      "Payment",
-                      "Status",
-                    ],
-                    rows.map((o) => [
-                      o.number,
-                      o.placedAt,
-                      o.customer.name,
-                      o.customer.email,
-                      o.items.join("; "),
-                      (o.total.amountMinor / 100).toFixed(2),
-                      o.total.currency,
-                      o.payment.status,
-                      o.status,
-                    ]),
-                  )
-                }
-              >
-                <DownloadIcon aria-hidden /> Export CSV
-              </Button>
+              <ExportMenu
+                name="orders"
+                columns={[
+                  { header: "Order no" },
+                  { header: "Date", type: "date" },
+                  { header: "Customer" },
+                  { header: "Email" },
+                  { header: "Items" },
+                  { header: "Total", type: "num" },
+                  { header: "Currency" },
+                  { header: "Payment" },
+                  { header: "Status" },
+                ]}
+                rows={rows.map((o) => [
+                  o.number,
+                  o.placedAt,
+                  o.customer.name,
+                  o.customer.email,
+                  o.items.join("; "),
+                  (o.total.amountMinor / 100).toFixed(2),
+                  o.total.currency,
+                  o.payment.status,
+                  o.status,
+                ])}
+              />
               <Button asChild size="sm">
                 <Link href={newOrderHref}>
                   <PlusIcon aria-hidden /> New manual order

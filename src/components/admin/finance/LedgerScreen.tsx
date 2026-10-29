@@ -1,7 +1,7 @@
 "use client";
 
 import { SavedViews } from "../SavedViews";
-import { ExportCsvLink } from "../ExportCsvLink";
+import { ExportMenu } from "../ExportMenu";
 import Link from "next/link";
 import * as React from "react";
 import { ChevronDownIcon, LockIcon, ScrollTextIcon } from "lucide-react";
@@ -108,7 +108,7 @@ export function LedgerScreen({
               Last posted {timeAgo(lastPostedAt, now)}
             </Badge>
             <SavedViews screen="ledger" />
-            <ExportCsvLink kind="ledger" />
+            <ExportMenu kind="ledger" />
           </>
         }
       />

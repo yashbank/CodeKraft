@@ -14,19 +14,3 @@ export function csvLine(cells: readonly unknown[]): string {
 export function toCsv(headers: readonly string[], rows: readonly (readonly unknown[])[]): string {
   return csvLine(headers) + rows.map(csvLine).join("");
 }
-
-/** Browser download of already-filtered rows (the screens that filter client-side). */
-export function downloadCsv(
-  filename: string,
-  headers: readonly string[],
-  rows: readonly (readonly unknown[])[],
-) {
-  const url = URL.createObjectURL(
-    new Blob([`\uFEFF${toCsv(headers, rows)}`], { type: "text/csv" }),
-  );
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
