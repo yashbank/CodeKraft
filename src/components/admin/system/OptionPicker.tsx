@@ -111,7 +111,7 @@ export function OptionPicker({
   const desc = `${options.length} options. Pick one to preview it; save to apply.`;
 
   return (
-    <fieldset className="grid gap-2">
+    <fieldset className="grid min-w-0 gap-2">
       <legend className="text-body-sm mb-1 font-medium">{label}</legend>
       <RadioGroup
         value={value}

@@ -106,6 +106,7 @@ test.describe("R9-10 finance", () => {
   });
 
   test("My share is the signed-in admin's own partner (CEO vs CFO)", async ({ page, browser }) => {
+    test.setTimeout(150_000); // two admin logins (auth limiter waits) plus the count-up settle
     const ceo = await partnerOf(CEO);
     const cfo = await partnerOf(CFO);
     await addEntry(

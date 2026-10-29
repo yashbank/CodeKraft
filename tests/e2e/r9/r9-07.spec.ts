@@ -45,7 +45,12 @@ test.describe("R9-07 admin dashboard", () => {
       .evaluate((el) => getComputedStyle(el).borderTopLeftRadius);
     expect(after).not.toBe(before);
 
-    await atWidths(page, `${ADMIN}/admin/dashboard`, async () => {
+    await atWidths(page, `${ADMIN}/admin/dashboard`, async (w) => {
+      // Below 1024 px the admin shell deliberately shows the laptop notice instead (docs/07 §3.4).
+      if (w < 1024) {
+        await expect(page.getByText(/designed for laptops/i)).toBeVisible();
+        return;
+      }
       await expect(page.locator('section[data-widget="system_health"]')).toBeVisible();
       expect(await page.locator("main").innerText()).not.toMatch(BAD);
     });

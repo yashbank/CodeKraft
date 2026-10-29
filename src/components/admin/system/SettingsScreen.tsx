@@ -806,7 +806,7 @@ export function SettingsScreen({
           Read-only — settings.write is limited to Super Admins.
         </Banner>
       ) : null}
-      <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
         <nav
           aria-label="Settings sections"
           className="rounded-lg border border-border bg-surface p-2"
