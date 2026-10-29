@@ -53,6 +53,7 @@ const EMPTY: DashboardData = {
   chatbotUsage: { platform: 0, platformCap: 0, usersAtCap: 0, perUserCap: 0 },
   catalogStatus: [],
   newCustomers: { count: 0, delta: "No data yet", sparkline: [] },
+  ordersHeatmap: { grid: [], total: 0, max: 0 },
   systemHealth: [],
 };
 

@@ -40,7 +40,7 @@ export interface AdminNotification {
 }
 
 export interface SearchItem {
-  group: "Products" | "Orders" | "Customers" | "Leads" | "Go to" | "Actions";
+  group: "Products" | "Orders" | "Invoices" | "Customers" | "Leads" | "Go to" | "Actions";
   label: string;
   hint?: string;
   href: string;
@@ -1050,7 +1050,8 @@ export type WidgetKey =
   | "chatbot_usage"
   | "catalog_status"
   | "new_customers"
-  | "system_health";
+  | "system_health"
+  | "orders_heatmap";
 
 export interface QueueItem {
   label: string;
@@ -1082,6 +1083,8 @@ export interface DashboardData {
   chatbotUsage: { platform: number; platformCap: number; usersAtCap: number; perUserCap: number };
   catalogStatus: Array<{ status: ProductStatus; count: number }>;
   newCustomers: { count: number; delta: string; sparkline: number[] };
+  /** Orders by weekday (Mon..Sun) x hour over the last 90 days (P14-12a). */
+  ordersHeatmap: { grid: number[][]; total: number; max: number };
   systemHealth: Array<{
     label: string;
     ok: boolean;

@@ -18,6 +18,7 @@
  */
 import type { Currency } from "@/lib/money";
 import type { StatusValue } from "@/lib/status-tone";
+import { humanizeAction } from "@/modules/audit/humanize";
 import type { AuditLogRow } from "@/modules/audit/types";
 import type { LedgerEntryView, OrderAllocationView } from "@/modules/finance/types";
 import type { OrderAdminRow, OrderDetail, OrderPaymentView } from "@/modules/orders/types";
@@ -146,7 +147,7 @@ function mapAuditRowToTimelineEvent(row: AuditLogRow): TimelineEvent {
   return {
     at: row.createdAt,
     actor: role,
-    text: row.action,
+    text: humanizeAction(row.action),
     kind,
   };
 }

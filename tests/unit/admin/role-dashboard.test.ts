@@ -60,7 +60,7 @@ beforeEach(() => {
 
 describe("role widget allow-list (P14-01)", () => {
   it("super_admin gets every widget", () => {
-    expect(allowedWidgetKeys(["super_admin"]).length).toBe(21);
+    expect(allowedWidgetKeys(["super_admin"]).length).toBe(22);
   });
   it("admin and staff get small, scoped sets", () => {
     const admin = allowedWidgetKeys(["admin"]);

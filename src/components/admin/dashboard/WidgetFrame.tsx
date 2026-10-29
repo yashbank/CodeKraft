@@ -2,7 +2,7 @@
 
 import { ArrowDownIcon, ArrowUpIcon, EllipsisIcon, RefreshCwIcon } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +35,7 @@ export function WidgetFrame({
   viewAllHref,
   viewAllLabel,
   styleName,
+  dnd,
   children,
 }: {
   id: string;
@@ -56,6 +57,8 @@ export function WidgetFrame({
   onMoveDown?: () => void;
   viewAllHref?: string;
   viewAllLabel?: string;
+  /** Drag-and-drop handlers (edit mode); the move buttons stay as the keyboard path. */
+  dnd?: HTMLAttributes<HTMLElement>;
   children: ReactNode;
 }) {
   const headingId = `widget-${id}-title`;
@@ -64,6 +67,7 @@ export function WidgetFrame({
       aria-labelledby={headingId}
       data-widget={id}
       data-style={styleName}
+      {...dnd}
       className={cn(
         "flex min-h-[176px] flex-col rounded-lg border border-border bg-surface shadow-1",
         colSpan === 3 && "lg:col-span-3",

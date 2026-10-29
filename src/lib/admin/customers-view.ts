@@ -75,8 +75,10 @@ export function mapCustomerDetail(
 
   const activity: TimelineEvent[] = detail.timeline.map((item) => ({
     at: item.at,
-    actor: detail.user.name,
+    actor: item.kind === "audit" || item.kind === "note" ? "Admin" : detail.user.name,
     text: item.summary,
+    kind:
+      item.kind === "audit" || item.kind === "note" ? ("admin" as const) : ("customer" as const),
   }));
 
   const profile = detail.profile;

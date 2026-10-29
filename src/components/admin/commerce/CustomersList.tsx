@@ -48,6 +48,8 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { reinstateCustomer, suspendCustomer } from "@/modules/users/admin-mutations";
+import { bulkSummary, runBulk } from "@/lib/admin/bulk";
+import { BulkActionBar } from "../BulkActionBar";
 import { NewCustomerDialog } from "./NewCustomerDialog";
 import { AccessDialog } from "../system/AccessDialog";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
@@ -67,7 +69,7 @@ export interface CustomersListProps {
 }
 
 interface StatusDialogState {
-  customer: CustomerRow;
+  customers: CustomerRow[];
   mode: "suspend" | "reinstate";
 }
 
@@ -85,6 +87,23 @@ export function CustomersList({
   const [submitting, setSubmitting] = React.useState(false);
   const [newOpen, setNewOpen] = React.useState(false);
   const [accessFor, setAccessFor] = React.useState<CustomerRow | null>(null);
+  const [selected, setSelected] = React.useState<ReadonlySet<string>>(new Set());
+  const eligible = customers.filter((c) => c.status !== "deleted");
+  const picked = customers.filter((c) => selected.has(c.id));
+  const openBulk = (mode: StatusDialogState["mode"]) => {
+    // Only rows the single-row action would allow: suspend active, reinstate suspended.
+    const targets = picked.filter((c) =>
+      mode === "suspend" ? c.status === "active" : c.status === "suspended",
+    );
+    if (targets.length === 0) {
+      toast.error(
+        `None of the selected customers can be ${mode === "suspend" ? "suspended" : "reinstated"}.`,
+      );
+      return;
+    }
+    setReason("");
+    setStatusDialog({ customers: targets, mode });
+  };
 
   async function confirmStatusChange() {
     if (!statusDialog) return;
@@ -93,20 +112,28 @@ export function CustomersList({
       return;
     }
     setSubmitting(true);
-    const input = { userId: statusDialog.customer.id, reason: reason.trim() };
-    const result =
-      statusDialog.mode === "suspend"
-        ? await suspendCustomer(input)
-        : await reinstateCustomer(input);
+    const run = statusDialog.mode === "suspend" ? suspendCustomer : reinstateCustomer;
+    const result = await runBulk(
+      statusDialog.customers.map((c) => c.id),
+      (userId) => run({ userId, reason: reason.trim() }),
+    ).catch((err: Error) => err);
     setSubmitting(false);
 
-    if (!result.ok) {
-      toast.error(result.error.message);
+    if (result instanceof Error) {
+      toast.error(result.message);
       return;
     }
-    toast.success(
-      `${statusDialog.customer.name} ${statusDialog.mode === "suspend" ? "suspended" : "reinstated"}`,
-    );
+    const verb = statusDialog.mode === "suspend" ? "Suspended" : "Reinstated";
+    if (result.done.length === 0) {
+      // Nothing changed: keep the dialog open so the reason is not lost.
+      toast.error(result.failed[0]?.message ?? "Failed");
+      return;
+    }
+    if (result.failed.length > 0) toast.error(bulkSummary(verb, "customer", result));
+    else if (statusDialog.customers.length === 1)
+      toast.success(`${statusDialog.customers[0]?.name} ${verb.toLowerCase()}`);
+    else toast.success(bulkSummary(verb, "customer", result));
+    setSelected(new Set());
     setStatusDialog(null);
     setReason("");
     router.refresh();
@@ -220,6 +247,14 @@ export function CustomersList({
           </>
         }
       />
+      <BulkActionBar count={selected.size} onClear={() => setSelected(new Set())}>
+        <Button size="sm" variant="secondary" onClick={() => openBulk("suspend")}>
+          Suspend selected
+        </Button>
+        <Button size="sm" variant="secondary" onClick={() => openBulk("reinstate")}>
+          Reinstate selected
+        </Button>
+      </BulkActionBar>
       {customers.length === 0 ? (
         <EmptyState icon={UsersIcon} title="No customers match" />
       ) : (
@@ -228,6 +263,21 @@ export function CustomersList({
             <TableCaption className="sr-only">Customers</TableCaption>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    aria-label="Select all customers"
+                    checked={
+                      eligible.length > 0 && eligible.every((c) => selected.has(c.id))
+                        ? true
+                        : selected.size > 0
+                          ? "indeterminate"
+                          : false
+                    }
+                    onCheckedChange={(v) =>
+                      setSelected(v === true ? new Set(eligible.map((c) => c.id)) : new Set())
+                    }
+                  />
+                </TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Company / country</TableHead>
                 <TableHead>Tags</TableHead>
@@ -244,7 +294,22 @@ export function CustomersList({
             </TableHeader>
             <TableBody>
               {customers.map((c) => (
-                <TableRow key={c.id}>
+                <TableRow key={c.id} data-state={selected.has(c.id) ? "selected" : undefined}>
+                  <TableCell>
+                    <Checkbox
+                      aria-label={`Select ${c.name}`}
+                      disabled={c.status === "deleted"}
+                      checked={selected.has(c.id)}
+                      onCheckedChange={(v) =>
+                        setSelected((p) => {
+                          const n = new Set(p);
+                          if (v === true) n.add(c.id);
+                          else n.delete(c.id);
+                          return n;
+                        })
+                      }
+                    />
+                  </TableCell>
                   <TableCell>
                     <Link
                       href={`${detailHref}/${c.id}`}
@@ -324,7 +389,7 @@ export function CustomersList({
                           onSelect: () => {
                             setReason("");
                             setStatusDialog({
-                              customer: c,
+                              customers: [c],
                               mode: c.status === "suspended" ? "reinstate" : "suspend",
                             });
                           },
@@ -356,7 +421,10 @@ export function CustomersList({
           <DialogHeader>
             <DialogTitle>
               {statusDialog?.mode === "suspend" ? "Suspend" : "Reinstate"}{" "}
-              {statusDialog?.customer.name}?
+              {statusDialog?.customers.length === 1
+                ? statusDialog.customers[0]?.name
+                : `${statusDialog?.customers.length ?? 0} customers`}
+              ?
             </DialogTitle>
             <DialogDescription>
               {statusDialog?.mode === "suspend"

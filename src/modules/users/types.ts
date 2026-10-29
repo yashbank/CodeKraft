@@ -90,7 +90,7 @@ export interface CustomerRow {
 }
 
 export type CustomerTimelineKind =
-  "order" | "payment" | "entitlement" | "query" | "note" | "login" | "status";
+  "order" | "payment" | "entitlement" | "query" | "note" | "login" | "status" | "audit";
 
 export interface CustomerTimelineItem {
   at: string;

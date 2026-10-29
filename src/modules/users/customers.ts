@@ -14,6 +14,8 @@ function getOuterTx(db: DbOrTx): TxCtx | undefined {
 import type { ListResult } from "@/modules/_shared/zod";
 import { sessions, userRoles, users, type User } from "../../../drizzle/schema/auth";
 import { customerProfiles, type CustomerProfile } from "../../../drizzle/schema/users-ext";
+import { auditLogs } from "../../../drizzle/schema/audit";
+import { humanizeAction } from "@/modules/audit/humanize";
 import { orders } from "../../../drizzle/schema/commerce";
 import { entitlements } from "../../../drizzle/schema/delivery";
 import type {
@@ -227,6 +229,21 @@ export async function getCustomer(
       kind: "entitlement",
       summary: `Entitlement granted (${ent.deliveryType}, status: ${ent.status})`,
       ref: { type: "entitlement", id: ent.id },
+    });
+  }
+
+  // Admin-side changes on this account (suspend, notes, resets...) straight from the audit log.
+  const userAudit = await database
+    .select({ at: auditLogs.createdAt, action: auditLogs.action })
+    .from(auditLogs)
+    .where(and(eq(auditLogs.subjectType, "user"), eq(auditLogs.subjectId, row.user.id)))
+    .orderBy(desc(auditLogs.createdAt))
+    .limit(20);
+  for (const a of userAudit) {
+    timeline.push({
+      at: a.at.toISOString(),
+      kind: a.action.includes("notes") ? "note" : "audit",
+      summary: humanizeAction(a.action),
     });
   }
 

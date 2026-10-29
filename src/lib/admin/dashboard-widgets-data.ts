@@ -12,6 +12,7 @@ import { getEnv } from "@/lib/env";
 import { getPrivateBucketName, getStorageDriver } from "@/lib/storage";
 import { runHealthChecks } from "./system-health";
 import type { DashboardData, QueueItem } from "@/components/admin/types";
+import { HEATMAP_DAYS, bucketWeekdayHour, emptyHeatmap } from "@/modules/dashboard-widgets/heatmap";
 
 const n = (v: unknown) => Number(v ?? 0);
 const NO_DATA = "No data yet";
@@ -33,6 +34,16 @@ export function deltaText(current: number, previous: number): string {
   if (diff === 0) return "No change vs previous period";
   return `${diff > 0 ? "+" : "-"}${Math.abs(diff)} vs previous period`;
 }
+
+// shortcut: buckets up to 50k order timestamps in JS, move to a SQL group-by past that volume.
+export const loadOrdersHeatmap = (): Promise<DashboardData["ordersHeatmap"]> =>
+  safe("ordersHeatmap", emptyHeatmap(), async () => {
+    const rows = await db.execute<{ created_at: Date }>(sql`
+      select created_at from orders
+      where created_at >= now() - make_interval(days => ${HEATMAP_DAYS})
+      order by created_at desc limit 50000`);
+    return bucketWeekdayHour([...rows].map((r) => r.created_at));
+  });
 
 export const loadServiceChecklists = (): Promise<QueueItem[]> =>
   safe("serviceChecklists", [], async () => {
