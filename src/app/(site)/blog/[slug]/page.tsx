@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { getSiteShareImages } from "@/lib/site-brand";
+
 import { BlogPostPage } from "@/components/site/BlogPostPage";
 import { toBlogPost, toBlogTeaser } from "@/lib/blog-view";
 import { anonymousContext } from "@/lib/authz/context";
@@ -26,7 +28,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: `${title} — Blog`,
     description,
-    openGraph: { title, description },
+    openGraph: { title, description, images: await getSiteShareImages() },
   };
 }
 

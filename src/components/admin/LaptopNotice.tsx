@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LaptopIcon } from "lucide-react";
 
+import { SiteLogo } from "@/components/brand/site-brand";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -27,6 +28,7 @@ export function LaptopNotice({
       aria-labelledby="laptop-notice-title"
       className="mx-auto max-w-md space-y-4 py-10 text-center"
     >
+      <SiteLogo className="mx-auto h-8" />
       <LaptopIcon aria-hidden className="mx-auto size-10 text-fg-subtle" />
       <Heading id="laptop-notice-title" className="text-h2">
         {title}
