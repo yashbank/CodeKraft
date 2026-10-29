@@ -36,6 +36,9 @@ export async function q<T = Record<string, unknown>>(
   return (await client.unsafe(text, params as never[])) as unknown as T[];
 }
 
+/** Storage-state file written by r9-auth.setup.ts (one login per role per run). */
+export const authFile = (role: Role): string => `test-results/r9-auth/${role}.json`;
+
 /** Base URL for a role's home host: customers use the site, the rest the admin host. */
 export const baseFor = (role: Role): string => (role === "customer" ? SITE : ADMIN);
 
