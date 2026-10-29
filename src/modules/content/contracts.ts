@@ -64,6 +64,8 @@ export const upsertLandingChapterSchema = z.strictObject({
     posterMediaId: uuidSchema.optional(),
     videoEmbedUrl: embedUrlSchema.optional(),
     sceneVariant: text(40).optional(),
+    nodeLabel: z.string().trim().max(40).optional(),
+    nodeStyle: z.enum(["pill", "terminal", "outline"]).optional(),
   }),
   cta: z.strictObject({ primary: ctaLinkSchema, secondary: ctaLinkSchema.optional() }),
   position: positionSchema,

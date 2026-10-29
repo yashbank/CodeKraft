@@ -37,6 +37,9 @@ export interface LandingChapterMedia {
   posterMediaId?: string;
   videoEmbedUrl?: string;
   sceneVariant?: string;
+  /** Hero image-panel label; undefined = default text, "" = hidden. */
+  nodeLabel?: string;
+  nodeStyle?: "pill" | "terminal" | "outline";
 }
 
 export interface CtaLink {

@@ -818,6 +818,8 @@ export interface LandingChapter {
   published: boolean;
   poster?: string;
   posterMediaId?: string;
+  nodeLabel?: string;
+  nodeStyle?: "pill" | "terminal" | "outline";
   ctaPrimary?: { label: string; target: string };
   ctaSecondary?: { label: string; target: string };
 }

@@ -227,6 +227,9 @@ export interface LandingContent {
     /** Admin-uploaded hero poster (Landing editor, "Who we are" chapter). Falls back to the
      * built-in architecture render when none is set. */
     poster: { url: string; alt: string } | null;
+    /** Hero panel label: undefined = default text, "" = hidden. */
+    nodeLabel?: string;
+    nodeStyle?: "pill" | "terminal" | "outline";
   };
   build: LandingChapterCopy;
   sell: LandingChapterCopy;

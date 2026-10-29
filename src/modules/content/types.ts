@@ -63,7 +63,13 @@ export interface LandingChapterView {
   html: string;
   /** Plain-text rendering of `html`, for surfaces (Chapter.tsx) that show body copy as plain text. */
   plainBody: string;
-  media: { poster: ImageRef | null; videoEmbedUrl: string | null; sceneVariant: string | null };
+  media: {
+    poster: ImageRef | null;
+    videoEmbedUrl: string | null;
+    sceneVariant: string | null;
+    nodeLabel: string | null;
+    nodeStyle: "pill" | "terminal" | "outline" | null;
+  };
   cta: LandingChapterCta | null;
   position: number;
 }
