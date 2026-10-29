@@ -10,12 +10,14 @@ import { mapNotificationItem } from "@/lib/admin/notifications-view";
 import { Banner } from "@/components/admin/Banner";
 import { emailSenderProblem } from "@/lib/email/transport";
 import { getEnv } from "@/lib/env";
+import { enforcePasswordChange } from "@/lib/authz/must-change";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminAppLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session) redirect("/auth/login?next=/dashboard");
+  enforcePasswordChange(session);
 
   const roles = await loadRoles(session.user.id);
   if (!hasAdminClassRole(roles)) redirect("/auth/login?next=/dashboard");

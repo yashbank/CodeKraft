@@ -164,6 +164,9 @@ export function afterHook(host: AuthHost) {
     }
 
     const actorId = ctx.context.session?.user.id ?? null;
+    // Better Auth's own change-password must clear the forced-change flag too (success only).
+    if (ctx.path === "/change-password" && actorId && !(ctx.context.returned instanceof Error))
+      await getDb().update(users).set({ mustChangePassword: false }).where(eq(users.id, actorId));
     const AUDITED: Record<string, string> = {
       "/sign-out": "auth.sign_out",
       "/sign-up/email": "auth.sign_up",

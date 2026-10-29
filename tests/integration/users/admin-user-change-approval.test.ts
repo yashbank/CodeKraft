@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { buildContext } from "@/lib/authz/context";
 import { usersService } from "@/modules/users/service";
 import { approvalsService } from "@/modules/approvals/service";
-import { userRoles, users, verifications } from "../../../drizzle/schema/auth";
+import { userRoles, userTokens, users } from "../../../drizzle/schema/auth";
 import { partners } from "../../../drizzle/schema/users-ext";
 import { createAdmin, createSuperAdmin } from "../../factories/users";
 import { getTestDb, truncateAll } from "../../setup/db";
@@ -75,14 +75,12 @@ describe("admin.user_change dual-approval workflow (API-ADM-11, MASTER_SPEC §7,
     expect(partner!.displayName).toBe("Acme Partner Studios");
     expect(partner!.active).toBe(true);
 
-    // 6. R8-09: the invitee gets a set-password link (Better Auth reset-password token) -- before
+    // 6. R8-09: the invitee gets a set-password link (single-use user_tokens invite, hash only) -- before
     // this, the password-less user was created and nothing was sent, so they could never sign in.
-    const tokens = await db
-      .select()
-      .from(verifications)
-      .where(eq(verifications.value, invitedUser!.id));
+    const tokens = await db.select().from(userTokens).where(eq(userTokens.userId, invitedUser!.id));
     expect(tokens).toHaveLength(1);
-    expect(tokens[0]!.identifier).toMatch(/^reset-password:/);
+    expect(tokens[0]!.purpose).toBe("invite");
+    expect(tokens[0]!.tokenHash).toMatch(/^[0-9a-f]{64}$/);
     expect(tokens[0]!.expiresAt.getTime()).toBeGreaterThan(Date.now() + 6 * 24 * 3600 * 1000);
   });
 
