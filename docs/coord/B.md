@@ -45,6 +45,7 @@ Updated: 2026-10-29
 - P12-01 | ready | branch feat/p12-01-interactive-widgets | stacked on P9-04; vitest tests/unit+static: 1102 pass
 - P12-03 | ready | branch feat/p12-03-seo | stacked on P11-03; vitest tests/unit+static: 1095 pass (seo 9)
 - P12-04 | ready | branch feat/p12-04-admin-extras | stacked on P9-04; vitest tests/unit+static: 1106 pass
+- P12-02 | doing | branch feat/p12-02-dead-button-audit (based on a local merge of ALL P7-P12 branches; merge it LAST)
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
 - [open] R2 private bucket CORS must allow PUT from the admin origin | P2-01 browser uploads straight to R2 | upload a .dmg on a product version, it completes and appears
