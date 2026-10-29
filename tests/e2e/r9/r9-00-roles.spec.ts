@@ -12,6 +12,7 @@ import {
   baseFor,
   expectNoOverflow,
   loginAs,
+  q,
   trackIssues,
 } from "./helpers";
 import type { Role } from "./helpers";
@@ -225,9 +226,20 @@ test.describe("catalog and checkout", () => {
   test("[customer] /checkout - buy link from a product opens checkout", async ({ page }) => {
     await login(page, "customer");
     const t = trackIssues(page);
-    await page.goto(`${SITE}/products/tradeflow`);
+    // A product whose default one-time offering the buyer does not already own (earlier specs may
+    // have bought tradeflow, which swaps "Buy now" for "You own this").
+    const [pick] = await q<{ slug: string }>(
+      `select p.slug from products p join offerings o on o.product_id = p.id and o.is_default
+       where p.status = 'published' and o.status = 'active' and o.purchase_model = 'one_time'
+         and not exists (select 1 from entitlements e join users u on u.id = e.user_id
+                         where e.offering_id = o.id and u.email = $1 and e.status = 'active')
+       order by (p.slug = 'tradeflow') desc, p.slug limit 1`,
+      [ROLE_EMAILS.customer],
+    );
+    const slug = pick?.slug ?? "tradeflow";
+    await page.goto(`${SITE}/products/${slug}`);
     const buy = page.locator('a[href*="/checkout/"]').first();
-    await expect(buy, "no checkout link on /products/tradeflow").toBeVisible();
+    await expect(buy, `no checkout link on /products/${slug}`).toBeVisible();
     await buy.click();
     await expect(page).toHaveURL(/\/checkout\//);
     await expect(page.locator("h1").first()).toBeVisible();

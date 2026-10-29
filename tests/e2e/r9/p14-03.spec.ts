@@ -95,8 +95,11 @@ for (const width of WIDTHS) {
     // Page is clickable: the bell reopens, an outside click closes it.
     await bell.click();
     await expect(page.locator('[data-slot="popover-content"]')).toBeVisible();
-    await page.mouse.click(2, 880);
-    await expect(page.locator('[data-slot="popover-content"]')).toHaveCount(0);
+    // Radix arms its outside-click listener one tick after opening, so retry a click that races it.
+    await expect(async () => {
+      await page.mouse.click(2, 880);
+      await expect(page.locator('[data-slot="popover-content"]')).toHaveCount(0, { timeout: 1000 });
+    }).toPass({ timeout: 10_000 });
 
     // Later visits never resurface the read item as unread.
     for (const path of ["/account", "/account/notifications"]) {
