@@ -50,13 +50,6 @@ export async function recordExpense(
       }
     }
 
-    // Lock the FX rate on the row (live -> stored -> manual; never silently 1:1)
-    const lock = await resolveExpenseRate({
-      currency: input.currency,
-      db: tx,
-      manualRate: input.manualRate,
-    });
-
     // 1. Insert expenses row
     const [exp] = await tx
       .insert(expenses)
@@ -105,6 +98,14 @@ export async function recordExpense(
       entryIds: postResult.entryIds,
     };
   };
+
+  // Lock the FX rate (live -> stored -> manual; never silently 1:1) before opening the transaction,
+  // so a slow FX provider never holds a DB transaction open.
+  const lock = await resolveExpenseRate({
+    currency: input.currency,
+    db: outerTx ?? db,
+    manualRate: input.manualRate,
+  });
 
   return outerTx ? runner(outerTx) : withTx(runner);
 }
