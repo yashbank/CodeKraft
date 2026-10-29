@@ -7,6 +7,9 @@ import { getSession } from "@/modules/auth/service";
 import { loadRoles } from "@/modules/auth/roles-port";
 import { buildContext, type RequestContext } from "./context";
 import { assertNoPasswordChange } from "./must-change";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { partners } from "../../../drizzle/schema/users-ext";
 import { AppError, ErrorCode } from "@/lib/errors";
 
 export async function getAdminRequestContext(): Promise<RequestContext> {
@@ -15,9 +18,17 @@ export async function getAdminRequestContext(): Promise<RequestContext> {
   assertNoPasswordChange(session);
 
   const roles = await loadRoles(session.user.id);
+  // The signed-in admin's own partner row: "My share", own-ledger scoping and statements all
+  // key off ctx.partnerId; without it every admin looked partner-less (share 0, wrong scope).
+  const [partner] = await db
+    .select({ id: partners.id })
+    .from(partners)
+    .where(eq(partners.userId, session.user.id))
+    .limit(1);
   return buildContext({
     user: { id: session.user.id },
     session: { id: session.session.id },
     roles,
+    partnerId: partner?.id,
   });
 }
