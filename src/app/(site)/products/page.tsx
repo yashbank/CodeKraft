@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { pageMetadata } from "@/lib/seo";
+
 import { anonymousContext } from "@/lib/authz/context";
 import { getSession } from "@/modules/auth/service";
 import { toProductSummary } from "@/lib/product-summary";
@@ -14,11 +16,20 @@ import type { CategoryNode as CatalogCategoryNode } from "@/modules/catalog/type
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Products & Software Solutions",
-  description:
-    "Explore our ready-to-deploy SaaS applications, business tools, and developer platforms. Built with modern architecture and complete ownership.",
-};
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}): Promise<Metadata> {
+  const { q } = await searchParams;
+  return pageMetadata({
+    path: "/products",
+    title: "Products & Software Solutions",
+    description:
+      "Explore our ready-to-deploy SaaS applications, business tools, and developer platforms. Built with modern architecture and complete ownership.",
+    noindex: Boolean(q),
+  });
+}
 
 function toCategoryTree(nodes: CatalogCategoryNode[]): CategoryNode[] {
   return nodes.map((n) => ({

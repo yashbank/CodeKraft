@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { JsonLd } from "@/components/seo/JsonLd";
+import { articleLd, breadcrumbLd, NOINDEX, pageMetadata } from "@/lib/seo";
 import { anonymousContext } from "@/lib/authz/context";
 import { toneFromSlug } from "@/lib/media-tone";
 import {
@@ -18,12 +20,14 @@ export async function generateMetadata(props: {
 }): Promise<Metadata> {
   const params = await props.params;
   const result = await getCaseStudyBySlugQuery({ slug: params.slug }, anonymousContext());
-  if (!result.ok) return { title: "Project Not Found" };
+  if (!result.ok) return { title: "Project Not Found", robots: NOINDEX };
 
-  return {
-    title: `${result.data.title} — Case Study`,
-    description: result.data.seo.description || result.data.resultHighlight || undefined,
-  };
+  return pageMetadata({
+    path: `/projects/${params.slug}`,
+    title: result.data.seo.title || result.data.title,
+    description: result.data.seo.description || result.data.resultHighlight,
+    type: "article",
+  });
 }
 
 export default async function ProjectDetailRoute(props: { params: Promise<{ slug: string }> }) {
@@ -78,11 +82,29 @@ export default async function ProjectDetailRoute(props: { params: Promise<{ slug
     currentIndex >= 0 && currentIndex < items.length - 1 ? items[currentIndex + 1] : undefined;
 
   return (
-    <CaseStudyDetailPage
-      study={study}
-      serviceOptions={serviceOptions}
-      prev={prevItem ? { title: prevItem.title, href: `/projects/${prevItem.slug}` } : undefined}
-      next={nextItem ? { title: nextItem.title, href: `/projects/${nextItem.slug}` } : undefined}
-    />
+    <>
+      <JsonLd
+        data={[
+          articleLd({
+            type: "Article",
+            path: `/projects/${s.slug}`,
+            title: s.title,
+            description: s.seo.description || s.resultHighlight,
+            image: s.cover?.url,
+            datePublished: s.publishedAt,
+          }),
+          breadcrumbLd([
+            { name: "Projects", path: "/projects" },
+            { name: s.title, path: `/projects/${s.slug}` },
+          ]),
+        ]}
+      />
+      <CaseStudyDetailPage
+        study={study}
+        serviceOptions={serviceOptions}
+        prev={prevItem ? { title: prevItem.title, href: `/projects/${prevItem.slug}` } : undefined}
+        next={nextItem ? { title: nextItem.title, href: `/projects/${nextItem.slug}` } : undefined}
+      />
+    </>
   );
 }
