@@ -56,7 +56,10 @@ class FakeS3 {
     };
     const k = `${i.Bucket}/${i.Key}`;
     const missing = () =>
-      Object.assign(new Error("NoSuchKey"), { name: "NotFound", $metadata: { httpStatusCode: 404 } });
+      Object.assign(new Error("NoSuchKey"), {
+        name: "NotFound",
+        $metadata: { httpStatusCode: 404 },
+      });
     switch (cmd.constructor.name) {
       case "PutObjectCommand":
         this.store.set(k, {
@@ -113,9 +116,15 @@ const DRIVERS: Array<[string, () => StorageDriver]> = [
 
 /* ---- fixtures ---- */
 
-const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d, 1, 2, 3, 4]);
+const PNG = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d, 1, 2, 3, 4,
+]);
 const JPG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49, 0x46, 0, 1]);
-const WEBP = Buffer.concat([Buffer.from("RIFF"), Buffer.from([4, 0, 0, 0]), Buffer.from("WEBPVP8 ")]);
+const WEBP = Buffer.concat([
+  Buffer.from("RIFF"),
+  Buffer.from([4, 0, 0, 0]),
+  Buffer.from("WEBPVP8 "),
+]);
 const MP4 = Buffer.concat([Buffer.from([0, 0, 0, 0x18]), Buffer.from("ftypisom"), Buffer.alloc(8)]);
 const PDF = Buffer.from("%PDF-1.4\n%fake\n");
 const ZIP = Buffer.from([0x50, 0x4b, 0x03, 0x04, 1, 2, 3, 4]);
@@ -138,8 +147,20 @@ const PUBLIC_KINDS: Kind[] = [
   { purpose: "avatar", file: "me.png", mime: "image/png", bytes: PNG, admin: false },
 ];
 const PRIVATE_KINDS: Kind[] = [
-  { purpose: "product_presentation", file: "p.pdf", mime: "application/pdf", bytes: PDF, admin: true },
-  { purpose: "product_attachment", file: "a.zip", mime: "application/zip", bytes: ZIP, admin: true },
+  {
+    purpose: "product_presentation",
+    file: "p.pdf",
+    mime: "application/pdf",
+    bytes: PDF,
+    admin: true,
+  },
+  {
+    purpose: "product_attachment",
+    file: "a.zip",
+    mime: "application/zip",
+    bytes: ZIP,
+    admin: true,
+  },
   { purpose: "release_file", file: "app.zip", mime: "application/zip", bytes: ZIP, admin: true },
   { purpose: "expense_receipt", file: "r.pdf", mime: "application/pdf", bytes: PDF, admin: true },
   { purpose: "query_attachment", file: "q.txt", mime: "text/plain", bytes: TXT, admin: false },
@@ -153,7 +174,8 @@ const json = (body: unknown, headers: Record<string, string> = {}) =>
     headers: { "content-type": "application/json", ...headers },
     body: JSON.stringify(body),
   });
-const get = (headers: Record<string, string> = {}) => new Request("http://localhost/x", { headers });
+const get = (headers: Record<string, string> = {}) =>
+  new Request("http://localhost/x", { headers });
 const pubPath = (key: string) => ({ params: Promise.resolve({ path: key.split("/") }) });
 
 describe.each(DRIVERS)("P15-01 media parity [%s driver]", (_name, makeDriver) => {
@@ -186,7 +208,10 @@ describe.each(DRIVERS)("P15-01 media parity [%s driver]", (_name, makeDriver) =>
   /** Real browser flow: intent -> PUT to the minted URL -> complete. */
   async function upload(k: Kind, as: { id: string }, roles = ADMIN_ROLE) {
     const ires = await intentPOST(
-      json({ purpose: k.purpose, filename: k.file, mime: k.mime, sizeBytes: k.bytes.length }, H(as, roles)),
+      json(
+        { purpose: k.purpose, filename: k.file, mime: k.mime, sizeBytes: k.bytes.length },
+        H(as, roles),
+      ),
     );
     expect(ires.status).toBe(200);
     const { data: intent } = (await ires.json()) as {
@@ -282,7 +307,8 @@ describe.each(DRIVERS)("P15-01 media parity [%s driver]", (_name, makeDriver) =>
         loc.searchParams.set("sig", "00".repeat(32));
         expect((await localGET(new Request(loc))).status).toBe(403);
       }
-      if (driver instanceof S3StorageDriver) expect(loc.searchParams.get("X-Amz-Expires")).toBe("300");
+      if (driver instanceof S3StorageDriver)
+        expect(loc.searchParams.get("X-Amz-Expires")).toBe("300");
 
       const db = (await import("@/lib/db")).db;
       await db.transaction((tx) =>
@@ -307,10 +333,18 @@ describe.each(DRIVERS)("P15-01 media parity [%s driver]", (_name, makeDriver) =>
 
   it("rejects upload whose bytes do not match the declared mime (nothing registered)", async () => {
     const ires = await intentPOST(
-      json({ purpose: "product_image", filename: "x.png", mime: "image/png", sizeBytes: 12 }, H(admin, ADMIN_ROLE)),
+      json(
+        { purpose: "product_image", filename: "x.png", mime: "image/png", sizeBytes: 12 },
+        H(admin, ADMIN_ROLE),
+      ),
     );
     const { data } = (await ires.json()) as { data: { intentId: string; objectKey: string } };
-    await driver.putObject(getPublicBucketName(), data.objectKey, Buffer.from("<html>hi</html>"), "image/png");
+    await driver.putObject(
+      getPublicBucketName(),
+      data.objectKey,
+      Buffer.from("<html>hi</html>"),
+      "image/png",
+    );
     const c = await completePOST(json({}, H(admin, ADMIN_ROLE)), {
       params: Promise.resolve({ id: data.intentId }),
     });
@@ -349,7 +383,9 @@ describe.each(DRIVERS)("P15-01 media parity [%s driver]", (_name, makeDriver) =>
     expect(anon.status).toBe(200);
     expect(anon.headers.get("content-type")).toBe("application/pdf");
     expect(anon.headers.get("cache-control")).toMatch(/^private/);
-    expect((await productMediaGET(get(), { params: Promise.resolve({ mediaId: "nope" }) })).status).toBe(404);
+    expect(
+      (await productMediaGET(get(), { params: Promise.resolve({ mediaId: "nope" }) })).status,
+    ).toBe(404);
     void products;
   });
 
@@ -361,11 +397,19 @@ describe.each(DRIVERS)("P15-01 media parity [%s driver]", (_name, makeDriver) =>
     const ctx = buildContext({ user: admin, session: { id: "s" }, roles: [ADMIN_ROLE] });
     await expect(
       mediaService.attachProductMedia(ctx, {
-        productId: product.id, kind: "image", mediaId: priv.mediaId, alt: "x", position: 0,
+        productId: product.id,
+        kind: "image",
+        mediaId: priv.mediaId,
+        alt: "x",
+        position: 0,
       }),
     ).rejects.toThrow(/public/);
     const res = await mediaService.attachProductMedia(ctx, {
-      productId: product.id, kind: "image", mediaId: pubImg.mediaId, alt: "x", position: 0,
+      productId: product.id,
+      kind: "image",
+      mediaId: pubImg.mediaId,
+      alt: "x",
+      position: 0,
     });
     expect(res.productMedia[0]?.url).toContain(`/api/files/public/${pubImg.objectKey}`);
     void db;
@@ -376,14 +420,20 @@ describe.each(DRIVERS)("P15-01 media parity [%s driver]", (_name, makeDriver) =>
     const db = (await import("@/lib/db")).db;
     const rel = await upload(PRIVATE_KINDS[2]!, admin);
     const product = await createProduct({ createdBy: admin.id });
-    await db.insert(releaseFiles).values({ productId: product.id, version: "1.0.0", mediaId: rel.mediaId });
+    await db
+      .insert(releaseFiles)
+      .values({ productId: product.id, version: "1.0.0", mediaId: rel.mediaId });
     const offering = await createOffering({
       productId: product.id,
       deliveryType: "download",
       deliveryConfig: { downloadCap: 5, updatePolicy: "all_free" },
     });
     const ent = await createEntitlement({
-      offering, userId: customer.id, deliveryType: "download", downloadCap: 5, status: "active",
+      offering,
+      userId: customer.id,
+      deliveryType: "download",
+      downloadCap: 5,
+      status: "active",
     });
     const ctx = { params: Promise.resolve({ entitlementId: ent.id, mediaId: rel.mediaId }) };
 
@@ -393,17 +443,33 @@ describe.each(DRIVERS)("P15-01 media parity [%s driver]", (_name, makeDriver) =>
     expect(ok.status).toBe(302);
     expect(ok.headers.get("location")).toBeTruthy();
     if (driver instanceof LocalFsStorageDriver) {
-      const body = await localGET(new Request(new URL(ok.headers.get("location")!, "http://localhost:3000")));
+      const body = await localGET(
+        new Request(new URL(ok.headers.get("location")!, "http://localhost:3000")),
+      );
       expect(Buffer.from(await body.arrayBuffer()).equals(ZIP)).toBe(true);
     }
   });
 
   /* ---------------- documents bucket (invoice / statement PDFs) ---------------- */
   it("documents-bucket objects (invoice PDFs) are never reachable through the public proxy", async () => {
-    await driver.putObject(getDocumentsBucketName(), "invoices/2026/INV-1.pdf", PDF, "application/pdf");
-    await driver.putObject(getPrivateBucketName(), "invoices/2026/INV-1.pdf", PDF, "application/pdf");
+    await driver.putObject(
+      getDocumentsBucketName(),
+      "invoices/2026/INV-1.pdf",
+      PDF,
+      "application/pdf",
+    );
+    await driver.putObject(
+      getPrivateBucketName(),
+      "invoices/2026/INV-1.pdf",
+      PDF,
+      "application/pdf",
+    );
     expect((await publicGET(get(), pubPath("invoices/2026/INV-1.pdf"))).status).toBe(404);
-    const url = await driver.createPresignedGet(getDocumentsBucketName(), "invoices/2026/INV-1.pdf", 300);
+    const url = await driver.createPresignedGet(
+      getDocumentsBucketName(),
+      "invoices/2026/INV-1.pdf",
+      300,
+    );
     expect(url).toContain("invoices");
   });
 
@@ -412,7 +478,9 @@ describe.each(DRIVERS)("P15-01 media parity [%s driver]", (_name, makeDriver) =>
     const forged = "http://localhost/api/files/local?bucket=b&key=k&exp=9999999999999&sig=00";
     const status = (await localPUT(new Request(forged, { method: "PUT", body: "x" }))).status;
     expect(status).toBe(driver instanceof LocalFsStorageDriver ? 403 : 404);
-    expect((await localGET(new Request(forged))).status).toBe(driver instanceof LocalFsStorageDriver ? 403 : 404);
+    expect((await localGET(new Request(forged))).status).toBe(
+      driver instanceof LocalFsStorageDriver ? 403 : 404,
+    );
   });
 });
 
@@ -430,7 +498,10 @@ describe.each(DRIVERS)("P15-01 storage driver contract [%s]", (_n, makeDriver) =
   it("put -> head -> get -> range -> replace -> delete -> deleteObjects", async () => {
     const d = makeDriver();
     await d.putObject("b", "media/a.bin", Buffer.from([1, 2, 3, 4]), "image/png");
-    expect(await d.headObject("b", "media/a.bin")).toMatchObject({ contentLength: 4, contentType: "image/png" });
+    expect(await d.headObject("b", "media/a.bin")).toMatchObject({
+      contentLength: 4,
+      contentType: "image/png",
+    });
     expect([...(await d.getObjectRange("b", "media/a.bin", 1, 2))]).toEqual([2, 3]);
     await d.putObject("b", "media/a.bin", "xyz", "text/plain");
     const got = await d.getObject("b", "media/a.bin");

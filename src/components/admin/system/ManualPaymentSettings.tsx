@@ -13,8 +13,8 @@ import { Banner } from "../Banner";
 import { Field } from "../RichTextField";
 import type { SettingsData } from "../types";
 
-/** Keep in step with `UPI_QR_IMAGE_MAX_CHARS` (base64 inflates ~4/3). */
-const QR_MAX_BYTES = 220 * 1024;
+/** Keep in step with the `payment_qr` rule in `UPLOAD_RULES`. */
+const QR_MAX_BYTES = 1024 * 1024;
 const QR_MIMES = ["image/png", "image/jpeg", "image/webp"];
 
 type Payments = SettingsData["payments"];
@@ -34,15 +34,6 @@ const FIELD_IDS: Record<string, string> = {
   upiVpa: "st-vpa",
   bankDetails: "st-acct-name",
 };
-
-function readAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result));
-    r.onerror = () => reject(r.error ?? new Error("Could not read the file"));
-    r.readAsDataURL(file);
-  });
-}
 
 /**
  * R8-01 — the UPI + bank transfer details customers see at checkout and on their order page.
@@ -64,6 +55,7 @@ export function ManualPaymentSettings({ payments: p, ro }: { payments: Payments;
   const [branch, setBranch] = React.useState(p.branch ?? "");
   const [swift, setSwift] = React.useState(p.swift ?? "");
   const [saving, setSaving] = React.useState(false);
+  const [uploadingQr, setUploadingQr] = React.useState(false);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const fileRef = React.useRef<HTMLInputElement>(null);
 
@@ -77,14 +69,20 @@ export function ManualPaymentSettings({ payments: p, ro }: { payments: Payments;
       return;
     }
     if (file.size > QR_MAX_BYTES) {
-      setErrors((e) => ({ ...e, "st-qr": "Image is too large — keep it under 220 KB." }));
+      setErrors((e) => ({ ...e, "st-qr": "Image is too large — keep it under 1 MB." }));
       return;
     }
+    setUploadingQr(true);
     try {
-      setQr(await readAsDataUrl(file));
+      const { uploadMediaFile } = await import("@/lib/admin/media-upload");
+      const up = await uploadMediaFile(file, "payment_qr");
+      if (!up.url) throw new Error("Upload finished without a public URL");
+      setQr(up.url);
       setErrors(({ "st-qr": _drop, ...rest }) => rest);
     } catch (err) {
       setErrors((e) => ({ ...e, "st-qr": (err as Error).message }));
+    } finally {
+      setUploadingQr(false);
     }
   }
 
@@ -203,7 +201,7 @@ export function ManualPaymentSettings({ payments: p, ro }: { payments: Payments;
             <span className="text-body-sm font-semibold">Preview</span>
             {qr ? (
               <div className="space-y-2">
-                {/* eslint-disable-next-line @next/next/no-img-element -- inline data URL */}
+                {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded media URL */}
                 <img
                   src={qr}
                   alt="Uploaded UPI QR code"
@@ -310,7 +308,13 @@ export function ManualPaymentSettings({ payments: p, ro }: { payments: Payments;
       ) : null}
 
       <div className="flex justify-end">
-        <Button type="button" size="sm" disabled={ro} loading={saving} onClick={() => void save()}>
+        <Button
+          type="button"
+          size="sm"
+          disabled={ro || uploadingQr}
+          loading={saving}
+          onClick={() => void save()}
+        >
           Save payment details
         </Button>
       </div>
