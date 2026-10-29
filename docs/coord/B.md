@@ -25,7 +25,7 @@ Updated: 2026-10-29
 - P6-05 | ready | branch feat/p6-05-reset-site-data | MIGRATION 0006 (ALTER TYPE approval_type ADD VALUE site.reset) | vitest tests/unit/settings: 41 pass; FK order checked against migrated schema (throwaway local PG): all categories OK
 - P6-03 | ready | branch feat/p6-03-invoice-output (stacked on P6-02, merge P6-02 first) | vitest tests/unit/invoices + pdf: 21 pass
 - P6-04 | ready | branch feat/p6-04-ui-sweep (contains merged P6-01/02/03/05; merge it LAST) | e2e tests/e2e/flows/ui-sweep.spec.ts 6/6 pass (--workers=1); vitest tests/unit/site: 46 pass
-- P7-01 | doing | branch feat/p7-01-reset-ui-fix
+- P7-01 | ready | branch feat/p7-01-reset-ui-fix | vitest tests/unit/admin/danger-zone.test.tsx: 2 pass; e2e reset-site-data-ui.spec.ts type-checked only (never clicks Request)
 - P7-02 | ready | branch feat/p7-02-rounded-logos | vitest logo-radius + logo-strip + site-logo: 11 pass
 - P7-03 | doing | branch feat/p7-03-invoice-redesign
 ## Requests to A
@@ -52,3 +52,4 @@ Updated: 2026-10-29
 - 2026-10-29 P6-05 ready. Danger zone in Settings: pick categories, preview counts, download a JSON backup (no password hashes or tokens), type the site name, then a second super admin approves and it runs in one transaction. A real-schema check found and fixed three FK problems: the credit_notes/refunds cycle, quotes referenced by orders, and customer media. Super admins, admins, settings, RBAC, legal, landing and audit logs are kept. Migration 0006 is hand-written (drizzle-kit generate hits a snapshot collision at 0003/0004). Please test on a staging or branch DB before production.
 - 2026-10-29 P6-04 ready. Phase 6 complete. Sweep at 390/768/1440 over site, account and admin: no console errors or failed requests in app code. Fixed: /account/chat overflowed at 390; the theme toggle did nothing (it now switches theme and saves the ck_theme cookie, honouring the P4-01 setting). Left: /admin/customers table overflows at 390 (admin is laptop-gated on mobile by design). The e2e spec is stable only with --workers=1 on next dev.
 - 2026-10-29 P7-02: Client logo tiles, LogoMark and SiteLogo get rounded-md (6px) with overflow-hidden; admin logo tiles too. Class-only change.
+- 2026-10-29 P7-01: Ticks showed the expanded dependency set; ticks now show only the user's picks plus an 'Also removed because they depend on it' line. The name check used raw settings while the server used getSiteName(); the page now passes getSiteName(). Reset never run on any DB.
