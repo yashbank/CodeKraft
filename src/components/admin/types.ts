@@ -1049,5 +1049,13 @@ export interface DashboardData {
   chatbotUsage: { platform: number; platformCap: number; usersAtCap: number; perUserCap: number };
   catalogStatus: Array<{ status: ProductStatus; count: number }>;
   newCustomers: { count: number; delta: string; sparkline: number[] };
-  systemHealth: Array<{ label: string; ok: boolean; detail: string }>;
+  systemHealth: Array<{
+    label: string;
+    ok: boolean;
+    detail: string;
+    /** ok/warn/fail; absent on legacy fixtures (derived from `ok`). */
+    status?: "ok" | "warn" | "fail";
+    /** ISO time the check ran. */
+    checkedAt?: string;
+  }>;
 }

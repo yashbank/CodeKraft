@@ -1,7 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2Icon, LayoutGridIcon, PlusIcon, XCircleIcon } from "lucide-react";
+import {
+  CheckCircle2Icon,
+  LayoutGridIcon,
+  PlusIcon,
+  TriangleAlertIcon,
+  XCircleIcon,
+} from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -532,24 +538,51 @@ export function WidgetBody({ widget, data }: { widget: WidgetKey; data: Dashboar
         </div>
       );
     case "system_health":
-      if (data.systemHealth.length === 0) return <NoData text="No health checks reported" />;
+      if (data.systemHealth.length === 0) return <NoData text="Health checks unavailable" />;
       return (
         <ul className="space-y-1.5">
-          {data.systemHealth.map((h) => (
-            <li key={h.label} className="flex items-center gap-2 text-body-sm">
-              {h.ok ? (
-                <CheckCircle2Icon aria-hidden className="size-4 text-success" />
-              ) : (
-                <XCircleIcon aria-hidden className="size-4 text-danger" />
-              )}
-              <span className="flex-1">{h.label}</span>
-              <span
-                className={cn("font-mono text-caption", h.ok ? "text-fg-muted" : "text-danger")}
-              >
-                {h.ok ? "ok" : "error"} · {h.detail}
-              </span>
-            </li>
-          ))}
+          {data.systemHealth.map((h) => {
+            const status = h.status ?? (h.ok ? "ok" : "fail");
+            const Icon =
+              status === "ok"
+                ? CheckCircle2Icon
+                : status === "warn"
+                  ? TriangleAlertIcon
+                  : XCircleIcon;
+            return (
+              <li key={h.label} className="flex items-start gap-2 text-body-sm">
+                <Icon
+                  aria-hidden
+                  className={cn(
+                    "mt-0.5 size-4 shrink-0",
+                    status === "ok"
+                      ? "text-success"
+                      : status === "warn"
+                        ? "text-warning"
+                        : "text-danger",
+                  )}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium">{h.label}</span>
+                  <span
+                    className={cn(
+                      "block break-words font-mono text-caption",
+                      status === "ok"
+                        ? "text-fg-muted"
+                        : status === "warn"
+                          ? "text-warning"
+                          : "text-danger",
+                    )}
+                  >
+                    {status} · {h.detail}
+                    {h.checkedAt
+                      ? ` · ${new Date(h.checkedAt).toISOString().slice(11, 16)} UTC`
+                      : ""}
+                  </span>
+                </span>
+              </li>
+            );
+          })}
           <li className="pt-1 text-caption text-fg-muted">
             {compactNumber(data.visits.total)} visits in range · cron runs listed in Settings ›
             Retention
