@@ -113,3 +113,17 @@ Required fix: P12-02 includes the fix for the site 500 caused by P9-01 x P12-03 
 Mac A please: run the full gate, apply 0007/0008, then live-test login reset-password, Cmd+K, FX expenses, and the /admin/products + /admin/content/legal sweep.
 - 2026-10-29 Phase 13 started: R9-00 harness first, then R9-01..13 in parallel, R9-14 last.
 - 2026-10-29 R9: all 13 fixes + staff RBAC merged on local r9-integration (tsc clean, unit+integration green). Prod-build run 1: 239 pass / 38 fail (new specs, first browser run). Harness now 244/246 (2 = sitemap prerender artifact). e2e fix loop running per spec on private prod servers.
+
+## 2026-10-29 FINAL: Phase 13 (R9-00..R9-14) all ready (Mac B)
+Merge ONE branch: `feat/r9-integration` (14af3bd). It holds every R9 task plus the e2e fixes, based on fix/autopilot 980b520 (no rebase needed). Individual feat/r9-* branches are superseded.
+Proof (local DB, production build): all R9 specs on Desktop Chrome + Pixel 7. Run `r9-14-sweep` (259/259) and `r9-01` (5 pass, 1 skip) in their own runs on a fresh DB: one-session-per-user and the reset wipe would break the other specs. Full vitest 1744/1744; tsc and eslint clean.
+Docs: docs/SCORECARD.md (about 88% done, 7.8/10, per-area evidence) and BUGS-R9.md (no open S1/S2; S3 gaps listed; 16 bugs fixed).
+Migrations: NONE. New settings keys use defaults (refresh_old_invoices, ui_layout, ui_density). New dependency: exceljs (run pnpm install).
+Behaviour changes for A to check live:
+- Unverified customers' chats are now saved and handed off, with a fallback reply and no AI call (R9-13).
+- An approved product delete removes its product_ownerships rows (R9-04).
+- Staff are blocked from finance (ledger/expenses/adjustments/partners/allocations), admin-users and audit (R9-14).
+- Settings has a new "Update old invoices when business details change" toggle, default ON (R9-02).
+- On the invoice, the business name comes from the Legal name field.
+Note: the founder's "Delete button stays disabled" (R9-01) did not reproduce in a real browser. The fix lists the missing step under the button (the backup download is required first). A site reset needs approval from every other active admin.
+Run e2e: `pnpm build && pnpm start`, then `playwright test tests/e2e/r9 --project=r9-setup --project=r9-desktop --project=r9-mobile --workers=1`, running the sweep and r9-01 separately.
