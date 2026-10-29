@@ -45,8 +45,8 @@ const n = (v: unknown) => Number(v ?? 0);
  * see modules/finance/metrics.ts) per product over the selected range.
  */
 export async function revenueByProduct(range: DateRange) {
-  const rows = await db.execute<{ label: string; value: string }>(sql`
-    select p.name as label,
+  const rows = await db.execute<{ id: string; label: string; value: string }>(sql`
+    select p.id as id, p.name as label,
            sum(case when le.entry_type = 'sale' then abs(le.amount_inr_minor)
                     when le.entry_type = 'discount' then -abs(le.amount_inr_minor)
                     else 0 end) as value
@@ -54,13 +54,13 @@ export async function revenueByProduct(range: DateRange) {
     join order_items oi on oi.id = le.order_item_id
     join products p on p.id = oi.product_id
     where ${win(range)}
-    group by p.name
+    group by p.id, p.name
     having sum(case when le.entry_type = 'sale' then abs(le.amount_inr_minor)
                     when le.entry_type = 'discount' then -abs(le.amount_inr_minor)
                     else 0 end) <> 0
     order by value desc
     limit 8`);
-  return [...rows].map((r) => ({ label: r.label, value: n(r.value) }));
+  return [...rows].map((r) => ({ id: r.id, label: r.label, value: n(r.value) }));
 }
 
 export async function loadDashboardFinance(

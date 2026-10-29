@@ -35,6 +35,7 @@ import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
 import { StatTile } from "../StatTile";
 import { useUrlFilters } from "./use-url-filters";
+import { ledgerDrillHref } from "@/lib/admin/drill-links";
 import type { REPORT_PRESETS } from "@/lib/admin/finance-filters";
 import { SiteName } from "@/components/brand/site-brand";
 import type {
@@ -300,22 +301,32 @@ export function ReportsScreen({
                 ) : null}
               </div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {report.tiles.map((t) => (
-                  <StatTile
-                    key={t.label}
-                    label={t.label}
-                    value={
-                      t.isCount || t.label === "Products sold" || t.label === "Credit notes"
-                        ? t.valueInr
-                        : inr(t.valueInr)
-                    }
-                    delta={t.delta}
-                  />
-                ))}
+                {report.tiles.map((t) => {
+                  const plain =
+                    t.isCount || t.label === "Products sold" || t.label === "Credit notes";
+                  return (
+                    <StatTile
+                      key={t.label}
+                      label={t.label}
+                      value={plain ? t.valueInr : inr(t.valueInr)}
+                      count={{ to: t.valueInr, format: plain ? String : inr }}
+                      delta={t.delta}
+                    />
+                  );
+                })}
               </div>
               <div className="rounded-lg border border-border bg-surface p-4">
                 <BarChart
-                  data={report.series}
+                  data={report.series.map((d) => ({
+                    ...d,
+                    href: d.id
+                      ? ledgerDrillHref({
+                          product: d.id,
+                          from: uf.get("from") || undefined,
+                          to: uf.get("to") || undefined,
+                        })
+                      : undefined,
+                  }))}
                   formatValue={inr}
                   colourByBar={
                     key !== "revenue_by_period" && key !== "tax_collected" && key !== "refunds"
