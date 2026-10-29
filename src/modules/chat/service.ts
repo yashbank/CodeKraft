@@ -73,11 +73,8 @@ export class DefaultChatService implements ChatService {
       throw new AppError(ErrorCode.UNAUTHENTICATED, "Authentication required to use AI chat");
     }
 
-    const userRow = await this.db.select().from(users).where(eq(users.id, ctx.userId)).limit(1);
-
-    if (!userRow[0] || !userRow[0].emailVerified) {
-      throw new AppError(ErrorCode.EMAIL_UNVERIFIED, "Please verify your email before using chat");
-    }
+    // R9-13: no verified-email gate here -- new signups' chats must persist and reach admins.
+    // Only the AI completion is withheld for unverified customers (see sendMessage).
 
     // Active prompt version
     let activePrompt = (
@@ -159,6 +156,15 @@ export class DefaultChatService implements ChatService {
     await assertEmailVerified(ctx, this.db, "Please verify your email before using chat");
   }
 
+  private async canUseAi(ctx: RequestContext): Promise<boolean> {
+    try {
+      await this.assertCanChat(ctx);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async menuIntent(ctx: RequestContext, input: MenuIntentInput): Promise<MenuIntentResult> {
     await this.assertCanChat(ctx);
     return await resolveMenuIntent(ctx, input);
@@ -232,6 +238,22 @@ export class DefaultChatService implements ChatService {
     // on the first user message (the page creates a conversation row on every visit).
     if ((prior?.n ?? 0) === 0) {
       await this.notifyAdminsChatStarted(ctx.userId, conv.id, input.content);
+    }
+
+    // R9-13: unverified customers are persisted + notified above but get no AI completion.
+    if (!(await this.canUseAi(ctx))) {
+      await chatCapGuard.decrement(ctx.userId, today, this.db);
+      yield {
+        event: "fallback",
+        data: {
+          menu: ROOT_MENU_NODES,
+          reason: "unavailable",
+          message:
+            "Thanks, your message reached our team. Verify your email to chat with the assistant, or use Talk to a human and we will reply to you here.",
+        },
+      };
+      yield { event: "done", data: { tokensIn: 0, tokensOut: 0, stopReason: "end_turn" } };
+      return;
     }
 
     // Send meta event
@@ -347,7 +369,7 @@ export class DefaultChatService implements ChatService {
     ctx: RequestContext,
     input: EscalateConversationInput,
   ): Promise<EscalateConversationResult> {
-    await this.assertCanChat(ctx);
+    // R9-13: handoff to a human is open to unverified customers (replies arrive by notification).
     const [conv] = await this.db
       .select()
       .from(conversations)
