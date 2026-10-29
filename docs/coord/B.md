@@ -61,12 +61,17 @@ Updated: 2026-10-30
 - R9-12 | ready | branch feat/r9-integration | r9-12 SEO tags/OG/sitemap/preview; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-13 | ready | branch feat/r9-integration | r9-13 new-user chat+handoff; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-14 | ready | branch feat/r9-integration | r9-14 sweep 259/259, SCORECARD; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
-- P14-03 | doing | Phase 14 wave 1 | -
-- P14-01 | doing | Phase 14 wave 1 | -
-- P14-10 | doing | Phase 14 wave 1 | -
-- P14-07 | doing | Phase 14 wave 1 | -
-- P14-08 | doing | Phase 14 wave 1 | -
+- P14-03 | doing | built, fix loop | branch feat/p14-integration
+- P14-01 | doing | built, fix loop | branch feat/p14-integration
+- P14-10 | doing | built, fix loop | branch feat/p14-integration
+- P14-07 | doing | built, fix loop | branch feat/p14-integration
+- P14-08 | doing | built, fix loop | branch feat/p14-integration
+- P14-02, P14-04, P14-05, P14-06, P14-09 | doing | built, in feat/p14-integration, fix loop | -
+- P15-01 | doing | built (parity suite 78 green before+after), in feat/p14-integration | -
+- P14-12 | doing | 2 builder agents (admin extras, site/account extras) | -
 ## Requests to A
+- [open] Delete test objects from the LIVE R2 buckets (Mac B local test servers loaded R2 keys from .env.local; now forced to STORAGE_DRIVER=local and blank live keys). Known keys: public media/2026/10/{c9faf532-f718-4a3e-b009-fe5f0d821f4c,a502af97-dd7f-4ac0-a004-cc90fb2567a9,b84a3087-0c51-4970-9611-1fca39cb8bd0,41bbec9f-8818-44f6-b5e6-1b9e55d58996,788817d9-364d-4a14-94d6-bed8224be07d}.png; private media/2026/10/{b6973b65-68de-43b0-90bc-2fb8401068d6,20531a0c-7dce-4138-9eee-55d06ec7153a,47553342-2f67-42d6-9f34-81df484162dc}.zip. Phase 13 (R9) runs on 2026-10-29 likely left similar tiny objects under media/2026/10/ with no DB row: list objects without a media row and delete | why: test junk in prod storage | verify: no orphan keys
+- [open] P15-01 Vercel/R2 config: set NEXT_PUBLIC_MEDIA_BASE_URL to the R2 public bucket domain (custom domain or r2.dev); bucket CORS must allow PUT from site + admin origins; Cloudflare cache rule 1y immutable on the public bucket domain | why: public media served from R2, not the serverless proxy | verify: curl -I a public image shows R2 host + cache-control immutable
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
 - [open] R2 private bucket CORS must allow PUT from the admin origin | P2-01 browser uploads straight to R2 | upload a .dmg on a product version, it completes and appears
 - [open] Apply migration 0006 (P6-05) via the Neon script | new approval type site.reset | approvals list shows a 'Reset site data' request after requesting one
@@ -134,3 +139,7 @@ Note: the founder's "Delete button stays disabled" (R9-01) did not reproduce in 
 Run e2e: `pnpm build && pnpm start`, then `playwright test tests/e2e/r9 --project=r9-setup --project=r9-desktop --project=r9-mobile --workers=1`, running the sweep and r9-01 separately.
 
 - 2026-10-30 Phase 14+15 started (base 14af3bd). Wave 1 doing: P14-03, P14-01, P14-10, P14-07, P14-08. Done 0 of 13, estimated remaining ~14 h.
+- 2026-10-30 P14 Round 1 (build + own tests): 9 builder branches merged into feat/p14-integration (01,02,03,04+05,06,07,08,09,10) + P15-01. tsc clean, vitest unit 1514/1514. Migration 0009_message_attachments.sql (additive: files_upload_intents.filename, media.original_name, chat_messages.attachments uuid[]).
+- 2026-10-30 P14 Round 2a (prod build, new P14 specs + R9 except sweep/r9-01, under heavy load): 282 passed, 65 failed, 43 skipped. Failures: P14 spec gaps (fonts, tap targets, popover, widget pattern), r9-00 timeouts/session redirects (load), checkout link on product page. Two fix-loop agents running.
+- 2026-10-30 P14-09 widget design sources: designrevision.com/components/sparkline, 21st.dev kpi-card-row, help.boldbi.com KPI card (visualization v2), gooddata.com/docs/cloud/create-dashboards/accessibility, blog.equally.ai accessible dashboard best practices. Patterns used: KPI tile variants (plain, accent bar, trend badge, inline sparkline, big number, outlined), chart styles (filled, outlined, minimal no-grid, gradient, compact, striped), sr-only data tables + aria summaries.
+- 2026-10-30 Safety: found local test servers used live R2 + AI/Resend keys from .env*.local; scripts now force STORAGE_DRIVER=local and blank live keys. Request to A to delete orphan test objects. Done 0 of 13, estimated remaining ~9 h.
