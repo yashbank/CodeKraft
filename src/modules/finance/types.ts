@@ -239,6 +239,12 @@ export const recordExpenseInput = z
     /** Split across the ownership active on `incurredOn` (needs `productId`). */
     sharedBySplit: z.boolean().default(true),
     receiptMediaId: zUuid.optional(),
+    /** Admin-entered rate (1 unit of `currency` in INR); required only when live + stored rates fail. */
+    manualRate: z
+      .string()
+      .regex(/^\d+(\.\d{1,8})?$/)
+      .refine((r) => /[1-9]/.test(r), "rate must be positive")
+      .optional(),
   })
   .strict()
   .superRefine((e, ctx) => {

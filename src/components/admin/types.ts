@@ -740,6 +740,8 @@ export interface ExpenseRow {
   receipt?: string;
   recordedBy: string;
   ledgerSeq: number;
+  /** "1 USD = 83.12 INR (source, date)" for non-INR expenses with a locked rate. */
+  fxLine?: string;
 }
 
 export interface AdjustmentLine {

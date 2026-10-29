@@ -130,6 +130,10 @@ export const expenses = pgTable(
     receiptMediaId: uuid("receipt_media_id").references(() => media.id, { onDelete: "set null" }),
     createdBy: uuid("created_by").references(() => users.id),
     createdAt: ts("created_at").notNull().defaultNow(),
+    /** Locked rate (1 unit of `currency` = N INR), its source and fetch time (P9-02). Null on legacy rows. */
+    fxRateToInr: fxRate("fx_rate_to_inr"),
+    fxRateSource: text("fx_rate_source"),
+    fxRateAt: ts("fx_rate_at"),
   },
   (t) => [
     index("expenses_product_idx").on(t.productId, t.incurredOn),
