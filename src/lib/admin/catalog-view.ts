@@ -68,6 +68,8 @@ export function mapProductRow(row: ProductAdminRow): ProductRow {
   const flags: ProductFlag[] = [];
   if (row.isFeatured) flags.push("is_featured");
   if (row.isUnlisted) flags.push("is_unlisted");
+  if (row.isComingSoon) flags.push("is_coming_soon");
+  if (row.taxEnabled) flags.push("tax_enabled");
 
   return {
     id: row.id,

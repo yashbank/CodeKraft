@@ -140,6 +140,7 @@ export interface BlogPost extends BlogTeaser {
 
 export interface ProductDetail extends ProductSummary {
   seo?: { title?: string | null; description?: string | null };
+  isUnlisted?: boolean;
   version: string;
   descriptionHtml: string;
   benefits: string[];

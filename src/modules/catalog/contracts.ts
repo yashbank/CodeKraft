@@ -470,4 +470,9 @@ export interface CatalogService {
 }
 
 /** Statuses from which `submitForApproval` is allowed (API-CAT-11). */
-export const SUBMITTABLE_STATUSES: readonly ProductStatus[] = ["draft", "unpublished"];
+export const SUBMITTABLE_STATUSES: readonly ProductStatus[] = [
+  "draft",
+  "unpublished",
+  "published",
+  "scheduled",
+];

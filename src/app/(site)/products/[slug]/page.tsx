@@ -123,6 +123,7 @@ async function loadProduct(slug: string): Promise<ProductDetail | null> {
     deliveryTypes: deliveryTypes.length ? deliveryTypes : ["custom"],
     isFeatured: p.isFeatured,
     isComingSoon: p.isComingSoon,
+    isUnlisted: p.isUnlisted,
     tags: p.tags.map((t) => t.name),
     techStack: p.techStack,
     industries: p.industry,
@@ -157,15 +158,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const product = await loadProduct(slug);
   if (!product) return {};
 
-  return pageMetadata(
-    productSeo({
+  return pageMetadata({
+    ...productSeo({
       slug: product.slug,
       name: product.name,
       shortDescription: product.shortDescription,
       seoTitle: product.seo?.title,
       seoDescription: product.seo?.description,
     }),
-  );
+    noindex: product.isUnlisted,
+  });
 }
 
 export default async function ProductPage({ params }: PageProps) {
