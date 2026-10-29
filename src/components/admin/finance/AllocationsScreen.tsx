@@ -1,10 +1,11 @@
 "use client";
 
 import { SavedViews } from "../SavedViews";
-import { downloadCsv } from "@/lib/admin/csv";
+import { ExportMenu } from "@/components/admin/ExportMenu";
+import type { ExportColumn } from "@/lib/admin/export-builder";
 import Link from "next/link";
 import * as React from "react";
-import { ChevronDownIcon, DownloadIcon, InfoIcon } from "lucide-react";
+import { ChevronDownIcon, InfoIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -62,40 +63,36 @@ export function AllocationsScreen({
   const partnerName = (n: string) => (isSuperAdmin || n === ownPartnerName ? n : "Other partner");
   const f = useUrlFilters();
   const m = (x: { amountMinor: number }) => (x.amountMinor / 100).toFixed(2);
-  const exportRows = () =>
-    downloadCsv(
-      "allocations.csv",
-      [
-        "Date",
-        "Order",
-        "Product",
-        "Item",
-        "Gross",
-        "Discount",
-        "Tax",
-        "Gateway fee",
-        "Bank charge",
-        "Distributable",
-        "Company cut",
-        "Partners",
-        "Ownership version",
-      ],
-      rows.map((r) => [
-        r.at,
-        r.order,
-        r.product,
-        r.item,
-        m(r.gross),
-        m(r.discount),
-        m(r.tax),
-        m(r.gatewayFee),
-        m(r.bankCharge),
-        m(r.distributable),
-        m(r.companyCut.amount),
-        r.partners.map((p) => `${partnerName(p.name)} ${m(p.amount)}`).join("; "),
-        r.ownershipVersion,
-      ]),
-    );
+  const exportColumns: ExportColumn[] = [
+    { header: "Date", type: "date" },
+    { header: "Order" },
+    { header: "Product" },
+    { header: "Item" },
+    { header: "Gross", type: "money" },
+    { header: "Discount", type: "money" },
+    { header: "Tax", type: "money" },
+    { header: "Gateway fee", type: "money" },
+    { header: "Bank charge", type: "money" },
+    { header: "Distributable", type: "money" },
+    { header: "Company cut", type: "money" },
+    { header: "Partners" },
+    { header: "Ownership version" },
+  ];
+  const exportData = rows.map((r) => [
+    r.at,
+    r.order,
+    r.product,
+    r.item,
+    m(r.gross),
+    m(r.discount),
+    m(r.tax),
+    m(r.gatewayFee),
+    m(r.bankCharge),
+    m(r.distributable),
+    m(r.companyCut.amount),
+    r.partners.map((p) => `${partnerName(p.name)} ${m(p.amount)}`).join("; "),
+    r.ownershipVersion,
+  ]);
   const [search, setSearch] = useUrlSearch();
   // Keep the active choice selectable even when it filtered every row out.
   const productOptions = [
@@ -110,9 +107,7 @@ export function AllocationsScreen({
         actions={
           <>
             <SavedViews screen="allocations" />
-            <Button variant="outline" size="sm" onClick={exportRows}>
-              <DownloadIcon aria-hidden /> Export CSV
-            </Button>
+            <ExportMenu name="allocations" columns={exportColumns} rows={exportData} />
           </>
         }
       />

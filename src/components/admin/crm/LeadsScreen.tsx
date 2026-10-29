@@ -1,17 +1,10 @@
 "use client";
 
-import { downloadCsv } from "@/lib/admin/csv";
+import { ExportMenu } from "@/components/admin/ExportMenu";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import {
-  AlarmClockIcon,
-  DownloadIcon,
-  KanbanIcon,
-  PlusIcon,
-  TableIcon,
-  TargetIcon,
-} from "lucide-react";
+import { AlarmClockIcon, KanbanIcon, PlusIcon, TableIcon, TargetIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -242,41 +235,33 @@ export function LeadsScreen({
                 </button>
               ))}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                downloadCsv(
-                  "leads.csv",
-                  [
-                    "Name",
-                    "Company",
-                    "Email",
-                    "Phone",
-                    "Source",
-                    "Product",
-                    "Status",
-                    "Priority",
-                    "Assignee",
-                    "Created",
-                  ],
-                  rows.map((l) => [
-                    l.name,
-                    l.company,
-                    l.email,
-                    l.phone,
-                    l.source,
-                    l.product,
-                    l.status,
-                    l.priority,
-                    l.assignee?.name,
-                    l.createdAt,
-                  ]),
-                )
-              }
-            >
-              <DownloadIcon aria-hidden /> Export CSV
-            </Button>
+            <ExportMenu
+              name="leads"
+              columns={[
+                { header: "Name" },
+                { header: "Company" },
+                { header: "Email" },
+                { header: "Phone" },
+                { header: "Source" },
+                { header: "Product" },
+                { header: "Status" },
+                { header: "Priority" },
+                { header: "Assignee" },
+                { header: "Created", type: "date" },
+              ]}
+              rows={rows.map((l) => [
+                l.name,
+                l.company,
+                l.email,
+                l.phone,
+                l.source,
+                l.product,
+                l.status,
+                l.priority,
+                l.assignee?.name,
+                l.createdAt,
+              ])}
+            />
             <Button size="sm" onClick={() => setNewOpen(true)}>
               <PlusIcon aria-hidden /> New lead
             </Button>

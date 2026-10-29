@@ -1,12 +1,11 @@
 "use client";
 
-import { downloadCsv } from "@/lib/admin/csv";
+import { ExportMenu } from "@/components/admin/ExportMenu";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import {
   BadgeCheckIcon,
-  DownloadIcon,
   FilterIcon,
   MessageSquareIcon,
   ShoppingCartIcon,
@@ -123,37 +122,29 @@ export function CustomersList({
             <Button size="sm" onClick={() => setNewOpen(true)}>
               <UserPlusIcon aria-hidden /> New customer
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                downloadCsv(
-                  "customers.csv",
-                  [
-                    "Name",
-                    "Email",
-                    "Company",
-                    "Country",
-                    "Status",
-                    "Orders open",
-                    "Lifetime spend INR",
-                    "Joined",
-                  ],
-                  customers.map((c) => [
-                    c.name,
-                    c.email,
-                    c.company,
-                    c.country,
-                    c.status,
-                    c.openOrders,
-                    (c.lifetimeSpendInr / 100).toFixed(2),
-                    c.joinedAt,
-                  ]),
-                )
-              }
-            >
-              <DownloadIcon aria-hidden /> Export CSV
-            </Button>
+            <ExportMenu
+              name="customers"
+              columns={[
+                { header: "Name" },
+                { header: "Email" },
+                { header: "Company" },
+                { header: "Country" },
+                { header: "Status" },
+                { header: "Orders open", type: "int" },
+                { header: "Lifetime spend INR", type: "money" },
+                { header: "Joined", type: "date" },
+              ]}
+              rows={customers.map((c) => [
+                c.name,
+                c.email,
+                c.company,
+                c.country,
+                c.status,
+                c.openOrders,
+                (c.lifetimeSpendInr / 100).toFixed(2),
+                c.joinedAt,
+              ])}
+            />
           </>
         }
       />

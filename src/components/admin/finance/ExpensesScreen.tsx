@@ -1,7 +1,7 @@
 "use client";
 
 import { SavedViews } from "../SavedViews";
-import { ExportCsvLink } from "../ExportCsvLink";
+import { ExportMenu } from "../ExportMenu";
 import Link from "next/link";
 import * as React from "react";
 import { useRouter } from "next/navigation";
@@ -175,7 +175,7 @@ export function ExpensesScreen({
         actions={
           <>
             <SavedViews screen="expenses" />
-            <ExportCsvLink kind="expenses" />
+            <ExportMenu kind="expenses" />
             <Button size="sm" onClick={() => setOpen(true)}>
               <PlusIcon aria-hidden /> Record expense
             </Button>
