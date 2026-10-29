@@ -89,6 +89,7 @@ export function mapSiteSettingsToSettingsData(settings: SiteSettings): SettingsD
     general: {
       siteName: settings.siteName,
       siteLogo: settings.siteLogo,
+      refreshOldInvoices: settings.refreshOldInvoices,
       domain: env.NEXT_PUBLIC_SITE_URL.replace(/^https?:\/\//, ""),
       legalName: seller?.name ?? "",
       address: seller

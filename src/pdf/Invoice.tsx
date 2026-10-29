@@ -42,7 +42,10 @@ const PRINT_CSS = `@page{size:A4;margin:14mm}
 .ck-lines tr{break-inside:avoid;page-break-inside:avoid}
 @media print{body *{visibility:hidden}.ck-invoice,.ck-invoice *{visibility:visible}
 .ck-invoice{position:absolute;left:0;top:0;width:100%;padding:0!important}
-header[role=banner],nav,footer{display:none!important}}`;
+header[role=banner],nav,aside,footer,.ck-no-print{display:none!important}
+.ck-scroll{overflow:visible!important}}
+.ck-lines tbody tr:nth-child(even){background:#f3f4f6}
+.ck-scroll{overflow-x:auto}`;
 
 const DEFAULT_ACCENT = "#41507a";
 const cell = { padding: "8px" } as const;
@@ -78,50 +81,47 @@ export function InvoiceDocument(props: InvoiceProps) {
       style={{
         backgroundColor: "#ffffff",
         color: "#111827",
-        padding: "40px",
-        fontFamily: "sans-serif",
+        padding: "clamp(16px, 4vw, 40px)",
+        fontFamily: "var(--ck-font-body, sans-serif)",
         fontSize: "14px",
       }}
     >
       <style>{PRINT_CSS}</style>
       <header
         style={{
-          backgroundColor: accent,
-          color: "#ffffff",
-          borderRadius: "12px",
-          padding: "24px",
-          marginBottom: "24px",
+          borderBottom: `3px solid ${accent}`,
+          paddingBottom: "16px",
+          marginBottom: "20px",
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: "flex-start",
           gap: "16px",
           flexWrap: "wrap",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
           {seller.logo_url && (
             // eslint-disable-next-line @next/next/no-img-element -- print sheet, snapshot URL
             <img
               src={seller.logo_url}
               alt={seller.name}
-              style={{
-                maxHeight: "56px",
-                maxWidth: "160px",
-                borderRadius: "10px",
-                backgroundColor: "#ffffff",
-                padding: "4px",
-              }}
+              style={{ maxHeight: "56px", maxWidth: "160px", objectFit: "contain" }}
             />
           )}
-          <div>
-            <h1 style={{ fontSize: "26px", fontWeight: "bold", margin: 0 }}>TAX INVOICE</h1>
-            <p style={{ margin: "2px 0" }}>{seller.name}</p>
-          </div>
+          <p
+            data-testid="invoice-seller-name"
+            style={{ margin: 0, fontSize: "18px", fontWeight: "bold" }}
+          >
+            {seller.name}
+          </p>
         </div>
         <div style={{ textAlign: "right" }}>
+          <h1 style={{ fontSize: "24px", fontWeight: "bold", margin: 0, color: accent }}>
+            TAX INVOICE
+          </h1>
           <p style={{ ...p, fontWeight: "bold" }}>Invoice No: {props.invoiceNo}</p>
-          {props.orderNo && <p style={p}>Order No: {props.orderNo}</p>}
-          <p style={p}>Purchase Date: {props.issuedAt}</p>
+          {props.orderNo && <p style={{ ...p, color: "#4b5563" }}>Order No: {props.orderNo}</p>}
+          <p style={{ ...p, color: "#4b5563" }}>Purchase Date: {props.issuedAt}</p>
         </div>
       </header>
 
@@ -131,7 +131,7 @@ export function InvoiceDocument(props: InvoiceProps) {
           display: "inline-block",
           backgroundColor: accent,
           color: "#ffffff",
-          borderRadius: "999px",
+          borderRadius: "var(--ck-radius-xl, 999px)",
           padding: "4px 14px",
           fontSize: "12px",
           fontWeight: "bold",
@@ -169,43 +169,42 @@ export function InvoiceDocument(props: InvoiceProps) {
         </div>
       </section>
 
-      <table
-        className="ck-lines"
-        style={{ width: "100%", borderCollapse: "collapse", marginBottom: "28px" }}
-      >
-        <thead>
-          <tr style={{ backgroundColor: accent, color: "#ffffff", textAlign: "left" }}>
-            <th style={cell}>#</th>
-            <th style={cell}>Description</th>
-            <th style={right}>Qty</th>
-            <th style={right}>Unit Price</th>
-            <th style={right}>Discount</th>
-            <th style={right}>Tax{ratePct && ` (${ratePct})`}</th>
-            <th style={right}>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {props.lines.map((line, idx) => (
-            <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
-              <td style={cell}>{idx + 1}</td>
-              <td style={cell}>
-                {line.description}
-                {line.hsn_sac && (
-                  <small style={{ color: "#4b5563" }}> (HSN/SAC {line.hsn_sac})</small>
-                )}
-              </td>
-              <td style={right}>{line.quantity}</td>
-              <td style={right}>{formatMoney(line.unit_minor)}</td>
-              <td style={right}>{formatMoney(line.discount_minor)}</td>
-              <td style={right}>{formatMoney(line.tax_minor)}</td>
-              <td style={right}>{formatMoney(line.total_minor)}</td>
+      <div className="ck-scroll" style={{ marginBottom: "28px" }}>
+        <table className="ck-lines" style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ backgroundColor: accent, color: "#ffffff", textAlign: "left" }}>
+              <th style={cell}>#</th>
+              <th style={cell}>Description</th>
+              <th style={right}>Qty</th>
+              <th style={right}>Unit Price</th>
+              <th style={right}>Discount</th>
+              <th style={right}>Tax{ratePct && ` (${ratePct})`}</th>
+              <th style={right}>Total</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {props.lines.map((line, idx) => (
+              <tr key={idx}>
+                <td style={cell}>{idx + 1}</td>
+                <td style={cell}>
+                  {line.description}
+                  {line.hsn_sac && (
+                    <small style={{ color: "#4b5563" }}> (HSN/SAC {line.hsn_sac})</small>
+                  )}
+                </td>
+                <td style={right}>{line.quantity}</td>
+                <td style={right}>{formatMoney(line.unit_minor)}</td>
+                <td style={right}>{formatMoney(line.discount_minor)}</td>
+                <td style={right}>{formatMoney(line.tax_minor)}</td>
+                <td style={right}>{formatMoney(line.total_minor)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <section style={{ display: "flex", justifyContent: "flex-end" }}>
-        <div style={{ width: "300px" }}>
+        <div style={{ width: "100%", maxWidth: "320px" }}>
           {total("Subtotal:", props.subtotalMinor)}
           {props.discountMinor > 0 &&
             total("Discount:", -props.discountMinor, { color: "#166534" })}
@@ -222,9 +221,9 @@ export function InvoiceDocument(props: InvoiceProps) {
           {total("Grand Total:", props.totalMinor, {
             backgroundColor: accent,
             color: "#ffffff",
-            borderRadius: "8px",
+            borderRadius: "var(--ck-radius-md, 8px)",
             padding: "10px 12px",
-            marginTop: "8px",
+            marginTop: "12px",
             fontWeight: "bold",
             fontSize: "16px",
           })}

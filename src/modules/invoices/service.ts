@@ -43,6 +43,7 @@ import { INVOICE_PDF_URL_TTL_SECONDS } from "./types";
 import { computeFy, nextCreditNoteNumber, nextInvoiceNumber } from "./numbering";
 import { PALETTES } from "@/lib/palettes";
 import { computeGstBreakdown } from "./gst";
+import type { InvoiceProps } from "@/pdf/Invoice";
 import { buildInvoicePdf, buildPdfBuffer, fetchLogo, uploadDocumentPdf } from "./pdf";
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
 
@@ -62,6 +63,79 @@ export function buildSellerSnapshot(
     state_code: sellerState ?? "KA",
     logo_url: settings.siteLogo ?? null,
   };
+}
+
+/**
+ * Seller block to render. ON: current settings win field by field (an unset current value keeps the
+ * stored one); OFF: the stored snapshot. Numbering, lines, amounts and tax are never touched here.
+ */
+export function resolveSeller(stored: SellerSnapshot, settings: SiteSettings): SellerSnapshot {
+  if (!settings.refreshOldInvoices) return stored;
+  const cur = buildSellerSnapshot(settings, stored.state_code);
+  const d = settings.sellerDetails;
+  return {
+    ...stored,
+    name: cur.name,
+    address: d?.address ? cur.address : stored.address,
+    gst_number: cur.gst_number,
+    email: cur.email || stored.email,
+    phone: d?.contactPhones.length ? d.contactPhones.join(", ") : stored.phone,
+    logo_url: cur.logo_url,
+  };
+}
+
+type InvoiceRowT = typeof invoices.$inferSelect;
+
+/** Renderable invoice (HTML and PDF share it): immutable money/lines + seller/brand per setting. */
+export async function loadInvoiceProps(invoice: InvoiceRowT, tx: TxCtx): Promise<InvoiceProps> {
+  const [order] = await tx
+    .select({ orderNo: orders.orderNo, status: orders.status })
+    .from(orders)
+    .where(eq(orders.id, invoice.orderId))
+    .limit(1);
+  const settings = await settingsService.load(tx);
+  return {
+    invoiceNo: invoice.invoiceNo,
+    issuedAt: invoice.issuedAt.toISOString().slice(0, 10),
+    orderNo: order?.orderNo,
+    seller: resolveSeller(invoice.sellerSnapshot, settings),
+    buyer: invoice.buyerSnapshot,
+    lines: invoice.lines,
+    subtotalMinor: invoice.subtotalMinor,
+    discountMinor: invoice.discountMinor,
+    taxMinor: invoice.taxMinor,
+    totalMinor: invoice.totalMinor,
+    currency: invoice.currency,
+    gstBreakdown: invoice.gstBreakdown,
+    paymentStatus:
+      order?.status === "refunded" || order?.status === "partially_refunded"
+        ? "refunded"
+        : order?.status === "pending_payment"
+          ? "pending"
+          : "paid",
+    accent: PALETTES.find((x) => x.id === settings.palette)?.light,
+  };
+}
+
+/** Invoice for the HTML view / PDF route; a customer only ever sees their own (NOT_FOUND otherwise). */
+export async function getInvoiceDocument(
+  ctx: RequestContext,
+  invoiceId: string,
+): Promise<{ props: InvoiceProps; id: string }> {
+  const isAdmin = ctx.roles.includes("admin") || ctx.roles.includes("super_admin");
+  if (isAdmin) assertPermission(ctx, "invoices.read");
+  return await withTx(async (tx) => {
+    const [row] = await tx
+      .select({ invoice: invoices, userId: orders.userId })
+      .from(invoices)
+      .innerJoin(orders, eq(invoices.orderId, orders.id))
+      .where(eq(invoices.id, invoiceId))
+      .limit(1);
+    if (!row || (!isAdmin && row.userId !== ctx.userId)) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Invoice not found");
+    }
+    return { id: row.invoice.id, props: await loadInvoiceProps(row.invoice, tx) };
+  });
 }
 
 export class DefaultInvoicesService implements InvoicesService {
@@ -313,8 +387,8 @@ export class DefaultInvoicesService implements InvoicesService {
         );
       }
 
-      if (!row.invoice.pdfMediaId) {
-        // Issued while storage was unavailable (R8-02) — render it now.
+      if (!row.invoice.pdfMediaId || (await settingsService.load()).refreshOldInvoices) {
+        // Never rendered (storage was down, R8-02) or old invoices follow current details.
         await withTx((tx) => this.renderInvoicePdf(row.invoice.id, tx));
       }
       objectKey = `invoices/${row.invoice.fy}/${row.invoice.invoiceNo.replace(/\//g, "-")}.pdf`;
@@ -463,44 +537,14 @@ export class DefaultInvoicesService implements InvoicesService {
       throw new AppError(ErrorCode.NOT_FOUND, "Invoice not found");
     }
 
-    if (invoice.pdfMediaId) {
+    const props = await loadInvoiceProps(invoice, tx);
+    // Reuse the stored PDF only when old invoices keep their snapshot (setting OFF).
+    if (invoice.pdfMediaId && !(await settingsService.load(tx)).refreshOldInvoices) {
       return { pdfMediaId: invoice.pdfMediaId };
     }
 
     const objectKey = `invoices/${invoice.fy}/${invoice.invoiceNo.replace(/\//g, "-")}.pdf`;
-    const [order] = await tx
-      .select({ orderNo: orders.orderNo, status: orders.status })
-      .from(orders)
-      .where(eq(orders.id, invoice.orderId))
-      .limit(1);
-    const { palette } = await settingsService.load(tx);
-    const accent = PALETTES.find((x) => x.id === palette)?.light;
-    const paymentStatus =
-      order?.status === "refunded" || order?.status === "partially_refunded"
-        ? "refunded"
-        : order?.status === "pending_payment"
-          ? "pending"
-          : "paid";
-    // Renders from the stored snapshot, never current settings.
-    const pdfBuf = buildInvoicePdf(
-      {
-        invoiceNo: invoice.invoiceNo,
-        issuedAt: invoice.issuedAt.toISOString().slice(0, 10),
-        orderNo: order?.orderNo,
-        seller: invoice.sellerSnapshot,
-        buyer: invoice.buyerSnapshot,
-        lines: invoice.lines,
-        subtotalMinor: invoice.subtotalMinor,
-        discountMinor: invoice.discountMinor,
-        taxMinor: invoice.taxMinor,
-        totalMinor: invoice.totalMinor,
-        currency: invoice.currency,
-        gstBreakdown: invoice.gstBreakdown,
-        paymentStatus,
-        accent,
-      },
-      await fetchLogo(invoice.sellerSnapshot.logo_url),
-    );
+    const pdfBuf = buildInvoicePdf(props, await fetchLogo(props.seller.logo_url));
 
     await uploadDocumentPdf(objectKey, pdfBuf);
 
@@ -515,7 +559,12 @@ export class DefaultInvoicesService implements InvoicesService {
       .limit(1);
 
     let mediaId = existingMedia?.id;
-    if (!mediaId) {
+    if (mediaId) {
+      await tx
+        .update(media)
+        .set({ sizeBytes: pdfBuf.length, checksum })
+        .where(eq(media.id, mediaId));
+    } else {
       const [mediaRow] = await tx
         .insert(media)
         .values({

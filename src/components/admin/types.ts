@@ -907,6 +907,7 @@ export interface SettingsData {
   general: {
     siteName: string;
     siteLogo: string | null;
+    refreshOldInvoices: boolean;
     domain: string;
     legalName: string;
     address: string;
