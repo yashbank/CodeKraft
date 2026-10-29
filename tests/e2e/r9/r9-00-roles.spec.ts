@@ -298,7 +298,7 @@ for (const role of ["customer", "super_admin", "admin", "staff"] as const satisf
             const stayed = new URL(page.url()).pathname === p;
             const body = (await page.locator("body").innerText()).toLowerCase();
             expect(
-              !stayed || /forbidden|not allowed|permission|not found|403|404/.test(body),
+              !stayed || /forbidden|not allowed|permission|don't have access|not found|403|404/.test(body),
               `staff sees ${p}: ${body.slice(0, 120).replace(/\s+/g, " ")}`,
             ).toBe(true);
           });
