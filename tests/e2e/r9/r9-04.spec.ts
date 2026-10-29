@@ -2,10 +2,23 @@
  * R9-04: product lifecycle + flags. Edit/republish/schedule a published product, the four flags on
  * the storefront, approved delete across all surfaces, editor + list at 3 widths.
  */
+import { readFileSync } from "node:fs";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { ADMIN, PASSWORD, SITE, atWidths, loginAs, q, trackIssues } from "./helpers";
 
 test.describe.configure({ mode: "serial" });
+// The admin editor is laptop-only (<1024px shows a notice); the width sweep test covers the rest.
+test.use({ viewport: { width: 1280, height: 900 } });
+
+/** The server reads CRON_SECRET from .env.local; the test process does not load that file. */
+function cronSecret(): string | undefined {
+  if (process.env.CRON_SECRET) return process.env.CRON_SECRET;
+  const all = [...readFileSync(".env.local", "utf8").matchAll(/^CRON_SECRET=(.*)$/gm)];
+  return all
+    .at(-1)?.[1]
+    ?.trim()
+    .replace(/^["']|["']$/g, "");
+}
 
 type Prod = { id: string; slug: string; name: string };
 let prod: Prod;
@@ -77,6 +90,10 @@ test.beforeAll(async () => {
     [prod.id],
   );
   const [u] = await q<{ id: string }>(`select id from users where email = $1`, [SUPER]);
+  // leftovers from aborted runs would make the row lookup ambiguous
+  const stale = `select id from products where slug like 'r9-04-doomed-%'`;
+  await q(`delete from product_ownerships where product_id in (${stale})`);
+  await q(`delete from products where slug like 'r9-04-doomed-%'`);
   const slug = `r9-04-doomed-${Date.now()}`;
   const [d] = await q<Prod>(
     `insert into products (name, slug, short_description, status, published_at, created_by, updated_by)
@@ -143,11 +160,11 @@ test("schedule a change; the cron publishes it when due", async ({ page, browser
   await expect.poll(() => statusOf(prod.id)).toBe("scheduled");
 
   await q(`update products set publish_at = now() - interval '1 minute' where id = $1`, [prod.id]);
-  const secret = process.env.CRON_SECRET;
+  const secret = cronSecret();
   const res = await request.get(`${SITE}/api/cron/frequent`, {
     headers: secret ? { authorization: `Bearer ${secret}` } : {},
   });
-  expect(res.status()).toBeLessThan(500);
+  expect(res.status()).toBe(200);
   await expect.poll(() => statusOf(prod.id)).toBe("published");
 });
 
@@ -231,7 +248,10 @@ test("editor and list render at 375/768/1280 without overflow", async ({ page })
   await atWidths(page, `${ADMIN}/admin/products`, async () => {
     await expect(page.getByRole("heading", { name: /products/i }).first()).toBeVisible();
   });
-  await atWidths(page, `${ADMIN}/admin/products/${prod.id}`, async () => {
-    await expect(page.locator("#p-name")).toBeVisible();
+  await atWidths(page, `${ADMIN}/admin/products/${prod.id}`, async (w) => {
+    // below 1024 the admin shows the laptop-only notice instead of the editor
+    await expect(
+      w >= 1024 ? page.locator("#p-name") : page.getByText(/designed for laptops/),
+    ).toBeVisible();
   });
 });
