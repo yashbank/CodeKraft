@@ -105,11 +105,8 @@ export function mapEntitlementSummary(e: EntitlementView): EntitlementSummary {
  *    so the alternative would be omitting the whole `licenseKey` object and hiding the masked key
  *    too, which is strictly worse for the customer; mirroring the masked value keeps the page
  *    honest (never shows a real secret) without hiding the one thing we *can* show.
- *  - `hosted` is always left undefined -- `provisioning.notes` (`ProvisioningNotesSchema`) is
- *    structured (`loginUrl?`, `username?`, `message?`), not free text, but it has no equivalent of
- *    `hosted.credentialsSentAt` (required by `EntitlementDetail.hosted`), and nothing elsewhere in
- *    `EntitlementView` carries that timestamp. Rather than fabricate a "sent on" date, the hosted
- *    panel renders its "being set up" state instead.
+ *  - `hosted` is filled from `provisioning.notes` (login URL / username / message) once
+ *    provisioning is done; while pending it stays undefined and the panel says "Being set up".
  *  - `changelog` is always `[]` -- `EntitlementView.versions` is always `[]` from
  *    `buildCustomerView` (release catalog isn't wired into the customer view yet); mapped
  *    faithfully so it fills in automatically once that's done.
@@ -151,7 +148,16 @@ export function mapEntitlementDetail(e: EntitlementView): EntitlementDetail {
     licenseKey: e.licenseKeyMasked
       ? { masked: e.licenseKeyMasked, full: e.licenseKeyMasked }
       : undefined,
-    hosted: undefined,
+    // Delivered hosted/SaaS: surface the admin's login link / username / note (else the panel would
+    // say "Being set up" forever).
+    hosted:
+      e.provisioning?.state === "done"
+        ? {
+            loginUrl: e.provisioning.notes?.loginUrl,
+            username: e.provisioning.notes?.username,
+            message: e.provisioning.notes?.message,
+          }
+        : undefined,
     steps: e.deliveryType === "service" ? steps : undefined,
     attachments: e.custom?.attachments.map((a) => ({
       name: a.name,

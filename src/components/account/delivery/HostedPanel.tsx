@@ -13,13 +13,13 @@ import type { EntitlementDetail } from "../types";
 export function HostedPanel({
   productName,
   provisioningState,
-  hosted,
+  hosted = {},
 }: {
   productName: string;
   provisioningState: EntitlementDetail["provisioningState"];
   hosted?: EntitlementDetail["hosted"];
 }) {
-  if (provisioningState === "pending" || !hosted) {
+  if (provisioningState === "pending") {
     return (
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
@@ -45,22 +45,29 @@ export function HostedPanel({
       </div>
       <div className="grid gap-4 rounded-lg border border-border bg-surface p-4 sm:grid-cols-[1fr_auto] sm:items-center">
         <dl className="grid gap-2 text-body-sm">
-          <div className="flex gap-2">
-            <dt className="w-24 shrink-0 text-fg-muted">Username</dt>
-            <dd className="font-mono text-fg">{hosted.username}</dd>
-          </div>
-          <div className="flex gap-2">
-            <dt className="w-24 shrink-0 text-fg-muted">Credentials</dt>
-            <dd className="text-fg">
-              Sent to your email on {formatDate(hosted.credentialsSentAt)}
-            </dd>
-          </div>
+          {hosted.message ? <p className="whitespace-pre-line text-fg">{hosted.message}</p> : null}
+          {hosted.username ? (
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-fg-muted">Username</dt>
+              <dd className="font-mono text-fg">{hosted.username}</dd>
+            </div>
+          ) : null}
+          {hosted.credentialsSentAt ? (
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-fg-muted">Credentials</dt>
+              <dd className="text-fg">
+                Sent to your email on {formatDate(hosted.credentialsSentAt)}
+              </dd>
+            </div>
+          ) : null}
         </dl>
-        <Button asChild>
-          <a href={hosted.loginUrl} target="_blank" rel="noreferrer">
-            Open {productName} <ExternalLinkIcon aria-hidden />
-          </a>
-        </Button>
+        {hosted.loginUrl ? (
+          <Button asChild>
+            <a href={hosted.loginUrl} target="_blank" rel="noreferrer">
+              Open {productName} <ExternalLinkIcon aria-hidden />
+            </a>
+          </Button>
+        ) : null}
       </div>
     </div>
   );

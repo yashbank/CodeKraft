@@ -990,7 +990,7 @@ function EntitlementPanel({
         <p className="text-caption text-fg-muted">
           {ent.provisioning === "done"
             ? "Provisioned."
-            : "Complete the provision task in Entitlements to activate this."}
+            : "Set it up, then mark it delivered to notify the customer."}
         </p>
       ) : null}
       {item.deliveryType === "service" ? (
@@ -1017,11 +1017,13 @@ function EntitlementPanel({
           </ul>
         </div>
       ) : null}
-      {item.deliveryType === "custom" ? (
+      {item.deliveryType === "custom" ||
+      ((item.deliveryType === "saas" || item.deliveryType === "hosted") &&
+        ent.provisioning !== "done") ? (
         <Button
           size="sm"
           variant="secondary"
-          disabled={busy || ent.status !== "active"}
+          disabled={busy || ent.status === "revoked" || ent.provisioning === "done"}
           onClick={() => run(() => markDelivered({ entitlementId: ent.id }), "Marked delivered")}
         >
           Mark delivered

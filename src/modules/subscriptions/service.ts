@@ -1,4 +1,4 @@
-import { and, eq, lte, or } from "drizzle-orm";
+import { and, eq, lte, ne, or } from "drizzle-orm";
 import { type TxCtx, withTx } from "@/lib/db";
 import { assertPermission } from "@/lib/authz/assert";
 import type { RequestContext } from "@/lib/authz/context";
@@ -237,7 +237,8 @@ export class DefaultSubscriptionsService implements SubscriptionsService {
         accessEndsAt: newEnd,
         updatedAt: now,
       })
-      .where(eq(entitlements.id, sub.entitlementId));
+      // A revoked (refunded / admin-revoked) entitlement must never be revived by a renewal.
+      .where(and(eq(entitlements.id, sub.entitlementId), ne(entitlements.status, "revoked")));
 
     return this.toDetail(required(updatedSub, "Subscription"));
   }
@@ -319,7 +320,7 @@ export class DefaultSubscriptionsService implements SubscriptionsService {
             accessEndsAt: now,
             updatedAt: now,
           })
-          .where(eq(entitlements.id, sub.entitlementId));
+          .where(and(eq(entitlements.id, sub.entitlementId), ne(entitlements.status, "revoked")));
 
         await auditService.log(
           ctx,
@@ -418,7 +419,7 @@ export class DefaultSubscriptionsService implements SubscriptionsService {
             accessEndsAt: now,
             updatedAt: now,
           })
-          .where(eq(entitlements.id, sub.entitlementId));
+          .where(and(eq(entitlements.id, sub.entitlementId), ne(entitlements.status, "revoked")));
         cancelled++;
       }
 
@@ -442,14 +443,14 @@ export class DefaultSubscriptionsService implements SubscriptionsService {
           .from(entitlements)
           .where(eq(entitlements.id, sub.entitlementId));
 
-        if (ent) {
+        if (ent && ent.status !== "revoked") {
           await tx
             .update(entitlements)
             .set({
               status: "suspended",
               updatedAt: now,
             })
-            .where(eq(entitlements.id, ent.id));
+            .where(and(eq(entitlements.id, ent.id), ne(entitlements.status, "revoked")));
 
           const handler = this.registry.get(ent.deliveryType);
           const [offering] = await tx

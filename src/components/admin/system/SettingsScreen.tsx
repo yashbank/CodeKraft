@@ -56,6 +56,7 @@ import { updateRazorpaySettings, updateSettings } from "@/modules/settings/admin
 import { testRazorpayConnection } from "@/modules/settings/razorpay-test-connection";
 import { Banner } from "../Banner";
 import { DangerZoneSection } from "./DangerZoneSection";
+import { FulfilmentGuide } from "./FulfilmentGuide";
 import { ManualPaymentSettings } from "./ManualPaymentSettings";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
@@ -372,6 +373,7 @@ const SECTIONS = [
   ["notifications", "Notifications"],
   ["flags", "Feature flags"],
   ["retention", "Retention"],
+  ["fulfilment", "Fulfilment guide"],
   ["danger", "Danger zone"],
 ] as const;
 type SectionKey = (typeof SECTIONS)[number][0];
@@ -1243,6 +1245,8 @@ export function SettingsScreen({
               </p>
             </>
           ) : null}
+
+          {section === "fulfilment" ? <FulfilmentGuide /> : null}
 
           {section === "danger" && isSuperAdmin ? (
             <DangerZoneSection siteName={resetSiteName ?? s.general.siteName} />
