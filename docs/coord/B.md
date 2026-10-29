@@ -60,7 +60,7 @@ Updated: 2026-10-29
 - R9-11 | ready | branch feat/r9-integration | r9-11 xlsx+csv; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-12 | ready | branch feat/r9-integration | r9-12 SEO tags/OG/sitemap/preview; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-13 | ready | branch feat/r9-integration | r9-13 new-user chat+handoff; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
-- R9-14 | doing | branch feat/r9-14
+- R9-14 | ready | branch feat/r9-integration | r9-14 sweep 259/259, SCORECARD; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
 - [open] R2 private bucket CORS must allow PUT from the admin origin | P2-01 browser uploads straight to R2 | upload a .dmg on a product version, it completes and appears
