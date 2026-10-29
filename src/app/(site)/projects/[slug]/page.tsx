@@ -28,6 +28,8 @@ export async function generateMetadata(props: {
       slug: params.slug,
       title: d.title,
       resultHighlight: d.resultHighlight,
+      clientName: d.clientName,
+      industry: d.industry,
       seoTitle: d.seo.title,
       seoDescription: d.seo.description,
     }),

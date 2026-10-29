@@ -16,12 +16,20 @@ const statusOf = async (id: string) =>
   (await q<{ status: string }>(`select status from products where id = $1`, [id]))[0]?.status;
 
 async function loginEmail(page: Page, email: string) {
-  await q(`delete from rate_limit_buckets`);
-  await page.goto(`${ADMIN}/auth/login`);
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page).not.toHaveURL(/\/auth\/login/, { timeout: 20_000 });
+  // better-auth throttles sign-in (3 per 10 s per process); wait out the window and retry.
+  for (let attempt = 0; ; attempt++) {
+    await page.goto(`${ADMIN}/auth/login`);
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    try {
+      await expect(page).not.toHaveURL(/\/auth\/login/, { timeout: 15_000 });
+      return;
+    } catch (e) {
+      if (attempt >= 3) throw e;
+      await page.waitForTimeout(11_000);
+    }
+  }
 }
 
 /** Every other admin-class user approves in their own context (approver set, BR-13). */

@@ -209,13 +209,19 @@ export function caseStudySeo(c: {
   slug: string;
   title: string;
   resultHighlight?: Opt;
+  clientName?: Opt;
+  industry?: Opt;
   seoTitle?: Opt;
   seoDescription?: Opt;
 }): PageMetaInput {
+  // A case study with no highlight or SEO text still needs a description for search results.
+  const fallback = c.clientName
+    ? `${c.industry ? `${c.industry} case study` : "Case study"} for ${c.clientName}.`
+    : undefined;
   return {
     path: `/projects/${c.slug}`,
     title: pick(c.seoTitle, c.title) ?? "",
-    description: pick(c.seoDescription, c.resultHighlight),
+    description: pick(c.seoDescription, c.resultHighlight, fallback),
     type: "article",
   };
 }
