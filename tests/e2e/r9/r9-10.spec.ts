@@ -40,6 +40,8 @@ async function addEntry(
 
 test.describe("R9-10 finance", () => {
   test.describe.configure({ mode: "serial" });
+  // Finance screens render only a LaptopNotice below 1024px (docs/07 §3.4), so admin flows are desktop-only.
+  test.skip(({ isMobile }) => isMobile, "admin finance is laptop-only (LaptopNotice below lg)");
 
   test("credit 40,000 then spend 2: exact debit/credit and running balance", async ({ page }) => {
     const issues = trackIssues(page);
@@ -54,10 +56,7 @@ test.describe("R9-10 finance", () => {
       .click();
     await page.locator("#ex-desc").fill(`${TAG} spend`);
     await page.locator("#ex-amount").fill("2");
-    await page
-      .getByRole("button", { name: /^Record expense$/ })
-      .last()
-      .click();
+    await page.getByRole("button", { name: "Record", exact: true }).click();
     await expect(page.getByText("Expense recorded")).toBeVisible();
 
     await page.goto(`${LEDGER}?q=${TAG}`);
@@ -126,11 +125,31 @@ test.describe("R9-10 finance", () => {
       ceo.user_id,
     );
 
+    // My share is not in the default dashboard layout: pin it for both admins.
+    for (const u of [ceo.user_id, cfo.user_id])
+      await q(
+        `insert into dashboard_layouts (user_id, layout) values ($1, '["my_share"]'::jsonb)
+         on conflict (user_id) do update set layout = excluded.layout`,
+        [u],
+      );
     const share = async (p: Page) => {
       await p.goto(`${ADMIN}/admin/dashboard`);
       const tile = p.getByText("Your allocations, net of refunds").locator("..");
       await expect(tile).toContainText("₹", { timeout: 30_000 });
-      return (await tile.innerText()).replace(/[,\s]/g, "");
+      // the stat counts up from 0, so wait for the value to settle before reading it
+      let last = "";
+      await expect
+        .poll(
+          async () => {
+            const t = (await tile.innerText()).replace(/[,\s]/g, "");
+            const stable = t === last;
+            last = t;
+            return stable && !t.startsWith("₹0.00");
+          },
+          { timeout: 15_000, intervals: [700] },
+        )
+        .toBe(true);
+      return last;
     };
     await loginAs(page, "super_admin");
     const ceoText = await share(page);
@@ -165,15 +184,15 @@ test.describe("R9-10 finance", () => {
     const ceo = await partnerOf(CEO);
     await loginAs(page, "super_admin");
     await page.goto(`${ADMIN}/admin/finance/partners`);
-    await page.getByRole("button", { name: /Record payout/ }).click();
+    await page
+      .getByRole("button", { name: /Record payout/ })
+      .first()
+      .click();
     await page.locator("#po-partner").click();
     await page.getByRole("option", { name: ceo.display_name }).click();
     await page.locator("#po-amount").fill("100");
     await page.locator('input[name="reference"]').fill(`${TAG}-UTR`);
-    await page
-      .getByRole("button", { name: /^Record payout$|Send for approval|Submit/ })
-      .last()
-      .click();
+    await page.getByRole("button", { name: "Request approval" }).last().click();
     await expect(page.getByText("Payout sent for approval")).toBeVisible();
     await page.getByRole("tab", { name: /Payouts/ }).click();
     await expect(page.getByText(`${TAG}-UTR`)).toBeVisible();
@@ -182,7 +201,12 @@ test.describe("R9-10 finance", () => {
 
   test("ledger renders at 375 / 768 / 1280 with the balance column", async ({ page }) => {
     await loginAs(page, "super_admin");
-    await atWidths(page, `${LEDGER}?q=${TAG}`, async () => {
+    await atWidths(page, `${LEDGER}?q=${TAG}`, async (w) => {
+      if (w < 1024) {
+        // below lg the admin shows only the "open on a laptop" notice (docs/07 §3.4)
+        await expect(page.getByText(/designed for laptops/)).toBeVisible();
+        return;
+      }
       await expect(page.getByRole("columnheader", { name: "Balance" })).toBeAttached();
       await expect(rows(page).first()).toBeVisible();
     });
