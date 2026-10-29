@@ -134,13 +134,9 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   const framable = pathname.startsWith("/api/files/product-media/");
   const csp = buildCsp(nonce, await getThemeScriptHash(), framable ? "'self'" : "'none'");
   const reqHeaders = new Headers(req.headers);
-  // Next.js reads the nonce from the request CSP header to stamp its own inline scripts. That
-  // makes a render per-request, so ISR twins (cached, shared HTML) must not carry it.
-  const twin = kind === "site" ? staticTwinPath(req) : null;
-  if (!twin) {
-    reqHeaders.set(csp.header, csp.policy);
-    reqHeaders.set("x-nonce", nonce);
-  }
+  // Next.js reads the nonce from the request CSP header to stamp its own inline scripts.
+  reqHeaders.set(csp.header, csp.policy);
+  reqHeaders.set("x-nonce", nonce);
   reqHeaders.set("x-host-kind", kind);
   // Original (pre-rewrite) path so server layouts can build a correct login `next`.
   reqHeaders.set("x-request-path", pathname + req.nextUrl.search);
@@ -172,6 +168,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     url.pathname = "/__404";
     res = NextResponse.rewrite(url, { request: { headers: reqHeaders } });
   } else {
+    const twin = staticTwinPath(req);
     if (twin) {
       const url = req.nextUrl.clone();
       url.pathname = twin;

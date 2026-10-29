@@ -40,6 +40,10 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 60 * 60 * 24 * 30,
   },
   headers: async () => cacheHeaderRules,
+  // A real 307 (a page-level redirect() under a loading.tsx boundary streams as a client redirect).
+  redirects: async () => [
+    { source: "/account/orders", destination: "/account/purchases", permanent: false },
+  ],
   eslint: {
     ignoreDuringBuilds: true,
   },
