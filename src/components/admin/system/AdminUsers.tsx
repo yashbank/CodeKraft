@@ -190,11 +190,15 @@ export function AdminUsers({
         status: "invited",
       },
     });
+    // A network failure rejects the server action instead of returning `{ ok: false }`.
     const result = await inviteAdmin({
       email,
       role: inviteRole,
       ...(invitePartner ? { partner: { displayName: partnerName } } : {}),
-    });
+    }).catch(() => ({
+      ok: false as const,
+      error: { message: "Couldn't reach the server. Check your connection and try again." },
+    }));
     inviteLock.current = false;
     setInviteSubmitting(false);
     if (!result.ok) {

@@ -43,7 +43,7 @@ test.describe("P14-09 widget styles", () => {
 
   test.afterAll(async () => {
     if (before)
-      await q(`update dashboard_layouts set layout = $2::jsonb where user_id = $1`, [
+      await q(`update dashboard_layouts set layout = $2::text::jsonb where user_id = $1`, [
         uid,
         JSON.stringify(before.layout),
       ]);
@@ -57,7 +57,7 @@ test.describe("P14-09 widget styles", () => {
     const issues = trackIssues(page);
     // Old array-of-ids format on purpose: it must still load, and the first save upgrades it.
     await q(
-      `insert into dashboard_layouts (user_id, layout) values ($1, $2::jsonb)
+      `insert into dashboard_layouts (user_id, layout) values ($1, $2::text::jsonb)
        on conflict (user_id) do update set layout = excluded.layout`,
       [uid, JSON.stringify(["conversion_rate", "revenue_by_product", "chatbot_usage"])],
     );

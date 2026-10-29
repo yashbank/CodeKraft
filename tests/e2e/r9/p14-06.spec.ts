@@ -43,12 +43,17 @@ test("P14-06 customer attaches in chat and query, admin sees and downloads, stra
   /* ---- chat: disallowed type, oversize, then image + txt ------------------------------- */
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto(`${SITE}/account/chat`);
-  await attach(page, {
-    name: "evil.svg",
-    mimeType: "image/svg+xml",
-    buffer: Buffer.from("<svg/>"),
-  });
-  await expect(page.getByTestId("attach-error")).toContainText(/not allowed/i);
+  // The first change event can land before React hydrates the composer (slow mobile): retry it.
+  await expect(async () => {
+    await attach(page, {
+      name: "evil.svg",
+      mimeType: "image/svg+xml",
+      buffer: Buffer.from("<svg/>"),
+    });
+    await expect(page.getByTestId("attach-error")).toContainText(/not allowed/i, {
+      timeout: 2_000,
+    });
+  }).toPass({ timeout: 20_000 });
   await attach(page, {
     name: "huge.png",
     mimeType: "image/png",

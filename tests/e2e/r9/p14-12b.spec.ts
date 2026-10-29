@@ -122,14 +122,18 @@ test("branded 404 on site, account and admin: status 404, logo, search, links, n
 
   await loginAs(page, "customer");
   const acc = await page.goto(`${SITE}/account/orders/00000000-0000-4000-8000-000000000000`);
-  expect(acc?.status()).toBe(404);
+  // loading.tsx streams the skeleton first, so the status is already 200 when notFound() fires
+  // (Next adds noindex instead); the site 404 above has no data fetch, so it keeps a real 404.
+  expect([200, 404]).toContain(acc?.status());
+  await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute("content", /noindex/);
   await expect(page.getByRole("link", { name: "Account home" })).toBeVisible();
 
   const adminCtx = await quietContext(browser);
   const admin = await adminCtx.newPage();
   await loginAs(admin, "admin");
   const adm = await admin.goto(`${ADMIN}/admin/products/00000000-0000-4000-8000-000000000000`);
-  expect(adm?.status()).toBe(404);
+  expect([200, 404]).toContain(adm?.status());
+  await expect(admin.locator('meta[name="robots"]').first()).toHaveAttribute("content", /noindex/);
   await expect(admin.getByRole("heading", { name: "Page not found" })).toBeVisible();
   await expect(admin.getByRole("link", { name: "Back to dashboard" })).toBeVisible();
   await ctx.close();
@@ -280,11 +284,14 @@ test("print media hides site nav/footer and account chrome, text is black, links
     .getByRole("heading", { level: 1 })
     .evaluate((el) => getComputedStyle(el).color);
   expect(color).toBe("rgb(0, 0, 0)");
-  const after = await page
+  // The seeded legal text may hold no links, and evaluate() on a missing element waits out the
+  // whole test timeout, so only measure when one exists.
+  const link = page
     .locator("[data-print-urls] a[href^='/'], [data-print-urls] a[href^='http']")
-    .first()
-    .evaluate((el) => getComputedStyle(el, "::after").content)
-    .catch(() => '" (x)"');
+    .first();
+  const after = (await link.count())
+    ? await link.evaluate((el) => getComputedStyle(el, "::after").content)
+    : '" (x)"';
   expect(after).toMatch(/\(/);
 
   await loginAs(page, "customer");
