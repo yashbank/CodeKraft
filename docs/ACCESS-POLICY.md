@@ -8,41 +8,40 @@ This page explains who can do what in CodeKraft, how people get access, how pass
 
 CodeKraft has four login roles. Each user has one role.
 
-| Role | Who it is for | Summary |
-| --- | --- | --- |
-| `super_admin` | Founders and the most trusted operators | Everything an admin can do, with no data scoping. Also manages admin users and roles, changes site settings, reads all ledgers and leads, and exports audit data. |
-| `admin` | Trusted day-to-day operators | Runs catalog, orders, invoices, delivery, leads, queries, and customer support. Sees finance only for their own product and partner lines. Approves requests from others, never their own. Cannot manage admin users or change settings. |
-| `staff` | Support and content helpers | Edits catalog and content, handles orders, invoices, delivery tasks, leads, queries, and customer notes. Can read settings and the dashboard. No finance, no approvals, no audit log, no suspending or resetting customers. |
-| `customer` | Buyers | Manages their own account, purchases, delivery, support chat, and the chatbot. No admin screens. |
+| Role          | Who it is for                          | Summary                                                                                                                                                                                                                                                                                                                                        |
+| ------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `super_admin` | Founders and the most trusted operators | Everything an admin can do, with no data scoping. Also manages admin users and roles, changes site settings, reads all ledgers and leads, and exports audit data.                                                                                                                                                                              |
+| `admin`       | Trusted day-to-day operators           | Runs catalog, orders, invoices, delivery, leads, queries, and customer support. Sees finance only for their own product and partner lines. Approves requests from others, never their own. Cannot manage admin users or change settings.                                                                                                       |
+| `staff`       | Support and content helpers            | Edits catalog and content, handles orders, invoices, delivery tasks, leads, queries, and customer notes. Can read settings and the dashboard. No finance, no approvals, no audit log, no suspending or resetting customers.                                                                                                                    |
+| `customer`    | Buyers                                 | Manages their own account, purchases, delivery, support chat, and the chatbot. No admin screens.                                                                                                                                                                                                                                               |
 
 Partners are not a login role. A partner is a business record linked to a user (for payouts and statements). Partner access to money views comes from the admin role and the partner record, not from a separate login.
 
 The admin console is open only to `super_admin` and `admin`, and `staff` have a limited admin view. Customers never reach admin screens.
 
-## 2. Inviting an admin
+## 2. Inviting people
 
-- An invite creates a single-use link that is valid for **7 days**.
-- The inviter can copy the link and share it through a channel the invitee trusts. Do not send it to a shared inbox or public chat.
-- Regenerating an invite **invalidates the old link**. Only the newest link works.
-- Inviting any admin-class user (`admin` or `super_admin`) needs approval from a second admin-class user. The request appears under Approvals as `admin.user_change`. The requester cannot approve their own request.
-- Gap to close: the current code lets any other active admin-class user approve, not only a second super admin. Until that is tightened, approve admin-class invites only when you would trust the approver with full access.
+- An invite creates a single-use link that is valid for **7 days**. The server stores only a SHA-256 hash of the link, never the link itself.
+- The inviter uses **Copy link** in the Access dialog and shares it through a channel the invitee trusts. Do not send it to a shared inbox or public chat.
+- **Regenerate link** invalidates the old link. Only the newest link works.
+- Inviting an admin-class user (`admin` or `super_admin`) needs approval. The request appears under Approvals as `admin.user_change`. The requester cannot approve their own request.
+- Accepting an invite is rate limited to **10 attempts per 15 minutes per IP address**.
 
 ## 3. Temporary passwords
 
-- The policy is that no one shares a temporary password. An admin never sets a password for another person.
-- Where a temporary password is shown, it is shown **once** at creation. Copy it straight into a password manager and hand it over in person or in a secure channel.
-- Temporary passwords are never stored in readable form. If it is lost, regenerate it.
-- The user **must change it on first login**.
-- Regenerating a temporary password **invalidates the old one** immediately.
-- Gap to check: the current customer flow sends a set-password email instead of creating a temporary password. Confirm with the team which flow is live before relying on this section.
+- A temporary password is generated from the Access dialog and **shown once**. Copy it straight into a password manager and hand it over in person or in a secure channel. Once the dialog closes, it cannot be seen again.
+- It is stored only as a password hash, never in readable form.
+- The user **must change it on first login**. The flag is enforced on both the pages and the server actions, so the person cannot skip the change by calling the app directly.
+- Regenerating a temporary password **replaces the old one** immediately.
 
 ## 4. Password reset
 
 - **Email flow.** When email is configured, a user who forgets their password requests a reset email. The reset link is valid for **1 hour**.
-- **Admin-generated link.** An admin with `customers.reset_link` can send a single-use reset link. It is valid for **1 hour**. The admin never sees the link itself.
-- **Signing out.** A successful reset signs out all other sessions for that user.
-- **Super admins only.** Only a `super_admin` can reset another `super_admin`'s password.
-- Failed or expired reset links cannot be reused. Request a new one.
+- **Admin-generated link.** An admin with the right permission can generate a single-use reset link from the Access dialog. It is valid for **1 hour**. The link is shown once to the admin; the user receives it from the admin.
+- **Signing out.** Using an admin-generated reset link revokes all of that user's existing sessions.
+- **Super admins only.** Only a `super_admin` can reset another `super_admin`.
+- **Nobody resets themselves.** Use account settings to change your own password.
+- Expired or used links cannot be reused. Generate a new one.
 
 ## 5. Password rules
 
@@ -52,7 +51,7 @@ Enforced by the server on every sign-up, change, and reset (`src/modules/auth/pa
 - **Maximum length:** 128 characters.
 - **No forced symbols or digits.** Length matters more than character mix. Use a passphrase.
 - **Not blank.** Spaces alone are rejected.
-- **Must not contain your email name.** For example, if your email is `<admin-email>`, the local part before `@` cannot appear in the password.
+- **Must not contain your email name.** For example, if your email is `<admin-email>`, the part before `@` cannot appear in the password.
 - **Breach check.** Passwords found in known data breaches are refused.
 
 ## 6. Two-factor login (2FA)
@@ -61,14 +60,14 @@ Enforced by the server on every sign-up, change, and reset (`src/modules/auth/pa
 - Users turn it on from their own Security (TOTP) screen. Setup needs their password.
 - Admin users with TOTP enabled are asked for a six-digit code after the password step on the admin login.
 - **Recommendation:** every `admin` and `super_admin` must enable 2FA. Treat an admin account without 2FA as a risk to fix on day one.
-- Gap to check: the code does not appear to force 2FA on admin accounts. Confirm the enforcement before relying on it.
+- **Known gap:** the code does not force 2FA on admin accounts. Until it does, enforcement depends on the admins themselves.
 
 ## 7. Sessions
 
 - Admin sessions sign out after **30 minutes idle**.
 - Customer sessions sign out after **1 hour idle**.
-- Gap: the code defines a 12-hour (admin) and 7-day (customer) absolute session cap, but nothing enforces it yet.
 - Suspending a customer deletes all of their sessions at once.
+- **Known gap:** the code defines a 12-hour (admin) and 7-day (customer) absolute session cap, but nothing enforces it yet.
 
 ## 8. Offboarding a person
 
@@ -83,7 +82,7 @@ Do these in order, the same day:
 
 ## 9. Audit log
 
-- Every sign-in, sign-out, role change, approval, settings change, and password action is recorded.
+- Every sign-in, sign-out, role change, approval, settings change, invite, link, and password action is recorded.
 - Find it in the admin console under **Audit log**. Only `super_admin` and `admin` can read it. Only `super_admin` and `admin` can export it.
 - Review it after every offboarding and once a month for admin accounts.
 
@@ -97,3 +96,11 @@ Do these in order, the same day:
 - Never approve your own admin request, and never skip the approval step.
 - Never leave an offboarded person's session or 2FA device active.
 - Never disable 2FA on an admin account without a replacement plan.
+
+## 11. Known gaps (open items)
+
+- The approver for an admin-class invite can be any other active admin, not only a second super admin.
+- 2FA is not enforced for admin accounts.
+- The 12-hour admin and 7-day customer session caps are defined but not enforced.
+- The email reset path does not clear the must-change-password flag.
+- Partner is not a login role; it is a business record only.
