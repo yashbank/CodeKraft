@@ -43,6 +43,8 @@ export const users = pgTable(
     status: userStatus("status").notNull().default("active"),
     displayCurrency: text("display_currency").notNull().default("INR"),
     themePref: themePref("theme_pref"),
+    /** P10: set for admin-issued temporary passwords; layouts force /auth/change-password until cleared. */
+    mustChangePassword: boolean("must_change_password").notNull().default(false),
     deletedAt: ts("deleted_at"),
     anonymizedAt: ts("anonymized_at"),
     createdAt: ts("created_at").notNull().defaultNow(),
@@ -112,6 +114,31 @@ export const verifications = pgTable(
     updatedAt: ts("updated_at").notNull().defaultNow(),
   },
   (t) => [index("verifications_identifier_idx").on(t.identifier)],
+);
+
+/**
+ * Admin-issued single-use links (P10): purpose 'invite' (new or approved-but-passwordless user) and
+ * 'reset'. Only the SHA-256 of the raw token is stored. `userId` null = invite for an email that
+ * has no account yet (created on acceptance).
+ */
+export const userTokens = pgTable(
+  "user_tokens",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    tokenHash: text("token_hash").notNull().unique(),
+    purpose: text("purpose").notNull(), // 'invite' | 'reset'
+    email: citext("email").notNull(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    role: text("role"), // invite only
+    partnerName: text("partner_name"), // invite only
+    expiresAt: ts("expires_at").notNull(),
+    usedAt: ts("used_at"),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("user_tokens_email_idx").on(t.email, t.purpose)],
 );
 
 export const twoFactor = pgTable(

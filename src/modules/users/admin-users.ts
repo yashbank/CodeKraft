@@ -9,14 +9,7 @@ import type { RequestContext } from "@/lib/authz/context";
 import { approvalsService } from "@/modules/approvals/service";
 import { countActiveAdmins } from "@/modules/approvals/approver-set";
 import type { ApprovalPayloadMap } from "@/modules/approvals/types";
-import {
-  accounts,
-  sessions,
-  twoFactor,
-  userRoles,
-  users,
-  verifications,
-} from "../../../drizzle/schema/auth";
+import { accounts, sessions, twoFactor, userRoles, users } from "../../../drizzle/schema/auth";
 import { partners } from "../../../drizzle/schema/users-ext";
 import { productOwnershipLines, productOwnerships } from "../../../drizzle/schema/ownership";
 import { leads } from "../../../drizzle/schema/leads";
@@ -499,9 +492,8 @@ export async function applyAdminUserChange(
 export const ADMIN_INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * Issue a Better Auth `reset-password:<token>` verification row (the same shape
- * `/request-password-reset` writes, so `/api/auth/reset-password` consumes it and creates the
- * credential account) and email the invitee a link to the admin host's set-password screen.
+ * Issue a single-use invite token (user_tokens, hash only) and email the invitee a link to the
+ * admin host's /auth/invite/<token> screen.
  * Mail failures are logged, never thrown: the approval must still apply, and the invitee can use
  * "Forgot password" on the admin login as a fallback.
  */
@@ -509,11 +501,13 @@ export async function sendAdminInvite(
   tx: TxCtx,
   invite: { userId: string; email: string; role: string },
 ): Promise<void> {
-  const token = Buffer.from(crypto.getRandomValues(new Uint8Array(24))).toString("base64url");
-  await tx.insert(verifications).values({
-    identifier: `reset-password:${token}`,
-    value: invite.userId,
-    expiresAt: new Date(Date.now() + ADMIN_INVITE_TTL_MS),
+  const { issueToken } = await import("@/modules/auth/invites");
+  const token = await issueToken(tx as unknown as import("@/lib/db").Db, {
+    purpose: "invite",
+    email: invite.email.toLowerCase(),
+    userId: invite.userId,
+    role: invite.role,
+    createdBy: null,
   });
   // Lazy: this module is reachable from client bundles/jsdom tests; env + mail are server-only.
   const [{ getEnv }, { sendEmail }, { getLogger }] = await Promise.all([
@@ -522,7 +516,7 @@ export async function sendAdminInvite(
     import("@/lib/logger"),
   ]);
   const adminUrl = getEnv().NEXT_PUBLIC_ADMIN_URL.replace(/\/$/, "");
-  const url = `${adminUrl}/auth/reset?token=${encodeURIComponent(token)}`;
+  const url = `${adminUrl}/auth/invite/${token}`;
   const { getSiteName } = await import("@/lib/site-brand");
   try {
     await sendEmail({

@@ -46,13 +46,13 @@ import { MoneyCell } from "../MoneyCell";
 import { Field } from "../RichTextField";
 import { RowActions } from "../RowActions";
 import { StatTile } from "../StatTile";
+import { AccessDialog } from "../system/AccessDialog";
 import type { CustomerDetailData } from "../types";
 import { grantEntitlementManual } from "@/modules/entitlements/admin-mutations";
 import {
   markCustomerEmailVerified,
   reinstateCustomer,
   sendMagicLink,
-  sendResetLink,
   suspendCustomer,
   updateCustomerNotes,
 } from "@/modules/users/admin-mutations";
@@ -86,6 +86,7 @@ export function CustomerDetail({
   const [tags, setTags] = React.useState(c.tags);
   const [newTag, setNewTag] = React.useState("");
   const [grantOpen, setGrantOpen] = React.useState(false);
+  const [accessOpen, setAccessOpen] = React.useState(false);
   const [reason, setReason] = React.useState("");
   const [grantOffering, setGrantOffering] = React.useState(data.offeringOptions[0]?.id ?? "");
   const [grantMonths, setGrantMonths] = React.useState("lifetime");
@@ -136,15 +137,6 @@ export function CustomerDetail({
     setNotesSaved("Saved");
   }
 
-  async function handleSendResetLink() {
-    const result = await sendResetLink({ userId: c.id, kind: "reset" });
-    if (!result.ok) {
-      toast.error(result.error.message);
-      return;
-    }
-    toast.success(`Reset link sent to ${result.data.sentTo}`);
-  }
-
   async function handleSendMagicLink() {
     const result = await sendMagicLink({ userId: c.id, kind: "magic" });
     if (!result.ok) {
@@ -189,6 +181,11 @@ export function CustomerDetail({
 
   return (
     <>
+      <AccessDialog
+        open={accessOpen}
+        onOpenChange={setAccessOpen}
+        target={{ userId: c.id, label: c.name }}
+      />
       <section
         aria-label="Customer header"
         className="mb-6 rounded-lg border border-border bg-surface p-5"
@@ -271,9 +268,9 @@ export function CustomerDetail({
               variant="outline"
               size="sm"
               disabled={deleted}
-              onClick={() => void handleSendResetLink()}
+              onClick={() => setAccessOpen(true)}
             >
-              Send reset link
+              Reset link / password
             </Button>
             <Button
               variant="outline"

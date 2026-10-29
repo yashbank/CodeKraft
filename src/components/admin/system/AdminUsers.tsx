@@ -57,6 +57,7 @@ import {
   updatePartner,
 } from "@/modules/users/admin-mutations";
 import { formatDateTime, initials } from "../format";
+import { AccessDialog, type AccessTarget } from "./AccessDialog";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
 import { RowActions } from "../RowActions";
@@ -104,6 +105,7 @@ export function AdminUsers({
   const [invitePartner, setInvitePartner] = React.useState(false);
   const [inviteRole, setInviteRole] = React.useState<AdminRole>("admin");
   const [inviteSubmitting, setInviteSubmitting] = React.useState(false);
+  const [access, setAccess] = React.useState<AccessTarget | "customer" | null>(null);
   const [securityOpen, setSecurityOpen] = React.useState(false);
   const [partnerSheet, setPartnerSheet] = React.useState<AdminUserRow | null>(null);
   const [partnerSubmitting, setPartnerSubmitting] = React.useState(false);
@@ -221,6 +223,9 @@ export function AdminUsers({
           <>
             <Button variant="outline" size="sm" onClick={() => setSecurityOpen(true)}>
               <KeyRoundIcon aria-hidden /> Security (my TOTP)
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setAccess("customer")}>
+              Invite customer
             </Button>
             <Button size="sm" onClick={() => setInviteOpen(true)}>
               <PlusIcon aria-hidden /> Invite admin
@@ -381,7 +386,11 @@ export function AdminUsers({
                             onSelect: () => setPartnerSheet(u),
                             disabled: !u.partner,
                           },
-                          { label: "Resend invite", disabled: true },
+                          {
+                            label: "Link / temporary password…",
+                            onSelect: () => setAccess({ userId: u.id, label: u.name }),
+                            disabled: u.status === "invited" || u.id === currentUserId,
+                          },
                           {
                             label: "Revoke sessions",
                             disabled: true,
@@ -404,7 +413,8 @@ export function AdminUsers({
         </div>
       )}
       <p className="mt-3 text-caption text-fg-muted">
-        Resend invite and Revoke sessions are currently disabled.
+        Revoke sessions is currently disabled. Invited admins get a link after the invite is
+        approved: use Link / temporary password.
       </p>
       <p className="mt-1 text-caption text-fg-muted">
         Removing the last Super Admin is not allowed. A partner holding active shares must have
@@ -418,6 +428,12 @@ export function AdminUsers({
         </Link>
         .
       </p>
+
+      <AccessDialog
+        open={access !== null}
+        onOpenChange={(o) => !o && setAccess(null)}
+        target={access === "customer" ? null : access}
+      />
 
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
         <DialogContent size="md">
