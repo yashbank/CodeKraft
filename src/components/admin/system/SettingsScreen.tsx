@@ -51,6 +51,7 @@ import { Banner } from "../Banner";
 import { DangerZoneSection } from "./DangerZoneSection";
 import { FulfilmentGuide } from "./FulfilmentGuide";
 import { ManualPaymentSettings } from "./ManualPaymentSettings";
+import { SettingsTransfer } from "./SettingsTransfer";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
 import type { SiteSettings } from "@/modules/settings/types";
@@ -634,9 +635,12 @@ export function SettingsScreen({
         title="Settings"
         description="Platform configuration that never needs a deploy. Every change is audited with before/after."
         actions={
-          <Button asChild variant="link" size="sm">
-            <a href={auditHref}>Audit trail</a>
-          </Button>
+          <>
+            {isSuperAdmin ? <SettingsTransfer /> : null}
+            <Button asChild variant="link" size="sm">
+              <a href={auditHref}>Audit trail</a>
+            </Button>
+          </>
         }
       />
       {ro ? (
