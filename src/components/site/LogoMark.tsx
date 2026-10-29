@@ -8,7 +8,7 @@ export function LogoMark({ src, name }: { src: string; name: string }) {
   const [failed, setFailed] = useState(false);
   if (failed) return <>{name}</>;
   return (
-    <span className="relative block h-8 w-28">
+    <span className="relative block h-8 w-28 overflow-hidden rounded-md">
       <Image
         src={src}
         alt={name}
