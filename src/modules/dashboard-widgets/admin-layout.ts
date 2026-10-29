@@ -37,6 +37,7 @@ export const ADMIN_WIDGET_KEYS = [
   "catalog_status",
   "new_customers",
   "system_health",
+  "orders_heatmap",
 ] as const;
 export type AdminWidgetKey = (typeof ADMIN_WIDGET_KEYS)[number];
 

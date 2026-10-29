@@ -4,7 +4,7 @@
  * changes presentation only: numbers, labels and the text alternative are always rendered.
  * `tests/unit/dashboard-widgets/widget-styles.test.tsx` pins 5-6 styles per kind.
  *
- * Heatmap is not a kind yet: no widget has a two-dimensional dataset to draw.
+ * Heatmap (weekday x hour grid) was added by P14-12a.
  */
 import type { AdminWidgetKey } from "./admin-layout";
 
@@ -15,6 +15,7 @@ export const WIDGET_STYLES = {
   donut: ["donut", "pie", "thin-ring", "segmented", "center-total", "compact"],
   progress: ["solid", "thin", "thick", "segmented", "striped", "outlined"],
   sparkline: ["line", "area", "bars", "dots", "gradient", "minimal"],
+  heatmap: ["squares", "rounded", "circles", "outlined", "contrast", "compact"],
   list: ["divided", "plain", "striped", "compact", "cards", "accent-bar"],
 } as const;
 export type WidgetKind = keyof typeof WIDGET_STYLES;
@@ -41,6 +42,7 @@ export const WIDGET_KIND: Record<AdminWidgetKey, WidgetKind> = {
   catalog_status: "donut",
   new_customers: "sparkline",
   system_health: "list",
+  orders_heatmap: "heatmap",
 };
 
 export const stylesFor = (key: AdminWidgetKey): readonly string[] =>

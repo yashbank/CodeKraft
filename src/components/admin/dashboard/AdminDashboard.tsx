@@ -56,6 +56,7 @@ import { WidgetSkeleton } from "./WidgetSkeleton";
 import { dashboardRangeBounds, ledgerDrillHref } from "@/lib/admin/drill-links";
 import { AnimatedNumber } from "../use-count-up";
 import { Funnel } from "../charts/Funnel";
+import { HeatmapChart, type HeatmapVariant } from "../charts/HeatmapChart";
 import { Gauge } from "../charts/Gauge";
 import { Sparkline } from "../charts/Sparkline";
 import { EmptyState } from "../EmptyState";
@@ -65,6 +66,7 @@ import type { DashboardData, ProductStatus, WidgetKey } from "../types";
 import { LIST_CLASS, QueueList } from "./QueueList";
 import { WIDGET_LIBRARY, type WidgetDefinition } from "./widget-library";
 import { defaultLayoutFor } from "./role-widgets";
+import { moveKey } from "./reorder";
 import { WidgetFrame } from "./WidgetFrame";
 
 const lakh = (paise: number) => `₹${(paise / 10000000).toFixed(1)}L`;
@@ -109,6 +111,7 @@ export function AdminDashboard({
   const [enabled, setEnabled] = React.useState<WidgetKey[]>(layout ?? defaultLayout);
   const [styles, setStyles] = React.useState<Partial<Record<WidgetKey, string>>>(stylesProp ?? {});
   const [editing, setEditing] = React.useState(false);
+  const [dragKey, setDragKey] = React.useState<WidgetKey | null>(null);
   const [libraryOpen, setLibraryOpen] = React.useState(false);
   const range = serverData.range;
   // Per-widget refresh results are layered over the server-rendered data; a new server render
@@ -281,6 +284,29 @@ export function AdminDashboard({
               onMoveDown={index < definitions.length - 1 ? () => move(def.key, 1) : undefined}
               viewAllHref={VIEW_ALL[def.key] ? href(VIEW_ALL[def.key] as string) : undefined}
               styleName={resolveWidgetStyle(def.key, styles[def.key])}
+              dnd={
+                editing
+                  ? {
+                      draggable: true,
+                      title: "Drag to reorder",
+                      onDragStart: (e) => {
+                        setDragKey(def.key);
+                        e.dataTransfer.effectAllowed = "move";
+                        e.dataTransfer.setData("text/plain", def.key);
+                      },
+                      onDragOver: (e) => {
+                        if (dragKey) e.preventDefault();
+                      },
+                      onDrop: (e) => {
+                        e.preventDefault();
+                        if (dragKey && dragKey !== def.key)
+                          persist(moveKey(enabled, dragKey, def.key));
+                        setDragKey(null);
+                      },
+                      onDragEnd: () => setDragKey(null),
+                    }
+                  : undefined
+              }
             >
               {refreshing.has(def.key) ? (
                 <WidgetSkeleton />
@@ -695,6 +721,15 @@ export function WidgetBody({
             />
           ) : null}
         </div>
+      );
+    case "orders_heatmap":
+      if (data.ordersHeatmap.total === 0) return <NoData text="No orders in the last 90 days" />;
+      return (
+        <HeatmapChart
+          data={data.ordersHeatmap}
+          variant={v as HeatmapVariant}
+          caption="Orders by weekday and hour, last 90 days (IST)"
+        />
       );
     case "system_health":
       if (data.systemHealth.length === 0) return <NoData text="Health checks unavailable" />;

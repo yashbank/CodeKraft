@@ -191,6 +191,15 @@ export const WIDGET_LIBRARY: WidgetDefinition[] = [
     requiredPermission: "settings.read",
     colSpan: 4,
   },
+  {
+    key: "orders_heatmap",
+    title: "Orders by weekday and hour",
+    group: "Sales & revenue",
+    description: "When orders arrive over the last 90 days (IST); Super Admin only.",
+    requiredPermission: "orders.read",
+    colSpan: 6,
+    superAdminOnly: true,
+  },
 ];
 
 /** Default layout for a new admin (SCR-ADM-02). */

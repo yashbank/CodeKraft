@@ -3455,6 +3455,13 @@ export const DASHBOARD: DashboardData = {
     { status: "archived", count: 1 },
   ],
   newCustomers: { count: 5, delta: "+1 vs previous 30 days", sparkline: [1, 0, 2, 1, 0, 1, 0, 0] },
+  ordersHeatmap: {
+    grid: Array.from({ length: 7 }, (_, d) =>
+      Array.from({ length: 24 }, (_, h) => (d < 5 && h >= 10 && h <= 17 ? 1 + ((d + h) % 4) : 0)),
+    ),
+    total: 100,
+    max: 4,
+  },
   systemHealth: [
     { label: "Database", ok: true, detail: "12 ms" },
     { label: "Email (Resend)", ok: true, detail: "queue 0" },

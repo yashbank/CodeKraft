@@ -11,6 +11,7 @@ import { WIDGET_LIBRARY } from "@/components/admin/dashboard/widget-library";
 import { allowedWidgetKeys } from "@/components/admin/dashboard/role-widgets";
 export { WIDGET_DATA_KEYS, pickWidgetData } from "@/components/admin/dashboard/widget-data-keys";
 import { startOfFy } from "@/lib/dates";
+import { emptyHeatmap } from "@/modules/dashboard-widgets/heatmap";
 import { listApprovalsAction } from "@/modules/approvals/queries";
 import { listQueriesAdminQuery } from "@/modules/queries/queries";
 import { listLeadsQuery } from "@/modules/leads/queries";
@@ -25,6 +26,7 @@ import {
   loadConversionRate,
   loadFunnel,
   loadNewCustomers,
+  loadOrdersHeatmap,
   loadRevocationTasks,
   loadServiceChecklists,
   loadSystemHealth,
@@ -95,6 +97,7 @@ export async function loadDashboardData(
     chatbotUsage,
     newCustomers,
     systemHealth,
+    ordersHeatmap,
   ] = await Promise.all([
     // `mine`: pending requests the caller must decide on (never their own).
     allowed("publish_approvals")
@@ -143,6 +146,7 @@ export async function loadDashboardData(
       ? loadNewCustomers(days)
       : Promise.resolve({ count: 0, delta: "No data yet", sparkline: [] as number[] }),
     allowed("system_health") ? loadSystemHealth() : Promise.resolve([]),
+    allowed("orders_heatmap") ? loadOrdersHeatmap() : Promise.resolve(emptyHeatmap()),
   ]);
 
   const money = finance ?? {
@@ -201,6 +205,7 @@ export async function loadDashboardData(
     chatbotUsage,
     catalogStatus: Array.from(statusCounts.entries()).map(([status, count]) => ({ status, count })),
     newCustomers,
+    ordersHeatmap,
     systemHealth,
   };
 }

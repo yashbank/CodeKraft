@@ -15,7 +15,7 @@ const ALLOWED: Record<"admin" | "staff", string[]> = {
   ],
   staff: ["new_leads", "overdue_follow_ups", "open_queries", "service_checklists"],
 };
-const TOTAL_WIDGETS = 21;
+const TOTAL_WIDGETS = 22;
 
 type Saved = { layout: unknown } | undefined;
 const saved = new Map<string, Saved>();
