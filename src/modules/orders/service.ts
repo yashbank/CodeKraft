@@ -779,7 +779,17 @@ export class DefaultOrdersService implements OrdersService {
       items,
       itemMeta: {},
       payments: paymentViews,
-      entitlements: [],
+      entitlements: (
+        await db
+          .select({
+            id: entitlements.id,
+            deliveryType: entitlements.deliveryType,
+            status: entitlements.status,
+          })
+          .from(entitlements)
+          .innerJoin(orderItems, eq(entitlements.orderItemId, orderItems.id))
+          .where(eq(orderItems.orderId, order.id))
+      ).map((e) => ({ entitlementId: e.id, deliveryType: e.deliveryType, status: e.status })),
       instructionsHtml: "<p>Thank you for your order.</p>",
       refunds: [],
       customerExtra: { tags: [], notes: null },
