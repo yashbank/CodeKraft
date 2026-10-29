@@ -83,17 +83,15 @@ export class LicenseDeliveryHandler implements DeliveryHandler<"license"> {
   }
 
   customerView(source: CustomerViewSource): CustomerDeliveryView {
-    const isSuspendedOrRevoked =
-      source.entitlement.status === "suspended" ||
-      source.entitlement.status === "expired" ||
-      source.entitlement.status === "revoked";
+    const isSuspendedOrRevoked = source.entitlement.status !== "active";
 
     const keyIssued = Boolean(source.entitlement.licenseKeyEnc);
 
     // Masked view: •••• •••• •••• 4F2A or null
     let licenseKeyMasked: string | null = null;
     if (!isSuspendedOrRevoked && source.entitlement.licenseKeyEnc) {
-      licenseKeyMasked = maskLicenseKey(source.entitlement.licenseKeyEnc);
+      // Undecryptable-for-masking still means a key exists: keep it revealable.
+      licenseKeyMasked = maskLicenseKey(source.entitlement.licenseKeyEnc) ?? "•••• •••• •••• ••••";
     }
 
     return {
