@@ -47,7 +47,7 @@ Updated: 2026-10-29
 - P12-04 | ready | branch feat/p12-04-admin-extras | stacked on P9-04; vitest tests/unit+static: 1106 pass
 - P12-02 | ready | branch feat/p12-02-dead-button-audit | Fixes site 500 regression (client imported server display-currency; pure helpers moved to src/lib/currency-prefs.ts). Removed dead Duplicate actions, added disabled reasons. 0 overflow at 375/768/1280, 0 console errors. Branch = merge of all P7-P12 + fixes. tsc clean, vitest 1627/1627, e2e dead-buttons 7/7 (workers=1). Not audited: /admin/products, /admin/content/legal (dev restart).
 - R9-00 | ready | branch feat/r9-integration | harness: 4 roles x Chrome+Pixel7, r9-00-roles 118 tests; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
-- R9-01 | doing | branch feat/r9-01
+- R9-01 | ready | branch feat/r9-integration | r9-01 executes reset on local DB, super admins survive (5 pass); prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-02 | doing | branch feat/r9-02
 - R9-03 | doing | branch feat/r9-03
 - R9-04 | doing | branch feat/r9-04
