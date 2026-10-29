@@ -49,7 +49,7 @@ Updated: 2026-10-29
 - R9-00 | ready | branch feat/r9-integration | harness: 4 roles x Chrome+Pixel7, r9-00-roles 118 tests; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-01 | ready | branch feat/r9-integration | r9-01 executes reset on local DB, super admins survive (5 pass); prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-02 | ready | branch feat/r9-integration | r9-02 invoice refresh+PDF+print; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
-- R9-03 | doing | branch feat/r9-03
+- R9-03 | ready | branch feat/r9-integration | r9-03 fulfilment per type + guide; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-04 | doing | branch feat/r9-04
 - R9-05 | doing | branch feat/r9-05
 - R9-06 | doing | branch feat/r9-06
