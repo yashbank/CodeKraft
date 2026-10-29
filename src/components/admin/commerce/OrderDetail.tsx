@@ -36,12 +36,23 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
 import { ApprovalGateNotice, Banner } from "../Banner";
+import { EntitlementStatusChip } from "@/components/account/EntitlementStatusChip";
+import { entitlementStatus } from "@/lib/entitlement-status";
 import { formatDateTime, money, percentFromBps } from "../format";
+
+function entStatusInput(ent: NonNullable<OrderItemDetail["entitlement"]>) {
+  return {
+    status: ent.status,
+    provisioningState: ent.provisioning ?? "n/a",
+    startsAt: ent.accessStarts,
+    endsAt: ent.accessEnds,
+  };
+}
 import { KeyValue } from "../KeyValue";
 import { MoneyCell } from "../MoneyCell";
 import { Field } from "../RichTextField";
 import { RowActions } from "../RowActions";
-import type { DeliveryTaskRow, OrderDetailData } from "../types";
+import type { DeliveryTaskRow, OrderDetailData, OrderItemDetail } from "../types";
 import { ConfirmPaymentDialog } from "./ConfirmPaymentDialog";
 
 export interface OrderDetailProps {
@@ -423,23 +434,10 @@ export function OrderDetail({
                           value={it.deliveryType}
                           size="sm"
                         />
-                        <StatusBadge
-                          kind="entitlements.status"
-                          value={it.entitlement.status}
-                          size="sm"
-                        />
-                        {it.entitlement.provisioning && it.entitlement.provisioning !== "n/a" ? (
-                          <StatusBadge
-                            kind="entitlements.provisioning_state"
-                            value={it.entitlement.provisioning}
-                            size="sm"
-                          />
-                        ) : null}
-                        {it.entitlement.accessEnds ? (
-                          <span className="text-caption text-fg-muted">
-                            access until {it.entitlement.accessEnds}
-                          </span>
-                        ) : null}
+                        <EntitlementStatusChip input={entStatusInput(it.entitlement)} />
+                        <span className="min-w-0 text-caption text-fg-muted">
+                          {entitlementStatus(entStatusInput(it.entitlement)).label}
+                        </span>
                       </div>
                       <EntitlementPanel item={it} onRevoke={() => setRevokeOpen(true)} />
                     </div>

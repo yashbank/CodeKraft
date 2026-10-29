@@ -303,6 +303,7 @@ export interface EntitlementAdminRow {
   deliveryType: DeliveryType;
   status: EntitlementStatus;
   provisioningState: ProvisioningState;
+  accessStartsAt: string;
   accessEndsAt: string | null;
   downloads: { used: number; cap: number | null } | null;
   licenseKeyIssued: boolean;

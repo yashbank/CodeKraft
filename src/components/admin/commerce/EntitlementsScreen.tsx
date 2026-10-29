@@ -58,6 +58,9 @@ import { STATUS_ENUMS } from "@/lib/status-tone";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
 import { FilterChips } from "../FilterChips";
+import { EntitlementStatusChip } from "@/components/account/EntitlementStatusChip";
+import { entitlementStatus } from "@/lib/entitlement-status";
+import { adminStatusInput } from "@/lib/admin/entitlements-view";
 import { formatDate, hoursSince, timeAgo } from "../format";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
@@ -349,14 +352,10 @@ export function EntitlementsScreen({
                         </TableCell>
                         <TableCell>
                           <span className="flex flex-wrap gap-1">
-                            <StatusBadge kind="entitlements.status" value={e.status} size="sm" />
-                            {e.status === "active" && e.provisioning === "pending" ? (
-                              <StatusBadge
-                                kind="entitlements.provisioning_state"
-                                value="pending"
-                                size="sm"
-                              />
-                            ) : null}
+                            <EntitlementStatusChip input={adminStatusInput(e)} />
+                          </span>
+                          <span className="mt-1 block text-caption text-fg-muted">
+                            {entitlementStatus(adminStatusInput(e)).label}
                           </span>
                         </TableCell>
                         <TableCell className="text-fg-muted">

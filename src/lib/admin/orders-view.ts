@@ -33,6 +33,21 @@ import type {
 
 const AWAITING_AGE_MS = 24 * 60 * 60 * 1000;
 
+function mapItemEntitlement(
+  x: OrderDetail["entitlements"][number] | undefined,
+): OrderItemDetail["entitlement"] {
+  if (!x) return undefined;
+  return {
+    status: x.status as StatusValue<"entitlements.status">,
+    accessStarts: x.accessStartsAt,
+    accessEnds: x.accessEndsAt ?? undefined,
+    downloadsUsed: x.downloadsUsed,
+    downloadCap: x.downloadCap ?? undefined,
+    keyIssued: x.keyIssued,
+    provisioning: x.provisioningState,
+  };
+}
+
 function shortId(id: string | null): string {
   return id ? id.slice(0, 8) : "unknown";
 }
@@ -197,9 +212,7 @@ export function mapOrderDetailToOrderDetailData(
       // No ownership-version lookup wired in `getOrderAdmin` -- see file header.
       ownershipVersion: undefined,
       deliveryType: (meta?.deliveryType ?? "custom") as StatusValue<"entitlements.delivery_type">,
-      // `getOrderAdmin` always returns `entitlements: []` -- entitlements/delivery is a separate
-      // module, out of this phase's scope.
-      entitlement: undefined,
+      entitlement: mapItemEntitlement(detail.entitlements.find((x) => x.orderItemId === it.id)),
       splitSnapshot: it.splitSnapshot
         ? {
             companyCutBps: it.splitSnapshot.company_cut_bps,

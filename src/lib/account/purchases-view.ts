@@ -78,6 +78,7 @@ export function mapEntitlementSummary(e: EntitlementView): EntitlementSummary {
     downloadsCap: e.downloads?.cap ?? undefined,
     keyIssued: e.licenseKeyMasked ? true : e.licenseKeyMasked === null ? false : undefined,
     purchasedAt: e.grantedAt,
+    accessStartsAt: e.access.startsAt,
     accessEndsAt: e.access.endsAt ?? undefined,
     orderNumber: e.orderNo ?? "Manual grant",
     invoiceNumber: e.invoiceNo ?? undefined,

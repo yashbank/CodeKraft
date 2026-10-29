@@ -334,7 +334,19 @@ export interface OrderDetail {
   itemMeta: Record<string, OrderItemMeta>;
   payments: OrderPaymentView[];
   invoice?: { invoiceId: string; invoiceNo: string };
-  entitlements: { entitlementId: string; deliveryType: string; status: string }[];
+  entitlements: {
+    entitlementId: string;
+    deliveryType: string;
+    status: string;
+    /** Admin order view only (getOrderAdmin). */
+    orderItemId?: string;
+    provisioningState?: "n/a" | "pending" | "done";
+    accessStartsAt?: string;
+    accessEndsAt?: string | null;
+    downloadsUsed?: number;
+    downloadCap?: number | null;
+    keyIssued?: boolean;
+  }[];
   /** Sanitised delivery instructions rendered server-side (A-601). */
   instructionsHtml: string;
   /** `refunds` rows for this order (docs/06 API-PAY-05/06), most recent first. */

@@ -817,6 +817,7 @@ export class DefaultDeliveryService implements DeliveryService {
       deliveryType: ent.deliveryType,
       status: ent.status,
       provisioningState: ent.provisioningState,
+      accessStartsAt: ent.accessStartsAt.toISOString(),
       accessEndsAt: ent.accessEndsAt ? ent.accessEndsAt.toISOString() : null,
       downloads: { used: ent.downloadsUsed, cap: ent.downloadCap },
       licenseKeyIssued: Boolean(ent.licenseKeyEnc),

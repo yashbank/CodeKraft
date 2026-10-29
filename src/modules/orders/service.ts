@@ -37,6 +37,7 @@ import {
   offeringPaymentMethods,
 } from "../../../drizzle/schema/offerings";
 import { products } from "../../../drizzle/schema/catalog";
+import { entitlements } from "../../../drizzle/schema/delivery";
 import { users } from "../../../drizzle/schema/auth";
 import { customerProfiles } from "../../../drizzle/schema/users-ext";
 import { emailOutbox, notifications } from "../../../drizzle/schema/notifications";
@@ -1081,6 +1082,25 @@ export class DefaultOrdersService implements OrdersService {
       if (q) quote = { id: order.customQuoteId, title: q.title };
     }
 
+    // Fulfilment state per order item, so admin sees the same lifecycle the customer does.
+    const entRows = await db
+      .select({ e: entitlements, orderItemId: orderItems.id })
+      .from(entitlements)
+      .innerJoin(orderItems, eq(entitlements.orderItemId, orderItems.id))
+      .where(eq(orderItems.orderId, order.id));
+    const entitlementRows: OrderDetail["entitlements"] = entRows.map(({ e, orderItemId }) => ({
+      entitlementId: e.id,
+      deliveryType: e.deliveryType,
+      status: e.status,
+      orderItemId,
+      provisioningState: e.provisioningState,
+      accessStartsAt: e.accessStartsAt.toISOString(),
+      accessEndsAt: e.accessEndsAt ? e.accessEndsAt.toISOString() : null,
+      downloadsUsed: e.downloadsUsed,
+      downloadCap: e.downloadCap,
+      keyIssued: Boolean(e.licenseKeyEnc),
+    }));
+
     // Invoice, when one has been issued (payment confirmed).
     const [invoiceRow] = await db
       .select({ id: invoices.id, invoiceNo: invoices.invoiceNo })
@@ -1108,7 +1128,7 @@ export class DefaultOrdersService implements OrdersService {
       invoice: invoiceRow
         ? { invoiceId: invoiceRow.id, invoiceNo: invoiceRow.invoiceNo }
         : undefined,
-      entitlements: [],
+      entitlements: entitlementRows,
       instructionsHtml: "",
       refunds: refundViews,
       splitApproval,

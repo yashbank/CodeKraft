@@ -39,6 +39,7 @@ describe("mapEntitlementRow service steps", () => {
       deliveryType: "service",
       status: "active",
       provisioningState: "n/a",
+      accessStartsAt: "2026-01-01T00:00:00.000Z",
       accessEndsAt: null,
       downloads: null,
       licenseKeyIssued: false,
