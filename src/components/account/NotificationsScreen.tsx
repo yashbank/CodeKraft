@@ -119,7 +119,7 @@ export function NotificationsScreen({
                 aria-pressed={on}
                 onClick={() => setType(on ? null : t.key)}
                 className={cn(
-                  "h-8 shrink-0 rounded-full border px-3 text-caption font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                  "h-10 shrink-0 lg:h-8 rounded-full border px-3 text-caption font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                   on
                     ? "border-accent bg-accent-soft text-accent-text"
                     : "border-border bg-surface text-fg-muted hover:text-fg",
