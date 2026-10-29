@@ -4,6 +4,8 @@
  * customers, system health). Server-only; each loader returns the exact `DashboardData` slice and
  * never throws (a failed query becomes the empty state plus a server log line).
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { getEnv } from "@/lib/env";
@@ -52,7 +54,7 @@ export const loadServiceChecklists = (): Promise<QueueItem[]> =>
     return [...rows].map((r) => ({
       label: r.name,
       meta: `${n(r.done)} of ${n(r.total)} steps done`,
-      href: `/entitlements/${r.id}`,
+      href: "/entitlements",
       progress: n(r.total) > 0 ? n(r.done) / n(r.total) : 0,
     }));
   });
@@ -174,8 +176,21 @@ export const loadSystemHealth = (): Promise<DashboardData["systemHealth"]> =>
       query: async (q) => [...(await db.execute(q))] as Array<Record<string, unknown>>,
       headProbe: () => getStorageDriver().headObject(getPrivateBucketName(), ".health-probe"),
       env: getEnv(),
+      expectedMigrations: journalLength(),
     }),
   );
+
+/** Repo migration count; undefined when the journal is not shipped with the runtime. */
+function journalLength(): number | undefined {
+  try {
+    const j = JSON.parse(
+      readFileSync(join(process.cwd(), "drizzle/migrations/meta/_journal.json"), "utf8"),
+    );
+    return Array.isArray(j.entries) ? j.entries.length : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 const UNAVAILABLE_HEALTH = (): DashboardData["systemHealth"][number] => ({
   label: "Health checks unavailable",

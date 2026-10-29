@@ -333,7 +333,7 @@ const VIEW_ALL: Partial<Record<WidgetKey, string>> = {
   revocation_tasks: "/delivery-tasks",
   new_leads: "/leads",
   overdue_follow_ups: "/leads",
-  open_queries: "/admin/queries",
+  open_queries: "/queries",
   outstanding_payouts: "/finance/partners",
   chatbot_usage: "/chatbot",
   catalog_status: "/products",

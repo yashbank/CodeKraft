@@ -68,6 +68,9 @@ export function BarChart({
           {formatBarTooltip(data[active].label, data[active].value, total, formatValue)}
         </div>
       ) : null}
+      <div aria-hidden className="text-right text-caption text-fg-muted tnum">
+        Max {formatValue(max)}
+      </div>
       <svg
         viewBox={`0 0 ${w} ${plotH}`}
         preserveAspectRatio="none"
@@ -185,6 +188,9 @@ export function StackedBarChart({
   const plotH = height;
   return (
     <figure className={cn("w-full", className)}>
+      <div aria-hidden className="text-right text-caption text-fg-muted tnum">
+        Max {formatValue(max)}
+      </div>
       <svg
         viewBox={`0 0 ${w} ${plotH}`}
         preserveAspectRatio="none"
