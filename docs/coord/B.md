@@ -56,7 +56,7 @@ Updated: 2026-10-29
 - R9-07 | ready | branch feat/r9-integration | r9-07 real health + tokens; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-08 | ready | branch feat/r9-integration | r9-08 options/Show all/density; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-09 | ready | branch feat/r9-integration | r9-09 trusted FX + lock; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
-- R9-10 | doing | branch feat/r9-10
+- R9-10 | ready | branch feat/r9-integration | r9-10 ledger exact, My share, payouts; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-11 | doing | branch feat/r9-11
 - R9-12 | doing | branch feat/r9-12
 - R9-13 | doing | branch feat/r9-13
