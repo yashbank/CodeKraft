@@ -31,7 +31,7 @@ import { RowActions } from "../RowActions";
 import type { CaseStudyRow } from "../types";
 import { ContentEditorFrame } from "./ContentEditorFrame";
 import { resolveEditing } from "./case-study-sync";
-import { fromPlainText } from "@/modules/content/render";
+import { fromPlainText } from "@/modules/content/plain-text";
 import {
   publishCaseStudyById,
   removeCaseStudy,

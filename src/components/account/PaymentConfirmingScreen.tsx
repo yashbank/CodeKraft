@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
+import { usePolling, type PollOutcome } from "@/lib/use-polling";
 import { nextStep, type ConfirmStatus } from "@/lib/account/payment-confirm";
 import { getPaymentConfirmStatus } from "@/modules/orders/customer-mutations";
 
@@ -31,23 +32,26 @@ export function PaymentConfirmingScreen({ orderNo }: { orderNo: string }) {
   const [checking, setChecking] = React.useState(true);
   const [error, setError] = React.useState(false);
 
-  const check = React.useCallback(async () => {
+  const check = React.useCallback(async (): Promise<PollOutcome> => {
     setChecking(true);
+    let outcome: PollOutcome = "ok";
     try {
       const r = await getPaymentConfirmStatus(orderNo);
       if (r.ok) setStatus(r.data);
       setError(!r.ok);
+      if (!r.ok) outcome = "error";
     } catch {
       setError(true);
+      outcome = "error";
     }
     setChecking(false);
+    return outcome;
   }, [orderNo]);
 
   React.useEffect(() => {
     void check();
-    const t = setInterval(() => void check(), POLL_MS);
-    return () => clearInterval(t);
   }, [check]);
+  usePolling(check, { intervalMs: POLL_MS });
 
   // Paid stays put so the delivery action is reachable; pending/failed hand off to invoices.
   const known = !!status && status.stage !== "paid";

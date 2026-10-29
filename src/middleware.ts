@@ -91,6 +91,24 @@ export function buildCsp(
   };
 }
 
+const CURRENCY_COOKIE = "ck_currency"; // = lib/currency-prefs (literal: this file is edge-safe)
+const TWIN_PATH = /^\/(products(\/[^/]+)?)?$/;
+
+/**
+ * Price pages (/, /products, /products/[slug]) depend on the visitor's currency (cookie) and
+ * session. Visitors with neither get exactly the base-currency render, which is served from an
+ * ISR-cached twin under /ssg (docs/08 §10); everyone else keeps the per-request dynamic route.
+ */
+export function staticTwinPath(req: NextRequest): string | null {
+  const { pathname, searchParams } = req.nextUrl;
+  if ((req.method !== "GET" && req.method !== "HEAD") || !TWIN_PATH.test(pathname)) return null;
+  if (searchParams.has("q")) return null; // search state is client-side only on the dynamic page
+  for (const c of req.cookies.getAll()) {
+    if (c.name === CURRENCY_COOKIE || /ck\.session_(token|data)$/.test(c.name)) return null;
+  }
+  return pathname === "/" ? "/ssg" : `/ssg${pathname}`;
+}
+
 export function resolveHostKind(host: string): "admin" | "site" {
   return ADMIN_HOST !== "" && host === ADMIN_HOST ? "admin" : "site";
 }
@@ -137,12 +155,24 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
       res = NextResponse.rewrite(url, { request: { headers: reqHeaders } });
     }
     res.headers.set("X-Robots-Tag", "noindex, nofollow");
-  } else if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+  } else if (
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/") ||
+    pathname === "/ssg" ||
+    pathname.startsWith("/ssg/")
+  ) {
     const url = req.nextUrl.clone();
     url.pathname = "/__404";
     res = NextResponse.rewrite(url, { request: { headers: reqHeaders } });
   } else {
-    res = NextResponse.next({ request: { headers: reqHeaders } });
+    const twin = staticTwinPath(req);
+    if (twin) {
+      const url = req.nextUrl.clone();
+      url.pathname = twin;
+      res = NextResponse.rewrite(url, { request: { headers: reqHeaders } });
+    } else {
+      res = NextResponse.next({ request: { headers: reqHeaders } });
+    }
   }
 
   if (APP_ENV === "staging" || APP_ENV === "preview") {

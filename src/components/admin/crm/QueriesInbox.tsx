@@ -7,7 +7,7 @@ import { BotIcon, ChevronDownIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { AttachPicker, AttachmentList, useAttachments } from "@/components/attachments/Attachments";
-import { fromPlainText } from "@/modules/content/render";
+import { fromPlainText } from "@/modules/content/plain-text";
 import {
   assignQuery,
   closeQuery,

@@ -13,7 +13,7 @@
  *  - `unread` is always `false` -- `QueryRow.unreadForCaller` has no backing read-tracking column
  *    on `queries` (see `modules/queries/service.ts`'s `toQueryRow`), so it's never fabricated true.
  */
-import { toPlainText } from "@/modules/content/render";
+import { toPlainText } from "@/modules/content/plain-text";
 import type { QuerySummary } from "@/components/account/types";
 import type { QueryRow, QueryThread } from "@/modules/queries/types";
 

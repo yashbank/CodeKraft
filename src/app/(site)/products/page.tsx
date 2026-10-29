@@ -3,17 +3,8 @@ import type { Metadata } from "next";
 
 import { pageMetadata } from "@/lib/seo";
 
-import { anonymousContext } from "@/lib/authz/context";
 import { getSession } from "@/modules/auth/service";
-import { toProductSummary } from "@/lib/product-summary";
-import {
-  listCategoriesQuery,
-  listMyWishlistQuery,
-  listProductsQuery,
-} from "@/modules/catalog/queries";
-import { ProductsListPage } from "@/components/site/ProductsListPage";
-import type { CategoryNode } from "@/components/site/ProductFilters";
-import type { CategoryNode as CatalogCategoryNode } from "@/modules/catalog/types";
+import { ProductsView } from "../_views/products-list";
 
 export const dynamic = "force-dynamic";
 
@@ -32,50 +23,15 @@ export async function generateMetadata({
   });
 }
 
-function toCategoryTree(nodes: CatalogCategoryNode[]): CategoryNode[] {
-  return nodes.map((n) => ({
-    slug: n.slug,
-    name: n.name,
-    children: n.children.map((c) => ({ slug: c.slug, name: c.name })),
-  }));
-}
-
 interface PageProps {
   searchParams: Promise<{ q?: string }>;
 }
 
+// Dynamic variant: search queries, visitors with a currency cookie or a session. Everyone else is
+// rewritten by middleware to the static twin at ../ssg/products.
 export default async function ProductsPage({ searchParams }: PageProps) {
   const { q } = await searchParams;
   const { currency } = await getDisplayCurrency();
-  const ctx = anonymousContext();
-  const [productsResult, categoriesResult, session] = await Promise.all([
-    listProductsQuery({ limit: 100, displayCurrency: currency }, ctx),
-    listCategoriesQuery({}, ctx),
-    getSession(),
-  ]);
-
-  const products = productsResult.ok ? productsResult.data.map(toProductSummary) : [];
-  const categories = categoriesResult.ok ? toCategoryTree(categoriesResult.data) : [];
-
-  let wishlistedIds: string[] = [];
-  if (session) {
-    const { getSiteRequestContext } = await import("@/lib/authz/site-request-context");
-    const wishlistCtx = await getSiteRequestContext();
-    const wishlistResult = await listMyWishlistQuery(
-      { limit: 100, displayCurrency: currency },
-      wishlistCtx,
-    );
-    if (wishlistResult.ok) wishlistedIds = wishlistResult.data.items.map((i) => i.productId);
-  }
-
-  return (
-    <ProductsListPage
-      products={products}
-      categories={categories}
-      pageSize={12}
-      initialQuery={q}
-      signedIn={Boolean(session)}
-      wishlistedIds={wishlistedIds}
-    />
-  );
+  const session = await getSession();
+  return <ProductsView currency={currency} q={q} signedIn={Boolean(session)} />;
 }

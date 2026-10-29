@@ -30,7 +30,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
-import { fromPlainText } from "@/modules/content/render";
+import { fromPlainText } from "@/modules/content/plain-text";
 import { AttachPicker, AttachmentList, useAttachments } from "@/components/attachments/Attachments";
 import { createQuery, replyToMyQuery } from "@/modules/queries/customer-mutations";
 import { EmptyState } from "./EmptyState";

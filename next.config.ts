@@ -1,6 +1,8 @@
 import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
+import { cacheHeaderRules } from "./src/lib/cache-headers";
+
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 const adminHost = process.env.ADMIN_HOST ?? "admin.localhost:3000";
 const mediaBase = process.env.NEXT_PUBLIC_MEDIA_BASE_URL;
@@ -29,7 +31,15 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["pino", "pino-pretty", "thread-stream", "argon2", "embedded-postgres"],
   reactStrictMode: true,
   poweredByHeader: false,
-  images: { remotePatterns, formats: ["image/avif", "image/webp"] },
+  images: {
+    remotePatterns,
+    formats: ["image/avif", "image/webp"],
+    // Fewer variants = fewer optimizer transforms; every `sizes` in the app maps onto these.
+    deviceSizes: [640, 828, 1080, 1280, 1920],
+    imageSizes: [96, 128, 256, 384],
+    minimumCacheTTL: 60 * 60 * 24 * 30,
+  },
+  headers: async () => cacheHeaderRules,
   eslint: {
     ignoreDuringBuilds: true,
   },

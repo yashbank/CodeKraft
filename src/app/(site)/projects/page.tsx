@@ -12,7 +12,8 @@ import {
 import { CaseStudiesPage } from "@/components/site/CaseStudiesPage";
 import type { CaseStudySummary, ClientLogo, ServiceOption } from "@/components/site/types";
 
-export const dynamic = "force-dynamic";
+// ISR: anonymous data only; admin content saves call revalidatePath("/", "layout").
+export const revalidate = 300;
 
 export const metadata: Metadata = pageMetadata({
   path: "/projects",

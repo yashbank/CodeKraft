@@ -13,7 +13,12 @@ import {
 import { CaseStudyDetailPage } from "@/components/site/CaseStudyDetailPage";
 import type { CaseStudy, MediaItem, ServiceOption } from "@/components/site/types";
 
-export const dynamic = "force-dynamic";
+// ISR: anonymous data only; admin saves revalidate the layout. Empty list = render on demand, then cache.
+export const revalidate = 300;
+
+export function generateStaticParams() {
+  return [];
+}
 
 export async function generateMetadata(props: {
   params: Promise<{ slug: string }>;

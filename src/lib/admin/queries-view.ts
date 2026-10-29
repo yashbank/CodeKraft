@@ -14,13 +14,13 @@
  *    thread header still resolves the product name via the `catalog` product map passed in).
  *  - `assignedTo` / message `author` names resolve through the admin directory
  *    (`listActiveAdminUsers`) with a short-id fallback, same pattern as `leads-view.ts`.
- *  - Message bodies are Tiptap JSON (`bodyJson`); `toPlainText` (`modules/content/render.ts`)
+ *  - Message bodies are Tiptap JSON (`bodyJson`); `toPlainText` (`modules/content/plain-text.ts`)
  *    extracts the same plain text used by chat search/teasers elsewhere in this codebase, so the
  *    thread reads correctly even though the admin composer here is still plain text (see
  *    `fromPlainText`, used when *sending*).
  */
 import type { AdminDirectoryEntry } from "@/modules/approvals/approver-set";
-import { toPlainText } from "@/modules/content/render";
+import { toPlainText } from "@/modules/content/plain-text";
 import type {
   QueryMessageView,
   QueryRow as ModuleQueryRow,

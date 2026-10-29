@@ -49,7 +49,7 @@ describe("middleware host matrix (docs/04 §8, docs/09 §3.5)", () => {
     const res = await middleware(
       req("http://admin.localhost.evil.com:3000/", "admin.localhost.evil.com:3000"),
     );
-    expect(res.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(res.headers.get("x-middleware-rewrite") ?? "").not.toMatch(/\/admin(\/|$)/);
   });
   it("sets a nonce and a report-only CSP on every response", async () => {
     const res = await middleware(req("http://localhost:3000/", "localhost:3000"));
@@ -122,5 +122,43 @@ describe("PDF preview framing (P2-04)", () => {
     const other = await middleware(req("http://localhost:3000/", "localhost:3000"));
     expect(other.headers.get("X-Frame-Options")).toBe("DENY");
     expect(other.headers.get(HDR)).toContain("frame-ancestors 'none'");
+  });
+});
+
+describe("ISR twins for anonymous price pages (P15-02)", () => {
+  const rewrite = async (url: string, cookie?: string, method = "GET") =>
+    (
+      await middleware(
+        new NextRequest(url, {
+          method,
+          headers: { host: "localhost:3000", ...(cookie ? { cookie } : {}) },
+        }),
+      )
+    ).headers.get("x-middleware-rewrite");
+
+  it("rewrites /, /products and /products/[slug] to /ssg for visitors with no cookies", async () => {
+    expect(await rewrite("http://localhost:3000/")).toBe("http://localhost:3000/ssg");
+    expect(await rewrite("http://localhost:3000/products")).toBe(
+      "http://localhost:3000/ssg/products",
+    );
+    expect(await rewrite("http://localhost:3000/products/fitdesk-pro?utm=x")).toBe(
+      "http://localhost:3000/ssg/products/fitdesk-pro?utm=x",
+    );
+  });
+
+  it("keeps the dynamic route for a currency cookie, a session cookie, search or non-GET", async () => {
+    expect(await rewrite("http://localhost:3000/", "ck_currency=USD")).toBeNull();
+    expect(await rewrite("http://localhost:3000/products", "ck.session_token=abc")).toBeNull();
+    expect(
+      await rewrite("http://localhost:3000/products", "__Secure-ck.session_token=abc"),
+    ).toBeNull();
+    expect(await rewrite("http://localhost:3000/products?q=crm")).toBeNull();
+    expect(await rewrite("http://localhost:3000/", undefined, "POST")).toBeNull();
+  });
+
+  it("leaves other pages alone and hides the twins from direct requests", async () => {
+    expect(await rewrite("http://localhost:3000/blog")).toBeNull();
+    expect(await rewrite("http://localhost:3000/products/a/opengraph-image")).toBeNull();
+    expect(await rewrite("http://localhost:3000/ssg/products")).toContain("/__404");
   });
 });

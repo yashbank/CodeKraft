@@ -26,7 +26,7 @@ import { ServiceIcon } from "@/components/site/ServiceIcon";
 import { toServiceIcon } from "@/components/site/service-icons";
 import { ServiceIconPicker } from "./ServiceIconPicker";
 import { ContentEditorFrame, moveItem, SortableRow } from "./ContentEditorFrame";
-import { fromPlainText } from "@/modules/content/render";
+import { fromPlainText } from "@/modules/content/plain-text";
 import { removeService, reorderServicesList, saveService } from "@/modules/content/admin-mutations";
 
 function slugify(v: string): string {
