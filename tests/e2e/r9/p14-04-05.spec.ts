@@ -70,8 +70,9 @@ test.describe("P14-05 tab title + icons follow Settings", () => {
     const [name0] = await q<{ v: string }>(
       `select value #>> '{}' as v from site_settings where key = 'site_name'`,
     );
+    // Raw jsonb text: the seeded logo can be JSON null, whose `#>> '{}'` is SQL NULL.
     const [logo0] = await q<{ v: string }>(
-      `select value #>> '{}' as v from site_settings where key = 'site_logo'`,
+      `select value::text as v from site_settings where key = 'site_logo'`,
     );
     const originalName = name0?.v ?? "CodeKraft";
     const saveName = async (name: string) => {
@@ -114,7 +115,7 @@ test.describe("P14-05 tab title + icons follow Settings", () => {
       }
     } finally {
       if (logo0) {
-        await q(`update site_settings set value = to_jsonb($1::text) where key = 'site_logo'`, [
+        await q(`update site_settings set value = $1::text::jsonb where key = 'site_logo'`, [
           logo0.v,
         ]);
       } else {

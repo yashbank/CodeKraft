@@ -95,8 +95,11 @@ for (const width of WIDTHS) {
     // Page is clickable: the bell reopens, an outside click closes it.
     await bell.click();
     await expect(page.locator('[data-slot="popover-content"]')).toBeVisible();
-    await page.mouse.click(2, 880);
-    await expect(page.locator('[data-slot="popover-content"]')).toHaveCount(0);
+    // Radix arms its outside-click listener one tick after opening, so retry a click that races it.
+    await expect(async () => {
+      await page.mouse.click(2, 880);
+      await expect(page.locator('[data-slot="popover-content"]')).toHaveCount(0, { timeout: 1000 });
+    }).toPass({ timeout: 10_000 });
 
     // Later visits never resurface the read item as unread.
     for (const path of ["/account", "/account/notifications"]) {
@@ -137,7 +140,7 @@ test("[admin] @1280: bell + inbox open targets, popup closes, read persists, sid
   const badge = nav
     .locator("li")
     .filter({ has: page.getByRole("link", { name: "Approvals", exact: true }) })
-    .getByText(/pending approvals/);
+    .locator('[data-sidebar="menu-badge"]');
   await expect(badge).toHaveText(new RegExp(`^${pending}\\s*pending approvals`));
 
   const bell = page.getByRole("button", { name: /^Notifications, \d+ unread/ });
@@ -162,8 +165,10 @@ test("[admin] @1280: bell + inbox open targets, popup closes, read persists, sid
   // Outside click closes the popup.
   await bell.click();
   await expect(page.locator('[data-slot="popover-content"]')).toBeVisible();
-  await page.mouse.click(640, 880);
-  await expect(page.locator('[data-slot="popover-content"]')).toHaveCount(0);
+  await expect(async () => {
+    await page.mouse.click(640, 880);
+    await expect(page.locator('[data-slot="popover-content"]')).toHaveCount(0, { timeout: 1000 });
+  }).toPass({ timeout: 10_000 });
 
   // Inbox page row opens its target; read items stay read on other pages and after reload.
   await page.goto(`${ADMIN}/admin/notifications`);

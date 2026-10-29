@@ -132,7 +132,9 @@ async function smallTargets(page: Page) {
         )
           return false;
         const type = (el as HTMLInputElement).type;
-        if (type === "checkbox" || type === "radio") return false;
+        // Radix checkboxes/radios are buttons; the wrapping <label> is the 44px thumb target.
+        if (type === "checkbox" || type === "radio" || el.closest("label, [role=checkbox]"))
+          return false;
         return r.height < 40 || r.width < 40;
       })
       .map((el) => {
@@ -185,7 +187,9 @@ test.describe("customer", () => {
         if (route.startsWith("/auth/") && !page.url().includes(route)) continue;
         await expectNoOverflow(page);
         const l = await layout(page);
-        if (l.headerTop > 0 || l.gap >= 280)
+        // The chat screen pins its composer to the bottom, so an empty thread is a deliberate gap.
+        const chat = route === "/account/chat";
+        if (l.headerTop > 0 || (!chat && l.gap >= 280))
           problems.push(`@${w} blank band ${String(l.gap)}px at y=${String(l.gapAt)}`);
         const small = await smallTargets(page);
         if (small.length) problems.push(`@${w} small targets: ${small.join(" | ")}`);

@@ -85,7 +85,7 @@ function FooterColumn({
           <li key={l.href}>
             <Link
               href={l.href}
-              className="inline-flex min-h-10 items-center rounded-xs text-body-sm text-fg transition-colors lg:min-h-0 hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex min-h-10 min-w-10 items-center rounded-xs text-body-sm text-fg transition-colors lg:min-h-0 lg:min-w-0 hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               {l.label}
             </Link>

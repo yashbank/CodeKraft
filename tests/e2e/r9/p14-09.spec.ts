@@ -17,6 +17,28 @@ test.describe("P14-09 widget styles", () => {
       `select layout from dashboard_layouts where user_id = $1`,
       [uid],
     );
+    // "Revenue by product" shows its empty state without a sale, so a fresh DB has no chart to
+    // style. The ledger is append-only: seed one 1-rupee sale only when none exists (kept after).
+    const [{ n = 0 } = {}] = await q<{ n: number }>(
+      `select count(*)::int as n from ledger_entries where entry_type = 'sale' and order_item_id is not null`,
+    );
+    if (n === 0) {
+      const [order] = await q<{ id: string }>(
+        `insert into orders (order_no, user_id, currency, fx_rate_to_inr, subtotal_minor, total_minor, billing_snapshot)
+         values ($1, (select id from users where email = $2), 'INR', '1', 100, 100, '{}'::jsonb) returning id`,
+        [`P1409-${Date.now()}`, ROLE_EMAILS.super_admin],
+      );
+      const [item] = await q<{ id: string }>(
+        `insert into order_items (order_id, product_id, description, unit_minor, total_minor)
+         values ($1, (select id from products where slug = 'tradeflow'), 'P14-09 fixture', 100, 100) returning id`,
+        [order!.id],
+      );
+      await q(
+        `insert into ledger_entries (entry_type, party_type, order_id, order_item_id, amount_minor, currency, fx_rate_to_inr, amount_inr_minor, memo, created_by)
+         values ('sale', 'customer', $1, $2, 100, 'INR', '1', 100, 'P14-09 fixture', $3)`,
+        [order!.id, item!.id, uid],
+      );
+    }
   });
 
   test.afterAll(async () => {
