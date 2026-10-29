@@ -62,7 +62,7 @@ test("P14-08 landing section style: preview, save, public render", async ({ page
   await expect(preview).toHaveCSS("padding-top", "112px");
   expect(before).not.toBe("112px");
   await expect(preview).toHaveCSS("border-top-width", "2px");
-  expect(await preview.evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/Work_Sans/i);
+  expect(await preview.evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/Work[ _]Sans/i);
 
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText(/Chapter saved/)).toBeVisible({ timeout: 20_000 });
@@ -82,7 +82,7 @@ test("P14-08 landing section style: preview, save, public render", async ({ page
       await expectNoOverflow(page);
       const build = await metrics(page, "#build");
       expect(build?.bt).toBe("2px");
-      expect(build?.ff).toMatch(/Work_Sans/i);
+      expect(build?.ff).toMatch(/Work[ _]Sans/i);
       // Other sections are unchanged.
       expect([await metrics(page, "#sell"), await metrics(page, "#proof")]).toEqual(
         base[w]?.slice(1),

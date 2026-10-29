@@ -1,6 +1,15 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { ADMIN, SITE, WIDTHS, expectNoOverflow, loginAs, q, trackIssues } from "./helpers";
+import {
+  ADMIN,
+  SITE,
+  WIDTHS,
+  expectNoOverflow,
+  loginAs,
+  q,
+  resetThemeViaUi,
+  trackIssues,
+} from "./helpers";
 
 const KEYS = [
   "theme_palette",
@@ -44,7 +53,8 @@ async function save(page: Page) {
 }
 
 test.describe("P14-07 theme studio", () => {
-  test.afterEach(async () => {
+  test.afterEach(async ({ page }) => {
+    await resetThemeViaUi(page);
     await q(`delete from site_settings where key = any($1)`, [KEYS]);
   });
 
@@ -92,7 +102,10 @@ test.describe("P14-07 theme studio", () => {
     expect(await rootVar(page, "--ck-radius-lg")).toBe("32px");
     expect(await rootVar(page, "--ck-font-display")).toMatch(/Playfair Display/);
     expect(
-      await page.locator('link[href*="fonts.googleapis.com"]').first().getAttribute("href"),
+      await page
+        .locator('link[rel="stylesheet"][href*="fonts.googleapis.com"]')
+        .first()
+        .getAttribute("href"),
     ).toContain("Playfair+Display");
     expect(await page.evaluate(() => document.documentElement.hasAttribute("data-ck-btn"))).toBe(
       true,
