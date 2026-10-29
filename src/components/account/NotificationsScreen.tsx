@@ -64,9 +64,12 @@ export function NotificationsScreen({
   }, []);
 
   function markRead(id: string) {
+    const before = items;
     setItems((prev) => applyRead(prev, new Set([id])));
     return markMyNotificationRead({ notificationIds: [id] }).then((result) => {
-      if (!result.ok) toast.error(result.error.message);
+      if (result.ok) return;
+      setItems(before); // optimistic read not persisted: show it unread again
+      toast.error(result.error.message);
     });
   }
   const open = (e: React.MouseEvent, n: NotificationItem) =>
@@ -88,10 +91,16 @@ export function NotificationsScreen({
           size="sm"
           disabled={unread === 0}
           onClick={async () => {
+            const before = items;
             setItems((prev) => applyRead(prev));
             const result = await markAllMyNotificationsRead();
-            if (result.ok) toast.success("All notifications marked as read");
-            else toast.error(result.error.message);
+            if (result.ok) {
+              toast.success("All notifications marked as read");
+              router.refresh(); // header bell badge
+            } else {
+              setItems(before);
+              toast.error(result.error.message);
+            }
           }}
         >
           Mark all as read
@@ -200,9 +209,6 @@ export function NotificationsScreen({
               </ul>
             </section>
           ))}
-          <Button variant="ghost" className="w-full">
-            Load more
-          </Button>
         </div>
       )}
       <p className="text-caption text-fg-subtle">

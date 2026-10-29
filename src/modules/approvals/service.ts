@@ -236,6 +236,17 @@ export class DefaultApprovalsService implements ApprovalsService {
         .select({ email: users.email })
         .from(users)
         .where(inArray(users.id, approverIds));
+      // In-app bell for every deciding admin (the email alone left the inbox badge-less).
+      await tx.insert(notifications).values(
+        approverIds.map((userId) => ({
+          userId,
+          type: "approval.requested",
+          title: `Approval required: ${type}`,
+          body: `${requester?.name || "An administrator"}: ${payloadSummaryFor(type, payload as Record<string, unknown>)}`,
+          link: `/admin/approvals?id=${inserted.id}`,
+          payload: { approvalRequestId: inserted.id, kind: type },
+        })),
+      );
       await tx.insert(emailOutbox).values(
         approvers.map((a) => ({
           toEmail: a.email,

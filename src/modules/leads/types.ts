@@ -192,7 +192,8 @@ export type AddLeadNoteInput = z.infer<typeof addLeadNoteSchema>;
 export const setFollowUpSchema = z
   .object({
     leadId: uuid,
-    nextFollowUpAt: isoDateTime.nullable(),
+    /** Omit to leave the follow-up untouched (priority-only update); `null` clears it. */
+    nextFollowUpAt: isoDateTime.nullable().optional(),
     note: z.string().trim().max(2000).optional(),
     priority: leadPrioritySchema.optional(),
   })

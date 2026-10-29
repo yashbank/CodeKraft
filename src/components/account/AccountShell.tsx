@@ -17,7 +17,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -133,6 +133,8 @@ export function AccountShell({
 }: AccountShellProps) {
   const router = useRouter();
   const [drawer, setDrawer] = React.useState(false);
+  const pathname = usePathname();
+  React.useEffect(() => setDrawer(false), [pathname]);
   const nav = ACCOUNT_NAV.map((n) => ({ ...n, href: links?.[n.key] ?? n.href }));
   const activeItem = nav.find((n) => n.key === active);
   const heading = title ?? activeItem?.label ?? "Account";

@@ -242,11 +242,6 @@ export function NotificationsInbox({
               </ul>
             </section>
           ))}
-          <div className="text-center">
-            <Button variant="outline" size="sm" onClick={() => toast("No more notifications")}>
-              Load more
-            </Button>
-          </div>
         </div>
       )}
     </>

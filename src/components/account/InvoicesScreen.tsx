@@ -109,7 +109,7 @@ export function InvoicesScreen({
         <Banner
           tone="danger"
           action={
-            <Button size="sm" variant="secondary">
+            <Button size="sm" variant="secondary" onClick={() => window.location.reload()}>
               Try again
             </Button>
           }

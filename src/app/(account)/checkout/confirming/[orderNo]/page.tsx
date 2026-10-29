@@ -7,7 +7,10 @@ export const dynamic = "force-dynamic";
 /** R9-06: post-payment "Confirming your payment" screen. Auth only; the poll is order-scoped. */
 export default async function ConfirmingPage({ params }: { params: Promise<{ orderNo: string }> }) {
   const { orderNo } = await params;
-  if (!(await getSession())) redirect(`/auth/login?next=/checkout/confirming/${orderNo}`);
+  if (!(await getSession()))
+    redirect(
+      `/auth/login?next=${encodeURIComponent(`/checkout/confirming/${encodeURIComponent(orderNo)}`)}`,
+    );
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 lg:py-12">
       <PaymentConfirmingScreen orderNo={orderNo} />

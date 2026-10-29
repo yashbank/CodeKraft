@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { safeRedirectPath } from "@/lib/safe-redirect";
+
 /**
  * Admin-host landing for the site -> admin handoff (see LoginForm). Exchanges the single-use
  * one-time token for an admin-host session cookie, then continues to `next`. Admin-class
@@ -14,8 +16,8 @@ export default function AdminHandoffPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
-    const rawNext = params.get("next") ?? "/dashboard";
-    const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
+    // Same-site only: backslash hosts and encoded `//` slip past a bare startsWith check.
+    const next = safeRedirectPath(params.get("next"), "/dashboard");
     // Keep the token out of the address bar and history as soon as it is read.
     window.history.replaceState(null, "", "/auth/handoff");
     if (!token) {

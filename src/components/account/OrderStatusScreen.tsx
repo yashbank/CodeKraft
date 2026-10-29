@@ -31,6 +31,9 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
 import { format } from "@/lib/money";
+import { cancelMyOrder } from "@/modules/orders/customer-mutations";
+import { fromPlainText } from "@/modules/content/render";
+import { createQuery } from "@/modules/queries/customer-mutations";
 import { submitPaymentReference } from "@/modules/payments/customer-mutations";
 import { Banner } from "./Banner";
 import { PaymentMethodChoice } from "./CheckoutScreen";
@@ -145,9 +148,33 @@ function Timeline({ order: o, stage }: { order: OrderView; stage: Stage }) {
 
 /** "Open a query" / "Request refund" both create a query with `source='order'`. */
 function RefundDialog({ order: o }: { order: OrderView }) {
+  const router = useRouter();
   const [note, setNote] = React.useState("");
+  const [open, setOpen] = React.useState(false);
+  const [sending, setSending] = React.useState(false);
+  async function send() {
+    setSending(true);
+    const result = await createQuery({
+      subject: `Refund request · ${o.number}`,
+      bodyJson: fromPlainText(note.trim() || "I'd like to request a refund for this order."),
+      source: "order",
+      orderId: o.id,
+      refundRequest: true,
+    });
+    setSending(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(result.data.existing ? "Refund request already open" : "Refund request sent", {
+      description: `Refund request · ${o.number}`,
+    });
+    setOpen(false);
+    setNote("");
+    router.refresh();
+  }
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm">
           Request refund
@@ -182,15 +209,9 @@ function RefundDialog({ order: o }: { order: OrderView }) {
           <DialogClose asChild>
             <Button variant="ghost">Cancel</Button>
           </DialogClose>
-          <DialogClose asChild>
-            <Button
-              onClick={() =>
-                toast.success("Query created", { description: `Refund request · ${o.number}` })
-              }
-            >
-              Send request
-            </Button>
-          </DialogClose>
+          <Button onClick={() => void send()} disabled={sending}>
+            {sending ? "Sending…" : "Send request"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -220,6 +241,7 @@ export function OrderStatusScreen({
   const [submitting, setSubmitting] = React.useState(false);
   const [retrying, setRetrying] = React.useState(false);
   const [summaryOpen, setSummaryOpen] = React.useState(false);
+  const [editingRef, setEditingRef] = React.useState(false);
   const expiresIn = o.expiresAt ? timeUntil(o.expiresAt, now) : null;
 
   if (loading) {
@@ -252,6 +274,7 @@ export function OrderStatusScreen({
           toast.success("Reference submitted", {
             description: "We'll confirm within 1 working day.",
           });
+          setEditingRef(false);
           router.refresh();
         } else {
           toast.error(result.error.message);
@@ -311,7 +334,13 @@ export function OrderStatusScreen({
           title={`Cancel order ${o.number}?`}
           description="If you've already paid, don't cancel — submit your reference instead. Cancelling can't be undone."
           confirmLabel="Cancel order"
-          onConfirm={() => toast("Order cancelled")}
+          onConfirm={() =>
+            void cancelMyOrder({ orderId: o.id }).then((result) => {
+              if (!result.ok) return void toast.error(result.error.message);
+              toast.success("Order cancelled");
+              router.refresh();
+            })
+          }
         />
       </div>
     </form>
@@ -353,10 +382,11 @@ export function OrderStatusScreen({
               </div>
             </div>
             <Banner tone="info">We confirm payments manually within one business day.</Banner>
-            <Button variant="secondary" size="sm">
-              Edit reference
+            <Button variant="secondary" size="sm" onClick={() => setEditingRef((v) => !v)}>
+              {editingRef ? "Hide form" : "Edit reference"}
             </Button>
           </div>
+          {editingRef ? referenceForm : null}
           <div className="rounded-lg border border-border bg-surface p-4">
             <PaymentInstructionsCard
               instructions={o.instructionsFor}

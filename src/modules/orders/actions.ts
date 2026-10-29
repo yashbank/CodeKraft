@@ -1,7 +1,12 @@
 "use server";
 
 import { defineAction } from "@/lib/actions/envelope";
-import { createManualOrderInput, createOrderInput, previewCheckoutInput } from "./types";
+import {
+  cancelMyOrderInput,
+  createManualOrderInput,
+  createOrderInput,
+  previewCheckoutInput,
+} from "./types";
 import { ordersService } from "./service";
 
 export const createManualOrderAction = defineAction({
@@ -34,5 +39,15 @@ export const createOrderAction = defineAction({
   input: createOrderInput,
   handler: async (input, ctx) => {
     return await ordersService.createOrder(ctx, input);
+  },
+});
+
+/** API-COM-03 `cancelMyOrder` — customer cancels their own `pending_payment` order. */
+export const cancelMyOrderAction = defineAction({
+  name: "API-COM-03 order.cancel",
+  permission: "commerce.self",
+  input: cancelMyOrderInput,
+  handler: async (input, ctx) => {
+    return await ordersService.cancelMyOrder(ctx, input);
   },
 });

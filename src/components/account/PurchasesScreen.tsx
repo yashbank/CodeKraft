@@ -103,7 +103,12 @@ export function PurchasesScreen({
           className="rounded-md border-l-4 border-danger bg-danger-soft p-4 text-body-sm text-danger"
         >
           {error}{" "}
-          <Button size="sm" variant="secondary" className="ml-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            className="ml-2"
+            onClick={() => window.location.reload()}
+          >
             Try again
           </Button>
         </div>

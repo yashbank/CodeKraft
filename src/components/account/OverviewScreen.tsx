@@ -104,7 +104,7 @@ export function OverviewScreen(props: OverviewScreenProps) {
           tone="danger"
           title="We couldn't load your dashboard"
           action={
-            <Button size="sm" variant="secondary">
+            <Button size="sm" variant="secondary" onClick={() => window.location.reload()}>
               Try again
             </Button>
           }

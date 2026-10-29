@@ -62,6 +62,8 @@ export function SiteHeader({
   const [scrolled, setScrolled] = useState(!transparentAtTop);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [inquiryOpen, setInquiryOpen] = useState(false);
+  // Back/forward and programmatic navigation must not leave the drawer (and its scroll lock) open.
+  useEffect(() => setDrawerOpen(false), [pathname]);
 
   useEffect(() => {
     if (!transparentAtTop) return;

@@ -40,6 +40,12 @@ export async function createOrder(raw: unknown) {
   return withCtx(createOrderAction, raw);
 }
 
+/** Cancels the caller's own unpaid order (open payments become failed). */
+export async function cancelMyOrder(raw: unknown) {
+  const { cancelMyOrderAction } = await import("./actions");
+  return withCtx(cancelMyOrderAction, raw);
+}
+
 /** Poll target for the "Confirming your payment" screen: stage + next-step inputs for one order. */
 export async function getPaymentConfirmStatus(orderNo: string) {
   const { getMyOrderQuery } = await import("./queries");

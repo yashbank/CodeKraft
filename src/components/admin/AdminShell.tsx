@@ -297,6 +297,12 @@ export function AdminShell({
   );
   const [paletteOpen, setPaletteOpen] = React.useState(false);
   const [paletteQuery, setPaletteQuery] = React.useState("");
+  const shellPathname = usePathname();
+  // The shell persists across routes (back/forward, programmatic pushes): never leave overlays open.
+  React.useEffect(() => {
+    setMobileOpen(false);
+    setPaletteOpen(false);
+  }, [shellPathname]);
   const [remoteItems, setRemoteItems] = React.useState<SearchItem[]>([]);
 
   React.useEffect(() => {

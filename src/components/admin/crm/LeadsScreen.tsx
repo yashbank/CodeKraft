@@ -11,6 +11,7 @@ import {
   assignLead,
   claimLead,
   createLeadManual,
+  setFollowUp,
   updateLeadStatus,
 } from "@/modules/leads/admin-mutations";
 
@@ -135,12 +136,18 @@ export function LeadsScreen({
   initialNewLead,
 }: LeadsScreenProps) {
   const [leads, setLeads] = React.useState(initial);
+  // router.refresh() hands down fresh rows; without this the optimistic copy stays stale forever.
+  React.useEffect(() => setLeads(initial), [initial]);
   const router = useRouter();
   // The Table/Board toggle is a real navigation between `/admin/leads` and
   // `/admin/leads/board` (BUG-005) — the view comes from which route rendered this
   // component, not client-only state, so a direct link to either URL works.
   const view = initialView;
   const [overdueOnly, setOverdueOnly] = React.useState(false);
+  const [search, setSearch] = React.useState("");
+  const [sourceFilter, setSourceFilter] = React.useState("any");
+  const [assignedFilter, setAssignedFilter] = React.useState("any");
+  const [priorityFilter, setPriorityFilter] = React.useState("any");
   const [selected, setSelected] = React.useState<ReadonlySet<string>>(new Set());
   const [lostOpen, setLostOpen] = React.useState<LeadRow | null>(null);
   const [wonOpen, setWonOpen] = React.useState<LeadRow | null>(null);
@@ -175,8 +182,20 @@ export function LeadsScreen({
 
   const isOverdue = (l: LeadRow) =>
     Boolean(l.nextFollowUpAt && daysUntil(l.nextFollowUpAt, now) < 0);
+  const needle = search.trim().toLowerCase();
+  const matchesAssignee = (l: LeadRow) =>
+    assignedFilter === "any" ||
+    (assignedFilter === "pool"
+      ? !l.assignee
+      : l.assignee?.id === (assignedFilter === "me" ? currentUser.id : assignedFilter));
   const rows = leads
     .filter((l) => (overdueOnly ? isOverdue(l) : true))
+    .filter((l) => sourceFilter === "any" || l.source === sourceFilter)
+    .filter((l) => priorityFilter === "any" || l.priority === priorityFilter)
+    .filter(matchesAssignee)
+    .filter(
+      (l) => !needle || [l.name, l.email, l.company].some((v) => v?.toLowerCase().includes(needle)),
+    )
     .filter((l) => (view === "table" ? l.status !== "won" && l.status !== "lost" : true));
 
   const move = async (lead: LeadRow, status: LeadStatus) => {
@@ -191,6 +210,16 @@ export function LeadsScreen({
       return;
     }
     toast.success(`Moved to ${STAGE_LABEL[status]}`);
+    router.refresh();
+  };
+  const setPriorityFor = async (ids: string[], priority: "high" | "normal" | "low") => {
+    const results = await Promise.all(ids.map((leadId) => setFollowUp({ leadId, priority })));
+    const failed = results.filter((r) => !r.ok).length;
+    if (failed > 0) toast.error(`${failed} of ${ids.length} updates failed`);
+    if (failed < ids.length) {
+      toast.success(`Priority set to ${priority} on ${ids.length - failed} lead(s)`);
+    }
+    setSelected(new Set());
     router.refresh();
   };
   const claim = async (lead: LeadRow) => {
@@ -271,14 +300,17 @@ export function LeadsScreen({
       <DataToolbar
         searchId="leads-search"
         searchPlaceholder="Name, email, company…"
+        searchValue={search}
+        onSearchChange={setSearch}
         filters={
           <>
             <ToolbarField id="leads-source" label="Source">
-              <Select>
+              <Select value={sourceFilter} onValueChange={setSourceFilter}>
                 <SelectTrigger id="leads-source" size="sm" className="w-36">
                   <SelectValue placeholder="Any" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="any">Any</SelectItem>
                   <SelectItem value="inquiry_form">Inquiry form</SelectItem>
                   <SelectItem value="product_cta">Product CTA</SelectItem>
                   <SelectItem value="chatbot">Chatbot</SelectItem>
@@ -287,11 +319,12 @@ export function LeadsScreen({
               </Select>
             </ToolbarField>
             <ToolbarField id="leads-assigned" label="Assigned">
-              <Select>
+              <Select value={assignedFilter} onValueChange={setAssignedFilter}>
                 <SelectTrigger id="leads-assigned" size="sm" className="w-40">
                   <SelectValue placeholder="Anyone" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="any">Anyone</SelectItem>
                   <SelectItem value="me">Me</SelectItem>
                   <SelectItem value="pool">Unassigned pool</SelectItem>
                   {admins.map((a) => (
@@ -303,11 +336,12 @@ export function LeadsScreen({
               </Select>
             </ToolbarField>
             <ToolbarField id="leads-priority" label="Priority">
-              <Select>
+              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
                 <SelectTrigger id="leads-priority" size="sm" className="w-28">
                   <SelectValue placeholder="Any" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="any">Any</SelectItem>
                   <SelectItem value="high">High</SelectItem>
                   <SelectItem value="normal">Normal</SelectItem>
                   <SelectItem value="low">Low</SelectItem>
@@ -367,9 +401,20 @@ export function LeadsScreen({
               ))}
             </SelectContent>
           </Select>
-          <Button size="sm" variant="secondary">
-            Set priority
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="secondary">
+                Set priority
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {(["high", "normal", "low"] as const).map((p) => (
+                <DropdownMenuItem key={p} onSelect={() => void setPriorityFor([...selected], p)}>
+                  <span className="capitalize">{p}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
             Clear
           </Button>

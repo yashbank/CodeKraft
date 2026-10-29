@@ -94,6 +94,14 @@ export function LeadDetail({
   const [nextFollowUpAt, setNextFollowUpAt] = React.useState(lead.nextFollowUpAt);
   const [priority, setPriority] = React.useState(lead.priority);
   const [saving, setSaving] = React.useState(false);
+  const [followUpOpen, setFollowUpOpen] = React.useState(false);
+  // router.refresh() delivers fresh server data; adopt it instead of keeping the first render's copy.
+  React.useEffect(() => {
+    setStatus(data.lead.status);
+    setActivities(data.activities);
+    setNextFollowUpAt(data.lead.nextFollowUpAt);
+    setPriority(data.lead.priority);
+  }, [data]);
   const [createCustomerOpen, setCreateCustomerOpen] = React.useState(false);
   /** BUG-092: open the quote editor with this lead's details prefilled. */
   const quoteHrefFor = (customerId: string) => {
@@ -167,7 +175,6 @@ export function LeadDetail({
     setSaving(true);
     const result = await setFollowUp({
       leadId: lead.id,
-      nextFollowUpAt: nextFollowUpAt ?? null,
       priority: value,
     });
     setSaving(false);
@@ -194,6 +201,7 @@ export function LeadDetail({
       return;
     }
     setNextFollowUpAt(iso ?? undefined);
+    setFollowUpOpen(false);
     toast.success("Follow-up set");
     router.refresh();
   };
@@ -260,7 +268,7 @@ export function LeadDetail({
                 </SelectContent>
               </Select>
             </div>
-            <Popover>
+            <Popover open={followUpOpen} onOpenChange={setFollowUpOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm">
                   <AlarmClockIcon aria-hidden />{" "}
@@ -510,7 +518,10 @@ export function LeadDetail({
               size="sm"
               variant="secondary"
               className="mt-3"
-              onClick={() => toast("Done — set the next follow-up")}
+              onClick={() => {
+                setFollowUpOpen(true);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
             >
               Done → set next
             </Button>
