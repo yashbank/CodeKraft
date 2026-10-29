@@ -77,7 +77,9 @@ export function ManualPaymentSettings({ payments: p, ro }: { payments: Payments;
       const { uploadMediaFile } = await import("@/lib/admin/media-upload");
       const up = await uploadMediaFile(file, "payment_qr");
       if (!up.url) throw new Error("Upload finished without a public URL");
-      setQr(up.url);
+      // Local-storage URLs carry the site origin (http in dev, rejected by the https-only schema);
+      // the same-origin path is valid everywhere and survives a domain change.
+      setQr(up.url.match(/\/api\/files\/public\/[^\s]+$/)?.[0] ?? up.url);
       setErrors(({ "st-qr": _drop, ...rest }) => rest);
     } catch (err) {
       setErrors((e) => ({ ...e, "st-qr": (err as Error).message }));
