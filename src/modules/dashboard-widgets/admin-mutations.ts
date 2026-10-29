@@ -41,7 +41,10 @@ export async function refreshDashboardWidget(raw: unknown) {
     if (!can(ctx, "dashboard.admin")) throw new AppError(ErrorCode.FORBIDDEN);
     const { loadDashboardData } = await import("@/lib/admin/dashboard-data");
     const { pickWidgetData } = await import("@/components/admin/dashboard/widget-data-keys");
-    const data = await loadDashboardData(ctx, input.range);
+    const { allowedWidgetKeys } = await import("@/components/admin/dashboard/role-widgets");
+    if (!allowedWidgetKeys(ctx.roles).includes(input.widget))
+      throw new AppError(ErrorCode.FORBIDDEN);
+    const data = await loadDashboardData(ctx, input.range, [input.widget]);
     return ok({ widget: input.widget, data: pickWidgetData(input.widget, data) });
   } catch (err) {
     return fail(err);

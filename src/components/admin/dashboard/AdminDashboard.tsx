@@ -54,7 +54,8 @@ import { compactNumber, inr, plainNumber } from "../format";
 import { PageHeader } from "../PageHeader";
 import type { DashboardData, WidgetKey } from "../types";
 import { QueueList } from "./QueueList";
-import { DEFAULT_LAYOUT, WIDGET_LIBRARY, type WidgetDefinition } from "./widget-library";
+import { WIDGET_LIBRARY, type WidgetDefinition } from "./widget-library";
+import { defaultLayoutFor } from "./role-widgets";
 import { WidgetFrame } from "./WidgetFrame";
 
 const lakh = (paise: number) => `₹${(paise / 10000000).toFixed(1)}L`;
@@ -63,6 +64,8 @@ export interface AdminDashboardProps {
   data: DashboardData;
   /** Widget keys in display order (saved layout); defaults to the new-admin layout. */
   layout?: WidgetKey[];
+  /** Widgets this role may use (P14-01); defaults to the whole library. */
+  allowed?: readonly WidgetKey[];
   isSuperAdmin: boolean;
   greeting: string;
   dateLabel: string;
@@ -77,6 +80,7 @@ export interface AdminDashboardProps {
 export function AdminDashboard({
   data: serverData,
   layout,
+  allowed: allowedProp,
   isSuperAdmin,
   greeting,
   dateLabel,
@@ -85,7 +89,12 @@ export function AdminDashboard({
   const href = (route: string) => routes?.[route] ?? route;
   const router = useRouter();
   const pathname = usePathname();
-  const [enabled, setEnabled] = React.useState<WidgetKey[]>(layout ?? DEFAULT_LAYOUT);
+  const library = React.useMemo(
+    () => WIDGET_LIBRARY.filter((w) => !allowedProp || allowedProp.includes(w.key)),
+    [allowedProp],
+  );
+  const defaultLayout = defaultLayoutFor(library.map((w) => w.key));
+  const [enabled, setEnabled] = React.useState<WidgetKey[]>(layout ?? defaultLayout);
   const [editing, setEditing] = React.useState(false);
   const [libraryOpen, setLibraryOpen] = React.useState(false);
   const range = serverData.range;
@@ -162,7 +171,7 @@ export function AdminDashboard({
   };
 
   const definitions = enabled
-    .map((k) => WIDGET_LIBRARY.find((w) => w.key === k))
+    .map((k) => library.find((w) => w.key === k))
     .filter((w): w is WidgetDefinition => Boolean(w) && !(w?.superAdminOnly && !isSuperAdmin));
 
   return (
@@ -199,7 +208,7 @@ export function AdminDashboard({
             >
               <LayoutGridIcon aria-hidden /> {editing ? "Done" : "Edit layout"}
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => persist(DEFAULT_LAYOUT)}>
+            <Button variant="ghost" size="sm" onClick={() => persist(defaultLayout)}>
               Reset to default
             </Button>
           </>
@@ -216,7 +225,7 @@ export function AdminDashboard({
               <Button size="sm" onClick={() => setLibraryOpen(true)}>
                 Add widget
               </Button>
-              <Button size="sm" variant="secondary" onClick={() => persist(DEFAULT_LAYOUT)}>
+              <Button size="sm" variant="secondary" onClick={() => persist(defaultLayout)}>
                 Use default layout
               </Button>
             </div>
@@ -268,8 +277,8 @@ export function AdminDashboard({
           <SheetHeader>
             <SheetTitle>Widget library</SheetTitle>
             <SheetDescription>
-              {WIDGET_LIBRARY.length} widgets. Toggle to add or remove; widgets you lack permission
-              for are disabled.
+              {library.length} widgets. Toggle to add or remove; widgets you lack permission for are
+              disabled.
             </SheetDescription>
           </SheetHeader>
           <div className="space-y-6 px-4 pb-6">
@@ -282,48 +291,52 @@ export function AdminDashboard({
                 "Catalog & customers",
                 "System & AI",
               ] as const
-            ).map((group) => (
-              <section key={group} aria-labelledby={`lib-${group}`}>
-                <h3
-                  id={`lib-${group}`}
-                  className="mb-2 text-overline tracking-wider text-fg-muted uppercase"
-                >
-                  {group}
-                </h3>
-                <ul className="space-y-2">
-                  {WIDGET_LIBRARY.filter((w) => w.group === group).map((w) => {
-                    const blocked = Boolean(w.superAdminOnly && !isSuperAdmin);
-                    const on = enabled.includes(w.key);
-                    return (
-                      <li
-                        key={w.key}
-                        className={cn(
-                          "flex items-start gap-3 rounded-md border border-border bg-surface p-3",
-                          blocked && "opacity-60",
-                        )}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <Label htmlFor={`lib-${w.key}`} className="text-body-sm">
-                            {w.title}
-                          </Label>
-                          <p className="text-caption text-fg-muted">{w.description}</p>
-                          <p className="font-mono text-caption text-fg-subtle">
-                            requires {w.requiredPermission}
-                            {blocked ? " · not permitted" : ""}
-                          </p>
-                        </div>
-                        <Switch
-                          id={`lib-${w.key}`}
-                          checked={on}
-                          disabled={blocked}
-                          onCheckedChange={(v) => toggle(w.key, v)}
-                        />
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            ))}
+            )
+              .filter((group) => library.some((w) => w.group === group))
+              .map((group) => (
+                <section key={group} aria-labelledby={`lib-${group}`}>
+                  <h3
+                    id={`lib-${group}`}
+                    className="mb-2 text-overline tracking-wider text-fg-muted uppercase"
+                  >
+                    {group}
+                  </h3>
+                  <ul className="space-y-2">
+                    {library
+                      .filter((w) => w.group === group)
+                      .map((w) => {
+                        const blocked = Boolean(w.superAdminOnly && !isSuperAdmin);
+                        const on = enabled.includes(w.key);
+                        return (
+                          <li
+                            key={w.key}
+                            className={cn(
+                              "flex items-start gap-3 rounded-md border border-border bg-surface p-3",
+                              blocked && "opacity-60",
+                            )}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <Label htmlFor={`lib-${w.key}`} className="text-body-sm">
+                                {w.title}
+                              </Label>
+                              <p className="text-caption text-fg-muted">{w.description}</p>
+                              <p className="font-mono text-caption text-fg-subtle">
+                                requires {w.requiredPermission}
+                                {blocked ? " · not permitted" : ""}
+                              </p>
+                            </div>
+                            <Switch
+                              id={`lib-${w.key}`}
+                              checked={on}
+                              disabled={blocked}
+                              onCheckedChange={(v) => toggle(w.key, v)}
+                            />
+                          </li>
+                        );
+                      })}
+                  </ul>
+                </section>
+              ))}
           </div>
         </SheetContent>
       </Sheet>

@@ -8,6 +8,7 @@ import { can } from "@/lib/authz/assert";
 import type { RequestContext } from "@/lib/authz/context";
 import type { DashboardData, ProductStatus, QueueItem, WidgetKey } from "@/components/admin/types";
 import { WIDGET_LIBRARY } from "@/components/admin/dashboard/widget-library";
+import { allowedWidgetKeys } from "@/components/admin/dashboard/role-widgets";
 export { WIDGET_DATA_KEYS, pickWidgetData } from "@/components/admin/dashboard/widget-data-keys";
 import { startOfFy } from "@/lib/dates";
 import { listApprovalsAction } from "@/modules/approvals/queries";
@@ -51,15 +52,32 @@ function approvalItem(a: { payloadSummary: string; ageHours: number }): QueueIte
   };
 }
 
+/**
+ * `keys` = the widgets actually on screen (saved layout, or the one being refreshed). A widget
+ * outside the caller's role allow-list, outside `keys`, or without its permission is never
+ * queried; its slice stays at the empty default.
+ */
 export async function loadDashboardData(
   ctx: RequestContext,
   range: DashboardRange,
+  keys?: readonly WidgetKey[],
 ): Promise<DashboardData> {
   const days = RANGE_DAYS[range];
+  const roleOk = new Set(allowedWidgetKeys(ctx.roles));
   const allowed = (key: WidgetKey) => {
+    if (!roleOk.has(key) || (keys && !keys.includes(key))) return false;
     const def = WIDGET_LIBRARY.find((w) => w.key === key);
     return !def || can(ctx, def.requiredPermission as Parameters<typeof can>[1]);
   };
+  const skip = Promise.resolve({ ok: false as const });
+  const financeKeys: WidgetKey[] = [
+    "revenue_by_product",
+    "revenue_by_partner",
+    "my_share",
+    "outstanding_payouts",
+    "expenses_vs_profit",
+    "payments_awaiting",
+  ];
 
   const [
     publishRes,
@@ -78,18 +96,37 @@ export async function loadDashboardData(
     newCustomers,
     systemHealth,
   ] = await Promise.all([
-    listApprovalsAction({ type: "product.publish", status: "pending", limit: 10 }, ctx),
-    listApprovalsAction({ type: "project_order.split", status: "pending", limit: 10 }, ctx),
-    listQueriesAdminQuery({ limit: 100, filters: { status: ["open"] } }, ctx),
-    listLeadsQuery({ limit: 100 }, ctx),
-    listProductsAdminQuery({ limit: 100 }, ctx),
-    getReportQuery({ report: "revenue_by_period", ...rangeDates(range) }, ctx).catch(() => ({
-      ok: false as const,
-    })),
-    loadDashboardFinance(ctx, rangeDates(range)).catch((err: unknown) => {
-      console.error("[dashboard] finance widgets failed", err);
-      return null;
-    }),
+    // `mine`: pending requests the caller must decide on (never their own).
+    allowed("publish_approvals")
+      ? listApprovalsAction(
+          { limit: 10, filters: { type: "product.publish", status: "pending", mine: true } },
+          ctx,
+        )
+      : skip,
+    allowed("split_approvals")
+      ? listApprovalsAction(
+          { limit: 10, filters: { type: "project_order.split", status: "pending", mine: true } },
+          ctx,
+        )
+      : skip,
+    allowed("open_queries")
+      ? listQueriesAdminQuery({ limit: 100, filters: { status: ["open"] } }, ctx)
+      : skip,
+    allowed("new_leads") || allowed("overdue_follow_ups")
+      ? listLeadsQuery({ limit: 100 }, ctx)
+      : skip,
+    allowed("catalog_status") ? listProductsAdminQuery({ limit: 100 }, ctx) : skip,
+    allowed("revenue_by_period")
+      ? getReportQuery({ report: "revenue_by_period", ...rangeDates(range) }, ctx).catch(() => ({
+          ok: false as const,
+        }))
+      : skip,
+    financeKeys.some(allowed)
+      ? loadDashboardFinance(ctx, rangeDates(range), allowed).catch((err: unknown) => {
+          console.error("[dashboard] finance widgets failed", err);
+          return null;
+        })
+      : Promise.resolve(null),
     allowed("service_checklists") ? loadServiceChecklists() : Promise.resolve([]),
     allowed("revocation_tasks") ? loadRevocationTasks() : Promise.resolve([]),
     allowed("pipeline_funnel") ? loadFunnel() : Promise.resolve([]),

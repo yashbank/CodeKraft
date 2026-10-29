@@ -9,6 +9,11 @@ import {
   type DashboardRange,
 } from "@/lib/admin/dashboard-data";
 import { fyFor } from "@/lib/dates";
+import {
+  allowedWidgetKeys,
+  defaultLayoutFor,
+  permitWidgets,
+} from "@/components/admin/dashboard/role-widgets";
 import { getAdminWidgetLayout } from "@/modules/dashboard-widgets/admin-layout";
 
 export const dynamic = "force-dynamic";
@@ -30,9 +35,12 @@ export default async function AdminDashboardRoute({
   const firstName = session?.user.name?.split(" ")[0] || "there";
   // R8-10 — the admin's own saved widget selection/order (null → default layout).
   const savedLayout = await getAdminWidgetLayout(ctx.userId).catch(() => null);
+  // P14-01 — a saved widget the role may not have is dropped here, so it is neither rendered nor queried.
+  const allowed = allowedWidgetKeys(ctx.roles);
+  const layout = permitWidgets(savedLayout ?? defaultLayoutFor(allowed), ctx.roles);
 
   const [data, checklist] = await Promise.all([
-    loadDashboardData(ctx, range),
+    loadDashboardData(ctx, range, layout),
     isSuperAdmin ? loadSetupChecklist(ctx) : Promise.resolve([]),
   ]);
 
@@ -40,9 +48,10 @@ export default async function AdminDashboardRoute({
     <>
       {checklist.length > 0 ? <SetupChecklist items={checklist} userId={ctx.userId} /> : null}
       <AdminDashboard
-        key={(savedLayout ?? []).join(",")}
+        key={layout.join(",")}
         data={data}
-        layout={savedLayout ?? undefined}
+        layout={layout}
+        allowed={allowed}
         isSuperAdmin={isSuperAdmin}
         greeting={`Welcome back, ${firstName}`}
         dateLabel={`FY ${fyFor(new Date())} · ${new Date().toLocaleDateString("en-IN", {
