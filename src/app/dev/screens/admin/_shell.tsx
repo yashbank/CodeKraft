@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 import {
@@ -45,7 +45,7 @@ export function PreviewShell({
       routes={PREVIEW_ROUTES}
       stickyTop="41px"
     >
-      {children}
+      <Suspense fallback={null}>{children}</Suspense>
     </AdminShell>
   );
 }
