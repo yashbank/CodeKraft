@@ -578,9 +578,7 @@ export class DefaultOrdersService implements OrdersService {
           status: "failed",
           failureReason: "cancelled",
         })
-        .where(
-          and(eq(payments.orderId, order.id), eq(payments.status, "initiated")),
-        );
+        .where(and(eq(payments.orderId, order.id), eq(payments.status, "initiated")));
 
       return { order: cancelledOrder };
     };
