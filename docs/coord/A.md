@@ -17,3 +17,4 @@ Updated: 2026-10-29
 - 2026-10-29 Merged P6-01/02/03/05 to main (fixed palettes test mock for getSiteLogo). Gate green. Migration 0006 (site.reset enum) pending on live DB (user). P6-04 not merged yet.
 - 2026-10-29 Merged P6-04 (ui-sweep). Phase 6 all on main 0af5f7a, deployed, 1437 tests pass. Migration 0006 applied live by user. Live test pending (user).
 - 2026-10-29 Merged P7-P12 (21 branches; journal conflict resolved) to main 980b520, deployed Ready. Migrations 0007+0008 applied live by user. Fixed Vercel build error: Suspense around admin dev preview shell. 1627 tests pass. Live test pending (user).
+- 2026-10-29 Merged R9 (feat/r9-integration) to main 14af3bd, deployed Ready. vitest 1744 pass, typecheck/lint/build green. No new migration. Live test pending (user).
