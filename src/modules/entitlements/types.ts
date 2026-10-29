@@ -252,6 +252,8 @@ export const entitlementViewSchema = z.object({
   orderNo: z.string().nullable(),
   invoiceNo: z.string().nullable(),
   grantedAt: isoDateTime,
+  /** Revoked by a full refund (revoke_reason = "refund"). */
+  refunded: z.boolean().optional(),
   /** Sanitised HTML rendered from `offerings.instructions_json` (A-601). */
   instructionsHtml: z.string().nullable(),
   versions: z.array(
@@ -303,6 +305,7 @@ export interface EntitlementAdminRow {
   deliveryType: DeliveryType;
   status: EntitlementStatus;
   provisioningState: ProvisioningState;
+  accessStartsAt: string;
   accessEndsAt: string | null;
   downloads: { used: number; cap: number | null } | null;
   licenseKeyIssued: boolean;
@@ -312,6 +315,8 @@ export interface EntitlementAdminRow {
   adminActions: EntitlementAdminAction[];
   /** Service entitlements only: each offering step with its done state (admin "Service steps"). */
   serviceSteps?: Array<{ key: string; title: string; doneAt: string | null; note: string | null }>;
+  /** Revoked by a full refund (revoke_reason = "refund"). */
+  refunded: boolean;
   createdAt: string;
 }
 

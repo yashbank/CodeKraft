@@ -20,7 +20,20 @@
  *    faking task rows.
  */
 import type { EntitlementAdminRow } from "@/modules/entitlements/types";
+import type { EntitlementStatusInput } from "@/lib/entitlement-status";
 import type { EntitlementRow } from "@/components/admin/types";
+
+/** Admin row -> shared lifecycle input (same function the customer views use). */
+export function adminStatusInput(e: EntitlementRow): EntitlementStatusInput {
+  return {
+    status: e.status,
+    provisioningState: e.provisioning,
+    startsAt: e.accessStarts,
+    endsAt: e.accessEnds,
+    subscriptionPeriodEnd: e.subscription?.periodEnd,
+    refunded: e.refunded,
+  };
+}
 
 export function mapEntitlementRow(e: EntitlementAdminRow): EntitlementRow {
   return {
@@ -30,6 +43,8 @@ export function mapEntitlementRow(e: EntitlementAdminRow): EntitlementRow {
     offering: e.offering.name,
     type: e.deliveryType,
     status: e.status,
+    refunded: e.refunded,
+    accessStarts: e.accessStartsAt,
     accessEnds: e.accessEndsAt ?? undefined,
     subscription: undefined,
     downloadsUsed: e.downloads?.used,
