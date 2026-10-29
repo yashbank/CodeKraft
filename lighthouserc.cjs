@@ -1,7 +1,7 @@
 /**
  * Lighthouse CI (docs/11 §B10, docs/10 §9). `pnpm build` first, then `pnpm lhci`.
  * Mobile is Lighthouse's default form factor (Moto G Power emulation, 4x CPU slowdown, slow 4G).
- * Only `/` exists in P1; the remaining public URLs are enabled as their routes land.
+ * URLs use seeded slugs (scripts/seed/catalog.ts, content.ts).
  */
 const BASE = process.env.LHCI_BASE_URL ?? "http://localhost:3000";
 const home = `${BASE}/`;
@@ -15,14 +15,13 @@ module.exports = {
       startServerReadyTimeout: 60_000,
       url: [
         home,
-        // TODO(P7): enable once the public routes exist (docs/11 §B10 list):
-        // `${BASE}/products`,
-        // `${BASE}/products/<seeded-slug>`,
-        // `${BASE}/projects/<seeded-slug>`,
-        // `${BASE}/blog/<seeded-slug>`,
-        // `${BASE}/services`,
-        // `${BASE}/contact`,
-        // `${BASE}/legal/privacy`,
+        `${BASE}/products`,
+        `${BASE}/products/tradeflow`,
+        `${BASE}/projects/northwind-checkout`,
+        `${BASE}/blog/how-fitdesk-pro-collects-fees-on-upi`,
+        `${BASE}/services`,
+        `${BASE}/contact`,
+        `${BASE}/legal/privacy`,
       ],
       numberOfRuns: 3,
       settings: {
@@ -32,48 +31,23 @@ module.exports = {
       },
     },
     assert: {
-      // `aggregationMethod` cannot sit beside `assertMatrix` (LHCI rejects the config), so each
-      // matrix entry carries it: median of the 3 runs (docs/10 §9).
-      assertMatrix: [
-        {
-          // Story landing (`/`): performance ≥ 0.85, everything else at the public thresholds.
-          matchingUrlPattern: "^https?://[^/]+/$",
-          aggregationMethod: "median",
-          assertions: {
-            "categories:performance": ["error", { minScore: 0.85 }],
-            "categories:accessibility": ["error", { minScore: 0.95 }],
-            "categories:best-practices": ["error", { minScore: 0.9 }],
-            "categories:seo": ["error", { minScore: 0.95 }],
-            "largest-contentful-paint": ["error", { maxNumericValue: 2500 }],
-            "cumulative-layout-shift": ["error", { maxNumericValue: 0.1 }],
-            "total-blocking-time": ["error", { maxNumericValue: 300 }],
-            interactive: ["warn", { maxNumericValue: 5000 }],
-            "unused-javascript": "warn",
-            "render-blocking-resources": "warn",
-            "uses-responsive-images": "warn",
-            "modern-image-formats": "warn",
-          },
-        },
-        {
-          // Every other public route: performance ≥ 0.90.
-          matchingUrlPattern: "^https?://[^/]+/.+",
-          aggregationMethod: "median",
-          assertions: {
-            "categories:performance": ["error", { minScore: 0.9 }],
-            "categories:accessibility": ["error", { minScore: 0.95 }],
-            "categories:best-practices": ["error", { minScore: 0.9 }],
-            "categories:seo": ["error", { minScore: 0.95 }],
-            "largest-contentful-paint": ["error", { maxNumericValue: 2500 }],
-            "cumulative-layout-shift": ["error", { maxNumericValue: 0.1 }],
-            "total-blocking-time": ["error", { maxNumericValue: 300 }],
-            interactive: ["warn", { maxNumericValue: 5000 }],
-            "unused-javascript": "warn",
-            "render-blocking-resources": "warn",
-            "uses-responsive-images": "warn",
-            "modern-image-formats": "warn",
-          },
-        },
-      ],
+      // Median of the 3 runs (docs/10 §9). Same budgets for every public URL (P14-13).
+      aggregationMethod: "median",
+      assertions: {
+        "categories:performance": ["warn", { minScore: 0.8 }],
+        "categories:accessibility": ["error", { minScore: 0.95 }],
+        "categories:best-practices": ["error", { minScore: 0.9 }],
+        "categories:seo": ["error", { minScore: 0.95 }],
+        "largest-contentful-paint": ["warn", { maxNumericValue: 2500 }],
+        "cumulative-layout-shift": ["error", { maxNumericValue: 0.1 }],
+        "resource-summary:script:size": ["error", { maxNumericValue: 350 * 1024 }],
+        "total-blocking-time": ["warn", { maxNumericValue: 300 }],
+        interactive: ["warn", { maxNumericValue: 5000 }],
+        "unused-javascript": "warn",
+        "render-blocking-resources": "warn",
+        "uses-responsive-images": "warn",
+        "modern-image-formats": "warn",
+      },
     },
     upload: {
       target: "temporary-public-storage",

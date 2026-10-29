@@ -213,7 +213,7 @@ export function NotificationsScreen({
       )}
       <p className="text-caption text-fg-subtle">
         Manage email preferences in{" "}
-        <Link href={links.settings} className="text-accent-text hover:underline">
+        <Link href={links.settings} className="text-accent-text underline underline-offset-2">
           Settings
         </Link>
         .
