@@ -95,7 +95,7 @@ export function ProductCard({
                   e.preventDefault();
                   onWishlistToggle();
                 }}
-                className="relative z-10 -mt-1.5 -mr-1.5 inline-flex size-8 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-accent-soft hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                className="relative z-10 -mt-2.5 -mr-2.5 inline-flex size-10 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-accent-soft hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 <HeartIcon
                   aria-hidden
@@ -107,7 +107,7 @@ export function ProductCard({
                 href={wishlistHref ?? "/auth/login"}
                 aria-label="Sign in to add to wishlist"
                 onClick={(e) => e.stopPropagation()}
-                className="relative z-10 -mt-1.5 -mr-1.5 inline-flex size-8 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-accent-soft hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                className="relative z-10 -mt-2.5 -mr-2.5 inline-flex size-10 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-accent-soft hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 <HeartIcon aria-hidden className="size-4" />
               </Link>

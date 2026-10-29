@@ -66,7 +66,7 @@ export function TableOfContents({
                   "block rounded-sm text-body-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                   variant === "chips"
                     ? cn(
-                        "h-9 rounded-full border px-3.5 leading-9 whitespace-nowrap",
+                        "h-10 rounded-full border px-3.5 leading-10 whitespace-nowrap",
                         isCurrent
                           ? "border-accent bg-accent-soft text-accent-text"
                           : "border-border bg-surface text-fg-muted hover:text-fg",

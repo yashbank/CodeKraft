@@ -70,7 +70,7 @@ export function LegalPage({ page, nav }: LegalPageProps) {
                     href={`/legal/${n.key}`}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "block rounded-full border px-3.5 text-body-sm leading-9 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:relative md:rounded-none md:border-0 md:px-1 md:leading-10 md:after:absolute md:after:inset-x-0 md:after:-bottom-px md:after:h-0.5 md:after:bg-accent",
+                      "block rounded-full border px-3.5 text-body-sm leading-10 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:relative md:rounded-none md:border-0 md:px-1 md:leading-10 md:after:absolute md:after:inset-x-0 md:after:-bottom-px md:after:h-0.5 md:after:bg-accent",
                       active
                         ? "border-accent bg-accent-soft text-accent-text md:bg-transparent md:text-fg md:after:opacity-100"
                         : "border-border bg-surface text-fg-muted hover:text-fg md:bg-transparent md:after:opacity-0",

@@ -44,7 +44,7 @@ export function LandingHero({
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[image:var(--ck-gradient-glow)] opacity-60"
       />
-      <Container className="relative grid gap-10 pt-24 pb-16 lg:min-h-svh lg:grid-cols-12 lg:items-center lg:gap-8 lg:pt-16 lg:pb-24">
+      <Container className="relative grid gap-10 pt-10 pb-16 lg:min-h-svh lg:grid-cols-12 lg:items-center lg:gap-8 lg:pt-16 lg:pb-24">
         <div className="space-y-6 lg:col-span-6">
           <p className="text-overline font-semibold tracking-wider text-accent-text uppercase">
             {content.eyebrow}
