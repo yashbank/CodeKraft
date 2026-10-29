@@ -19,6 +19,8 @@ export interface HealthDeps {
   /** HEAD a probe key in the private bucket; a "not found" answer still proves reachability. */
   headProbe: () => Promise<unknown>;
   env: Parameters<typeof emailSenderProblem>[0];
+  /** Migration files in the repo journal; omit when it cannot be read (skips the check). */
+  expectedMigrations?: number;
   now?: () => Date;
   timeoutMs?: number;
 }
@@ -67,7 +69,30 @@ export async function runHealthChecks(deps: HealthDeps): Promise<HealthCheck[]> 
     }),
     check("Email", async () => {
       const problem = emailSenderProblem(deps.env);
-      return problem ? { status: "warn", detail: problem } : { status: "ok", detail: "resend" };
+      const [fail] = await deps
+        .query(
+          sql`
+        select last_error, updated_at from email_outbox
+        where last_error is not null and status::text <> 'sent' order by updated_at desc limit 1`,
+        )
+        .catch(() => []); // DB trouble is the Database row's job
+      const lastError = fail?.last_error ? String(fail.last_error).slice(0, 80) : null;
+      const base = problem ?? deps.env.EMAIL_TRANSPORT;
+      return lastError
+        ? { status: "warn", detail: `${base} · last failure: ${lastError}` }
+        : { status: problem ? "warn" : "ok", detail: base };
+    }),
+    check("Payments", async () => {
+      const [row] = await deps.query(sql`
+        select value->>'mode' as mode,
+          coalesce(value->>'keyId', '') <> '' as has_id,
+          coalesce(value->>'keySecret', '') <> '' as has_secret
+        from site_settings where key = 'razorpay_settings'`);
+      if (!row?.has_id) return { status: "warn", detail: "Razorpay not configured" };
+      const mode = row.mode === "live" ? "live" : "test";
+      return row.has_secret
+        ? { status: "ok", detail: `Razorpay ${mode} mode, keys set` }
+        : { status: "warn", detail: `Razorpay ${mode} mode, secret missing` };
     }),
     check("Cron", async () => {
       const [row] = await deps.query(sql`select max(started_at) as last from job_runs`);
@@ -91,6 +116,23 @@ export async function runHealthChecks(deps: HealthDeps): Promise<HealthCheck[]> 
         ? { status: "ok", detail: "none in 24 h" }
         : { status: "warn", detail: `${jobs} failed jobs, ${emails} email errors (24 h)` };
     }),
+    ...(deps.expectedMigrations === undefined
+      ? []
+      : [
+          check("Migrations", async () => {
+            const expected = deps.expectedMigrations as number;
+            const [row] = await deps.query(
+              sql`select count(*) as n from drizzle.__drizzle_migrations`,
+            );
+            const applied = Number(row?.n ?? 0);
+            return applied >= expected
+              ? { status: "ok", detail: `${applied} applied` }
+              : {
+                  status: "warn",
+                  detail: `${expected - applied} pending (${applied} of ${expected} applied)`,
+                };
+          }),
+        ]),
   ]);
 
   return checks.length > 0
