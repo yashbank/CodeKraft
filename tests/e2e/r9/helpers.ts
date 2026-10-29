@@ -65,10 +65,15 @@ export async function loginAs(page: Page, role: Role, fresh = false): Promise<vo
     await page.context().storageState({ path: authFile(role) });
     return;
   }
+  await formLogin(page, base, ROLE_EMAILS[role]);
+}
+
+/** Real login form with retries: the auth rate limiter can bounce a sign-in back to /auth/login. */
+export async function formLogin(page: Page, base: string, email: string): Promise<void> {
   for (let attempt = 0; ; attempt++) {
     await q(`delete from rate_limit_buckets`);
     await page.goto(`${base}/auth/login`);
-    await page.getByLabel("Email").fill(ROLE_EMAILS[role]);
+    await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
     const btn = page.getByRole("button", { name: "Sign in", exact: true });
     try {

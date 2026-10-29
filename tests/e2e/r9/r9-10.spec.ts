@@ -5,7 +5,7 @@
  * without a paid order); the spend is recorded through the real Record-expense sheet.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { ADMIN, PASSWORD, atWidths, loginAs, q, trackIssues } from "./helpers";
+import { ADMIN, atWidths, formLogin, loginAs, q, trackIssues } from "./helpers";
 
 const CFO = "sanketshrikant42@gmail.com";
 const CEO = "yashbank2002@gmail.com";
@@ -156,12 +156,7 @@ test.describe("R9-10 finance", () => {
 
     const ctx2 = await browser.newContext();
     const page2 = await ctx2.newPage();
-    await q(`delete from rate_limit_buckets`);
-    await page2.goto(`${ADMIN}/auth/login`);
-    await page2.getByLabel("Email").fill(CFO);
-    await page2.getByLabel("Password", { exact: true }).fill(PASSWORD);
-    await page2.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page2).not.toHaveURL(/\/auth\/login/, { timeout: 20_000 });
+    await formLogin(page2, ADMIN, CFO);
     const cfoText = await share(page2);
     await ctx2.close();
 

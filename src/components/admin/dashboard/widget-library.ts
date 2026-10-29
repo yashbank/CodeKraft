@@ -188,7 +188,7 @@ export const WIDGET_LIBRARY: WidgetDefinition[] = [
     title: "System health",
     group: "System & AI",
     description: "Database, email, AI provider and cron status.",
-    requiredPermission: "ops.read",
+    requiredPermission: "settings.read",
     colSpan: 4,
   },
 ];

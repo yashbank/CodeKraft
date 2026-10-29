@@ -116,7 +116,7 @@ export function OptionPicker({
       <RadioGroup
         value={value}
         onValueChange={onChange}
-        className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 [&>*]:min-w-0"
         disabled={disabled}
         aria-label={label}
       >
