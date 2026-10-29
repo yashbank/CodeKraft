@@ -112,3 +112,4 @@ Migrations (hand-written, additive): 0007_expense_fx_lock (journal idx 7), 0008_
 Required fix: P12-02 includes the fix for the site 500 caused by P9-01 x P12-03 (the client imported server display-currency).
 Mac A please: run the full gate, apply 0007/0008, then live-test login reset-password, Cmd+K, FX expenses, and the /admin/products + /admin/content/legal sweep.
 - 2026-10-29 Phase 13 started: R9-00 harness first, then R9-01..13 in parallel, R9-14 last.
+- 2026-10-29 R9: all 13 fixes + staff RBAC merged on local r9-integration (tsc clean, unit+integration green). Prod-build run 1: 239 pass / 38 fail (new specs, first browser run). Harness now 244/246 (2 = sitemap prerender artifact). e2e fix loop running per spec on private prod servers.
