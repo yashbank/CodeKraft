@@ -282,7 +282,7 @@ export function OfferingPanel({
               aria-pressed={wishlisted}
               aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
               onClick={handleWishlistToggle}
-              className="inline-flex items-center gap-1.5 rounded-sm text-body-sm text-fg-muted hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-sm text-body-sm text-fg-muted hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               <HeartIcon
                 aria-hidden
@@ -294,7 +294,7 @@ export function OfferingPanel({
             <Link
               href={`/auth/login?next=${encodeURIComponent(pathname)}`}
               aria-label="Sign in to add to wishlist"
-              className="inline-flex items-center gap-1.5 rounded-sm text-body-sm text-fg-muted hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-sm text-body-sm text-fg-muted hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               <HeartIcon aria-hidden className="size-4" />
               Wishlist

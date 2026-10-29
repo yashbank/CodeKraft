@@ -186,7 +186,7 @@ function Chip({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        "h-9 shrink-0 rounded-full border px-3.5 text-body-sm whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "h-10 shrink-0 rounded-full border px-3.5 text-body-sm whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
         active
           ? "border-accent bg-accent-soft text-accent-text"
           : "border-border bg-surface text-fg-muted hover:text-fg",

@@ -80,12 +80,12 @@ function FooterColumn({
   return (
     <nav aria-label={title}>
       <h2 className="text-overline tracking-wider text-fg-muted uppercase">{title}</h2>
-      <ul className="mt-4 space-y-2.5">
+      <ul className="mt-3 lg:mt-4 lg:space-y-2.5">
         {links.map((l) => (
           <li key={l.href}>
             <Link
               href={l.href}
-              className="rounded-xs text-body-sm text-fg transition-colors hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex min-h-10 items-center rounded-xs text-body-sm text-fg transition-colors lg:min-h-0 hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               {l.label}
             </Link>

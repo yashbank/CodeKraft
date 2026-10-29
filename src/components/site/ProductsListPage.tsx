@@ -492,7 +492,7 @@ export function ProductsListPage({
                     type="button"
                     onClick={c.remove}
                     aria-label={`Remove filter: ${c.label}`}
-                    className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-surface pr-2 pl-3 text-body-sm text-fg transition-colors hover:border-accent hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    className="inline-flex h-10 items-center gap-1.5 rounded-full border border-border bg-surface pr-2 pl-3 text-body-sm text-fg transition-colors hover:border-accent hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   >
                     {c.label}
                     <XIcon aria-hidden className="size-3.5" />
@@ -658,7 +658,7 @@ function ViewButton({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        "inline-flex size-8 items-center justify-center rounded-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "inline-flex size-10 items-center justify-center rounded-sm transition-colors lg:size-8 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
         active ? "bg-elevated text-fg shadow-1" : "text-fg-muted hover:text-fg",
       )}
     >

@@ -73,7 +73,7 @@ export function BlogTeaserCard({
           {showProductLink ? (
             <Link
               href={`/products/${post.product.slug}`}
-              className="relative z-10 text-body-sm font-medium text-accent-text underline-offset-2 hover:underline"
+              className="relative z-10 inline-flex min-h-10 items-center text-body-sm font-medium text-accent-text underline-offset-2 hover:underline"
             >
               View product →
             </Link>

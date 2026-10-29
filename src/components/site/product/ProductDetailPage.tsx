@@ -39,7 +39,7 @@ export function ProductDetailPage({ product, serviceOptions, ...panel }: Product
       <Container className="pt-6 lg:pt-8">
         <Link
           href="/products"
-          className="inline-flex items-center gap-1 text-body-sm text-fg-muted hover:text-fg md:hidden"
+          className="inline-flex min-h-10 items-center gap-1 text-body-sm text-fg-muted hover:text-fg md:hidden"
         >
           <ChevronLeftIcon aria-hidden className="size-4" /> Products
         </Link>

@@ -219,7 +219,10 @@ export function LoginForm({
               <span className="font-medium text-body-sm">Remember this device</span>
             </label>
           ) : null}
-          <Link href={resetHref} className="text-body-sm text-accent-text hover:underline">
+          <Link
+            href={resetHref}
+            className="inline-flex min-h-10 items-center text-body-sm text-accent-text hover:underline"
+          >
             Forgot password?
           </Link>
         </div>
