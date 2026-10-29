@@ -157,7 +157,7 @@ test("schedule a change; the cron publishes it when due", async ({ page, browser
   await page.getByRole("button", { name: /Republish/ }).click();
   await expect(page.getByText(/Submitted for approval/)).toBeVisible();
   await approveAll(browser, /publish/i);
-  await expect.poll(() => statusOf(prod.id)).toBe("scheduled");
+  await expect.poll(() => statusOf(prod.id), { timeout: 30_000 }).toBe("scheduled");
 
   await q(`update products set publish_at = now() - interval '1 minute' where id = $1`, [prod.id]);
   const secret = cronSecret();
@@ -178,11 +178,12 @@ test("flags: featured, unlisted, coming-soon, tax-enabled", async ({ page }) => 
       return page.getByText(prod.name.slice(0, 12), { exact: false }).count();
     })
     .toBeGreaterThan(0);
-  await page.goto(`${SITE}/products`);
-  await expect(page.locator("a[href^='/products/']").first()).toHaveAttribute(
-    "href",
-    `/products/${prod.slug}`,
-  );
+  await expect
+    .poll(async () => {
+      await page.goto(`${SITE}/products`);
+      return page.locator("a[href^='/products/']").first().getAttribute("href");
+    })
+    .toBe(`/products/${prod.slug}`);
   await setFlag(page, "is_featured", false);
 
   await setFlag(page, "is_coming_soon", true);

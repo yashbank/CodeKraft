@@ -72,8 +72,8 @@ test("site menu drawer: Escape closes it and returns focus; a route change close
 test("signed-out visit to an account page returns to it after sign-in; hostile next is inert", async ({
   page,
 }) => {
-  await atWidths(page, `${SITE}/account/orders`, async () => {
-    await expect(page).toHaveURL(/\/auth\/login\?next=%2Faccount%2Forders/);
+  await atWidths(page, `${SITE}/account/purchases`, async () => {
+    await expect(page).toHaveURL(/\/auth\/login\?next=%2Faccount%2Fpurchases/);
   });
   for (const hostile of [
     "//evil.example.com",
