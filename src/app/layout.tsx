@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
 
 import { SiteBrandProvider } from "@/components/brand/site-brand";
-import { DEFAULT_ICON } from "@/lib/brand-constants";
 import { fontVariables } from "@/lib/fonts";
 import { paletteCss } from "@/lib/palettes";
+import { brandIcons } from "@/lib/seo";
 import { getSiteLogo, getSiteName, getThemeConfig } from "@/lib/site-brand";
 import { uiStyleCss } from "@/lib/ui-style";
 import { DEFAULT_THEME, inlineThemeScript, THEME_COLOR } from "@/lib/theme";
@@ -17,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: siteName, template: `%s · ${siteName}` },
     description: "Premium software studio and digital-product marketplace.",
     // Logo if set, else the existing default mark.
-    icons: { icon: logo ?? DEFAULT_ICON, apple: logo ?? DEFAULT_ICON },
+    icons: brandIcons(logo),
     applicationName: siteName,
     openGraph: { siteName, images },
     twitter: { card: "summary", images },
