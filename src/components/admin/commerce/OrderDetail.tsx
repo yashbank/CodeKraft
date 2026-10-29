@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
+import { ActivityTimeline } from "../ActivityTimeline";
 import { ApprovalGateNotice, Banner } from "../Banner";
 import { EntitlementStatusChip } from "@/components/account/EntitlementStatusChip";
 import { entitlementStatus } from "@/lib/entitlement-status";
@@ -565,29 +566,7 @@ export function OrderDetail({
 
           {/* Timeline */}
           <Card title="Timeline" collapsedOnPhone hint={`${data.timeline.length} events`}>
-            <ol className="space-y-3">
-              {data.timeline.map((e, i) => (
-                <li key={`${e.at}-${i}`} className="flex gap-3 text-body-sm">
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "mt-1.5 size-2 shrink-0 rounded-full",
-                      e.kind === "admin"
-                        ? "bg-accent"
-                        : e.kind === "customer"
-                          ? "bg-info"
-                          : "bg-fg-subtle",
-                    )}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block">{e.text}</span>
-                    <span className="block text-caption text-fg-muted">
-                      {e.actor} · <time dateTime={e.at}>{formatDateTime(e.at)}</time>
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ol>
+            <ActivityTimeline events={data.timeline} empty="No events yet" />
             {data.linkedQueries.length > 0 ? (
               <div className="mt-4 border-t border-border pt-3">
                 <p className="mb-2 text-caption text-fg-muted">Linked queries</p>
