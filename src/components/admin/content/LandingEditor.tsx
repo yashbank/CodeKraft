@@ -22,7 +22,7 @@ import type { LandingChapter, ServiceRow } from "../types";
 import { ContentEditorFrame, moveItem, SortableRow } from "./ContentEditorFrame";
 import { landingFieldHelp as help } from "./landing-field-help";
 import { CTA_NONE, CTA_OTHER, CTA_ROUTES, ctaSelectValue, resolveCtaHref } from "./cta-targets";
-import { fromPlainText } from "@/modules/content/render";
+import { fromPlainText } from "@/modules/content/plain-text";
 import { saveFeaturedProducts, saveLandingChapter } from "@/modules/content/admin-mutations";
 
 const CHAPTER_LABEL: Record<LandingChapter["key"], string> = {

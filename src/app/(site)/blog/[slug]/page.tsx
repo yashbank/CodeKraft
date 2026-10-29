@@ -18,6 +18,11 @@ interface PageProps {
 // ISR (API-CAT-33: 60 s); unknown slugs are rendered on demand.
 export const revalidate = 60;
 
+// Empty list opts the dynamic segment into ISR (rendered on demand, then cached).
+export function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const result = await getBlogBySlugQuery({ slug, displayCurrency: "INR" }, anonymousContext());

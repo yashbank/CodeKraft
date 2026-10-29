@@ -57,7 +57,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { SEMVER_PATTERN } from "@/modules/catalog/contracts";
 import { slugify } from "@/modules/catalog/slugs";
-import { fromPlainText, toPlainText } from "@/modules/content/render";
+import { fromPlainText, toPlainText } from "@/modules/content/plain-text";
 import {
   createProduct,
   createProductVersion,

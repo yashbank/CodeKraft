@@ -32,7 +32,7 @@ import { PageHeader } from "../PageHeader";
 import { Field, RichTextField } from "../RichTextField";
 import type { LegalPage } from "../types";
 import { ContentEditorFrame } from "./ContentEditorFrame";
-import { fromPlainText } from "@/modules/content/render";
+import { fromPlainText } from "@/modules/content/plain-text";
 import { publishLegalPageByKey, saveLegalPage } from "@/modules/content/admin-mutations";
 
 /** SCR-ADM-28 — four versioned legal pages: rail, plain-text editor, clause checklist and version history (Super Admin only). */

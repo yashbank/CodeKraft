@@ -27,7 +27,7 @@ import { Field } from "../RichTextField";
 import { RowActions } from "../RowActions";
 import type { FaqItem } from "../types";
 import { ContentEditorFrame, moveItem, SortableRow } from "./ContentEditorFrame";
-import { fromPlainText, toPlainText } from "@/modules/content/render";
+import { fromPlainText, toPlainText } from "@/modules/content/plain-text";
 import type { RichTextDoc } from "@/modules/_shared/zod";
 import { removeFaq, reorderFaqsList, saveFaq } from "@/modules/content/admin-mutations";
 

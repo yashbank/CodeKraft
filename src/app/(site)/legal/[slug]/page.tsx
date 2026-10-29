@@ -100,8 +100,13 @@ const LEGAL_DOCS: Record<LegalKey, LegalPageView> = {
   },
 };
 
-// Published copy comes from the DB; static rendering would pin the built-in fixtures forever.
-export const dynamic = "force-dynamic";
+// Published copy comes from the DB: ISR, and admin legal saves revalidate the layout (so the
+// built-in fixtures are never pinned).
+export const revalidate = 300;
+
+export function generateStaticParams() {
+  return Object.keys(LEGAL_DOCS).map((slug) => ({ slug }));
+}
 
 /** DB-published page when one exists (fixture copy otherwise, e.g. before seeding). */
 async function loadDoc(slug: string): Promise<LegalPageView | undefined> {

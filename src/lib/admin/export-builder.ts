@@ -1,5 +1,4 @@
 /** The ONE export builder: every admin list/route turns columns + rows into a styled .xlsx or a plain CSV here. Server-only. */
-import ExcelJS from "exceljs";
 
 import { toCsv } from "./csv";
 
@@ -32,6 +31,8 @@ export async function buildXlsx(
   columns: readonly ExportColumn[],
   rows: readonly (readonly unknown[])[],
 ): Promise<Buffer> {
+  // Lazy: ~1 MB of exceljs is only loaded for .xlsx exports, not for CSV or cold starts.
+  const { default: ExcelJS } = await import("exceljs");
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet(sheet.slice(0, 31), { views: [{ state: "frozen", ySplit: 1 }] });
   const font = { name: FONT_NAME, size: 11 };

@@ -9,12 +9,13 @@ import { Banner } from "./Banner";
 import { ResendVerificationButton } from "./ResendVerificationButton";
 import type { NotificationItem } from "./types";
 import { CURRENCY_COOKIE } from "@/lib/currency-prefs";
+import { usePolling } from "@/lib/use-polling";
 import type { Currency } from "@/lib/money";
 import { updateMyAccountSettings } from "@/modules/users/site-mutations";
 import { markAllMyNotificationsRead } from "@/modules/notifications/site-mutations";
 
 /** Re-fetch server state (bell, badge, inbox share it) while the tab is visible. */
-const NOTIFICATION_POLL_MS = 30_000;
+const NOTIFICATION_POLL_MS = 60_000;
 
 interface AccountShellWrapperProps {
   user: { name: string; email: string; initials: string };
@@ -40,12 +41,13 @@ export function AccountShellWrapper({
 }: AccountShellWrapperProps) {
   const pathname = usePathname();
   const router = useRouter();
-  React.useEffect(() => {
-    const id = window.setInterval(() => {
-      if (document.visibilityState === "visible") router.refresh();
-    }, NOTIFICATION_POLL_MS);
-    return () => window.clearInterval(id);
-  }, [router]);
+  usePolling(
+    async () => {
+      router.refresh();
+      return "ok";
+    },
+    { intervalMs: NOTIFICATION_POLL_MS },
+  );
 
   let active: AccountNavKey = "overview";
   if (pathname.startsWith("/account/purchases") || pathname.startsWith("/account/orders"))
