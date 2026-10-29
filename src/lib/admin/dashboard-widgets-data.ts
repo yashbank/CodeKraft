@@ -7,6 +7,8 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { getEnv } from "@/lib/env";
+import { getPrivateBucketName, getStorageDriver } from "@/lib/storage";
+import { runHealthChecks } from "./system-health";
 import type { DashboardData, QueueItem } from "@/components/admin/types";
 
 const n = (v: unknown) => Number(v ?? 0);
@@ -167,44 +169,18 @@ export const loadNewCustomers = (days: number): Promise<DashboardData["newCustom
   });
 
 export const loadSystemHealth = (): Promise<DashboardData["systemHealth"]> =>
-  safe("systemHealth", [{ label: "Database", ok: false, detail: "check failed" }], async () => {
-    const env = getEnv();
-    const out: DashboardData["systemHealth"] = [];
-    const started = Date.now();
-    await db.execute(sql`select 1`);
-    out.push({ label: "Database", ok: true, detail: `${Date.now() - started} ms` });
+  safe("systemHealth", [UNAVAILABLE_HEALTH()], () =>
+    runHealthChecks({
+      query: async (q) => [...(await db.execute(q))] as Array<Record<string, unknown>>,
+      headProbe: () => getStorageDriver().headObject(getPrivateBucketName(), ".health-probe"),
+      env: getEnv(),
+    }),
+  );
 
-    const emailOk = env.EMAIL_TRANSPORT !== "resend" || Boolean(env.RESEND_API_KEY);
-    out.push({
-      label: "Email",
-      ok: emailOk,
-      detail: emailOk ? `transport ${env.EMAIL_TRANSPORT ?? "default"}` : "RESEND_API_KEY missing",
-    });
-
-    const provider = env.AI_PROVIDER ?? "anthropic";
-    const aiOk =
-      provider === "fake" ||
-      (provider === "anthropic" ? Boolean(env.ANTHROPIC_API_KEY) : Boolean(env.OPENAI_API_KEY));
-    out.push({
-      label: "AI provider",
-      ok: aiOk,
-      detail: aiOk ? provider : `${provider} key missing`,
-    });
-
-    const jobs = await db.execute<{ job: string; status: string | null; started_at: Date }>(sql`
-      select distinct on (job) job, status::text as status, started_at
-      from job_runs order by job, started_at desc`);
-    const list = [...jobs];
-    const failing = list.filter((j) => j.status === "error");
-    out.push({
-      label: "Cron jobs",
-      ok: failing.length === 0,
-      detail:
-        list.length === 0
-          ? "no runs yet"
-          : failing.length > 0
-            ? `${failing.length} failing: ${failing.map((j) => j.job).join(", ")}`
-            : `${list.length} jobs, last run ok`,
-    });
-    return out;
-  });
+const UNAVAILABLE_HEALTH = (): DashboardData["systemHealth"][number] => ({
+  label: "Health checks unavailable",
+  ok: false,
+  status: "fail",
+  detail: "could not run checks",
+  checkedAt: new Date().toISOString(),
+});
