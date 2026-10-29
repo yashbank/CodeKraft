@@ -4,6 +4,7 @@
  * shapes. Money is always `{ amountMinor, currency }` (lib/money); timestamps are ISO strings.
  */
 import type { Currency } from "@/lib/money";
+import type { SectionStyle } from "@/modules/content/section-style";
 import type { StatusValue } from "@/lib/status-tone";
 import type { SellerDetails } from "@/modules/settings/types";
 
@@ -827,6 +828,7 @@ export interface LandingChapter {
   posterMediaId?: string;
   nodeLabel?: string;
   nodeStyle?: "pill" | "terminal" | "outline";
+  style?: SectionStyle;
   ctaPrimary?: { label: string; target: string };
   ctaSecondary?: { label: string; target: string };
 }

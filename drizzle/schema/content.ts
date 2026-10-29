@@ -40,6 +40,15 @@ export interface LandingChapterMedia {
   /** Hero image-panel label; undefined = default text, "" = hidden. */
   nodeLabel?: string;
   nodeStyle?: "pill" | "terminal" | "outline";
+  /** Per-section look (P14-08); validated by `sectionStyleSchema`. */
+  style?: {
+    font?: string;
+    border?: string;
+    padY?: string;
+    padX?: string;
+    gap?: string;
+    tone?: string;
+  };
 }
 
 export interface CtaLink {

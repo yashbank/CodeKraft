@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Field, RichTextField } from "../RichTextField";
+import { readSectionStyle, SectionStylePanel } from "./SectionStylePanel";
 import type { LandingChapter, ServiceRow } from "../types";
 import { ContentEditorFrame, moveItem, SortableRow } from "./ContentEditorFrame";
 import { landingFieldHelp as help } from "./landing-field-help";
@@ -125,6 +126,7 @@ export function LandingEditor({
                 : {}),
             }
           : {}),
+        ...(readSectionStyle(data) ? { style: readSectionStyle(data) } : {}),
       },
       cta: { primary, ...(secondary ? { secondary } : {}) },
       position: chapters.indexOf(chapter),
@@ -394,6 +396,12 @@ export function LandingEditor({
             </Field>
           </div>
         ) : null}
+        <SectionStylePanel
+          initial={chapter.style}
+          eyebrow={chapter.eyebrow}
+          title={chapter.title}
+          help={help(chapter.key, "style")}
+        />
         <div className="flex items-center gap-3">
           <Switch
             id="ch-published"

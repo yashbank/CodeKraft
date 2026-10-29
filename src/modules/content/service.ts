@@ -38,6 +38,7 @@ import {
   users,
 } from "../../../drizzle/schema";
 import { renderToHtml, toPlainText } from "./render";
+import { parseSectionStyle, type SectionStyle } from "./section-style";
 import type {
   ContentService,
   Reorder,
@@ -898,6 +899,7 @@ export class DefaultContentService implements ContentService {
           nodeStyle: c.media?.nodeStyle ?? null,
         },
         cta: c.cta,
+        style: parseSectionStyle(c.media?.style),
         position: c.position,
       });
     }
@@ -1491,6 +1493,7 @@ export class DefaultContentService implements ContentService {
       posterMediaId?: string;
       nodeLabel?: string;
       nodeStyle?: "pill" | "terminal" | "outline";
+      style?: SectionStyle;
       ctaPrimary?: { label: string; target: string };
       ctaSecondary?: { label: string; target: string };
     }> = [];
@@ -1515,6 +1518,7 @@ export class DefaultContentService implements ContentService {
         posterMediaId: c.media?.posterMediaId ?? undefined,
         nodeLabel: c.media?.nodeLabel,
         nodeStyle: c.media?.nodeStyle,
+        style: parseSectionStyle(c.media?.style),
         ctaPrimary: c.cta?.primary
           ? { label: c.cta.primary.label, target: c.cta.primary.href }
           : undefined,

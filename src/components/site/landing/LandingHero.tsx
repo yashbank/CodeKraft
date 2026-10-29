@@ -6,6 +6,8 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
+import { sectionStyleCss } from "@/modules/content/section-style";
+
 import { Container } from "../Container";
 import { InquirySheet } from "../InquirySheet";
 import type { LandingContent, ServiceOption } from "../types";
@@ -39,7 +41,12 @@ export function LandingHero({
   const head = words.slice(0, -2).join(" ");
   const tail = words.slice(-2).join(" ");
   return (
-    <section id="who" aria-labelledby="who-title" className="relative scroll-mt-16 overflow-hidden">
+    <section
+      id="who"
+      aria-labelledby="who-title"
+      className="relative scroll-mt-16 overflow-hidden"
+      style={sectionStyleCss(content.style)}
+    >
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[image:var(--ck-gradient-glow)] opacity-60"

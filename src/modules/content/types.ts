@@ -13,6 +13,7 @@ import type {
 } from "../../../drizzle/schema/content";
 import type { TiptapDoc } from "../../../drizzle/schema/catalog";
 import type { ImageRef } from "../catalog/types";
+import type { SectionStyle } from "./section-style";
 import { enumTuple } from "../catalog/types";
 
 export type {
@@ -71,6 +72,7 @@ export interface LandingChapterView {
     nodeStyle: "pill" | "terminal" | "outline" | null;
   };
   cta: LandingChapterCta | null;
+  style?: SectionStyle;
   position: number;
 }
 

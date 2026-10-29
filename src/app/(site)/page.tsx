@@ -62,6 +62,7 @@ function chapterCopy(c: LandingChapterView | undefined) {
     title: c?.title ?? "",
     body: c?.plainBody ?? "",
     cta: safeCta(c?.cta),
+    style: c?.style,
   };
 }
 

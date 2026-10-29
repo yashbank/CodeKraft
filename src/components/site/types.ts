@@ -4,6 +4,7 @@
  * the dev previews feed them from `app/dev/screens/_fixtures/site.ts`. No component here fetches.
  */
 import type { Money } from "@/lib/money";
+import type { SectionStyle } from "@/modules/content/section-style";
 
 export type PurchaseModel = "one_time" | "subscription" | "custom_quote";
 export type BillingInterval = "monthly" | "quarterly" | "annual";
@@ -225,6 +226,8 @@ export interface LandingChapterCopy {
   body: string;
   /** Admin-stored CTA (Landing editor); the hero renders it, falling back to its defaults. */
   cta?: { primary: { label: string; href: string }; secondary?: { label: string; href: string } };
+  /** Admin per-section look (Landing editor); absent = unchanged. */
+  style?: SectionStyle;
 }
 
 export interface LandingContent {
