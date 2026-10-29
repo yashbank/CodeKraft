@@ -4,15 +4,7 @@
  */
 import { expect, test } from "@playwright/test";
 
-import {
-  ADMIN,
-  SITE,
-  atWidths,
-  expectNoOverflow,
-  loginAs,
-  q,
-  trackIssues,
-} from "./helpers";
+import { ADMIN, SITE, atWidths, expectNoOverflow, loginAs, q, trackIssues } from "./helpers";
 
 // Must satisfy the register form's rules (upper+lower, digit, symbol, 12+); helpers' PASSWORD is lowercase-only.
 const NEW_PASSWORD = "R9-Thirteen-Pass#2026";

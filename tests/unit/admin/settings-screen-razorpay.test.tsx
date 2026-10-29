@@ -98,7 +98,9 @@ describe("SettingsScreen > Payments > Razorpay (D-501, TEST MODE ONLY)", () => {
     fireEvent.click(screen.getByRole("button", { name: /Test connection/i }));
 
     await waitFor(() =>
-      expect(screen.getByText(/Connected — Razorpay accepted the credentials/i)).toBeInTheDocument(),
+      expect(
+        screen.getByText(/Connected — Razorpay accepted the credentials/i),
+      ).toBeInTheDocument(),
     );
   });
 

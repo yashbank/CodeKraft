@@ -120,7 +120,9 @@ test.describe("R9-02 invoices render from current settings", () => {
         originalName,
       ]);
       if (sd)
-        await q(`update site_settings set value=$1::text::jsonb where key='seller_details'`, [sd.v]);
+        await q(`update site_settings set value=$1::text::jsonb where key='seller_details'`, [
+          sd.v,
+        ]);
       await q(`delete from invoices where id=$1`, [inv!.id]).catch(() => undefined);
       await q(`delete from orders where id=$1`, [order!.id]).catch(() => undefined);
       await adminCtx.close();

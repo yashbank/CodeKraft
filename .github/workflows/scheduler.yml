@@ -3,9 +3,11 @@ name: scheduler
 # docs/12 §4: Vercel Hobby allows only daily crons, so GitHub fires the two consolidated cron
 # endpoints. Secrets: CRON_SECRET (same value as the Vercel env), SITE_URL (e.g. https://codekraft-dusky.vercel.app).
 on:
-  schedule:
-    - cron: "*/15 * * * *"
-    - cron: "30 21 * * *"
+  # Schedules are OFF until the repo secrets CRON_SECRET and SITE_URL are set (a run without them
+  # fails and emails the owner). Vercel's own daily crons keep running meanwhile. To turn on, restore:
+  #   schedule:
+  #     - cron: "*/15 * * * *"
+  #     - cron: "30 21 * * *"
   workflow_dispatch:
 
 concurrency:
