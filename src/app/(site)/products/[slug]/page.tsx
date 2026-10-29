@@ -14,6 +14,7 @@ import type {
 import { anonymousContext } from "@/lib/authz/context";
 import { toneFromSlug } from "@/lib/media-tone";
 import { getProductBySlugQuery } from "@/modules/catalog/queries";
+import { getDisplayCurrency } from "@/lib/display-currency";
 import { renderToHtml, toPlainText } from "@/modules/content/render";
 import type { RichTextDoc } from "@/modules/_shared/zod";
 import type { ChangelogJson } from "../../../../../drizzle/schema/catalog";
@@ -47,7 +48,8 @@ function changelogHtml(c: ChangelogJson | null): string {
 
 async function loadProduct(slug: string): Promise<ProductDetail | null> {
   const ctx = anonymousContext();
-  const result = await getProductBySlugQuery({ slug, displayCurrency: "INR" }, ctx);
+  const { currency } = await getDisplayCurrency();
+  const result = await getProductBySlugQuery({ slug, displayCurrency: currency }, ctx);
   if (!result.ok) return null;
   const p = result.data;
 
@@ -58,6 +60,7 @@ async function loadProduct(slug: string): Promise<ProductDetail | null> {
     billingInterval: o.billingInterval ?? undefined,
     deliveryType: o.deliveryType,
     price: o.price?.display,
+    priceApprox: o.price?.displayIsConverted,
     compareAtPrice: o.price?.compareAt ?? undefined,
     licenseType: o.licenseType ?? undefined,
     accessPeriod: accessPeriod(o.purchaseModel, o.billingInterval),
@@ -112,6 +115,7 @@ async function loadProduct(slug: string): Promise<ProductDetail | null> {
       ? { slug: p.category.slug, name: p.category.name }
       : { slug: "uncategorized", name: "Uncategorized" },
     fromPrice: cheapest,
+    priceApprox: offerings.find((o) => o.price === cheapest)?.priceApprox,
     purchaseModels: purchaseModels.length ? purchaseModels : ["custom_quote"],
     deliveryTypes: deliveryTypes.length ? deliveryTypes : ["custom"],
     isFeatured: p.isFeatured,

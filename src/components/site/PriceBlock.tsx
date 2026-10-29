@@ -9,6 +9,7 @@ import { price } from "./_format";
  */
 export function PriceBlock({
   amount,
+  approx = false,
   compareAt,
   prefix,
   suffix,
@@ -17,6 +18,8 @@ export function PriceBlock({
   className,
 }: {
   amount?: Money;
+  /** Converted from the base currency: prefix "≈". */
+  approx?: boolean;
   compareAt?: Money;
   /** "From" on cards. */
   prefix?: string;
@@ -38,7 +41,10 @@ export function PriceBlock({
   return (
     <span className={cn("inline-flex flex-wrap items-baseline gap-x-1.5 text-fg", className)}>
       {prefix ? <span className="text-body-sm text-fg-muted">{prefix}</span> : null}
-      <span className={cn(valueClass, "tnum")}>{price(amount)}</span>
+      <span className={cn(valueClass, "tnum")}>
+        {approx ? "≈ " : ""}
+        {price(amount)}
+      </span>
       {suffix ? <span className="text-body-sm text-fg-muted">{suffix}</span> : null}
       {compareAt && compareAt.amountMinor > amount.amountMinor ? (
         <s className="text-body-sm text-fg-subtle tnum">

@@ -13,6 +13,7 @@ export function toProductSummary(card: ProductCard): ProductSummary {
       ? { slug: card.category.slug, name: card.category.name }
       : { slug: "uncategorized", name: "Uncategorized" },
     fromPrice: card.fromPrice ?? undefined,
+    priceApprox: card.fromPriceApprox,
     compareAtPrice: card.compareAtPrice,
     purchaseModels: card.purchaseModels,
     deliveryTypes: card.deliveryTypes,

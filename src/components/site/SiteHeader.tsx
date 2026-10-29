@@ -20,6 +20,8 @@ import { useSession } from "@/modules/auth/client";
 
 import { InquirySheet } from "./InquirySheet";
 import { SITE_NAV } from "./nav";
+import { CurrencySwitcher } from "./CurrencySwitcher";
+import type { Currency } from "@/lib/money";
 import { ThemeToggle } from "./ThemeToggle";
 import type { ServiceOption } from "./types";
 import { useSiteName } from "@/components/brand/site-brand";
@@ -32,6 +34,9 @@ export interface SiteHeaderProps {
   transparentAtTop?: boolean;
   /** Feature flag `theme_light_editorial` (hidden at release 1). */
   themeToggleEnabled?: boolean;
+  /** Display-currency selector (enabled currencies only); omitted in previews. */
+  currency?: Currency;
+  currencyOptions?: readonly Currency[];
   /** Overrides the active-link detection (previews render outside the real routes). */
   currentPath?: string;
 }
@@ -45,6 +50,8 @@ export function SiteHeader({
   serviceOptions,
   transparentAtTop = false,
   themeToggleEnabled = false,
+  currency,
+  currencyOptions = [],
   currentPath,
 }: SiteHeaderProps) {
   const pathname = usePathname();
@@ -120,6 +127,14 @@ export function SiteHeader({
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
+            {currency ? (
+              <CurrencySwitcher
+                currency={currency}
+                signedIn={Boolean(session)}
+                options={currencyOptions}
+                className="w-[4.5rem]"
+              />
+            ) : null}
             <ThemeToggle enabled={themeToggleEnabled} />
             <Button asChild variant="ghost" size="sm" className="hidden lg:inline-flex">
               <Link href={authHref}>{authLabel}</Link>

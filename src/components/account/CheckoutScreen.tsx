@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/components/ui/_utils";
-import { add, format, money, type Money } from "@/lib/money";
+import { add, convertMinor, format, money, type Money } from "@/lib/money";
 import { mapBillingToOrderInput } from "@/lib/account/checkout-view";
 import { createOrder, previewCheckout } from "@/modules/orders/customer-mutations";
 import type { CreateOrderResult } from "@/modules/orders/types";
@@ -697,6 +697,21 @@ export function CheckoutScreen({
                     <dt>Total</dt>
                     <dd className="font-mono tnum">{format(total)}</dd>
                   </div>
+                  {offering.estimate && offering.estimate.currency !== total.currency ? (
+                    <div className="space-y-0.5 text-caption text-fg-muted">
+                      <div className="flex justify-between">
+                        <dt>≈ in {offering.estimate.currency}</dt>
+                        <dd className="font-mono tnum">
+                          ≈{" "}
+                          {format({
+                            amountMinor: convertMinor(total.amountMinor, offering.estimate.rate),
+                            currency: offering.estimate.currency,
+                          })}
+                        </dd>
+                      </div>
+                      <p>You will be charged in {total.currency}.</p>
+                    </div>
+                  ) : null}
                   {offering.displayEstimate ? (
                     <div className="flex justify-between text-caption text-fg-muted">
                       <dt>≈ in {offering.displayCurrency}</dt>

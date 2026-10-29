@@ -350,6 +350,8 @@ export interface CheckoutOffering {
   displayCurrency: Currency;
   /** Whole-number display-currency rate hint for the "≈" estimate (preview only). */
   displayEstimate?: Money;
+  /** Selected display currency + rate from the charge currency, for the "≈" line (charge unchanged). */
+  estimate?: { currency: Currency; rate: string };
   renewal?: { periodLabel: string };
   productHref: string;
 }

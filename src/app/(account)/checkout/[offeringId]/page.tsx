@@ -1,3 +1,5 @@
+import { getDisplayCurrency } from "@/lib/display-currency";
+import { getFxProvider } from "@/lib/fx";
 import { notFound, redirect } from "next/navigation";
 import { CheckoutScreen, type CheckoutPageState } from "@/components/account/CheckoutScreen";
 import { mapCheckoutPreviewToOffering, mapProfileToBilling } from "@/lib/account/checkout-view";
@@ -84,7 +86,17 @@ export default async function CheckoutPage({ params }: PageProps) {
   }
 
   const { getProductCoverUrl } = await import("@/modules/catalog/cover-images");
+  const { currency: selected } = await getDisplayCurrency();
+  const chargeCurrency = previewResult.data.subtotal.currency;
+  const estimate =
+    selected === chargeCurrency
+      ? undefined
+      : await getFxProvider()
+          .getRate(chargeCurrency, selected)
+          .then((q) => ({ currency: selected, rate: q.rate }))
+          .catch(() => undefined);
   const offering = {
+    estimate,
     ...mapCheckoutPreviewToOffering(
       previewResult.data,
       razorpayAvailable,
