@@ -527,7 +527,13 @@ export class DefaultOrdersService implements OrdersService {
     outerTx?: TxCtx,
   ): Promise<{ order: Order }> {
     const runner = async (tx: TxCtx): Promise<{ order: Order }> => {
-      const [order] = await tx.select().from(orders).where(eq(orders.id, input.orderId)).limit(1);
+      // Row lock: a concurrent markPaid (webhook/admin confirm) must not be overwritten by a cancel.
+      const [order] = await tx
+        .select()
+        .from(orders)
+        .where(eq(orders.id, input.orderId))
+        .limit(1)
+        .for("update");
 
       if (!order || order.userId !== ctx.userId) {
         throw new AppError(ErrorCode.NOT_FOUND, "Order not found");
@@ -540,6 +546,19 @@ export class DefaultOrdersService implements OrdersService {
         );
       }
 
+      // A submitted UPI/bank reference is money the admin may still confirm: don't fail it.
+      const [submitted] = await tx
+        .select({ id: payments.id })
+        .from(payments)
+        .where(and(eq(payments.orderId, order.id), eq(payments.status, "submitted")))
+        .limit(1);
+      if (submitted) {
+        throw new AppError(
+          ErrorCode.STATE_INVALID,
+          "Payment details were already sent; contact support to cancel",
+        );
+      }
+
       const now = new Date();
       const [cancelledOrder] = await tx
         .update(orders)
@@ -548,7 +567,7 @@ export class DefaultOrdersService implements OrdersService {
           cancelledAt: now,
           updatedAt: now,
         })
-        .where(eq(orders.id, order.id))
+        .where(and(eq(orders.id, order.id), eq(orders.status, "pending_payment")))
         .returning();
       if (!cancelledOrder) throw new AppError(ErrorCode.INTERNAL, "cancelledOrder missing");
 
@@ -560,7 +579,7 @@ export class DefaultOrdersService implements OrdersService {
           failureReason: "cancelled",
         })
         .where(
-          and(eq(payments.orderId, order.id), inArray(payments.status, ["initiated", "submitted"])),
+          and(eq(payments.orderId, order.id), eq(payments.status, "initiated")),
         );
 
       return { order: cancelledOrder };

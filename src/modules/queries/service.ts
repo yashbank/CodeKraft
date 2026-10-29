@@ -94,6 +94,24 @@ export class DefaultQueriesService implements QueriesService {
       throw new AppError(ErrorCode.UNAUTHENTICATED, "Authentication required");
     }
 
+    // The linked order must be the caller's own; a refund request needs a refundable order (BR-09).
+    if (input.orderId) {
+      const [order] = await this.db
+        .select({ userId: orders.userId, status: orders.status })
+        .from(orders)
+        .where(eq(orders.id, input.orderId))
+        .limit(1);
+      if (!order || order.userId !== ctx.userId) {
+        throw new AppError(ErrorCode.NOT_FOUND, "Order not found");
+      }
+      if (
+        input.refundRequest &&
+        !["paid", "fulfilled", "partially_refunded"].includes(order.status)
+      ) {
+        throw new AppError(ErrorCode.STATE_INVALID, "This order cannot be refunded");
+      }
+    }
+
     // Refund request single-open thread check (BR-09)
     if (input.refundRequest && input.orderId) {
       const existing = await this.db
