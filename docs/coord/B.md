@@ -40,6 +40,7 @@ Updated: 2026-10-29
 - P11-02 | ready | branch feat/p11-02-hero-node-label | vitest tests/unit/content/hero-node-label.test.tsx: 3 pass; content suites pass
 - P11-03 | ready | branch feat/p11-03-logo-everywhere | vitest tests/unit + static: 1086 pass (logo-everywhere 6, no-hardcoded-brand 2)
 - P10-01 | ready | branch feat/p10-01-invites | vitest auth+authz: 132 pass (incl. must-change-server); tests/unit full run below | MIGRATION 0008
+- P10-02 | ready | branch feat/p10-02-reset-password | stacked on P10-01; vitest auth suite pass
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
 - [open] R2 private bucket CORS must allow PUT from the admin origin | P2-01 browser uploads straight to R2 | upload a .dmg on a product version, it completes and appears
@@ -78,3 +79,4 @@ Updated: 2026-10-29
 - 2026-10-29 P11-02: Hero 'Architecture Node' label is editable in Landing > Who we are (max 40 chars; empty hides it). Styles: Default, Pill, Terminal, Outline. Stored in landing_chapters.media JSON, no migration.
 - 2026-10-29 P11-03: Logo now also on admin login (CK monogram removed), LaptopNotice, every email template (the render path never passed the logo), apple icon, and OG/Twitter share images (root, blog, product). 2FA issuer and auth appName use the site name. A static test blocks hard-coded brand paths and the CK monogram.
 - 2026-10-29 P10-01: MIGRATION 0008_user_tokens.sql (journal idx 8, after 0007): users.must_change_password plus a user_tokens table (SHA-256 hash only). Single-use invite links (7 days) with Copy link. Temp password shown once and stored only as a hash. Regenerate invalidates the old link or password. Forced change on first login is enforced in layouts AND request contexts (403 PASSWORD_CHANGE_REQUIRED). Admin-class invites still need admin.user_change approval. Merge P9 first (journal conflict expected, keep both entries).
+- 2026-10-29 P10-02: Admin-generated single-use reset link (1 hour, Copy link): sets the password, revokes sessions, clears the forced-change flag. Only a super admin can reset a super admin; no self-reset. The forgot-password email goes through sendEmail. Known: the better-auth email /reset-password path doesn't clear must_change_password (the user is just asked to change again).
