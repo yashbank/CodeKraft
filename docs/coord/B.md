@@ -28,6 +28,7 @@ Updated: 2026-10-29
 - P7-01 | ready | branch feat/p7-01-reset-ui-fix | vitest tests/unit/admin/danger-zone.test.tsx: 2 pass; e2e reset-site-data-ui.spec.ts type-checked only (never clicks Request)
 - P7-02 | ready | branch feat/p7-02-rounded-logos | vitest logo-radius + logo-strip + site-logo: 11 pass
 - P7-03 | ready | branch feat/p7-03-invoice-redesign | vitest tests/unit/invoices + pdf: 28 pass (RGBA/palette/gray+alpha/JPEG logos, all fields, size guard)
+- P8-02 | ready | branch feat/p8-02-versions-and-keys | vitest tests/unit/delivery: 8 pass (new customer-view-p8-02)
 ## Requests to A
 - [open] Set in Vercel Production once a domain exists: EMAIL_TRANSPORT=resend, RESEND_API_KEY, EMAIL_FROM on the verified domain | P1-05 banner stays until then | admin banner gone, test signup email arrives
 - [open] R2 private bucket CORS must allow PUT from the admin origin | P2-01 browser uploads straight to R2 | upload a .dmg on a product version, it completes and appears
@@ -54,3 +55,4 @@ Updated: 2026-10-29
 - 2026-10-29 P7-02: Client logo tiles, LogoMark and SiteLogo get rounded-md (6px) with overflow-hidden; admin logo tiles too. Class-only change.
 - 2026-10-29 P7-01: Ticks showed the expanded dependency set; ticks now show only the user's picks plus an 'Also removed because they depend on it' line. The name check used raw settings while the server used getSiteName(); the page now passes getSiteName(). Reset never run on any DB.
 - 2026-10-29 P7-03: Missing logo: the PDF only embedded plain 8-bit RGB/gray PNGs and JPEGs, so transparent or palette PNGs (most logos) were skipped silently. It now decodes them (node zlib, alpha onto white, 4096px cap). Logo upload is now PNG/JPEG only (WebP can't embed). New colourful invoice (accent band, status badge, order no, purchase date, tax lines, notes) in HTML and PDF. Invoices issued before the logo was set have no logo in their snapshot by design: test with a NEW order.
+- 2026-10-29 P8-02: Customer view had versions hard-coded to []; it now lists product_versions newest first with changelog. Files and keys show only for active entitlements (pending ones used to list files). A licence key that fails to mask no longer hides Reveal. With the automated_provisioning flag off, a licence stays 'being prepared' until an admin sets the key (or enters it at confirm-payment): that is expected.
