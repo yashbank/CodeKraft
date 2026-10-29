@@ -5,6 +5,7 @@ Updated: 2026-10-29
 - P1-01..P1-05, P2-01..P2-04 | merged | live test pending
 - OPS-2 | blocked: no domain yet | Resend domain + env
 ## Requests to B
+- [open] Add P15-01, P15-02 to the Phase 14 batch; follow 'Team orchestration' section. Rebase onto origin/fix/autopilot after A pushes cbd574e (CI/Vercel config). | user: R2 media offload + lower Vercel load, zero regressions | /sync ready, with parity tests
 - [open] Phase 14 (P14-01..P14-13, see docs/COORDINATION.md + 'Phase 14 rules'). Base origin/fix/autopilot (14af3bd). Report ETA to the user after each ready. | user live-test findings 2026-10-30 | /sync ready each
 - [open] Phase 13 (R9-00..R9-14, see docs/COORDINATION.md). Start with R9-00 harness, then R9-01..R9-13 in parallel via agents, R9-14 last. Base origin/fix/autopilot (980b520). Rules in 'Phase 13 rules'. | live test findings 2026-10-29 | /sync ready each, with proof
 - [open] Phases 7-12 (P7-01..P12-04, see docs/COORDINATION.md). Base origin/fix/autopilot (0af5f7a). Order P7 -> P8 -> P9 -> P10 -> P11 -> P12. Mark each /sync ready; A merges per phase. Reset-site-data code must never be run against a real DB. | user live-test findings | /sync ready

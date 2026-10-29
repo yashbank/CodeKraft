@@ -114,6 +114,9 @@ Two machines, one repo. Never both on the same task. Never push `main`. Never pu
 | P14-12 | 14 | Extras: per-user dark/light/auto, toast + Undo on deletes, global search (orders, customers, invoices, products), drag-to-reorder widgets, empty-state illustrations, cookie banner, chat typing indicator, settings export/import, real-time order alerts, keyboard-shortcuts sheet (?), activity timeline on customer/order, bulk actions in tables, notification preferences, branded 404/500, PWA manifest, print stylesheet, skeleton loaders everywhere | B |
 | P14-13 | 14 | Quality gates: axe accessibility + Lighthouse budget checks, re-run R9 suite + new specs, update docs/SCORECARD.md | B |
 
+| P15-01 | 15 | Media on R2, zero regressions. Prod already runs the S3/R2 driver (R2_* env set). Audit every upload path (product media, versions, PDFs, logos, QR, chat attachments, case-study/blog images): nothing stored in repo/public, DB blobs or Vercel; public media served from the R2 public bucket with long immutable cache; private via signed/proxied routes. Write PARITY tests first (upload -> view -> replace -> delete for each kind, public vs private visibility) and keep them green before and after any change | B |
+| P15-02 | 15 | Vercel load: cache headers + ISR/revalidate on public pages, next/image sizes + TTL, sane polling intervals (bell, widgets, health), trim client bundle (analyze, lazy-load heavy admin/chart/editor code), no duplicate fetches. Report before/after numbers | B |
+
 Order for B: P1 (all tasks in parallel via agents) -> P2 -> P3 -> P4 -> P5 -> P6 -> P7 -> P8 -> P9 -> P10 -> P11 -> P12 -> R9 (Phase 13). A tests each phase as B marks tasks `ready`; B continues to the next phase without waiting.
 
 ## Token plan (Phase 7-12, both Macs)
@@ -136,3 +139,14 @@ Order for B: P1 (all tasks in parallel via agents) -> P2 -> P3 -> P4 -> P5 -> P6
 - ETA reporting: every time a task or group is marked `ready`, B tells the user in chat AND in the /sync note: "Done X of 13, estimated remaining ~N h".
 - Keep every existing R9 spec green. If a UI change breaks an old spec, fix the code, not the test (unless the test assumption is wrong; say why).
 - Hand-written additive migrations, 0009+ (none used so far).
+
+## Team orchestration (Mac B, Phases 14-15)
+Roles (all agents get only their task rows + files, report <=8 lines, caveman style):
+1. Planner (you, main session): split tasks, assign file ownership so agents never edit the same file; one integration branch.
+2. Builder agents (Sonnet, worktrees): one per task or small group. Haiku for mechanical edits/tests.
+3. Test agent (Sonnet): writes failing tests first, runs Playwright on the production build with `--reporter=line`, returns failure names only.
+4. Reviewer agent (`caveman:cavecrew-reviewer`): reviews each diff for regressions before `ready`.
+5. Verifier agent (`verifier`): final lint/typecheck/vitest for touched areas.
+Rounds: Round 1 build + own tests. Round 2 cross-review + full R9 suite + new specs. Round 3 route sweep (all roles, 375/768/1280) + fix. Only then `ready`. Log each round's pass/fail counts in B.md.
+Repeated work: reuse fixtures/helpers in tests/e2e; do not re-run the full suite per task, once per round.
+Mac A already did (do not redo): CI runs on main + PRs only, lint formatting fixed, GitHub scheduler off until secrets are set, Vercel builds only `main`. Branch pushes no longer trigger Vercel deployments.
