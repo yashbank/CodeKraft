@@ -50,6 +50,7 @@ test.describe("R9-12 public SEO", () => {
     page,
     request,
   }) => {
+    test.setTimeout(90_000);
     const list = await targets();
     expect(list.length).toBeGreaterThanOrEqual(2);
     const sitemap = await (await request.get(`${SITE}/sitemap.xml`)).text();
@@ -87,6 +88,12 @@ test.describe("R9-12 admin SEO preview", () => {
       for (const w of WIDTHS) {
         await page.setViewportSize({ width: w, height: 900 });
         await page.goto(`${ADMIN}/admin/products/${p.id}`);
+        if (w < 1024) {
+          // The admin editor is laptop-only: below 1024 the app shows a notice, not the editor.
+          await expect(page.getByText(/designed for laptops/)).toBeVisible();
+          await expectNoOverflow(page);
+          continue;
+        }
         await page.getByRole("tab", { name: "SEO" }).click();
         const preview = page.getByTestId("seo-preview");
         await expect(preview).toBeVisible();

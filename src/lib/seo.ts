@@ -38,14 +38,15 @@ export interface PageMetaInput {
 export function pageMetadata(i: PageMetaInput): Metadata {
   const description = truncate(i.description);
   const url = absoluteUrl(i.path);
-  const images = i.images;
+  // Next treats an own `images` key (even undefined) as explicit and drops the opengraph-image file.
+  const images = i.images ? { images: i.images } : {};
   return {
     title: i.title,
     description,
     alternates: { canonical: url },
     robots: i.noindex ? NOINDEX : undefined,
-    openGraph: { type: i.type ?? "website", url, title: i.title, description, images },
-    twitter: { card: "summary_large_image", title: i.title, description, images },
+    openGraph: { type: i.type ?? "website", url, title: i.title, description, ...images },
+    twitter: { card: "summary_large_image", title: i.title, description, ...images },
   };
 }
 
@@ -208,13 +209,19 @@ export function caseStudySeo(c: {
   slug: string;
   title: string;
   resultHighlight?: Opt;
+  clientName?: Opt;
+  industry?: Opt;
   seoTitle?: Opt;
   seoDescription?: Opt;
 }): PageMetaInput {
+  // A case study with no highlight or SEO text still needs a description for search results.
+  const fallback = c.clientName
+    ? `${c.industry ? `${c.industry} case study` : "Case study"} for ${c.clientName}.`
+    : undefined;
   return {
     path: `/projects/${c.slug}`,
     title: pick(c.seoTitle, c.title) ?? "",
-    description: pick(c.seoDescription, c.resultHighlight),
+    description: pick(c.seoDescription, c.resultHighlight, fallback),
     type: "article",
   };
 }

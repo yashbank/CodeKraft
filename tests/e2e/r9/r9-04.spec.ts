@@ -2,10 +2,23 @@
  * R9-04: product lifecycle + flags. Edit/republish/schedule a published product, the four flags on
  * the storefront, approved delete across all surfaces, editor + list at 3 widths.
  */
+import { readFileSync } from "node:fs";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { ADMIN, PASSWORD, SITE, atWidths, loginAs, q, trackIssues } from "./helpers";
 
 test.describe.configure({ mode: "serial" });
+// The admin editor is laptop-only (<1024px shows a notice); the width sweep test covers the rest.
+test.use({ viewport: { width: 1280, height: 900 } });
+
+/** The server reads CRON_SECRET from .env.local; the test process does not load that file. */
+function cronSecret(): string | undefined {
+  if (process.env.CRON_SECRET) return process.env.CRON_SECRET;
+  const all = [...readFileSync(".env.local", "utf8").matchAll(/^CRON_SECRET=(.*)$/gm)];
+  return all
+    .at(-1)?.[1]
+    ?.trim()
+    .replace(/^["']|["']$/g, "");
+}
 
 type Prod = { id: string; slug: string; name: string };
 let prod: Prod;
@@ -16,12 +29,20 @@ const statusOf = async (id: string) =>
   (await q<{ status: string }>(`select status from products where id = $1`, [id]))[0]?.status;
 
 async function loginEmail(page: Page, email: string) {
-  await q(`delete from rate_limit_buckets`);
-  await page.goto(`${ADMIN}/auth/login`);
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page).not.toHaveURL(/\/auth\/login/, { timeout: 20_000 });
+  // better-auth throttles sign-in (3 per 10 s per process); wait out the window and retry.
+  for (let attempt = 0; ; attempt++) {
+    await page.goto(`${ADMIN}/auth/login`);
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    try {
+      await expect(page).not.toHaveURL(/\/auth\/login/, { timeout: 15_000 });
+      return;
+    } catch (e) {
+      if (attempt >= 3) throw e;
+      await page.waitForTimeout(11_000);
+    }
+  }
 }
 
 /** Every other admin-class user approves in their own context (approver set, BR-13). */
@@ -61,7 +82,18 @@ test.beforeAll(async () => {
      and not is_coming_soon order by created_at limit 1`,
   );
   prod = p!;
+  // Republish is blocked without media (BUG-061 readiness); seeded products have none.
+  await q(
+    `insert into product_media (product_id, kind, embed_url, title)
+     select $1, 'video_embed', 'https://www.youtube.com/embed/r9-04', 'r9-04 media'
+     where not exists (select 1 from product_media where product_id = $1)`,
+    [prod.id],
+  );
   const [u] = await q<{ id: string }>(`select id from users where email = $1`, [SUPER]);
+  // leftovers from aborted runs would make the row lookup ambiguous
+  const stale = `select id from products where slug like 'r9-04-doomed-%'`;
+  await q(`delete from product_ownerships where product_id in (${stale})`);
+  await q(`delete from products where slug like 'r9-04-doomed-%'`);
   const slug = `r9-04-doomed-${Date.now()}`;
   const [d] = await q<Prod>(
     `insert into products (name, slug, short_description, status, published_at, created_by, updated_by)
@@ -79,6 +111,8 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
+  await q(`delete from product_media where product_id = $1 and title = 'r9-04 media'`, [prod.id]);
+  await q(`update products set name = $2 where id = $1`, [prod.id, prod.name]);
   await q(
     `update products set is_featured = false, is_unlisted = false, is_coming_soon = false,
        status = 'published', publish_at = null where id = $1`,
@@ -90,6 +124,7 @@ test("edit a published product and republish; change visible on the storefront",
   page,
   browser,
 }) => {
+  test.setTimeout(120_000);
   const issues = trackIssues(page);
   await loginAs(page, "super_admin");
   const newName = `${prod.name} R9`;
@@ -113,6 +148,7 @@ test("edit a published product and republish; change visible on the storefront",
 });
 
 test("schedule a change; the cron publishes it when due", async ({ page, browser, request }) => {
+  test.setTimeout(120_000);
   await loginAs(page, "super_admin");
   await page.goto(`${ADMIN}/admin/products/${prod.id}`);
   await openTab(page, /Publish \/ schedule/);
@@ -124,11 +160,11 @@ test("schedule a change; the cron publishes it when due", async ({ page, browser
   await expect.poll(() => statusOf(prod.id)).toBe("scheduled");
 
   await q(`update products set publish_at = now() - interval '1 minute' where id = $1`, [prod.id]);
-  const secret = process.env.CRON_SECRET;
+  const secret = cronSecret();
   const res = await request.get(`${SITE}/api/cron/frequent`, {
     headers: secret ? { authorization: `Bearer ${secret}` } : {},
   });
-  expect(res.status()).toBeLessThan(500);
+  expect(res.status()).toBe(200);
   await expect.poll(() => statusOf(prod.id)).toBe("published");
 });
 
@@ -185,6 +221,7 @@ test("request delete, approve with the other admins, product disappears everywhe
   page,
   browser,
 }) => {
+  test.setTimeout(120_000);
   await loginAs(page, "super_admin");
   await page.goto(`${ADMIN}/admin/products`);
   await page.getByRole("button", { name: `Actions for ${doomed.name}` }).click();
@@ -211,7 +248,10 @@ test("editor and list render at 375/768/1280 without overflow", async ({ page })
   await atWidths(page, `${ADMIN}/admin/products`, async () => {
     await expect(page.getByRole("heading", { name: /products/i }).first()).toBeVisible();
   });
-  await atWidths(page, `${ADMIN}/admin/products/${prod.id}`, async () => {
-    await expect(page.locator("#p-name")).toBeVisible();
+  await atWidths(page, `${ADMIN}/admin/products/${prod.id}`, async (w) => {
+    // below 1024 the admin shows the laptop-only notice instead of the editor
+    await expect(
+      w >= 1024 ? page.locator("#p-name") : page.getByText(/designed for laptops/),
+    ).toBeVisible();
   });
 });
