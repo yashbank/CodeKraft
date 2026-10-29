@@ -4,7 +4,10 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import { cn } from "@/components/ui/_utils";
+import { PaintDefs, markPaint, seriesNo } from "./chart-style";
 import { formatBarTooltip } from "./tooltip";
+
+export type BarVariant = "filled" | "outlined" | "minimal" | "gradient" | "compact" | "striped";
 
 export interface BarDatum {
   label: string;
@@ -13,27 +16,19 @@ export interface BarDatum {
   href?: string;
 }
 
-const SERIES_FILL = [
-  "fill-chart-1",
-  "fill-chart-2",
-  "fill-chart-3",
-  "fill-chart-4",
-  "fill-chart-5",
-  "fill-chart-6",
-  "fill-chart-7",
-] as const;
-
 /**
  * SVG bar chart (single series) — stands in for Recharts until Phase 8 (docs/08 §6.17).
  * Colours are the `--ck-chart-*` tokens; every chart carries a visually hidden data table and a
  * text summary (docs/07 §6). `series` picks the token (1-based); `colourByBar` cycles them.
+ * `variant` is the P14-09 visual style (paint/grid/height only; every number stays visible).
  */
 export function BarChart({
   data,
   formatValue = (v) => String(v),
   series = 1,
   colourByBar = false,
-  height = 140,
+  variant = "filled",
+  height = variant === "compact" ? 96 : 140,
   summary,
   caption,
   className,
@@ -42,12 +37,14 @@ export function BarChart({
   formatValue?: (v: number) => string;
   series?: number;
   colourByBar?: boolean;
+  variant?: BarVariant;
   height?: number;
   summary: string;
   caption: string;
   className?: string;
 }) {
   const router = useRouter();
+  const uid = React.useId().replace(/:/g, "");
   const [active, setActive] = React.useState<number | null>(null);
   const max = Math.max(1, ...data.map((d) => d.value));
   const total = data.reduce((a, d) => a + d.value, 0);
@@ -55,9 +52,10 @@ export function BarChart({
   const gap = 8;
   const bw = data.length > 0 ? (w - gap * (data.length + 1)) / data.length : 0;
   const plotH = height;
-  const gridLines = [0.25, 0.5, 0.75, 1];
+  const gridLines = variant === "minimal" ? [] : [0.25, 0.5, 0.75, 1];
+  const noOf = (i: number) => seriesNo(colourByBar ? i : series - 1);
   return (
-    <figure className={cn("relative w-full", className)}>
+    <figure data-variant={variant} className={cn("relative w-full", className)}>
       {active !== null && data[active] ? (
         <div
           aria-hidden
@@ -79,6 +77,7 @@ export function BarChart({
         role="group"
         aria-label={summary}
       >
+        <PaintDefs id={uid} variant={variant} nos={data.map((_, i) => noOf(i))} />
         {gridLines.map((g) => (
           <line
             key={g}
@@ -93,7 +92,7 @@ export function BarChart({
         {data.map((d, i) => {
           const h = (d.value / max) * plotH;
           const x = gap + i * (bw + gap);
-          const fill = SERIES_FILL[(colourByBar ? i : series - 1) % SERIES_FILL.length];
+          const paint = markPaint(uid, variant, noOf(i));
           return (
             <g
               key={`${d.label}-${i}`}
@@ -130,8 +129,9 @@ export function BarChart({
                 height={h}
                 rx={2}
                 strokeWidth={2}
+                {...paint}
                 className={cn(
-                  fill,
+                  paint.className,
                   "transition-opacity",
                   active !== null && active !== i && "opacity-60",
                 )}
@@ -168,7 +168,8 @@ export function StackedBarChart({
   data,
   formatValue = (v) => String(v),
   seriesLabels,
-  height = 160,
+  variant = "filled",
+  height = variant === "compact" ? 110 : 160,
   summary,
   caption,
   className,
@@ -176,18 +177,22 @@ export function StackedBarChart({
   data: Array<{ label: string; a: number; b: number }>;
   formatValue?: (v: number) => string;
   seriesLabels: [string, string];
+  variant?: BarVariant;
   height?: number;
   summary: string;
   caption: string;
   className?: string;
 }) {
+  const uid = React.useId().replace(/:/g, "");
+  const pa = markPaint(uid, variant, 3);
+  const pb = markPaint(uid, variant, 5);
   const max = Math.max(1, ...data.map((d) => d.a + d.b));
   const w = 320;
   const gap = 12;
   const bw = data.length > 0 ? (w - gap * (data.length + 1)) / data.length : 0;
   const plotH = height;
   return (
-    <figure className={cn("w-full", className)}>
+    <figure data-variant={variant} className={cn("w-full", className)}>
       <div aria-hidden className="text-right text-caption text-fg-muted tnum">
         Max {formatValue(max)}
       </div>
@@ -199,23 +204,17 @@ export function StackedBarChart({
         role="img"
         aria-label={summary}
       >
+        <PaintDefs id={uid} variant={variant} nos={[3, 5]} />
         {data.map((d, i) => {
           const ha = (d.a / max) * plotH;
           const hb = (d.b / max) * plotH;
           const x = gap + i * (bw + gap);
           return (
             <g key={`${d.label}-${i}`}>
-              <rect x={x} y={plotH - ha} width={bw} height={ha} rx={2} className="fill-chart-3">
+              <rect x={x} y={plotH - ha} width={bw} height={ha} rx={2} {...pa}>
                 <title>{`${d.label} ${seriesLabels[0]}: ${formatValue(d.a)}`}</title>
               </rect>
-              <rect
-                x={x}
-                y={plotH - ha - hb}
-                width={bw}
-                height={hb}
-                rx={2}
-                className="fill-chart-5"
-              >
+              <rect x={x} y={plotH - ha - hb} width={bw} height={hb} rx={2} {...pb}>
                 <title>{`${d.label} ${seriesLabels[1]}: ${formatValue(d.b)}`}</title>
               </rect>
             </g>
@@ -255,7 +254,7 @@ export function StackedBarChart({
 }
 
 /** HTML axis labels under the SVG so text never scales with the widget width. */
-function AxisLabels({ labels }: { labels: string[] }) {
+export function AxisLabels({ labels }: { labels: string[] }) {
   return (
     <div
       aria-hidden

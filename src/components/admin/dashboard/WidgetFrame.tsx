@@ -34,9 +34,12 @@ export function WidgetFrame({
   onMoveDown,
   viewAllHref,
   viewAllLabel,
+  styleName,
   children,
 }: {
   id: string;
+  /** P14-09 visual style, exposed as `data-style` on the card. */
+  styleName?: string;
   title: string;
   subtitle?: string;
   rangeChip?: string;
@@ -60,6 +63,7 @@ export function WidgetFrame({
     <section
       aria-labelledby={headingId}
       data-widget={id}
+      data-style={styleName}
       className={cn(
         "flex min-h-[176px] flex-col rounded-lg border border-border bg-surface shadow-1",
         colSpan === 3 && "lg:col-span-3",
