@@ -101,7 +101,10 @@ test.describe("R9-12 admin SEO preview", () => {
         await expect(preview.getByTestId("seo-preview-url")).toContainText(`/products/${p.slug}`);
         await expectNoOverflow(page);
       }
-      // Same builder as the public page: the live <title> carries the same text.
+      // Same builder as the public page: the live <title> carries the same text. The seo_title was
+      // written with SQL (no revalidation), so read the per-request render (currency cookie), not
+      // the ISR copy cached for anonymous visitors.
+      await page.context().addCookies([{ name: "ck_currency", value: "INR", url: SITE }]);
       await page.goto(`${SITE}/products/${p.slug}`);
       expect(await page.title()).toContain(seoTitle);
     } finally {
