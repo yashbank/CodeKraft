@@ -50,6 +50,11 @@ export async function recordExpense(raw: unknown) {
   return withCtx(recordExpenseAction, raw);
 }
 
+export async function previewExpenseRate(raw: unknown) {
+  const { previewExpenseRateAction } = await import("./actions");
+  return withCtx(previewExpenseRateAction, raw);
+}
+
 export async function proposeAdjustment(raw: unknown) {
   const { proposeAdjustmentAction } = await import("./actions");
   return withCtx(proposeAdjustmentAction, raw);

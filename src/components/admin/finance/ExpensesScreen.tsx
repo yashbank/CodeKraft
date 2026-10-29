@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { allocateLargestRemainder, parseMinor, type Currency } from "@/lib/money";
-import { recordExpense } from "@/modules/finance/admin-mutations";
+import { previewExpenseRate, recordExpense } from "@/modules/finance/admin-mutations";
 import { Banner } from "../Banner";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
@@ -89,6 +89,23 @@ export function ExpensesScreen({
   const [shared, setShared] = React.useState(true);
   const [amount, setAmount] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
+  const [rateLine, setRateLine] = React.useState<string | null>(null);
+  const [manualRequired, setManualRequired] = React.useState(false);
+  const [manualRate, setManualRate] = React.useState("");
+  React.useEffect(() => {
+    setRateLine(null);
+    setManualRequired(false);
+    if (!open || currency === "INR") return;
+    let live = true;
+    void previewExpenseRate({ currency }).then((r) => {
+      if (!live || !r.ok) return;
+      setRateLine(r.data.line);
+      setManualRequired(r.data.manualRequired);
+    });
+    return () => {
+      live = false;
+    };
+  }, [open, currency]);
   const amountMinor = (() => {
     try {
       return parseMinor(amount || "0", currency);
@@ -124,11 +141,13 @@ export function ExpensesScreen({
       sharedBySplit: product !== "company" && shared,
     };
     if (product !== "company") payload.productId = product;
+    if (currency !== "INR" && manualRate.trim()) payload.manualRate = manualRate.trim();
 
     setSubmitting(true);
     const result = await recordExpense(payload);
     setSubmitting(false);
     if (!result.ok) {
+      if (result.error.fieldErrors?.manualRate) setManualRequired(true);
       toast.error(result.error.message);
       return;
     }
@@ -280,6 +299,11 @@ export function ExpensesScreen({
                   </TableCell>
                   <TableCell>
                     <MoneyCell value={e.amount} inrEquivalent={e.amountInr} />
+                    {e.fxLine ? (
+                      <p className="mt-0.5 max-w-64 text-caption break-words text-fg-muted">
+                        {e.fxLine}
+                      </p>
+                    ) : null}
                   </TableCell>
                   <TableCell>{e.sharedBySplit ? "Yes" : "No"}</TableCell>
                   <TableCell>
@@ -395,6 +419,37 @@ export function ExpensesScreen({
                 </Select>
               </Field>
             </div>
+            {currency !== "INR" ? (
+              <div className="space-y-2">
+                {rateLine ? (
+                  <p
+                    role="status"
+                    aria-live="polite"
+                    className="rounded-md bg-elevated px-3 py-2 text-body-sm break-words"
+                  >
+                    {rateLine}. Locked when you record.
+                  </p>
+                ) : null}
+                {manualRequired ? (
+                  <Field
+                    id="ex-rate"
+                    label={`Manual rate (1 ${currency} = ? INR)`}
+                    required
+                    hint="Live and recent stored rates are unavailable, so enter the rate."
+                  >
+                    <Input
+                      id="ex-rate"
+                      inputMode="decimal"
+                      value={manualRate}
+                      onChange={(e) => setManualRate(e.target.value)}
+                      required
+                      aria-required
+                      className="text-right font-mono tnum"
+                    />
+                  </Field>
+                ) : null}
+              </div>
+            ) : null}
             <Field id="ex-product" label="Product" optional>
               <Select value={product} onValueChange={setProduct}>
                 <SelectTrigger id="ex-product">

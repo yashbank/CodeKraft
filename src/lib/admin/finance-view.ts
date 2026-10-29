@@ -28,6 +28,7 @@
  *    exact timestamp field), so it is accurate to the hour, not the second.
  */
 import { format as formatMoney, type Currency } from "@/lib/money";
+import { formatRateLine } from "@/modules/fx/expense-rate";
 import type {
   Expense,
   LedgerEntryView,
@@ -219,6 +220,14 @@ export function mapExpenseToRow(
     receipt: exp.receiptMediaId ? `receipt-${shortId(exp.receiptMediaId)}` : undefined,
     recordedBy: userLabel(exp.createdBy, opts.userNames),
     ledgerSeq: ledger?.minSeq ?? 0,
+    fxLine:
+      exp.fxRateToInr && exp.fxRateSource && exp.fxRateAt
+        ? formatRateLine(exp.currency, {
+            rate: exp.fxRateToInr,
+            source: exp.fxRateSource,
+            at: exp.fxRateAt.toISOString(),
+          })
+        : undefined,
   };
 }
 

@@ -11,7 +11,7 @@ import { auditService } from "@/modules/audit/service";
 import { fxService } from "@/modules/fx/service";
 import { ownershipService } from "@/modules/ownership/service";
 import { allocateLargestRemainder, mulBps, type Currency } from "@/lib/money";
-import { toInrMinor } from "./minor";
+import { resolveExpenseRate, toBaseMinor } from "@/modules/fx/expense-rate";
 import { expenses, ledgerEntries, type Expense } from "../../../drizzle/schema/finance";
 import { partners } from "../../../drizzle/schema/users-ext";
 import { users } from "../../../drizzle/schema/auth";
@@ -50,6 +50,13 @@ export async function recordExpense(
       }
     }
 
+    // Lock the FX rate on the row (live -> stored -> manual; never silently 1:1)
+    const lock = await resolveExpenseRate({
+      currency: input.currency,
+      db: tx,
+      manualRate: input.manualRate,
+    });
+
     // 1. Insert expenses row
     const [exp] = await tx
       .insert(expenses)
@@ -64,6 +71,9 @@ export async function recordExpense(
         receiptMediaId: input.receiptMediaId ?? null,
         createdBy: ctx.userId ?? null,
         createdAt: new Date(),
+        fxRateToInr: lock.rate,
+        fxRateSource: lock.source,
+        fxRateAt: new Date(lock.at),
       })
       .returning();
 
@@ -126,14 +136,12 @@ export async function postExpense(
     createdBy = firstAdmin?.id ?? "00000000-0000-4000-8000-000000000001";
   }
 
-  // FX rate to INR as of incurredOn
-  const fxRateToInr = await fxService.rateToInrOn(
-    expense.currency as Currency,
-    expense.incurredOn,
-    tx,
-  );
+  // Locked rate on the row (P9-02); legacy rows without one fall back to the as-of-date lookup
+  const fxRateToInr =
+    expense.fxRateToInr ??
+    (await fxService.rateToInrOn(expense.currency as Currency, expense.incurredOn, tx));
   const toInr = (amtMinor: number) =>
-    expense.currency === "INR" ? amtMinor : toInrMinor(amtMinor, fxRateToInr);
+    expense.currency === "INR" ? amtMinor : toBaseMinor(amtMinor, fxRateToInr);
 
   const memo = expense.description ?? expense.category;
 

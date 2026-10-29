@@ -7,7 +7,9 @@
  * SA-07). `applyPayout` / `applyAdjustment` are internal approval apply handlers, not
  * admin-triggerable actions, so they are intentionally not wrapped here.
  */
+import { z } from "zod";
 import { defineAction } from "@/lib/actions/envelope";
+import { currencySchema as zCurrency } from "@/modules/_shared/zod";
 import {
   exportStatementInput,
   proposeAdjustmentInput,
@@ -31,6 +33,22 @@ export const recordExpenseAction = defineAction({
   input: recordExpenseInput,
   handler: async (input, ctx) => {
     return await financeService.recordExpense(ctx, input);
+  },
+});
+
+export const previewExpenseRateAction = defineAction({
+  name: "API-FIN-06 expense.rate_preview",
+  permission: "finance.expense.write",
+  input: z.object({ currency: zCurrency }).strict(),
+  handler: async (input) => {
+    const { db } = await import("@/lib/db");
+    const { resolveExpenseRate, formatRateLine } = await import("@/modules/fx/expense-rate");
+    try {
+      const lock = await resolveExpenseRate({ currency: input.currency, db });
+      return { line: formatRateLine(input.currency, lock), manualRequired: false };
+    } catch {
+      return { line: null, manualRequired: true };
+    }
   },
 });
 
