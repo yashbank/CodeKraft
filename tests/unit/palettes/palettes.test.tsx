@@ -49,6 +49,7 @@ describe("palettes", () => {
         defaultTheme: "light-editorial",
         themeToggle: true,
         palette: "teal",
+        ui: { font: "default", radius: "soft", border: "subtle", pattern: "none" },
       }),
     }));
     const { default: RootLayout } = await import("@/app/layout");

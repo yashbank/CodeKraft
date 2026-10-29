@@ -4,6 +4,7 @@ import { SiteBrandProvider } from "@/components/brand/site-brand";
 import { fontVariables } from "@/lib/fonts";
 import { paletteCss } from "@/lib/palettes";
 import { getSiteLogo, getSiteName, getThemeConfig } from "@/lib/site-brand";
+import { uiStyleCss } from "@/lib/ui-style";
 import { DEFAULT_THEME, inlineThemeScript, THEME_COLOR } from "@/lib/theme";
 import "./globals.css";
 
@@ -31,7 +32,7 @@ const LIGHT_ENABLED = process.env.FEATURE_THEME_LIGHT_EDITORIAL === "true";
  */
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [siteName, siteLogo] = await Promise.all([getSiteName(), getSiteLogo()]);
-  const { defaultTheme, palette } = await getThemeConfig();
+  const { defaultTheme, palette, ui } = await getThemeConfig();
   // An admin who picks light-editorial as the default has opted in, so it needs no env flag.
   const lightEnabled = LIGHT_ENABLED || defaultTheme === "light-editorial";
   return (
@@ -39,12 +40,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       lang="en"
       data-theme={defaultTheme}
       data-palette={palette}
+      data-font={ui.font}
+      data-radius={ui.radius}
+      data-border={ui.border}
+      data-pattern={ui.pattern}
       className={fontVariables}
       suppressHydrationWarning
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: inlineThemeScript(lightEnabled) }} />
-        <style dangerouslySetInnerHTML={{ __html: paletteCss(palette) }} />
+        <style dangerouslySetInnerHTML={{ __html: paletteCss(palette) + uiStyleCss(ui) }} />
       </head>
       <body className="min-h-screen bg-canvas text-fg antialiased">
         <SiteBrandProvider siteName={siteName} siteLogo={siteLogo}>
