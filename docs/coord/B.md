@@ -61,14 +61,21 @@ Updated: 2026-10-30
 - R9-12 | ready | branch feat/r9-integration | r9-12 SEO tags/OG/sitemap/preview; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-13 | ready | branch feat/r9-integration | r9-13 new-user chat+handoff; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
 - R9-14 | ready | branch feat/r9-integration | r9-14 sweep 259/259, SCORECARD; prod build df353db+: all R9 specs pass (504 pass; sweep 259/259 and r9-01 5/5 run isolated); vitest 1744/1744; tsc+eslint clean; 375/768/1280 checked
-- P14-03 | doing | built, fix loop | branch feat/p14-integration
-- P14-01 | doing | built, fix loop | branch feat/p14-integration
-- P14-10 | doing | built, fix loop | branch feat/p14-integration
-- P14-07 | doing | built, fix loop | branch feat/p14-integration
-- P14-08 | doing | built, fix loop | branch feat/p14-integration
-- P14-02, P14-04, P14-05, P14-06, P14-09 | doing | built, in feat/p14-integration, fix loop | -
-- P15-01 | doing | built (parity suite 78 green before+after), in feat/p14-integration | -
-- P14-12 | doing | 2 builder agents (admin extras, site/account extras) | -
+- P14-01 | ready | branch feat/p14-integration @ 62ff842 | role widget allow-list (server-enforced); vitest role-dashboard 7 failed-first; e2e p14-01 green
+- P14-02 | ready | branch feat/p14-integration @ 62ff842 | admin->partner fixes (double submit, re-invite, staff+partner); integration p14-02 3/5 failed-first; e2e p14-02 green
+- P14-03 | ready | branch feat/p14-integration @ 62ff842 | notifications open target, popup closes, read persists, approvals badge; vitest p14-03 8/11 failed-first; e2e p14-03 green 375/768/1280
+- P14-04 | ready | branch feat/p14-integration @ 62ff842 | stored From name/address + test send; vitest p14-04-from failed-first; e2e p14-04-05 green
+- P14-05 | ready | branch feat/p14-integration @ 62ff842 | tab title + icons per area; vitest seo-p14-05 failed-first; e2e p14-04-05 green
+- P14-06 | ready | branch feat/p14-integration @ 62ff842 | chat/query attachments private, limits, AI vision/text; migration 0009; vitest chat-attachments 14; e2e p14-06 green
+- P14-07 | ready | branch feat/p14-integration @ 62ff842 | theme studio 40-70 options/group, live preview, presets; vitest theme-studio 23; e2e p14-07 failed-first on base, green
+- P14-08 | ready | branch feat/p14-integration @ 62ff842 | landing section style controls; vitest section-style failed-first; e2e p14-08 green 375/768/1280
+- P14-09 | ready | branch feat/p14-integration @ 62ff842 | 7 widget kinds x 6 styles, heatmap; vitest widget-styles failed-first; e2e p14-09 green; sources in log
+- P14-10 | ready | branch feat/p14-integration @ 62ff842 | mobile empty bar (StoryRail + hero offset) + 40px tap targets; e2e p14-10 failed-first on base (25 fail), green 375/390/768
+- P14-11 | ready | branch feat/p14-integration @ 62ff842 | ~20 UX fixes incl. open redirect, 11 dead buttons, approval.requested; vitest failed-first; e2e p14-11 green
+- P14-12 | ready | branch feat/p14-integration @ 62ff842 | all extras (12a admin, 12b site/account); migration 0010 (theme_pref auto); e2e p14-12a + p14-12b green
+- P14-13 | ready | branch feat/p14-integration @ 62ff842 | axe on 26 routes (14/48 failing before, fixed), lighthouserc budgets; e2e p14-13-a11y green; R9 suite green; SCORECARD updated
+- P15-01 | ready | branch feat/p14-integration @ 62ff842 | R2 parity suite 78 tests green before+after; QR off DB; nosniff; e2e p15-01 green on local driver
+- P15-02 | ready | branch feat/p14-integration @ 62ff842 | ISR public routes 3->11, idle admin polling 4.3->2/min, editor bundles -30-40%; vitest failed-first; e2e p15-02 green
 ## Requests to A
 - [open] Delete test objects from the LIVE R2 buckets (Mac B local test servers loaded R2 keys from .env.local; now forced to STORAGE_DRIVER=local and blank live keys). Known keys: public media/2026/10/{c9faf532-f718-4a3e-b009-fe5f0d821f4c,a502af97-dd7f-4ac0-a004-cc90fb2567a9,b84a3087-0c51-4970-9611-1fca39cb8bd0,41bbec9f-8818-44f6-b5e6-1b9e55d58996,788817d9-364d-4a14-94d6-bed8224be07d}.png; private media/2026/10/{b6973b65-68de-43b0-90bc-2fb8401068d6,20531a0c-7dce-4138-9eee-55d06ec7153a,47553342-2f67-42d6-9f34-81df484162dc}.zip. Phase 13 (R9) runs on 2026-10-29 likely left similar tiny objects under media/2026/10/ with no DB row: list objects without a media row and delete | why: test junk in prod storage | verify: no orphan keys
 - [open] P15-01 Vercel/R2 config: set NEXT_PUBLIC_MEDIA_BASE_URL to the R2 public bucket domain (custom domain or r2.dev); bucket CORS must allow PUT from site + admin origins; Cloudflare cache rule 1y immutable on the public bucket domain | why: public media served from R2, not the serverless proxy | verify: curl -I a public image shows R2 host + cache-control immutable
@@ -144,3 +151,14 @@ Run e2e: `pnpm build && pnpm start`, then `playwright test tests/e2e/r9 --projec
 - 2026-10-30 P14-09 widget design sources: designrevision.com/components/sparkline, 21st.dev kpi-card-row, help.boldbi.com KPI card (visualization v2), gooddata.com/docs/cloud/create-dashboards/accessibility, blog.equally.ai accessible dashboard best practices. Patterns used: KPI tile variants (plain, accent bar, trend badge, inline sparkline, big number, outlined), chart styles (filled, outlined, minimal no-grid, gradient, compact, striped), sr-only data tables + aria summaries.
 - 2026-10-30 Safety: found local test servers used live R2 + AI/Resend keys from .env*.local; scripts now force STORAGE_DRIVER=local and blank live keys. Request to A to delete orphan test objects. Done 0 of 13, estimated remaining ~9 h.
 - 2026-10-30 P14 Round 2b (fresh prod build of feat/p14-integration 87ed651, all P14/P15 specs + R9 except sweep/r9-01, workers=3): 423 passed, 21 failed, 77 skipped. Fix loops A+B merged earlier (app fixes: overview grid overflow, footer/breadcrumb tap widths, empty hero eyebrow band, get-session rate limit 30->300/min per IP which hid Buy for shared-IP users). Remaining 21: ISR twin regressions (P15-02) + new-spec gaps; fix loops C+D running. Done 0 of 13, estimated remaining ~3 h.
+
+## 2026-10-30 FINAL: Phase 14 (P14-01..P14-13) + P15-01, P15-02 all ready (Mac B)
+- Merge ONE branch: feat/p14-integration @ 62ff842 (base 14af3bd = origin/fix/autopilot). Not rebased: cbd574e (CI/Vercel config) not on origin yet; will rebase when the user confirms.
+- Migrations (hand-written, additive, apply in order): 0009_message_attachments.sql (files_upload_intents.filename, media.original_name, chat_messages.attachments uuid[]), 0010_theme_pref_auto.sql (ALTER TYPE theme_pref ADD VALUE 'auto'). No new dependencies.
+- Gate on Mac B: tsc + eslint clean; vitest unit+static 1618/1618; integration 455/455 (local DB).
+- Round 3 final (fresh production build, local DB, Desktop Chrome + Pixel 7): combined P14/P15 + R9 (minus sweep, r9-01) 447 passed / 2 failed / 81 skipped; the 2 (r9-03 licence key, r9-04 approved delete) pass alone: r9-03 + r9-04 24/24. R9-14 sweep alone (--workers=1) 256/0. r9-01 alone 5/0 (1 skipped by design).
+- Review round (independent reviewer on auth, middleware ISR rewrites, attachments, settings import, redirects): 2 medium found + fixed with failing-first integration tests (refund query on another customer's order; customer cancel racing markPaid / failing a submitted UPI ref). Rest clean.
+- Behaviour changes to live-test: public /, /products, /products/<slug> served from ISR twins (/ssg/**) for cookie-less anonymous visitors (middleware rewrite); get-session rate limit 30 -> 300/min per IP; account /orders list is a 307 to /account/purchases; checkboxes 24px; client logos full opacity; cookie notice (bottom-left, one time); 3-state theme toggle (light/dark/auto); bell + order alerts poll 60 s and pause when hidden; customer cancel blocked after a UPI reference is submitted; staff can no longer be invited as partner.
+- Vercel/R2 for A (from P15-01): set NEXT_PUBLIC_MEDIA_BASE_URL to the R2 public bucket domain; bucket CORS PUT from site + admin; Cloudflare 1y immutable cache rule. Delete orphan test objects (see Requests).
+- Not done / gaps: Lighthouse budgets configured but not run (run pnpm build && pnpm lhci); Reports Export/Print/Drill-down are toasts only; lead Merge/Delete no backend (disabled); PDF/DOCX attachment text not extracted; manifest icons SVG only.
+- Done 13 of 13 (+ P15-01, P15-02), estimated remaining ~0 h on B. Next for A: merge, apply 0009 + 0010, full gate, deploy on approval, live test.
