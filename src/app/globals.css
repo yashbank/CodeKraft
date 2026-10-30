@@ -3,3 +3,66 @@
 @import "../styles/tokens.css";
 @import "../styles/themes/dark-cinematic.css";
 @import "../styles/themes/light-editorial.css";
+
+/* P14-07 theme studio: button/card styles. Gated by data-ck-btn / data-ck-card (on <html> for the
+   site, on the live preview container in admin Settings -> Theme); the tokens come from
+   src/lib/theme-catalogue.ts, so unset = the components' own look. */
+[data-ck-btn] [data-slot="button"]:not([data-variant="link"]) {
+  border-radius: var(--ck-btn-radius);
+  font-weight: var(--ck-btn-weight);
+  text-transform: var(--ck-btn-case);
+  letter-spacing: var(--ck-btn-track);
+  box-shadow: var(--ck-btn-shadow);
+}
+[data-ck-card] [data-slot="card"] {
+  background: var(--ck-card-bg);
+  border-color: var(--ck-card-bc);
+  box-shadow: var(--ck-card-edge), var(--ck-card-sh);
+  backdrop-filter: var(--ck-card-blur);
+}
+@media (hover: hover) {
+  [data-ck-card] [data-slot="card"]:hover {
+    transform: translateY(var(--ck-card-hy));
+  }
+}
+
+/* P14-12b print: invoices, order pages, blog and legal print as plain black-on-white documents.
+   Site header/footer and the account sidebar/top bar carry `print:hidden`; this covers the rest. */
+@media print {
+  html,
+  body,
+  [data-app] {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  [data-app] :where(h1, h2, h3, h4, p, li, td, th, dt, dd, span, small) {
+    color: #000 !important;
+  }
+  button,
+  [role="dialog"],
+  [data-sonner-toaster],
+  [data-slot="sidebar"],
+  [data-slot="sidebar-container"],
+  [data-print-hide] {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  /* Show where links go on reading pages (blog posts, legal text). */
+  :is(article, [data-print-urls]) a[href^="http"]::after,
+  :is(article, [data-print-urls]) a[href^="/"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.85em;
+    word-break: break-all;
+  }
+  a {
+    color: #000 !important;
+    text-decoration: underline;
+  }
+  tr,
+  img {
+    break-inside: avoid;
+  }
+}

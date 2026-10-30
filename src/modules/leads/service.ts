@@ -518,12 +518,15 @@ export class DefaultLeadsService implements LeadsService {
   }
 
   async setFollowUp(ctx: RequestContext, input: SetFollowUpInput): Promise<LeadRow> {
-    const nextFollowUpAt = input.nextFollowUpAt ? new Date(input.nextFollowUpAt) : null;
+    const followUp =
+      input.nextFollowUpAt === undefined
+        ? {}
+        : { nextFollowUpAt: input.nextFollowUpAt ? new Date(input.nextFollowUpAt) : null };
 
     const [lead] = await this.db
       .update(leads)
       .set({
-        nextFollowUpAt,
+        ...followUp,
         priority: input.priority ?? leads.priority,
         updatedAt: new Date(),
       })
@@ -536,7 +539,10 @@ export class DefaultLeadsService implements LeadsService {
       leadId: lead.id,
       actorId: ctx.userId,
       kind: "follow_up_set",
-      body: `Follow-up set to ${input.nextFollowUpAt ?? "none"}`,
+      body:
+        input.nextFollowUpAt === undefined
+          ? `Priority set to ${input.priority ?? lead.priority}`
+          : `Follow-up set to ${input.nextFollowUpAt ?? "none"}`,
     });
 
     return this.toLeadRow(lead);

@@ -1,21 +1,41 @@
 "use client";
 
-import { MoonStarIcon, SunIcon } from "lucide-react";
+import { MonitorIcon, MoonStarIcon, SunIcon } from "lucide-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
-import { THEME_COOKIE, type ThemeName } from "@/lib/theme";
+import { applyThemePref, isThemePref, THEME_COOKIE, type ThemePref } from "@/lib/theme";
+import { setThemePreference } from "@/modules/users/theme-actions";
 
-/** Visitor theme switch (docs/07 §4.2), shown when the admin enables "visitors can switch theme". */
+const ORDER: ThemePref[] = ["dark-cinematic", "light-editorial", "auto"];
+const WORD: Record<ThemePref, string> = {
+  "dark-cinematic": "dark",
+  "light-editorial": "light",
+  auto: "auto",
+};
+
+/** Current choice: the ck_theme cookie (incl. "auto"), else whatever the page rendered with. */
+function currentPref(): ThemePref {
+  const c = document.cookie.match(new RegExp(`(?:^|; )${THEME_COOKIE}=([^;]*)`))?.[1];
+  if (isThemePref(c)) return c;
+  return document.documentElement.dataset.theme === "light-editorial"
+    ? "light-editorial"
+    : "dark-cinematic";
+}
+
+/**
+ * Visitor theme switch (docs/07 §4.2): dark → light → auto (system), shown when the admin enables
+ * "visitors can switch theme". The choice lands in the ck_theme cookie and, for signed-in users,
+ * on their profile (`setThemePreference`) so it follows them to account and admin.
+ */
 export function ThemeToggle({ enabled = false }: { enabled?: boolean }) {
-  const [theme, setTheme] = React.useState<ThemeName>("dark-cinematic");
-  React.useEffect(() => {
-    if (document.documentElement.dataset.theme === "light-editorial") setTheme("light-editorial");
-  }, []);
+  const [pref, setPref] = React.useState<ThemePref>("dark-cinematic");
+  React.useEffect(() => setPref(currentPref()), []);
   if (!enabled) return null;
 
-  const next: ThemeName = theme === "light-editorial" ? "dark-cinematic" : "light-editorial";
-  const label = `Switch to ${next === "light-editorial" ? "light" : "dark"} theme`;
+  const next = ORDER[(ORDER.indexOf(pref) + 1) % ORDER.length] ?? "dark-cinematic";
+  const label = `Switch to ${WORD[next]} theme`;
+  const Icon = pref === "auto" ? MonitorIcon : pref === "light-editorial" ? SunIcon : MoonStarIcon;
   return (
     <Button
       type="button"
@@ -23,13 +43,14 @@ export function ThemeToggle({ enabled = false }: { enabled?: boolean }) {
       size="icon-sm"
       aria-label={label}
       title={label}
+      data-theme-pref={pref}
       onClick={() => {
-        document.documentElement.dataset.theme = next;
-        document.cookie = `${THEME_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
-        setTheme(next);
+        applyThemePref(next);
+        setPref(next);
+        void setThemePreference(next);
       }}
     >
-      {theme === "light-editorial" ? <MoonStarIcon aria-hidden /> : <SunIcon aria-hidden />}
+      <Icon aria-hidden />
     </Button>
   );
 }

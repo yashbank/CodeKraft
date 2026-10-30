@@ -62,6 +62,8 @@ export function SiteHeader({
   const [scrolled, setScrolled] = useState(!transparentAtTop);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [inquiryOpen, setInquiryOpen] = useState(false);
+  // Back/forward and programmatic navigation must not leave the drawer (and its scroll lock) open.
+  useEffect(() => setDrawerOpen(false), [pathname]);
 
   useEffect(() => {
     if (!transparentAtTop) return;
@@ -82,7 +84,7 @@ export function SiteHeader({
       <header
         data-scrolled={scrolled ? "true" : "false"}
         className={cn(
-          "sticky top-(--site-header-top,0px) z-(--ck-z-header) w-full transition-[background-color,border-color,backdrop-filter] duration-(--ck-motion-duration-md) ease-standard",
+          "print:hidden sticky top-(--site-header-top,0px) z-(--ck-z-header) w-full transition-[background-color,border-color,backdrop-filter] duration-(--ck-motion-duration-md) ease-standard",
           scrolled
             ? "border-b border-border bg-glass backdrop-blur-header backdrop-saturate-[var(--ck-glass-saturate)]"
             : "border-b border-transparent bg-transparent",
@@ -91,7 +93,7 @@ export function SiteHeader({
         <div className="mx-auto flex h-14 max-w-[1320px] items-center gap-4 px-4 sm:px-6 lg:h-16 lg:px-8 2xl:max-w-[1440px] tv:h-20 tv:max-w-[1920px] tv:px-24">
           <Link
             href="/"
-            className="rounded-sm text-fg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+            className="inline-flex h-10 min-w-10 items-center rounded-sm text-fg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
             aria-label={`${siteName} home`}
           >
             <Wordmark className="h-5 lg:h-6 tv:h-8" />

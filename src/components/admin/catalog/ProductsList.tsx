@@ -402,7 +402,7 @@ export function ProductsList({
                           ) : (
                             <span
                               data-testid="product-row-no-image"
-                              className="grid size-9 shrink-0 place-items-center rounded-sm bg-elevated text-fg-subtle"
+                              className="grid size-9 shrink-0 place-items-center rounded-sm bg-elevated text-fg-muted"
                             >
                               <PackageIcon aria-hidden className="size-3.5" />
                               <span className="text-[8px] leading-none">No image</span>

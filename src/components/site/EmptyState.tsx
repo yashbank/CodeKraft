@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { cn } from "@/components/ui/_utils";
+import { EmptyIllustration } from "@/components/ui/empty-illustration";
 
 /** docs/07 §4.5: token-coloured icon + specific title + one sentence + one primary action. */
 export function EmptyState({
@@ -24,7 +25,7 @@ export function EmptyState({
         className,
       )}
     >
-      <Icon aria-hidden className="size-10 text-fg-subtle" />
+      <EmptyIllustration icon={Icon} />
       <h3 className="mt-4 text-h4">{title}</h3>
       {body ? <p className="mt-2 max-w-md text-body-sm text-fg-muted">{body}</p> : null}
       {actions ? <div className="mt-6 flex flex-wrap justify-center gap-3">{actions}</div> : null}

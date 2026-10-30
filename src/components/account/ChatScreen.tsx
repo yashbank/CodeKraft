@@ -13,6 +13,8 @@ import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
 
+import { AttachPicker, AttachmentList, useAttachments } from "@/components/attachments/Attachments";
+import type { AttachmentView } from "@/lib/attachments";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -26,6 +28,7 @@ import {
 } from "@/components/ui/sheet";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
+import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { cn } from "@/components/ui/_utils";
 import { buildGreeting, mapMenuMessagesToChat, mapMenuNodesToChips } from "@/lib/account/chat-view";
 import {
@@ -183,7 +186,8 @@ export function ChatScreen({
     email?: string;
     need: string;
   } | null>(null);
-  const logRef = React.useRef<HTMLOListElement>(null);
+  const att = useAttachments();
+  const logRef = React.useRef<HTMLDivElement>(null);
   const streaming = forcedStreaming || sending;
 
   React.useEffect(() => {
@@ -249,8 +253,8 @@ export function ChatScreen({
     }
   }
 
-  async function sendChatMessage(text: string) {
-    push({ role: "user", text });
+  async function sendChatMessage(text: string, files: AttachmentView[] = []) {
+    push({ role: "user", text, ...(files.length ? { attachments: files } : {}) });
     if (!conversationId) {
       push({
         role: "assistant",
@@ -273,8 +277,20 @@ export function ChatScreen({
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId, content: text }),
+        body: JSON.stringify({
+          conversationId,
+          content: text,
+          ...(files.length ? { attachments: files.map((f) => f.mediaId) } : {}),
+        }),
       });
+      if (res.status === 400) {
+        // Server-side attachment/validation error: show its message instead of "connection lost".
+        const body = (await res.json().catch(() => null)) as {
+          error?: { message?: string };
+        } | null;
+        patch((m) => ({ ...m, text: body?.error?.message ?? "That message couldn't be sent." }));
+        return;
+      }
       if (res.status === 403) {
         // R8-08: server-side verified-email gate -- swap to the verify prompt, not a retry.
         const body = (await res.json().catch(() => null)) as {
@@ -489,168 +505,185 @@ export function ChatScreen({
         </Banner>
       ) : null}
 
-      <ol
+      {/* role="log" on an <ol> would strip its list semantics (axe: listitem), so it wraps the list. */}
+      <div
         ref={logRef}
         role="log"
         aria-live="polite"
         aria-label="Conversation"
-        className="flex-1 space-y-4 overflow-y-auto py-4"
+        className="flex-1 overflow-y-auto py-4"
       >
-        {messages.map((m) => {
-          if (m.role === "menu") {
-            return (
-              <li key={m.id} className="flex justify-start">
-                <div
-                  role="toolbar"
-                  aria-label="Quick replies"
-                  className="flex max-w-[85%] flex-wrap gap-2"
-                >
-                  {(m.chips ?? menu).map((c) => (
-                    <Button key={c} variant="outline" size="sm" onClick={() => quickReply(c)}>
-                      {c}
+        <ol className="space-y-4">
+          {messages.map((m) => {
+            if (m.role === "menu") {
+              return (
+                <li key={m.id} className="flex justify-start">
+                  <div
+                    role="toolbar"
+                    aria-label="Quick replies"
+                    className="flex max-w-[85%] flex-wrap gap-2"
+                  >
+                    {(m.chips ?? menu).map((c) => (
+                      <Button key={c} variant="outline" size="sm" onClick={() => quickReply(c)}>
+                        {c}
+                      </Button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => quickReply("Talk to a human")}
+                    >
+                      Talk to a human
                     </Button>
-                  ))}
-                  <Button variant="outline" size="sm" onClick={() => quickReply("Talk to a human")}>
-                    Talk to a human
-                  </Button>
+                  </div>
+                </li>
+              );
+            }
+            const mine = m.role === "user";
+            return (
+              <li key={m.id} className={cn("flex gap-2", mine ? "justify-end" : "justify-start")}>
+                {!mine ? (
+                  <span
+                    aria-hidden
+                    className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-text"
+                  >
+                    <BotIcon className="size-4" />
+                  </span>
+                ) : null}
+                <div className={cn("max-w-[85%] space-y-2 sm:max-w-[75%]")}>
+                  <p className="sr-only">{mine ? "You" : "Assistant"}</p>
+                  {m.text ? (
+                    <div
+                      className={cn(
+                        "rounded-lg px-4 py-3 text-body-sm whitespace-pre-wrap",
+                        mine
+                          ? "bg-accent text-accent-fg"
+                          : "border border-border bg-surface text-fg",
+                      )}
+                    >
+                      {m.text}
+                      {m.interrupted ? (
+                        <span className="mt-2 block text-caption text-danger">
+                          Connection lost —{" "}
+                          <button
+                            type="button"
+                            className="underline"
+                            onClick={() => sendChatMessage(m.text ?? "")}
+                          >
+                            Retry
+                          </button>
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  <AttachmentList
+                    items={m.attachments ?? []}
+                    className={cn(mine && "justify-end")}
+                  />
+                  {m.card ? <DataCard card={m.card} /> : null}
+                  {m.citations?.length ? (
+                    <p className="flex flex-wrap gap-x-2 text-caption text-fg-muted">
+                      From:{" "}
+                      {m.citations.map((c) => (
+                        <Link
+                          key={c.href}
+                          href={c.href}
+                          className="text-accent-text underline underline-offset-2"
+                        >
+                          {c.label}
+                        </Link>
+                      ))}
+                    </p>
+                  ) : null}
                 </div>
               </li>
             );
-          }
-          const mine = m.role === "user";
-          return (
-            <li key={m.id} className={cn("flex gap-2", mine ? "justify-end" : "justify-start")}>
-              {!mine ? (
-                <span
-                  aria-hidden
-                  className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-text"
-                >
-                  <BotIcon className="size-4" />
+          })}
+          {connectionLost ? (
+            <li className="flex justify-start">
+              <div className="rounded-lg border border-border bg-surface px-4 py-3 text-body-sm text-fg">
+                Refunds for FitDesk Pro are handled within 14 days provided…
+                <span className="mt-2 block text-caption text-danger">
+                  Connection lost —{" "}
+                  <button type="button" className="underline">
+                    Retry
+                  </button>
                 </span>
-              ) : null}
-              <div className={cn("max-w-[85%] space-y-2 sm:max-w-[75%]")}>
-                <p className="sr-only">{mine ? "You" : "Assistant"}</p>
-                {m.text ? (
-                  <div
-                    className={cn(
-                      "rounded-lg px-4 py-3 text-body-sm whitespace-pre-wrap",
-                      mine ? "bg-accent text-accent-fg" : "border border-border bg-surface text-fg",
-                    )}
-                  >
-                    {m.text}
-                    {m.interrupted ? (
-                      <span className="mt-2 block text-caption text-danger">
-                        Connection lost —{" "}
-                        <button
-                          type="button"
-                          className="underline"
-                          onClick={() => sendChatMessage(m.text ?? "")}
-                        >
-                          Retry
-                        </button>
-                      </span>
-                    ) : null}
-                  </div>
-                ) : null}
-                {m.card ? <DataCard card={m.card} /> : null}
-                {m.citations?.length ? (
-                  <p className="flex flex-wrap gap-x-2 text-caption text-fg-muted">
-                    From:{" "}
-                    {m.citations.map((c) => (
-                      <Link key={c.href} href={c.href} className="text-accent-text hover:underline">
-                        {c.label}
-                      </Link>
-                    ))}
-                  </p>
-                ) : null}
               </div>
             </li>
-          );
-        })}
-        {connectionLost ? (
-          <li className="flex justify-start">
-            <div className="rounded-lg border border-border bg-surface px-4 py-3 text-body-sm text-fg">
-              Refunds for FitDesk Pro are handled within 14 days provided…
-              <span className="mt-2 block text-caption text-danger">
-                Connection lost —{" "}
-                <button type="button" className="underline">
-                  Retry
-                </button>
-              </span>
-            </div>
-          </li>
-        ) : null}
-        {streaming ? (
-          <li
-            className="flex items-center gap-2 text-caption text-fg-muted"
-            aria-label="Assistant is typing"
-          >
-            <span aria-hidden className="flex gap-1">
-              <span className="size-1.5 animate-pulse rounded-full bg-fg-subtle" />
-              <span className="size-1.5 animate-pulse rounded-full bg-fg-subtle [animation-delay:150ms]" />
-              <span className="size-1.5 animate-pulse rounded-full bg-fg-subtle [animation-delay:300ms]" />
-            </span>
-            Thinking…
-          </li>
-        ) : null}
-        {pendingLead ? (
-          <li className="flex justify-start">
-            <div className="max-w-[85%] space-y-3 rounded-lg border border-border bg-surface p-4 text-body-sm">
-              <p className="text-fg">Want us to follow up on &ldquo;{pendingLead.need}&rdquo;?</p>
-              <div className="flex gap-2">
-                <Button size="sm" onClick={confirmLead}>
-                  Send to our team
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setPendingLead(null)}>
-                  Not now
-                </Button>
+          ) : null}
+          {streaming ? (
+            <li>
+              <TypingIndicator />
+            </li>
+          ) : null}
+          {pendingLead ? (
+            <li className="flex justify-start">
+              <div className="max-w-[85%] space-y-3 rounded-lg border border-border bg-surface p-4 text-body-sm">
+                <p className="text-fg">Want us to follow up on &ldquo;{pendingLead.need}&rdquo;?</p>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={confirmLead}>
+                    Send to our team
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setPendingLead(null)}>
+                    Not now
+                  </Button>
+                </div>
               </div>
-            </div>
-          </li>
-        ) : null}
-        {escalate ? (
-          <li className="flex justify-start">
-            <form
-              className="max-w-[85%] space-y-3 rounded-lg border border-border bg-surface p-4 text-body-sm"
-              onSubmit={handleEscalateSubmit}
-            >
-              <p className="text-fg">
-                I&apos;ll pass this conversation to our team. A person will reply in your support
-                queries. Add a short summary?
-              </p>
-              <Label htmlFor="esc-summary" className="sr-only">
-                Summary
-              </Label>
-              <Textarea
-                id="esc-summary"
-                rows={2}
-                value={summary}
-                onChange={(e) => setSummary(e.target.value)}
-                placeholder="What should we look at?"
-              />
-              <div className="flex gap-2">
-                <Button type="submit" size="sm">
-                  Send to the team
-                </Button>
-                <Button type="button" size="sm" variant="ghost" onClick={() => setEscalate(false)}>
-                  Not now
-                </Button>
-              </div>
-            </form>
-          </li>
-        ) : null}
-      </ol>
+            </li>
+          ) : null}
+          {escalate ? (
+            <li className="flex justify-start">
+              <form
+                className="max-w-[85%] space-y-3 rounded-lg border border-border bg-surface p-4 text-body-sm"
+                onSubmit={handleEscalateSubmit}
+              >
+                <p className="text-fg">
+                  I&apos;ll pass this conversation to our team. A person will reply in your support
+                  queries. Add a short summary?
+                </p>
+                <Label htmlFor="esc-summary" className="sr-only">
+                  Summary
+                </Label>
+                <Textarea
+                  id="esc-summary"
+                  rows={2}
+                  value={summary}
+                  onChange={(e) => setSummary(e.target.value)}
+                  placeholder="What should we look at?"
+                />
+                <div className="flex gap-2">
+                  <Button type="submit" size="sm">
+                    Send to the team
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setEscalate(false)}
+                  >
+                    Not now
+                  </Button>
+                </div>
+              </form>
+            </li>
+          ) : null}
+        </ol>
+      </div>
 
       <form
         className="space-y-2 border-t border-border pt-3"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!draft.trim() || sending) return;
+          if ((!draft.trim() && att.items.length === 0) || sending || att.busy) return;
           const text = draft.trim();
+          const files = att.items;
           setDraft("");
-          void sendChatMessage(text);
+          att.clear();
+          void sendChatMessage(text, files);
         }}
       >
+        <AttachPicker att={att} disabled={capReached || emailUnverified || streaming} />
         <div className="flex items-end gap-2">
           <Button
             type="button"
@@ -705,7 +738,12 @@ export function ChatScreen({
               type="submit"
               size="icon-md"
               aria-label="Send"
-              disabled={capReached || emailUnverified || !draft.trim()}
+              disabled={
+                capReached ||
+                emailUnverified ||
+                att.busy ||
+                (!draft.trim() && att.items.length === 0)
+              }
             >
               <SendIcon aria-hidden />
             </Button>

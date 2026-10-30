@@ -42,7 +42,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { parseMinor, type Currency } from "@/lib/money";
 import { recordPayout } from "@/modules/finance/admin-mutations";
 import { createPartner, ensureSuperAdminPartners } from "@/modules/users/admin-mutations";
+import {
+  isTempId,
+  mergeOptimistic,
+  optimisticReducer,
+  TEMP_ID_PREFIX,
+} from "@/lib/admin/optimistic-rows";
 import { ApprovalGateNotice } from "../Banner";
+import { SuccessMark } from "../SuccessMark";
 import { Sparkline } from "../charts/Sparkline";
 import { FilterChips } from "../FilterChips";
 import { filterPayoutRows } from "@/lib/admin/finance-filters";
@@ -101,6 +108,19 @@ export function PartnersPayouts({
   const [addEmail, setAddEmail] = React.useState("");
   const [addName, setAddName] = React.useState("");
   const [adding, setAdding] = React.useState(false);
+  const [addDone, setAddDone] = React.useState(false);
+  // Synchronous guard: two fast clicks can both pass a `disabled` state check.
+  const addLock = React.useRef(false);
+  const [pendingCards, dispatch] = React.useReducer(optimisticReducer<PartnerBalance>, []);
+  const cards = mergeOptimistic(partners, pendingCards);
+  React.useEffect(() => {
+    if (!addDone) return;
+    const t = setTimeout(() => {
+      setAddOpen(false);
+      setAddDone(false);
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [addDone]);
   const [backfilling, setBackfilling] = React.useState(false);
   const partner = partners.find((p) => p.id === partnerId);
   const amountMinor = (() => {
@@ -161,23 +181,52 @@ export function PartnersPayouts({
   }
 
   async function handleAddPartner() {
+    if (addLock.current) return;
     const email = addEmail.trim();
     if (!addUserId && !email) {
       toast.error("Pick an admin user or enter their email.");
       return;
     }
+    addLock.current = true;
     setAdding(true);
+    // Optimistic card: shown now, re-keyed to the partner id on success, removed on failure.
+    const picked = candidates.find((c) => c.userId === addUserId);
+    const tempId = `${TEMP_ID_PREFIX}${crypto.randomUUID()}`;
+    dispatch({
+      type: "add",
+      row: {
+        id: tempId,
+        name: addName.trim() || picked?.name || picked?.email || email,
+        role: "Partner",
+        active: true,
+        balanceInr: 0,
+        perCurrency: [],
+        earnedInr: 0,
+        paidOutInr: 0,
+        pendingPayoutApprovals: 0,
+        sparkline: [],
+        history: [],
+      },
+    });
     const result = await createPartner({
       ...(addUserId ? { userId: addUserId } : { email }),
       ...(addName.trim() ? { displayName: addName.trim() } : {}),
     });
+    addLock.current = false;
     setAdding(false);
     if (!result.ok) {
+      dispatch({ type: "rollback", tempId });
       toast.error(result.error.message);
       return;
     }
+    dispatch({
+      type: "settle",
+      tempId,
+      id: result.data.partner.id,
+      patch: { name: result.data.partner.displayName },
+    });
     toast.success(`${result.data.partner.displayName} added as a partner`);
-    setAddOpen(false);
+    setAddDone(true);
     setAddUserId("");
     setAddEmail("");
     setAddName("");
@@ -235,7 +284,7 @@ export function PartnersPayouts({
           <TabsTrigger value="payouts">Payouts ({payouts.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="partners" className="space-y-6">
-          {partners.length === 0 ? (
+          {cards.length === 0 ? (
             <section
               aria-label="No partners"
               className="rounded-lg border border-dashed border-border bg-surface p-8 text-center"
@@ -265,11 +314,11 @@ export function PartnersPayouts({
             </section>
           ) : null}
           <div className="grid gap-4 lg:grid-cols-3 tv:grid-cols-4">
-            {partners.map((p) => (
+            {cards.map((p) => (
               <section
                 key={p.id}
                 aria-label={`${p.name} balance`}
-                className="space-y-3 rounded-lg border border-border bg-surface p-4"
+                className={`space-y-3 rounded-lg border border-border bg-surface p-4${isTempId(p.id) ? " ck-row-added" : ""}`}
               >
                 <div className="flex items-center gap-3">
                   <Avatar size="lg">
@@ -287,7 +336,7 @@ export function PartnersPayouts({
                   <Sparkline
                     points={p.sparkline}
                     label={`${p.name} 12-month allocations`}
-                    series={p.id === partners[0]?.id ? 2 : 3}
+                    series={p.id === cards[0]?.id ? 2 : 3}
                   />
                 </div>
                 <div>
@@ -334,7 +383,11 @@ export function PartnersPayouts({
                   <Badge tone="warning">{p.pendingPayoutApprovals} payout awaiting approval</Badge>
                 ) : null}
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" onClick={() => openDialog(p.id)}>
+                  <Button
+                    size="sm"
+                    disabled={!partners.some((x) => x.id === p.id)}
+                    onClick={() => openDialog(p.id)}
+                  >
                     Record payout
                   </Button>
                   <Button asChild size="sm" variant="secondary">
@@ -561,7 +614,7 @@ export function PartnersPayouts({
         </TabsContent>
       </Tabs>
 
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+      <Dialog open={addOpen} onOpenChange={(o) => (adding ? undefined : setAddOpen(o))}>
         <DialogContent size="md">
           <DialogHeader>
             <DialogTitle>Add partner</DialogTitle>
@@ -570,48 +623,52 @@ export function PartnersPayouts({
               share on the product&rsquo;s ownership tab afterwards.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4">
-            {candidates.length > 0 ? (
-              <Field id="ap-user" label="Admin user">
-                <Select
-                  value={addUserId}
-                  onValueChange={(v) => {
-                    setAddUserId(v);
-                    setAddEmail("");
-                  }}
-                >
-                  <SelectTrigger id="ap-user">
-                    <SelectValue placeholder="Pick an admin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {candidates.map((c) => (
-                      <SelectItem key={c.userId} value={c.userId}>
-                        {c.name ? `${c.name} · ${c.email}` : c.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-            ) : null}
-            <Field
-              id="ap-email"
-              label={candidates.length > 0 ? "Or admin email" : "Admin email"}
-              hint="Must already be an admin user."
-            >
-              <Input
+          {addDone ? (
+            <SuccessMark>Partner added</SuccessMark>
+          ) : (
+            <div className="grid gap-4">
+              {candidates.length > 0 ? (
+                <Field id="ap-user" label="Admin user">
+                  <Select
+                    value={addUserId}
+                    onValueChange={(v) => {
+                      setAddUserId(v);
+                      setAddEmail("");
+                    }}
+                  >
+                    <SelectTrigger id="ap-user">
+                      <SelectValue placeholder="Pick an admin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {candidates.map((c) => (
+                        <SelectItem key={c.userId} value={c.userId}>
+                          {c.name ? `${c.name} · ${c.email}` : c.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              ) : null}
+              <Field
                 id="ap-email"
-                type="email"
-                value={addEmail}
-                onChange={(e) => {
-                  setAddEmail(e.target.value);
-                  if (e.target.value) setAddUserId("");
-                }}
-              />
-            </Field>
-            <Field id="ap-name" label="Display name" optional>
-              <Input id="ap-name" value={addName} onChange={(e) => setAddName(e.target.value)} />
-            </Field>
-          </div>
+                label={candidates.length > 0 ? "Or admin email" : "Admin email"}
+                hint="Must already be an admin user."
+              >
+                <Input
+                  id="ap-email"
+                  type="email"
+                  value={addEmail}
+                  onChange={(e) => {
+                    setAddEmail(e.target.value);
+                    if (e.target.value) setAddUserId("");
+                  }}
+                />
+              </Field>
+              <Field id="ap-name" label="Display name" optional>
+                <Input id="ap-name" value={addName} onChange={(e) => setAddName(e.target.value)} />
+              </Field>
+            </div>
+          )}
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="ghost" disabled={adding}>
@@ -619,7 +676,8 @@ export function PartnersPayouts({
               </Button>
             </DialogClose>
             <Button
-              disabled={adding || (!addUserId && !addEmail.trim())}
+              loading={adding}
+              disabled={addDone || (!addUserId && !addEmail.trim())}
               onClick={() => {
                 void handleAddPartner();
               }}

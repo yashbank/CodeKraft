@@ -51,3 +51,17 @@ export function deleteView(store: Store, userId: string, screen: string, id: str
   store.setItem(key(userId, screen), JSON.stringify(next));
   return next;
 }
+
+/** Undo of `deleteView`: puts the removed view back (same id), unless the id is already there. */
+export function restoreView(
+  store: Store,
+  userId: string,
+  screen: string,
+  v: SavedView,
+): SavedView[] {
+  const cur = listViews(store, userId, screen);
+  if (cur.some((x) => x.id === v.id)) return cur;
+  const next = [...cur, v];
+  store.setItem(key(userId, screen), JSON.stringify(next));
+  return next;
+}

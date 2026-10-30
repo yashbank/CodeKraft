@@ -4,12 +4,30 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/components/ui/_utils";
 import type { QueueItem } from "../types";
 
+/** List styles (P14-09): classes for the `<ul>`. `divided` is the original look. */
+export const LIST_CLASS: Record<string, string> = {
+  divided: "divide-y divide-border",
+  plain: "",
+  striped: "[&>li:nth-child(even)]:bg-elevated",
+  compact: "divide-y divide-border [&_.py-2]:py-1",
+  cards: "space-y-2 [&>li]:rounded-md [&>li]:border [&>li]:border-border [&>li]:px-2",
+  "accent-bar": "space-y-1 [&>li]:border-l-2 [&>li]:border-accent [&>li]:pl-2",
+};
+
 /** Up to 5 queue rows; each links into the queue it summarises (SCR-ADM-02). */
-export function QueueList({ items, empty }: { items: QueueItem[]; empty: string }) {
+export function QueueList({
+  items,
+  empty,
+  variant = "divided",
+}: {
+  items: QueueItem[];
+  empty: string;
+  variant?: string;
+}) {
   if (items.length === 0)
     return <p className="py-6 text-center text-body-sm text-fg-subtle">{empty}</p>;
   return (
-    <ul className="divide-y divide-border">
+    <ul data-variant={variant} className={LIST_CLASS[variant]}>
       {items.slice(0, 5).map((it, i) => {
         const inner = (
           <span className="flex items-start gap-2 py-2">

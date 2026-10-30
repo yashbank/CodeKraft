@@ -45,6 +45,8 @@ export interface ApprovalsInboxProps {
   approvals: ApprovalItem[];
   currentUser: AdminUserRef;
   now: string;
+  /** Deep link (`?id=`, e.g. from a notification): opens on the tab holding this approval, selected. */
+  initialId?: string;
 }
 
 /**
@@ -52,9 +54,14 @@ export interface ApprovalsInboxProps {
  * two-pane list + detail with a per-type diff table and the decision box. The requester never
  * sees an Approve button on their own request (D-1102). Read-mostly single-pane layout below `lg`.
  */
-export function ApprovalsInbox({ approvals, currentUser, now }: ApprovalsInboxProps) {
+export function ApprovalsInbox({ approvals, currentUser, now, initialId }: ApprovalsInboxProps) {
   const router = useRouter();
-  const [tab, setTab] = React.useState<"mine" | "requested" | "history">("mine");
+  const [tab, setTab] = React.useState<"mine" | "requested" | "history">(() => {
+    const a = approvals.find((x) => x.id === initialId);
+    if (!a) return "mine";
+    if (a.status !== "pending") return "history";
+    return a.requestedBy.id === currentUser.id ? "requested" : "mine";
+  });
   const [type, setType] = React.useState<ApprovalType | null>(null);
   const [comment, setComment] = React.useState("");
   const [commentError, setCommentError] = React.useState<string | null>(null);
@@ -71,7 +78,9 @@ export function ApprovalsInbox({ approvals, currentUser, now }: ApprovalsInboxPr
         : a.status !== "pending",
   );
   const list = byTab.filter((a) => (type ? a.type === type : true));
-  const [selectedId, setSelectedId] = React.useState<string | null>(list[0]?.id ?? null);
+  const [selectedId, setSelectedId] = React.useState<string | null>(
+    initialId ?? list[0]?.id ?? null,
+  );
   const selected = approvals.find((a) => a.id === selectedId) ?? list[0] ?? null;
 
   const counts = {

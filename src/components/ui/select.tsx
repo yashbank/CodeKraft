@@ -30,7 +30,7 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "flex w-fit items-center justify-between gap-2 rounded-md border border-border-strong bg-surface px-3 py-2 text-body whitespace-nowrap text-fg transition-[color,border-color,box-shadow] outline-none hover:border-fg-subtle focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-danger data-[placeholder]:text-fg-subtle data-[size=default]:h-10 data-[size=sm]:h-8 data-[size=sm]:text-body-sm *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-fg-muted",
+        "flex w-fit items-center justify-between gap-2 rounded-md border border-border-strong bg-surface px-3 py-2 text-body whitespace-nowrap text-fg transition-[color,border-color,box-shadow] outline-none hover:border-fg-subtle focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-danger data-[placeholder]:text-fg-subtle data-[size=default]:h-10 data-[size=sm]:h-8 max-lg:data-[size=sm]:h-10 data-[size=sm]:text-body-sm *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-fg-muted",
         className,
       )}
       {...props}

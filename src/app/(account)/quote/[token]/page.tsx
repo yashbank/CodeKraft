@@ -26,7 +26,7 @@ export default async function QuotePage({ params }: PageProps) {
   const session = await getSession();
 
   if (!session) {
-    redirect(`/auth/login?next=/quote/${token}`);
+    redirect(`/auth/login?next=${encodeURIComponent(`/quote/${encodeURIComponent(token)}`)}`);
   }
 
   const ctx = await getSiteRequestContext();

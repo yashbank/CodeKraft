@@ -8,7 +8,8 @@ import { listServicesQuery } from "@/modules/content/queries";
 import { ServicesPage } from "@/components/site/ServicesPage";
 import type { Service, ServiceOption } from "@/components/site/types";
 
-export const dynamic = "force-dynamic";
+// ISR: anonymous data only; admin content saves call revalidatePath("/", "layout").
+export const revalidate = 300;
 
 export const metadata: Metadata = pageMetadata({
   path: "/services",

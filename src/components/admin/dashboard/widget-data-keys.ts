@@ -23,6 +23,7 @@ export const WIDGET_DATA_KEYS: Record<WidgetKey, ReadonlyArray<keyof DashboardDa
   catalog_status: ["catalogStatus"],
   new_customers: ["newCustomers"],
   system_health: ["systemHealth", "visits"],
+  orders_heatmap: ["ordersHeatmap"],
 };
 
 /** The slice of `DashboardData` a single widget renders. */

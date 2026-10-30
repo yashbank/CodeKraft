@@ -140,7 +140,12 @@ export function createAuth(host: AuthHost, opts: { phoneOtp?: boolean; siteName?
       window: 60,
       max: 30,
       // docs/09 §7: verification resend 3/h (the resend buttons added for R8-08 hit this).
-      customRules: { "/send-verification-email": { window: 60 * 60, max: 3 } },
+      // The client session probe runs on every page load: 30/min signed shared-IP (office/NAT) users
+      // out, but it still reads the DB, so keep a generous cap instead of none.
+      customRules: {
+        "/send-verification-email": { window: 60 * 60, max: 3 },
+        "/get-session": { window: 60, max: 300 },
+      },
     },
     hooks: { before: beforeHook(host), after: afterHook(host) },
     plugins,

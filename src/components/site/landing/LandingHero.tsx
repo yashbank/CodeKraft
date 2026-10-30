@@ -6,6 +6,8 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
+import { sectionStyleCss } from "@/modules/content/section-style";
+
 import { Container } from "../Container";
 import { InquirySheet } from "../InquirySheet";
 import type { LandingContent, ServiceOption } from "../types";
@@ -39,16 +41,23 @@ export function LandingHero({
   const head = words.slice(0, -2).join(" ");
   const tail = words.slice(-2).join(" ");
   return (
-    <section id="who" aria-labelledby="who-title" className="relative scroll-mt-16 overflow-hidden">
+    <section
+      id="who"
+      aria-labelledby="who-title"
+      className="relative scroll-mt-16 overflow-hidden"
+      style={sectionStyleCss(content.style)}
+    >
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[image:var(--ck-gradient-glow)] opacity-60"
       />
-      <Container className="relative grid gap-10 pt-24 pb-16 lg:min-h-svh lg:grid-cols-12 lg:items-center lg:gap-8 lg:pt-16 lg:pb-24">
+      <Container className="relative grid gap-10 pt-10 pb-16 lg:min-h-svh lg:grid-cols-12 lg:items-center lg:gap-8 lg:pt-16 lg:pb-24">
         <div className="space-y-6 lg:col-span-6">
-          <p className="text-overline font-semibold tracking-wider text-accent-text uppercase">
-            {content.eyebrow}
-          </p>
+          {content.eyebrow?.trim() ? (
+            <p className="text-overline font-semibold tracking-wider text-accent-text uppercase">
+              {content.eyebrow}
+            </p>
+          ) : null}
           <h1 id="who-title" className="font-display text-display-xl text-balance text-fg">
             {head}{" "}
             <span className="bg-[image:var(--ck-gradient-brand)] bg-clip-text text-transparent">

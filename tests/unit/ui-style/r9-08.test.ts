@@ -29,9 +29,9 @@ describe("R9-08 ui options", () => {
   it("has the requested option counts", () => {
     expect(PALETTES.length).toBeGreaterThanOrEqual(16);
     expect(FONT_IDS.length).toBeGreaterThanOrEqual(20);
-    expect(BORDER_IDS.length).toBe(6);
-    expect(RADIUS_IDS.length).toBe(6);
-    expect(PATTERN_IDS.length).toBeGreaterThanOrEqual(8);
+    expect(BORDER_IDS.length).toBeGreaterThanOrEqual(40); // P14-07: extended catalogue
+    expect(RADIUS_IDS.length).toBeGreaterThanOrEqual(40);
+    expect(PATTERN_IDS.length).toBeGreaterThanOrEqual(40);
     expect(LAYOUT_IDS.length).toBe(4);
   });
 
@@ -61,7 +61,7 @@ describe("R9-08 ui options", () => {
     expect(uiStyleCss({ ...DEFAULT_UI_STYLE, density: "comfortable" })).toContain(
       "--card-pad:2rem",
     );
-    expect(DENSITY_IDS).toEqual(["compact", "normal", "comfortable"]);
+    expect(DENSITY_IDS.slice(0, 3)).toEqual(["compact", "normal", "comfortable"]);
   });
 
   it("inline list shows at most 3 and includes the current one", () => {

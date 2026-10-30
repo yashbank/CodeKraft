@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import {
   BellIcon,
@@ -81,7 +81,7 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/components/ui/_utils";
-import { applyRead, countUnread } from "@/lib/notifications/read-state";
+import { applyRead, countUnread, readThenOpen } from "@/lib/notifications/read-state";
 import { initials, timeAgo } from "./format";
 import { LaptopNotice } from "./LaptopNotice";
 import { filterAdminNav } from "@/lib/authz/admin-routes";
@@ -221,7 +221,7 @@ export interface AdminShellProps {
   unreadCount?: number;
   /** Persist read state server-side; the shell re-renders from the server afterwards. */
   onMarkAllRead?: () => void;
-  onMarkRead?: (id: string) => void;
+  onMarkRead?: (id: string) => unknown;
   /** ISO timestamp used for relative times (deterministic SSR). */
   now: string;
   /** Screen title for the phone top bar and the "Open on a laptop" notice. */
@@ -297,6 +297,12 @@ export function AdminShell({
   );
   const [paletteOpen, setPaletteOpen] = React.useState(false);
   const [paletteQuery, setPaletteQuery] = React.useState("");
+  const shellPathname = usePathname();
+  // The shell persists across routes (back/forward, programmatic pushes): never leave overlays open.
+  React.useEffect(() => {
+    setMobileOpen(false);
+    setPaletteOpen(false);
+  }, [shellPathname]);
   const [remoteItems, setRemoteItems] = React.useState<SearchItem[]>([]);
 
   React.useEffect(() => {
@@ -526,7 +532,7 @@ export function AdminShell({
               }}
               onRead={(id) => {
                 setReadIds((s) => new Set([...s, id]));
-                onMarkRead?.(id);
+                return Promise.resolve(onMarkRead?.(id));
               }}
               viewAllHref={href("/notifications")}
             />
@@ -708,9 +714,14 @@ function NotificationBell({
   now: string;
   unread: number;
   onMarkAll: () => void;
-  onRead: (id: string) => void;
+  onRead: (id: string) => Promise<unknown>;
   viewAllHref: string;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [open, setOpen] = React.useState(false);
+  // The shell persists across routes, so close the popup whenever the route changes.
+  React.useEffect(() => setOpen(false), [pathname]);
   const isRead = (n: AdminNotification) => n.read || readIds.has(n.id);
   const latest = notifications.slice(0, 8);
   const list = (items: AdminNotification[]) =>
@@ -727,7 +738,16 @@ function NotificationBell({
             <li key={n.id}>
               <Link
                 href={n.href ?? viewAllHref}
-                onClick={() => onRead(n.id)}
+                onClick={(e) =>
+                  void readThenOpen(
+                    e,
+                    () => (isRead(n) ? Promise.resolve() : onRead(n.id)),
+                    () => {
+                      setOpen(false);
+                      router.push(n.href ?? viewAllHref);
+                    },
+                  )
+                }
                 className="flex min-h-16 items-start gap-3 px-3 py-2 hover:bg-accent-soft/60"
               >
                 <span className="relative mt-1">
@@ -758,7 +778,7 @@ function NotificationBell({
       </ul>
     );
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
@@ -798,7 +818,7 @@ function NotificationBell({
         </Tabs>
         <div className="border-t border-border px-3 py-2 text-right">
           <Button asChild variant="link" size="sm">
-            <Link href={viewAllHref}>
+            <Link href={viewAllHref} onClick={() => setOpen(false)}>
               <InboxIcon aria-hidden /> View all
             </Link>
           </Button>

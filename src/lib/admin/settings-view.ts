@@ -176,6 +176,8 @@ export function mapSiteSettingsToSettingsData(settings: SiteSettings): SettingsD
       pattern: settings.uiPattern,
       layout: settings.uiLayout,
       density: settings.uiDensity,
+      studio: settings.themeStudio,
+      presets: settings.themePresets,
       lightEnabled: settings.flags.theme_light_editorial,
     },
     ai: {
@@ -194,6 +196,9 @@ export function mapSiteSettingsToSettingsData(settings: SiteSettings): SettingsD
       digestEnabled: false,
       digestTime: "",
       sender: env.EMAIL_FROM,
+      fromName: settings.emailFromName ?? "",
+      fromAddress: settings.emailFromAddress ?? "",
+      transport: env.EMAIL_TRANSPORT,
     },
     flags: mapFlags(settings.flags),
     retention: {

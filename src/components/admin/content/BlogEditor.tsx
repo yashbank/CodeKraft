@@ -30,7 +30,7 @@ import { Field, RichTextField } from "../RichTextField";
 import { SeoPreview } from "../SeoPreview";
 import { RowActions } from "../RowActions";
 import { ContentEditorFrame } from "./ContentEditorFrame";
-import { fromPlainText, toPlainText } from "@/modules/content/render";
+import { fromPlainText, toPlainText } from "@/modules/content/plain-text";
 import { slugify } from "@/modules/catalog/slugs";
 import type { AdminBlogList, AdminBlogPost } from "@/modules/blog/types";
 import {

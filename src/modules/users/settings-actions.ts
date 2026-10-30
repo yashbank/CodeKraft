@@ -9,7 +9,7 @@ import { defineAction } from "@/lib/actions/envelope";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { getFlagFromEnv } from "@/lib/feature-flags";
 import type { Currency } from "@/lib/money";
-import type { ThemeName } from "@/lib/theme";
+import type { ThemePref } from "@/lib/theme";
 import { users } from "../../../drizzle/schema/auth";
 import { settingsService } from "../settings/service";
 import { CURRENCY_COOKIE, VISITOR_COOKIE_MAX_AGE_S } from "../settings/types";
@@ -57,7 +57,7 @@ export const updateAccountSettingsAction = defineAction({
       });
 
     const displayCurrency = (updated?.displayCurrency ?? "INR") as Currency;
-    const themePref = (updated?.themePref ?? null) as ThemeName | null;
+    const themePref = (updated?.themePref ?? null) as ThemePref | null;
 
     const cookieValues: { ck_currency?: string; ck_theme?: string } = {
       ck_currency: displayCurrency,

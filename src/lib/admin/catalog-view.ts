@@ -20,7 +20,7 @@
  */
 import type { StatusValue } from "@/lib/status-tone";
 import type { RichTextDoc } from "@/modules/_shared/zod";
-import { toPlainText } from "@/modules/content/render";
+import { toPlainText } from "@/modules/content/plain-text";
 import type {
   CategoryNode as CatalogCategoryNode,
   ProductAdminGraph,

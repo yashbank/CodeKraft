@@ -254,15 +254,15 @@ export function OfferingPanel({
               <dt className="text-fg-muted">Updates</dt>
               <dd className="text-right text-fg">{UPDATE_POLICY_LABEL[selected.updatePolicy]}</dd>
             </div>
-            {selected.price ? (
-              <p className="text-caption text-fg-subtle">
-                ≈ charged in INR · Prices exclude taxes where applicable
-              </p>
-            ) : null}
           </dl>
         ) : null}
+        {selected && !product.isComingSoon && selected.price ? (
+          <p className="mt-1.5 text-caption text-fg-subtle">
+            ≈ charged in INR · Prices exclude taxes where applicable
+          </p>
+        ) : null}
 
-        <div ref={ctaRef} aria-hidden={barVisible || undefined} className="mt-5 space-y-2">
+        <div ref={ctaRef} className="mt-5 space-y-2">
           {primaryCta()}
           <Button
             type="button"
@@ -282,7 +282,7 @@ export function OfferingPanel({
               aria-pressed={wishlisted}
               aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
               onClick={handleWishlistToggle}
-              className="inline-flex items-center gap-1.5 rounded-sm text-body-sm text-fg-muted hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-sm text-body-sm text-fg-muted hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               <HeartIcon
                 aria-hidden
@@ -294,7 +294,7 @@ export function OfferingPanel({
             <Link
               href={`/auth/login?next=${encodeURIComponent(pathname)}`}
               aria-label="Sign in to add to wishlist"
-              className="inline-flex items-center gap-1.5 rounded-sm text-body-sm text-fg-muted hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-sm text-body-sm text-fg-muted hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               <HeartIcon aria-hidden className="size-4" />
               Wishlist
@@ -315,7 +315,8 @@ export function OfferingPanel({
       </div>
 
       <div
-        aria-hidden={!barVisible || undefined}
+        // inert (not aria-hidden): the off-screen bar still holds focusable buttons.
+        inert={!barVisible}
         className={cn(
           "fixed inset-x-0 bottom-0 z-(--ck-z-sticky) border-t border-border bg-glass p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-glass transition-transform duration-(--ck-motion-duration-md) ease-emphasized md:hidden",
           barVisible ? "translate-y-0" : "translate-y-full",

@@ -17,7 +17,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/components/ui/_utils";
 import type { Currency } from "@/lib/money";
+import { ThemeToggle } from "@/components/site/ThemeToggle";
 import { CurrencySelect } from "./CurrencySelect";
 import { NotificationBell } from "./NotificationBell";
 import type { NotificationItem } from "./types";
@@ -95,6 +96,8 @@ export interface AccountShellProps {
   currency: Currency;
   currencyOptions?: readonly Currency[];
   onCurrencyChange?: (c: Currency) => void;
+  /** Admin "visitors can switch theme" setting; shows the theme switch in the top bar. */
+  themeToggle?: boolean;
   notifications: NotificationItem[];
   unreadCount: number;
   onMarkAllRead?: () => void;
@@ -119,6 +122,7 @@ export function AccountShell({
   currency,
   currencyOptions,
   onCurrencyChange,
+  themeToggle = false,
   notifications,
   unreadCount,
   onMarkAllRead,
@@ -129,6 +133,8 @@ export function AccountShell({
 }: AccountShellProps) {
   const router = useRouter();
   const [drawer, setDrawer] = React.useState(false);
+  const pathname = usePathname();
+  React.useEffect(() => setDrawer(false), [pathname]);
   const nav = ACCOUNT_NAV.map((n) => ({ ...n, href: links?.[n.key] ?? n.href }));
   const activeItem = nav.find((n) => n.key === active);
   const heading = title ?? activeItem?.label ?? "Account";
@@ -166,7 +172,7 @@ export function AccountShell({
   return (
     <div className="flex min-h-[calc(100dvh-3rem)] bg-canvas text-fg">
       {!minimal ? (
-        <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-surface lg:flex">
+        <aside className="hidden w-60 shrink-0 flex-col print:hidden! border-r border-border bg-surface lg:flex">
           <div className="px-5 py-5">
             <Wordmark />
           </div>
@@ -185,7 +191,7 @@ export function AccountShell({
       ) : null}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center gap-2 border-b border-border bg-surface px-4 lg:h-16 lg:px-8">
+        <header className="flex print:hidden h-14 items-center gap-2 border-b border-border bg-surface px-4 lg:h-16 lg:px-8">
           {minimal ? (
             <>
               <Button variant="ghost" size="sm" asChild>
@@ -290,6 +296,7 @@ export function AccountShell({
               onChange={onCurrencyChange}
               className="hidden sm:flex"
             />
+            <ThemeToggle enabled={themeToggle} />
             <NotificationBell
               items={notifications}
               unreadCount={unreadCount}
@@ -302,7 +309,7 @@ export function AccountShell({
                 <button
                   type="button"
                   aria-label={`Account menu for ${user.name}`}
-                  className="ml-1 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring max-sm:p-1.5"
+                  className="ml-1 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring max-lg:p-1.5"
                 >
                   <Avatar>
                     <AvatarFallback>{user.initials}</AvatarFallback>
@@ -362,7 +369,7 @@ export function AccountShell({
         {!minimal ? (
           <nav
             aria-label="Account sections"
-            className="fixed inset-x-0 bottom-0 z-(--ck-z-sticky) border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+            className="fixed inset-x-0 bottom-0 print:hidden z-(--ck-z-sticky) border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
           >
             <ul className="grid grid-cols-5">
               {TAB_BAR.map((key) => {

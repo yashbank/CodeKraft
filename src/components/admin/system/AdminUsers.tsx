@@ -52,10 +52,18 @@ import { EmptyState } from "../EmptyState";
 import { UsersIcon } from "lucide-react";
 import {
   changeAdminRole,
+  createPartner,
   inviteAdmin,
   removeAdmin,
   updatePartner,
 } from "@/modules/users/admin-mutations";
+import {
+  isTempId,
+  mergeOptimistic,
+  optimisticReducer,
+  TEMP_ID_PREFIX,
+} from "@/lib/admin/optimistic-rows";
+import { SuccessMark } from "../SuccessMark";
 import { formatDateTime, initials } from "../format";
 import { AccessDialog, type AccessTarget } from "./AccessDialog";
 import { PageHeader } from "../PageHeader";
@@ -105,6 +113,14 @@ export function AdminUsers({
   const [invitePartner, setInvitePartner] = React.useState(false);
   const [inviteRole, setInviteRole] = React.useState<AdminRole>("admin");
   const [inviteSubmitting, setInviteSubmitting] = React.useState(false);
+  const [inviteDone, setInviteDone] = React.useState(false);
+  // Synchronous guard: two fast clicks/Enter presses can both pass a `disabled` state check.
+  const inviteLock = React.useRef(false);
+  const [pending, dispatch] = React.useReducer(optimisticReducer<AdminUserRow>, []);
+  const [partnerBusy, setPartnerBusy] = React.useState<string | null>(null);
+  const [partnerOverride, setPartnerOverride] = React.useState<
+    Record<string, AdminUserRow["partner"]>
+  >({});
   const [access, setAccess] = React.useState<AccessTarget | "customer" | null>(null);
   const [securityOpen, setSecurityOpen] = React.useState(false);
   const [partnerSheet, setPartnerSheet] = React.useState<AdminUserRow | null>(null);
@@ -121,7 +137,19 @@ export function AdminUsers({
     ROLE_FILTER_ANY,
   );
 
-  const filteredUsers = users.filter((u) => {
+  React.useEffect(() => {
+    if (!inviteDone) return;
+    const t = setTimeout(() => {
+      setInviteOpen(false);
+      setInviteDone(false);
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [inviteDone]);
+
+  const rows = mergeOptimistic(users, pending).map((u) =>
+    partnerOverride[u.id] && !u.partner ? { ...u, partner: partnerOverride[u.id] } : u,
+  );
+  const filteredUsers = rows.filter((u) => {
     if (roleFilter !== ROLE_FILTER_ANY && u.role !== roleFilter) return false;
     const q = search.trim().toLowerCase();
     if (!q) return true;
@@ -135,6 +163,7 @@ export function AdminUsers({
 
   async function handleInviteSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (inviteLock.current) return;
     const form = new FormData(e.currentTarget);
     const email = String(form.get("email") ?? "").trim();
     const partnerName = String(form.get("partnerName") ?? "").trim();
@@ -146,24 +175,63 @@ export function AdminUsers({
       toast.error("Partner display name is required.");
       return;
     }
+    inviteLock.current = true;
     setInviteSubmitting(true);
+    // Optimistic row: shown now, re-keyed to the approval id on success, removed on failure.
+    const tempId = `${TEMP_ID_PREFIX}${crypto.randomUUID()}`;
+    dispatch({
+      type: "add",
+      row: {
+        id: tempId,
+        name: (invitePartner && partnerName) || email.split("@")[0] || email,
+        email,
+        role: inviteRole,
+        totp: false,
+        status: "invited",
+      },
+    });
+    // A network failure rejects the server action instead of returning `{ ok: false }`.
     const result = await inviteAdmin({
       email,
       role: inviteRole,
       ...(invitePartner ? { partner: { displayName: partnerName } } : {}),
-    });
+    }).catch(() => ({
+      ok: false as const,
+      error: { message: "Couldn't reach the server. Check your connection and try again." },
+    }));
+    inviteLock.current = false;
     setInviteSubmitting(false);
     if (!result.ok) {
+      dispatch({ type: "rollback", tempId });
       toast.error(result.error.message);
       return;
     }
+    dispatch({ type: "settle", tempId, id: result.data.approvalRequestId });
     toast.success(
       result.data.warning === "fewer_than_two_admins"
         ? "Invite approval requested — this will still leave fewer than two active admins."
         : "Invite approval requested",
     );
-    setInviteOpen(false);
+    setInviteDone(true);
     setInvitePartner(false);
+    router.refresh();
+  }
+
+  async function handleMakePartner(u: AdminUserRow) {
+    if (partnerBusy) return;
+    setPartnerBusy(u.id);
+    const result = await createPartner({ userId: u.id });
+    setPartnerBusy(null);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    const p = result.data.partner;
+    setPartnerOverride((o) => ({
+      ...o,
+      [u.id]: { id: p.id, displayName: p.displayName, activeShares: 0, active: p.active },
+    }));
+    toast.success(`${p.displayName} added as a partner`);
     router.refresh();
   }
 
@@ -288,7 +356,7 @@ export function AdminUsers({
               {filteredUsers.map((u) => {
                 const lastSuper = u.role === "super_admin" && superAdmins.length === 1;
                 return (
-                  <TableRow key={u.id}>
+                  <TableRow key={u.id} className={isTempId(u.id) ? "ck-row-added" : undefined}>
                     <TableCell>
                       <span className="flex items-center gap-3">
                         <Avatar>
@@ -319,7 +387,9 @@ export function AdminUsers({
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {u.partner ? (
+                      {partnerBusy === u.id ? (
+                        <span className="text-fg-muted">Adding…</span>
+                      ) : u.partner ? (
                         <button
                           type="button"
                           className="text-left hover:text-accent-text"
@@ -374,36 +444,49 @@ export function AdminUsers({
                       </span>
                     </TableCell>
                     <TableCell>
-                      <RowActions
-                        label={`Actions for ${u.name}`}
-                        actions={[
-                          {
-                            label: "Change role",
-                            onSelect: () => openConfirm("role", u),
-                          },
-                          {
-                            label: "Edit partner details",
-                            onSelect: () => setPartnerSheet(u),
-                            disabled: !u.partner,
-                          },
-                          {
-                            label: "Link / temporary password…",
-                            onSelect: () => setAccess({ userId: u.id, label: u.name }),
-                            disabled: u.status === "invited" || u.id === currentUserId,
-                          },
-                          {
-                            label: "Revoke sessions",
-                            disabled: true,
-                            separatorBefore: true,
-                          },
-                          {
-                            label: "Remove access",
-                            destructive: true,
-                            onSelect: () => openConfirm("remove", u),
-                            disabled: lastSuper,
-                          },
-                        ]}
-                      />
+                      {isTempId(u.id) ? (
+                        <span className="text-caption text-fg-muted">Saving…</span>
+                      ) : (
+                        <RowActions
+                          label={`Actions for ${u.name}`}
+                          actions={[
+                            {
+                              label: "Change role",
+                              onSelect: () => openConfirm("role", u),
+                            },
+                            {
+                              label: "Make partner",
+                              onSelect: () => void handleMakePartner(u),
+                              disabled:
+                                Boolean(u.partner) ||
+                                u.role === "staff" ||
+                                u.status === "invited" ||
+                                partnerBusy !== null,
+                            },
+                            {
+                              label: "Edit partner details",
+                              onSelect: () => setPartnerSheet(u),
+                              disabled: !u.partner,
+                            },
+                            {
+                              label: "Link / temporary password…",
+                              onSelect: () => setAccess({ userId: u.id, label: u.name }),
+                              disabled: u.status === "invited" || u.id === currentUserId,
+                            },
+                            {
+                              label: "Revoke sessions",
+                              disabled: true,
+                              separatorBefore: true,
+                            },
+                            {
+                              label: "Remove access",
+                              destructive: true,
+                              onSelect: () => openConfirm("remove", u),
+                              disabled: lastSuper,
+                            },
+                          ]}
+                        />
+                      )}
                     </TableCell>
                   </TableRow>
                 );
@@ -435,7 +518,10 @@ export function AdminUsers({
         target={access === "customer" ? null : access}
       />
 
-      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+      <Dialog
+        open={inviteOpen}
+        onOpenChange={(o) => (inviteSubmitting ? undefined : setInviteOpen(o))}
+      >
         <DialogContent size="md">
           <form onSubmit={handleInviteSubmit}>
             <DialogHeader>
@@ -445,44 +531,59 @@ export function AdminUsers({
                 admin host and recommends TOTP.
               </DialogDescription>
             </DialogHeader>
-            <Field id="inv-email" label="Email" required>
-              <Input id="inv-email" name="email" type="email" required aria-required />
-            </Field>
-            <fieldset className="space-y-2">
-              <legend className="text-body-sm font-semibold">Role *</legend>
-              <RadioGroup
-                value={inviteRole}
-                onValueChange={(v) => setInviteRole(v as AdminRole)}
-                className="grid gap-2"
-              >
-                {(["super_admin", "admin", "staff"] as AdminRole[]).map((r) => (
-                  <RadioGroupCard key={r} value={r}>
-                    <span className="text-body font-semibold">{ROLE_LABEL[r]}</span>
-                    <span className="text-caption text-fg-muted">{ROLE_SUMMARY[r]}</span>
-                  </RadioGroupCard>
-                ))}
-              </RadioGroup>
-            </fieldset>
-            <div className="flex items-center gap-2">
-              <Switch id="inv-partner" checked={invitePartner} onCheckedChange={setInvitePartner} />
-              <Label htmlFor="inv-partner">Also a partner</Label>
-            </div>
-            {invitePartner ? (
-              <Field id="inv-partner-name" label="Partner display name" required>
-                <Input id="inv-partner-name" name="partnerName" required aria-required />
-              </Field>
-            ) : null}
-            <ApprovalGateNotice approvers={approvers} what="Inviting an admin" />
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="ghost">
-                  Cancel
-                </Button>
-              </DialogClose>
-              <Button type="submit" disabled={inviteSubmitting}>
-                Request approval
-              </Button>
-            </DialogFooter>
+            {inviteDone ? (
+              <SuccessMark>Invite sent for approval</SuccessMark>
+            ) : (
+              <>
+                <Field id="inv-email" label="Email" required>
+                  <Input id="inv-email" name="email" type="email" required aria-required />
+                </Field>
+                <fieldset className="space-y-2">
+                  <legend className="text-body-sm font-semibold">Role *</legend>
+                  <RadioGroup
+                    value={inviteRole}
+                    onValueChange={(v) => {
+                      setInviteRole(v as AdminRole);
+                      if (v === "staff") setInvitePartner(false);
+                    }}
+                    className="grid gap-2"
+                  >
+                    {(["super_admin", "admin", "staff"] as AdminRole[]).map((r) => (
+                      <RadioGroupCard key={r} value={r}>
+                        <span className="text-body font-semibold">{ROLE_LABEL[r]}</span>
+                        <span className="text-caption text-fg-muted">{ROLE_SUMMARY[r]}</span>
+                      </RadioGroupCard>
+                    ))}
+                  </RadioGroup>
+                </fieldset>
+                {inviteRole !== "staff" ? (
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="inv-partner"
+                      checked={invitePartner}
+                      onCheckedChange={setInvitePartner}
+                    />
+                    <Label htmlFor="inv-partner">Also a partner</Label>
+                  </div>
+                ) : null}
+                {invitePartner ? (
+                  <Field id="inv-partner-name" label="Partner display name" required>
+                    <Input id="inv-partner-name" name="partnerName" required aria-required />
+                  </Field>
+                ) : null}
+                <ApprovalGateNotice approvers={approvers} what="Inviting an admin" />
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button type="button" variant="ghost" disabled={inviteSubmitting}>
+                      Cancel
+                    </Button>
+                  </DialogClose>
+                  <Button type="submit" loading={inviteSubmitting}>
+                    Request approval
+                  </Button>
+                </DialogFooter>
+              </>
+            )}
           </form>
         </DialogContent>
       </Dialog>
@@ -529,13 +630,13 @@ export function AdminUsers({
             </DialogClose>
             <Button
               variant={confirm?.kind === "remove" ? "destructive" : "primary"}
+              loading={confirmSubmitting}
               disabled={Boolean(
-                confirmSubmitting ||
-                (confirm &&
-                  ((confirm.user.role === "super_admin" && superAdmins.length === 1) ||
-                    (confirm.kind === "remove" &&
-                      confirm.user.partner &&
-                      confirm.user.partner.activeShares > 0))),
+                confirm &&
+                ((confirm.user.role === "super_admin" && superAdmins.length === 1) ||
+                  (confirm.kind === "remove" &&
+                    confirm.user.partner &&
+                    confirm.user.partner.activeShares > 0)),
               )}
               onClick={handleConfirmSubmit}
             >
@@ -610,7 +711,7 @@ export function AdminUsers({
             <Button variant="ghost" onClick={() => setPartnerSheet(null)}>
               Cancel
             </Button>
-            <Button type="submit" form="partner-form" disabled={partnerSubmitting}>
+            <Button type="submit" form="partner-form" loading={partnerSubmitting}>
               Save
             </Button>
           </SheetFooter>

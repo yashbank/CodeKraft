@@ -2,6 +2,7 @@
  * Fixture data for the admin screen previews (/dev/screens/admin/*). INR amounts are paise.
  * Everything here is placeholder content; Phase 8 replaces it with Server Action results.
  */
+import { DEFAULT_STUDIO_EXTRAS } from "@/lib/theme-studio";
 import type {
   AdjustmentRow,
   AdminNotification,
@@ -1670,7 +1671,15 @@ export const QUERY_THREAD: QueryThread = {
       author: "Priya Nair",
       at: "2026-09-22T15:45:00Z",
       text: "Hi Meera, sorry about that. I have raised a full refund of ₹1,178.82 for the duplicate order; you will get an email once it is approved (usually within one business day).",
-      attachments: ["refund-summary.pdf"],
+      attachments: [
+        {
+          mediaId: "00000000-0000-4000-8000-000000000002",
+          name: "refund-summary.pdf",
+          mime: "application/pdf",
+          sizeBytes: 48000,
+          url: "#",
+        },
+      ],
     },
     {
       id: "m5",
@@ -3051,6 +3060,8 @@ export const SETTINGS: SettingsData = {
     pattern: "none",
     layout: "standard",
     density: "normal",
+    studio: DEFAULT_STUDIO_EXTRAS,
+    presets: [],
     lightEnabled: false,
   },
   ai: {
@@ -3069,6 +3080,9 @@ export const SETTINGS: SettingsData = {
     digestEnabled: true,
     digestTime: "08:30 IST",
     sender: "no-reply@codekraft.in",
+    fromName: "",
+    fromAddress: "",
+    transport: "log",
   },
   flags: [
     {
@@ -3441,6 +3455,13 @@ export const DASHBOARD: DashboardData = {
     { status: "archived", count: 1 },
   ],
   newCustomers: { count: 5, delta: "+1 vs previous 30 days", sparkline: [1, 0, 2, 1, 0, 1, 0, 0] },
+  ordersHeatmap: {
+    grid: Array.from({ length: 7 }, (_, d) =>
+      Array.from({ length: 24 }, (_, h) => (d < 5 && h >= 10 && h <= 17 ? 1 + ((d + h) % 4) : 0)),
+    ),
+    total: 100,
+    max: 4,
+  },
   systemHealth: [
     { label: "Database", ok: true, detail: "12 ms" },
     { label: "Email (Resend)", ok: true, detail: "queue 0" },

@@ -2,9 +2,10 @@
 
 import { useEffect } from "react";
 
-import { Button } from "@/components/ui/button";
+import { ErrorPanel } from "@/components/site/ErrorPanel";
 
-export default function GlobalError({
+/** Site-wide 500 boundary: branded, no stack trace - only the opaque digest for support. */
+export default function SiteError({
   error,
   reset,
 }: {
@@ -16,14 +17,17 @@ export default function GlobalError({
     console.error(error);
   }, [error]);
   return (
-    <main className="flex min-h-screen items-center justify-center p-6">
-      <div className="space-y-3 text-center">
-        <h1 className="text-h2">Something went wrong</h1>
-        {error.digest ? (
-          <p className="text-body-sm text-fg-muted">Reference: {error.digest}</p>
-        ) : null}
-        <Button onClick={reset}>Try again</Button>
-      </div>
-    </main>
+    <ErrorPanel
+      code="500"
+      title="Something went wrong"
+      body="An unexpected error stopped this page from loading. It has been logged. Try again, or head somewhere else."
+      digest={error.digest}
+      onRetry={reset}
+      searchAction="/products"
+      links={[
+        { href: "/", label: "Go home" },
+        { href: "/contact", label: "Contact us" },
+      ]}
+    />
   );
 }

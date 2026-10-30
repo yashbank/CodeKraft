@@ -17,6 +17,7 @@ export const PALETTE_GROUPS = [
   "Go to",
   "Products",
   "Orders",
+  "Invoices",
   "Customers",
   "Leads",
 ] as const;

@@ -42,19 +42,31 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/components/ui/_utils";
-import { BarChart, StackedBarChart } from "../charts/BarChart";
+import { BarChart, StackedBarChart, type BarVariant } from "../charts/BarChart";
+import { DonutChart, type DonutVariant } from "../charts/DonutChart";
+import { LineChart, type LineVariant } from "../charts/LineChart";
+import type { GaugeVariant } from "../charts/Gauge";
+import type { SparklineVariant } from "../charts/Sparkline";
+import {
+  isWidgetStyle,
+  resolveWidgetStyle,
+  stylesFor,
+} from "@/modules/dashboard-widgets/widget-styles";
 import { WidgetSkeleton } from "./WidgetSkeleton";
 import { dashboardRangeBounds, ledgerDrillHref } from "@/lib/admin/drill-links";
 import { AnimatedNumber } from "../use-count-up";
 import { Funnel } from "../charts/Funnel";
+import { HeatmapChart, type HeatmapVariant } from "../charts/HeatmapChart";
 import { Gauge } from "../charts/Gauge";
 import { Sparkline } from "../charts/Sparkline";
 import { EmptyState } from "../EmptyState";
 import { compactNumber, inr, plainNumber } from "../format";
 import { PageHeader } from "../PageHeader";
-import type { DashboardData, WidgetKey } from "../types";
-import { QueueList } from "./QueueList";
-import { DEFAULT_LAYOUT, WIDGET_LIBRARY, type WidgetDefinition } from "./widget-library";
+import type { DashboardData, ProductStatus, WidgetKey } from "../types";
+import { LIST_CLASS, QueueList } from "./QueueList";
+import { WIDGET_LIBRARY, type WidgetDefinition } from "./widget-library";
+import { defaultLayoutFor } from "./role-widgets";
+import { moveKey } from "./reorder";
 import { WidgetFrame } from "./WidgetFrame";
 
 const lakh = (paise: number) => `₹${(paise / 10000000).toFixed(1)}L`;
@@ -63,6 +75,10 @@ export interface AdminDashboardProps {
   data: DashboardData;
   /** Widget keys in display order (saved layout); defaults to the new-admin layout. */
   layout?: WidgetKey[];
+  /** Widgets this role may use (P14-01); defaults to the whole library. */
+  allowed?: readonly WidgetKey[];
+  /** Saved visual style per widget (P14-09); unknown or missing -> the kind's default. */
+  styles?: Partial<Record<WidgetKey, string>>;
   isSuperAdmin: boolean;
   greeting: string;
   dateLabel: string;
@@ -77,6 +93,8 @@ export interface AdminDashboardProps {
 export function AdminDashboard({
   data: serverData,
   layout,
+  allowed: allowedProp,
+  styles: stylesProp,
   isSuperAdmin,
   greeting,
   dateLabel,
@@ -85,8 +103,15 @@ export function AdminDashboard({
   const href = (route: string) => routes?.[route] ?? route;
   const router = useRouter();
   const pathname = usePathname();
-  const [enabled, setEnabled] = React.useState<WidgetKey[]>(layout ?? DEFAULT_LAYOUT);
+  const library = React.useMemo(
+    () => WIDGET_LIBRARY.filter((w) => !allowedProp || allowedProp.includes(w.key)),
+    [allowedProp],
+  );
+  const defaultLayout = defaultLayoutFor(library.map((w) => w.key));
+  const [enabled, setEnabled] = React.useState<WidgetKey[]>(layout ?? defaultLayout);
+  const [styles, setStyles] = React.useState<Partial<Record<WidgetKey, string>>>(stylesProp ?? {});
   const [editing, setEditing] = React.useState(false);
+  const [dragKey, setDragKey] = React.useState<WidgetKey | null>(null);
   const [libraryOpen, setLibraryOpen] = React.useState(false);
   const range = serverData.range;
   // Per-widget refresh results are layered over the server-rendered data; a new server render
@@ -119,10 +144,16 @@ export function AdminDashboard({
   const saveChain = React.useRef<Promise<unknown>>(Promise.resolve());
 
   /** R8-10 — every layout change is persisted to the admin's own `dashboard_layouts` row. */
-  const persist = (next: WidgetKey[]) => {
+  const persist = (next: WidgetKey[], nextStyles = styles) => {
     setEnabled(next);
+    setStyles(nextStyles);
+    // Only a valid, explicitly picked style is stored; bare ids keep the old array-of-ids shape.
+    const widgets = next.map((id) => {
+      const style = nextStyles[id];
+      return isWidgetStyle(id, style) ? { id, style } : id;
+    });
     saveChain.current = saveChain.current.then(async () => {
-      const res = await saveDashboardWidgets({ widgets: next });
+      const res = await saveDashboardWidgets({ widgets });
       if (!res.ok)
         toast.error("Couldn't save your dashboard layout", { description: res.error.message });
     });
@@ -162,7 +193,7 @@ export function AdminDashboard({
   };
 
   const definitions = enabled
-    .map((k) => WIDGET_LIBRARY.find((w) => w.key === k))
+    .map((k) => library.find((w) => w.key === k))
     .filter((w): w is WidgetDefinition => Boolean(w) && !(w?.superAdminOnly && !isSuperAdmin));
 
   return (
@@ -199,7 +230,7 @@ export function AdminDashboard({
             >
               <LayoutGridIcon aria-hidden /> {editing ? "Done" : "Edit layout"}
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => persist(DEFAULT_LAYOUT)}>
+            <Button variant="ghost" size="sm" onClick={() => persist(defaultLayout)}>
               Reset to default
             </Button>
           </>
@@ -216,7 +247,7 @@ export function AdminDashboard({
               <Button size="sm" onClick={() => setLibraryOpen(true)}>
                 Add widget
               </Button>
-              <Button size="sm" variant="secondary" onClick={() => persist(DEFAULT_LAYOUT)}>
+              <Button size="sm" variant="secondary" onClick={() => persist(defaultLayout)}>
                 Use default layout
               </Button>
             </div>
@@ -252,11 +283,35 @@ export function AdminDashboard({
               onMoveUp={index > 0 ? () => move(def.key, -1) : undefined}
               onMoveDown={index < definitions.length - 1 ? () => move(def.key, 1) : undefined}
               viewAllHref={VIEW_ALL[def.key] ? href(VIEW_ALL[def.key] as string) : undefined}
+              styleName={resolveWidgetStyle(def.key, styles[def.key])}
+              dnd={
+                editing
+                  ? {
+                      draggable: true,
+                      title: "Drag to reorder",
+                      onDragStart: (e) => {
+                        setDragKey(def.key);
+                        e.dataTransfer.effectAllowed = "move";
+                        e.dataTransfer.setData("text/plain", def.key);
+                      },
+                      onDragOver: (e) => {
+                        if (dragKey) e.preventDefault();
+                      },
+                      onDrop: (e) => {
+                        e.preventDefault();
+                        if (dragKey && dragKey !== def.key)
+                          persist(moveKey(enabled, dragKey, def.key));
+                        setDragKey(null);
+                      },
+                      onDragEnd: () => setDragKey(null),
+                    }
+                  : undefined
+              }
             >
               {refreshing.has(def.key) ? (
                 <WidgetSkeleton />
               ) : (
-                <WidgetBody widget={def.key} data={data} />
+                <WidgetBody widget={def.key} data={data} style={styles[def.key]} />
               )}
             </WidgetFrame>
           ))}
@@ -268,8 +323,8 @@ export function AdminDashboard({
           <SheetHeader>
             <SheetTitle>Widget library</SheetTitle>
             <SheetDescription>
-              {WIDGET_LIBRARY.length} widgets. Toggle to add or remove; widgets you lack permission
-              for are disabled.
+              {library.length} widgets. Toggle to add or remove; widgets you lack permission for are
+              disabled.
             </SheetDescription>
           </SheetHeader>
           <div className="space-y-6 px-4 pb-6">
@@ -282,48 +337,84 @@ export function AdminDashboard({
                 "Catalog & customers",
                 "System & AI",
               ] as const
-            ).map((group) => (
-              <section key={group} aria-labelledby={`lib-${group}`}>
-                <h3
-                  id={`lib-${group}`}
-                  className="mb-2 text-overline tracking-wider text-fg-muted uppercase"
-                >
-                  {group}
-                </h3>
-                <ul className="space-y-2">
-                  {WIDGET_LIBRARY.filter((w) => w.group === group).map((w) => {
-                    const blocked = Boolean(w.superAdminOnly && !isSuperAdmin);
-                    const on = enabled.includes(w.key);
-                    return (
-                      <li
-                        key={w.key}
-                        className={cn(
-                          "flex items-start gap-3 rounded-md border border-border bg-surface p-3",
-                          blocked && "opacity-60",
-                        )}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <Label htmlFor={`lib-${w.key}`} className="text-body-sm">
-                            {w.title}
-                          </Label>
-                          <p className="text-caption text-fg-muted">{w.description}</p>
-                          <p className="font-mono text-caption text-fg-subtle">
-                            requires {w.requiredPermission}
-                            {blocked ? " · not permitted" : ""}
-                          </p>
-                        </div>
-                        <Switch
-                          id={`lib-${w.key}`}
-                          checked={on}
-                          disabled={blocked}
-                          onCheckedChange={(v) => toggle(w.key, v)}
-                        />
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            ))}
+            )
+              .filter((group) => library.some((w) => w.group === group))
+              .map((group) => (
+                <section key={group} aria-labelledby={`lib-${group}`}>
+                  <h3
+                    id={`lib-${group}`}
+                    className="mb-2 text-overline tracking-wider text-fg-muted uppercase"
+                  >
+                    {group}
+                  </h3>
+                  <ul className="space-y-2">
+                    {library
+                      .filter((w) => w.group === group)
+                      .map((w) => {
+                        const blocked = Boolean(w.superAdminOnly && !isSuperAdmin);
+                        const on = enabled.includes(w.key);
+                        return (
+                          <li
+                            key={w.key}
+                            className={cn(
+                              "flex items-start gap-3 rounded-md border border-border bg-surface p-3",
+                              blocked && "opacity-60",
+                            )}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <Label htmlFor={`lib-${w.key}`} className="text-body-sm">
+                                {w.title}
+                              </Label>
+                              <p className="text-caption text-fg-muted">{w.description}</p>
+                              <p className="font-mono text-caption text-fg-subtle">
+                                requires {w.requiredPermission}
+                                {blocked ? " · not permitted" : ""}
+                              </p>
+                              {on && !blocked ? (
+                                <div className="mt-2 flex items-center gap-2">
+                                  <Label
+                                    htmlFor={`style-${w.key}`}
+                                    className="text-caption text-fg-muted"
+                                  >
+                                    Style
+                                  </Label>
+                                  <Select
+                                    value={resolveWidgetStyle(w.key, styles[w.key])}
+                                    onValueChange={(v) =>
+                                      persist(enabled, { ...styles, [w.key]: v })
+                                    }
+                                  >
+                                    <SelectTrigger
+                                      id={`style-${w.key}`}
+                                      size="sm"
+                                      aria-label={`${w.title} style`}
+                                      className="w-40"
+                                    >
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {stylesFor(w.key).map((st) => (
+                                        <SelectItem key={st} value={st}>
+                                          {st}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              ) : null}
+                            </div>
+                            <Switch
+                              id={`lib-${w.key}`}
+                              checked={on}
+                              disabled={blocked}
+                              onCheckedChange={(v) => toggle(w.key, v)}
+                            />
+                          </li>
+                        );
+                      })}
+                  </ul>
+                </section>
+              ))}
           </div>
         </SheetContent>
       </Sheet>
@@ -354,22 +445,38 @@ function Stat({
   count,
   delta,
   hint,
+  variant = "plain",
 }: {
   value: string;
   /** Raw number behind `value`: counts up on first view instead of showing `value` directly. */
   count?: number;
   delta?: string;
   hint?: string;
+  /** P14-09 style: only frame/size/delta treatment changes, the numbers always render. */
+  variant?: string;
 }) {
   return (
-    <div>
-      <div className="text-[28px] leading-tight font-semibold tnum">
+    <div
+      data-variant={variant}
+      className={cn(
+        variant === "accent-bar" && "border-l-4 border-accent pl-3",
+        variant === "outlined" && "rounded-md border border-border p-3",
+        variant === "tinted" && "rounded-md bg-accent-soft p-3",
+      )}
+    >
+      <div
+        className={cn(
+          "leading-tight font-semibold tnum",
+          variant === "big-number" ? "text-[44px]" : "text-[28px]",
+        )}
+      >
         {count !== undefined ? <AnimatedNumber value={count} format={inr} /> : value}
       </div>
       {delta ? (
         <div
           className={cn(
             "text-caption font-medium",
+            variant === "trend-badge" && "mt-1 inline-block rounded-full bg-elevated px-2 py-0.5",
             delta.startsWith("+")
               ? "text-success"
               : delta.startsWith("-")
@@ -397,13 +504,24 @@ function NoData({ text = NO_DATA_TEXT }: { text?: string }) {
 
 const hasValues = (rows: ReadonlyArray<{ value: number }>) => rows.some((r) => r.value !== 0);
 
-export function WidgetBody({ widget, data }: { widget: WidgetKey; data: DashboardData }) {
+export function WidgetBody({
+  widget,
+  data,
+  style,
+}: {
+  widget: WidgetKey;
+  data: DashboardData;
+  /** Saved style; invalid or missing falls back to the widget kind's default (P14-09). */
+  style?: string;
+}) {
+  const v = resolveWidgetStyle(widget, style);
   switch (widget) {
     case "revenue_by_period":
       if (!hasValues(data.revenueByPeriod)) return <NoData />;
       return (
-        <BarChart
+        <LineChart
           data={data.revenueByPeriod}
+          variant={v as LineVariant}
           formatValue={inr}
           summary={`Revenue by period: ${data.revenueByPeriod.map((d) => `${d.label} ${lakh(d.value)}`).join(", ")}.`}
           caption="Revenue by period (INR)"
@@ -421,6 +539,7 @@ export function WidgetBody({ widget, data }: { widget: WidgetKey; data: Dashboar
           }))}
           formatValue={inr}
           colourByBar
+          variant={v as BarVariant}
           summary={`Revenue by product, highest ${data.revenueByProduct[0]?.label ?? "—"}.`}
           caption="Revenue by product (INR)"
         />
@@ -432,6 +551,7 @@ export function WidgetBody({ widget, data }: { widget: WidgetKey; data: Dashboar
           data={data.revenueByPartner}
           formatValue={inr}
           colourByBar
+          variant={v as BarVariant}
           summary="Revenue by partner."
           caption="Revenue by partner (INR)"
         />
@@ -446,7 +566,12 @@ export function WidgetBody({ widget, data }: { widget: WidgetKey; data: Dashboar
             hint="Your allocations, net of refunds"
           />
           {data.myShare.sparkline.length > 1 ? (
-            <Sparkline points={data.myShare.sparkline} label="Weekly share trend" series={2} />
+            <Sparkline
+              points={data.myShare.sparkline}
+              label="Weekly share trend"
+              series={2}
+              variant={v as SparklineVariant}
+            />
           ) : null}
         </div>
       );
@@ -457,6 +582,7 @@ export function WidgetBody({ widget, data }: { widget: WidgetKey; data: Dashboar
             value={inr(data.outstandingPayouts.totalInr)}
             count={data.outstandingPayouts.totalInr}
             hint="Across all partners"
+            variant={v}
           />
           <QueueList items={data.outstandingPayouts.items} empty="Nothing outstanding" />
         </>
@@ -467,43 +593,61 @@ export function WidgetBody({ widget, data }: { widget: WidgetKey; data: Dashboar
         <StackedBarChart
           data={data.expensesVsProfit.map((d) => ({ label: d.label, a: d.expenses, b: d.profit }))}
           seriesLabels={["Expenses", "Profit"]}
+          variant={v as BarVariant}
           formatValue={inr}
           summary="Expenses versus profit per month."
           caption="Expenses vs profit (INR)"
         />
       );
     case "payments_awaiting":
-      return <QueueList items={data.paymentsAwaiting} empty="No payments awaiting confirmation" />;
+      return (
+        <QueueList
+          items={data.paymentsAwaiting}
+          empty="No payments awaiting confirmation"
+          variant={v}
+        />
+      );
     case "publish_approvals":
-      return <QueueList items={data.publishApprovals} empty="No publish approvals pending" />;
+      return (
+        <QueueList items={data.publishApprovals} empty="No publish approvals pending" variant={v} />
+      );
     case "split_approvals":
-      return <QueueList items={data.splitApprovals} empty="No split approvals pending" />;
+      return (
+        <QueueList items={data.splitApprovals} empty="No split approvals pending" variant={v} />
+      );
     case "service_checklists":
-      return <QueueList items={data.serviceChecklists} empty="No service checklists due" />;
+      return (
+        <QueueList items={data.serviceChecklists} empty="No service checklists due" variant={v} />
+      );
     case "revocation_tasks":
-      return <QueueList items={data.revocationTasks} empty="No revocation tasks" />;
+      return <QueueList items={data.revocationTasks} empty="No revocation tasks" variant={v} />;
     case "new_leads":
       return (
         <>
-          <Stat value={String(data.newLeads.count)} delta={data.newLeads.delta} />
+          <Stat value={String(data.newLeads.count)} delta={data.newLeads.delta} variant={v} />
           <QueueList items={data.newLeads.items} empty="No new leads" />
         </>
       );
     case "pipeline_funnel":
       if (!hasValues(data.funnel)) return <NoData text="No leads in the pipeline yet" />;
-      return <Funnel stages={data.funnel} caption="Leads per pipeline stage" />;
+      return (
+        <Funnel stages={data.funnel} caption="Leads per pipeline stage" variant={v as BarVariant} />
+      );
     case "overdue_follow_ups":
-      return <QueueList items={data.overdueFollowUps} empty="No overdue follow-ups" />;
+      return <QueueList items={data.overdueFollowUps} empty="No overdue follow-ups" variant={v} />;
     case "conversion_rate":
       return (
         <Stat
           value={`${Math.round(data.conversionRate.value * 100)} %`}
           delta={data.conversionRate.delta}
           hint="Won ÷ closed"
+          variant={v}
         />
       );
     case "open_queries":
-      return <QueueList items={data.openQueries} empty="Inbox zero — no open queries" />;
+      return (
+        <QueueList items={data.openQueries} empty="Inbox zero — no open queries" variant={v} />
+      );
     case "visits_top_products":
       return (
         <>
@@ -511,6 +655,7 @@ export function WidgetBody({ widget, data }: { widget: WidgetKey; data: Dashboar
             value={plainNumber(data.visits.total)}
             delta={data.visits.delta}
             hint="Visits (Umami)"
+            variant={v}
           />
           {data.visits.top.length === 0 ? <NoData text="No product views yet" /> : null}
           <Table className={data.visits.top.length === 0 ? "hidden" : undefined}>
@@ -541,42 +686,55 @@ export function WidgetBody({ widget, data }: { widget: WidgetKey; data: Dashboar
             max={data.chatbotUsage.platformCap}
             label="Platform messages today"
             format={plainNumber}
+            variant={v as GaugeVariant}
           />
           <Gauge
             value={data.chatbotUsage.usersAtCap}
             max={10}
             label={`Users at the ${data.chatbotUsage.perUserCap}/day cap`}
+            variant={v as GaugeVariant}
           />
         </div>
       );
     case "catalog_status":
       if (data.catalogStatus.length === 0) return <NoData text="No products yet" />;
       return (
-        <ul className="flex flex-wrap gap-2">
-          {data.catalogStatus.map((c) => (
-            <li
-              key={c.status}
-              className="flex items-center gap-2 rounded-md border border-border px-2 py-1"
-            >
-              <StatusBadge kind="products.status" value={c.status} size="sm" />
-              <span className="font-mono text-body-sm tnum">{c.count}</span>
-            </li>
-          ))}
-        </ul>
+        <DonutChart
+          data={data.catalogStatus.map((c) => ({ label: c.status, value: c.count }))}
+          variant={v as DonutVariant}
+          legendLabel={(d) => (
+            <StatusBadge kind="products.status" value={d.label as ProductStatus} size="sm" />
+          )}
+          summary={`Products per status: ${data.catalogStatus.map((c) => `${c.status} ${c.count}`).join(", ")}.`}
+        />
       );
     case "new_customers":
       return (
         <div className="flex items-end justify-between gap-3">
           <Stat value={String(data.newCustomers.count)} delta={data.newCustomers.delta} />
           {data.newCustomers.sparkline.length > 1 ? (
-            <Sparkline points={data.newCustomers.sparkline} label="Daily sign-ups" series={6} />
+            <Sparkline
+              points={data.newCustomers.sparkline}
+              label="Daily sign-ups"
+              series={6}
+              variant={v as SparklineVariant}
+            />
           ) : null}
         </div>
+      );
+    case "orders_heatmap":
+      if (data.ordersHeatmap.total === 0) return <NoData text="No orders in the last 90 days" />;
+      return (
+        <HeatmapChart
+          data={data.ordersHeatmap}
+          variant={v as HeatmapVariant}
+          caption="Orders by weekday and hour, last 90 days (IST)"
+        />
       );
     case "system_health":
       if (data.systemHealth.length === 0) return <NoData text="Health checks unavailable" />;
       return (
-        <ul className="space-y-1.5">
+        <ul data-variant={v} className={cn("space-y-1.5", LIST_CLASS[v])}>
           {data.systemHealth.map((h) => {
             const status = h.status ?? (h.ok ? "ok" : "fail");
             const Icon =

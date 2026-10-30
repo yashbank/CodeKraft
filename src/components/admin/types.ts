@@ -3,7 +3,10 @@
  * Components are props-driven and never fetch; Phase 8 maps Server Action results onto these
  * shapes. Money is always `{ amountMinor, currency }` (lib/money); timestamps are ISO strings.
  */
+import type { AttachmentView } from "@/lib/attachments";
 import type { Currency } from "@/lib/money";
+import type { SectionStyle } from "@/modules/content/section-style";
+import type { StudioExtras, ThemePreset } from "@/lib/theme-studio";
 import type { StatusValue } from "@/lib/status-tone";
 import type { SellerDetails } from "@/modules/settings/types";
 
@@ -37,7 +40,7 @@ export interface AdminNotification {
 }
 
 export interface SearchItem {
-  group: "Products" | "Orders" | "Customers" | "Leads" | "Go to" | "Actions";
+  group: "Products" | "Orders" | "Invoices" | "Customers" | "Leads" | "Go to" | "Actions";
   label: string;
   hint?: string;
   href: string;
@@ -607,7 +610,7 @@ export interface QueryMessage {
   at: string;
   text: string;
   internal?: boolean;
-  attachments?: string[];
+  attachments?: AttachmentView[];
 }
 
 export interface QueryThread {
@@ -631,6 +634,7 @@ export interface ConversationRow {
 export interface TranscriptTurn {
   role: "user" | "assistant" | "menu" | "system";
   text: string;
+  attachments?: AttachmentView[];
   sources?: string[];
   tokens?: number;
   latencyMs?: number;
@@ -827,6 +831,7 @@ export interface LandingChapter {
   posterMediaId?: string;
   nodeLabel?: string;
   nodeStyle?: "pill" | "terminal" | "outline";
+  style?: SectionStyle;
   ctaPrimary?: { label: string; target: string };
   ctaSecondary?: { label: string; target: string };
 }
@@ -963,6 +968,8 @@ export interface SettingsData {
     pattern: string;
     layout: string;
     density: string;
+    studio: StudioExtras;
+    presets: ThemePreset[];
     lightEnabled: boolean;
   };
   ai: {
@@ -981,6 +988,11 @@ export interface SettingsData {
     digestEnabled: boolean;
     digestTime: string;
     sender: string;
+    /** P14-04: admin-set "From" (blank = use `sender`). */
+    fromName: string;
+    fromAddress: string;
+    /** Active EMAIL_TRANSPORT (log / outbox / resend). */
+    transport: string;
   };
   flags: FeatureFlagRow[];
   retention: { chatMonths: number; recordYears: number; nextPurgeAt: string; lastRunAt: string };
@@ -1038,7 +1050,8 @@ export type WidgetKey =
   | "chatbot_usage"
   | "catalog_status"
   | "new_customers"
-  | "system_health";
+  | "system_health"
+  | "orders_heatmap";
 
 export interface QueueItem {
   label: string;
@@ -1070,6 +1083,8 @@ export interface DashboardData {
   chatbotUsage: { platform: number; platformCap: number; usersAtCap: number; perUserCap: number };
   catalogStatus: Array<{ status: ProductStatus; count: number }>;
   newCustomers: { count: number; delta: string; sparkline: number[] };
+  /** Orders by weekday (Mon..Sun) x hour over the last 90 days (P14-12a). */
+  ordersHeatmap: { grid: number[][]; total: number; max: number };
   systemHealth: Array<{
     label: string;
     ok: boolean;

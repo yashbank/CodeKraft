@@ -3,7 +3,7 @@
 import { LayoutGridIcon, ListIcon, SearchIcon, SlidersHorizontalIcon, XIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { Suspense, useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { toggleWishlist } from "@/modules/catalog/site-mutations";
@@ -154,12 +154,7 @@ function sortProducts(list: ProductSummary[], sort: ProductSort): ProductSummary
   });
 }
 
-/**
- * SCR-SITE-03 — search, sidebar filters (Sheet below lg with sticky "Show N products"), active
- * filter chips, sort, grid/list toggle, 3-up grid (4-up at 2xl), pagination, tax footnote (BR-08).
- * Client-side over the passed list; P7 moves query/filters/sort/page to the URL and SSR.
- */
-export function ProductsListPage({
+function ProductsListBody({
   products,
   categories,
   intro,
@@ -170,7 +165,8 @@ export function ProductsListPage({
   initialFilters,
   signedIn = false,
   wishlistedIds = [],
-}: ProductsListPageProps) {
+  searchParams,
+}: ProductsListPageProps & { searchParams: URLSearchParams }) {
   const symbol = currencySymbol(products.find((p) => p.fromPrice)?.fromPrice?.currency ?? "INR");
   const [wishlisted, setWishlisted] = useState<Set<string>>(() => new Set(wishlistedIds));
 
@@ -196,7 +192,6 @@ export function ProductsListPage({
 
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   const setParams = useCallback(
     (patch: ParamPatch, opts?: { push?: boolean }) => {
@@ -492,7 +487,7 @@ export function ProductsListPage({
                     type="button"
                     onClick={c.remove}
                     aria-label={`Remove filter: ${c.label}`}
-                    className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-surface pr-2 pl-3 text-body-sm text-fg transition-colors hover:border-accent hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    className="inline-flex h-10 items-center gap-1.5 rounded-full border border-border bg-surface pr-2 pl-3 text-body-sm text-fg transition-colors hover:border-accent hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   >
                     {c.label}
                     <XIcon aria-hidden className="size-3.5" />
@@ -658,7 +653,7 @@ function ViewButton({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        "inline-flex size-8 items-center justify-center rounded-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "inline-flex size-10 items-center justify-center rounded-sm transition-colors lg:size-8 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
         active ? "bg-elevated text-fg shadow-1" : "text-fg-muted hover:text-fg",
       )}
     >
@@ -679,5 +674,25 @@ function FilterSkeleton() {
         </div>
       ))}
     </div>
+  );
+}
+
+function ProductsListWithUrl(props: ProductsListPageProps) {
+  return <ProductsListBody {...props} searchParams={useSearchParams()} />;
+}
+
+/**
+ * SCR-SITE-03 — search, sidebar filters (Sheet below lg with sticky "Show N products"), active
+ * filter chips, sort, grid/list toggle, 3-up grid (4-up at 2xl), pagination, tax footnote (BR-08).
+ * Client-side over the passed list; P7 moves query/filters/sort/page to the URL and SSR.
+ */
+export function ProductsListPage(props: ProductsListPageProps) {
+  // useSearchParams() makes a statically prerendered page client-render up to the nearest Suspense
+  // boundary. The fallback is the same list with default URL state, so the ISR HTML of /products
+  // still contains the full product grid (P15-02); the live URL state takes over once hydrated.
+  return (
+    <Suspense fallback={<ProductsListBody {...props} searchParams={new URLSearchParams()} />}>
+      <ProductsListWithUrl {...props} />
+    </Suspense>
   );
 }

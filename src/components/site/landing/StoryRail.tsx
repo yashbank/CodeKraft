@@ -50,7 +50,7 @@ export function StoryRail({ chapters }: { chapters: StoryChapterRef[] }) {
     <>
       <div
         aria-hidden
-        className="sticky top-(--site-header-top,0px) z-(--ck-z-sticky) mt-14 -mb-14 h-0.5 w-full bg-border lg:hidden"
+        className="fixed inset-x-0 top-(--site-header-top,0px) z-(--ck-z-header) h-0.5 bg-border lg:hidden"
       >
         <div
           className="h-full origin-left bg-accent"

@@ -8,6 +8,7 @@ import { PlusIcon, ShoppingCartIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -40,7 +41,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
 import { confirmPayment, failPayment } from "@/modules/payments/admin-mutations";
+import { bulkSummary, runBulk } from "@/lib/admin/bulk";
 import { Banner } from "../Banner";
+import { BulkActionBar } from "../BulkActionBar";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
 import { FilterChips } from "../FilterChips";
@@ -85,9 +88,15 @@ export function OrdersList({
   const [failing, setFailing] = React.useState<OrderRow | null>(null);
   const [failReason, setFailReason] = React.useState("");
   const [failBusy, setFailBusy] = React.useState(false);
+  const [selected, setSelected] = React.useState<ReadonlySet<string>>(new Set());
+  const [bulkFail, setBulkFail] = React.useState(false);
   const awaiting = orders.filter((o) => o.awaitingConfirmation);
   const rows =
     queue === "awaiting" ? awaiting : queue ? orders.filter((o) => o.status === queue) : orders;
+  // Same rule as the single-row "Mark failed": a pending order that has a payment record.
+  const canFail = (o: OrderRow) => o.status === "pending_payment" && Boolean(o.payment.paymentId);
+  const eligible = rows.filter(canFail);
+  const picked = eligible.filter((o) => selected.has(o.id));
   const chips: Array<{ value: Queue; label: string; count: number; tone?: "warning" }> = [
     { value: "awaiting", label: "Awaiting confirmation", count: awaiting.length, tone: "warning" },
     ...(
@@ -165,6 +174,34 @@ export function OrdersList({
     router.refresh();
   }
 
+  async function handleBulkFail() {
+    if (failReason.trim().length === 0) {
+      toast.error("A reason is required.");
+      return;
+    }
+    const paymentIds = new Map(picked.map((o) => [o.id, o.payment.paymentId as string]));
+    setFailBusy(true);
+    const res = await runBulk([...paymentIds.keys()], (id) =>
+      failPayment({ paymentId: paymentIds.get(id), reason: failReason.trim() }),
+    ).catch((err: Error) => err);
+    setFailBusy(false);
+    if (res instanceof Error) {
+      toast.error(res.message);
+      return;
+    }
+    if (res.done.length === 0) {
+      toast.error(res.failed[0]?.message ?? "Failed");
+      return;
+    }
+    (res.failed.length > 0 ? toast.error : toast.success)(
+      bulkSummary("Marked failed:", "order", res),
+    );
+    setBulkFail(false);
+    setFailReason("");
+    setSelected(new Set());
+    router.refresh();
+  }
+
   const confirmDialog = confirming ? (
     <ConfirmPaymentDialog
       key={confirming.id}
@@ -179,10 +216,21 @@ export function OrdersList({
   ) : null;
 
   const failDialog = (
-    <Dialog open={failing !== null} onOpenChange={(o) => !o && setFailing(null)}>
+    <Dialog
+      open={failing !== null || bulkFail}
+      onOpenChange={(o) => {
+        if (!o) {
+          setFailing(null);
+          setBulkFail(false);
+        }
+      }}
+    >
       <DialogContent size="sm">
         <DialogHeader>
-          <DialogTitle>Mark payment failed{failing ? ` · ${failing.number}` : ""}</DialogTitle>
+          <DialogTitle>
+            Mark payment failed
+            {bulkFail ? ` · ${picked.length} orders` : failing ? ` · ${failing.number}` : ""}
+          </DialogTitle>
           <DialogDescription>
             The order stays pending_payment so the customer can retry.
           </DialogDescription>
@@ -202,7 +250,11 @@ export function OrdersList({
           <DialogClose asChild>
             <Button variant="ghost">Cancel</Button>
           </DialogClose>
-          <Button variant="destructive" onClick={handleFailPayment} disabled={failBusy}>
+          <Button
+            variant="destructive"
+            onClick={bulkFail ? handleBulkFail : handleFailPayment}
+            disabled={failBusy}
+          >
             Mark failed
           </Button>
         </DialogFooter>
@@ -336,6 +388,24 @@ export function OrdersList({
               </>
             }
           />
+          <BulkActionBar count={selected.size} onClear={() => setSelected(new Set())}>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={picked.length === 0}
+              title={
+                picked.length === 0
+                  ? "Only pending orders with a payment record can be failed"
+                  : undefined
+              }
+              onClick={() => {
+                setFailReason("");
+                setBulkFail(true);
+              }}
+            >
+              Mark payments failed
+            </Button>
+          </BulkActionBar>
           {queue === "awaiting" ? (
             <Banner tone="info" className="mb-3">
               Payments where the customer submitted a reference or that are older than 1 day without
@@ -353,6 +423,22 @@ export function OrdersList({
                 <TableCaption className="sr-only">Orders</TableCaption>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox
+                        aria-label="Select all orders"
+                        disabled={eligible.length === 0}
+                        checked={
+                          eligible.length > 0 && eligible.every((o) => selected.has(o.id))
+                            ? true
+                            : selected.size > 0
+                              ? "indeterminate"
+                              : false
+                        }
+                        onCheckedChange={(v) =>
+                          setSelected(v === true ? new Set(eligible.map((o) => o.id)) : new Set())
+                        }
+                      />
+                    </TableHead>
                     <TableHead>Order no</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Customer</TableHead>
@@ -380,6 +466,21 @@ export function OrdersList({
                           router.push(`${detailHref}/${o.id}`);
                         }}
                       >
+                        <TableCell>
+                          <Checkbox
+                            aria-label={`Select ${o.number}`}
+                            disabled={!canFail(o)}
+                            checked={selected.has(o.id)}
+                            onCheckedChange={(v) =>
+                              setSelected((p) => {
+                                const n = new Set(p);
+                                if (v === true) n.add(o.id);
+                                else n.delete(o.id);
+                                return n;
+                              })
+                            }
+                          />
+                        </TableCell>
                         <TableCell>
                           <Link
                             href={`${detailHref}/${o.id}`}

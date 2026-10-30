@@ -6,7 +6,7 @@ import type { userStatus } from "../../../drizzle/schema/auth";
 import type { BillingAddress, NotificationPrefs } from "../../../drizzle/schema/users-ext";
 import type { Permission, Role } from "@/lib/authz/permissions";
 import type { Currency } from "@/lib/money";
-import type { ThemeName } from "@/lib/theme";
+import type { ThemePref } from "@/lib/theme";
 import { enumTuple } from "../catalog/types";
 
 export type { Session, User } from "../../../drizzle/schema/auth";
@@ -37,7 +37,7 @@ export interface UserView {
   phoneNumber: string | null;
   status: UserStatus;
   displayCurrency: Currency;
-  themePref: ThemeName | null;
+  themePref: ThemePref | null;
   twoFactorEnabled: boolean;
   createdAt: string;
 }
@@ -48,7 +48,7 @@ export interface Me {
   roles: Role[];
   permissions: Permission[];
   displayCurrency: Currency;
-  themePref: ThemeName | null;
+  themePref: ThemePref | null;
   emailVerified: boolean;
   twoFactorEnabled: boolean;
   partner?: { id: string; displayName: string; active: boolean };
@@ -68,7 +68,7 @@ export interface CustomerProfileView {
 /** API-AUTH-04 output. */
 export interface AccountSettings {
   displayCurrency: Currency;
-  themePref: ThemeName | null;
+  themePref: ThemePref | null;
 }
 
 export interface SessionView {
@@ -90,7 +90,7 @@ export interface CustomerRow {
 }
 
 export type CustomerTimelineKind =
-  "order" | "payment" | "entitlement" | "query" | "note" | "login" | "status";
+  "order" | "payment" | "entitlement" | "query" | "note" | "login" | "status" | "audit";
 
 export interface CustomerTimelineItem {
   at: string;

@@ -10,7 +10,7 @@ import { sql } from "drizzle-orm";
 import { can } from "@/lib/authz/assert";
 import type { RequestContext } from "@/lib/authz/context";
 import { db } from "@/lib/db";
-import type { DashboardData, QueueItem } from "@/components/admin/types";
+import type { DashboardData, QueueItem, WidgetKey } from "@/components/admin/types";
 import { rawSumsFromRow, rawSumsSql } from "@/modules/finance/metrics-core";
 import { buildMyShare } from "./dashboard-finance-core";
 
@@ -63,14 +63,16 @@ export async function revenueByProduct(range: DateRange) {
   return [...rows].map((r) => ({ id: r.id, label: r.label, value: n(r.value) }));
 }
 
+/** `want` limits which widgets are queried (role allow-list / layout); default = all. */
 export async function loadDashboardFinance(
   ctx: RequestContext,
   range: DateRange,
+  want: (key: WidgetKey) => boolean = () => true,
 ): Promise<FinanceWidgets> {
   const out: FinanceWidgets = structuredClone(EMPTY);
   const readAll = can(ctx, "finance.ledger.read_all");
 
-  if (can(ctx, "payments.confirm")) {
+  if (want("payments_awaiting") && can(ctx, "payments.confirm")) {
     const rows = await db.execute<{
       id: string;
       order_no: string;
@@ -92,9 +94,9 @@ export async function loadDashboardFinance(
     }));
   }
 
-  if (readAll) {
-    out.revenueByProduct = await revenueByProduct(range);
+  if (readAll && want("revenue_by_product")) out.revenueByProduct = await revenueByProduct(range);
 
+  if (readAll && want("revenue_by_partner")) {
     const partnerRows = await db.execute<{ label: string; value: string }>(sql`
       select pa.display_name as label, sum(le.amount_inr_minor) as value
       from ledger_entries le join partners pa on pa.id = le.partner_id
@@ -103,7 +105,9 @@ export async function loadDashboardFinance(
       group by pa.display_name having sum(le.amount_inr_minor) <> 0
       order by value desc limit 8`);
     out.revenueByPartner = [...partnerRows].map((r) => ({ label: r.label, value: n(r.value) }));
+  }
 
+  if (readAll && want("outstanding_payouts")) {
     // Outstanding = allocated - refunded - paid out, per partner (all time).
     const owed = await db.execute<{ id: string; label: string; value: string }>(sql`
       select pa.id, pa.display_name as label, sum(le.amount_inr_minor) as value
@@ -120,7 +124,9 @@ export async function loadDashboardFinance(
         href: "/finance/partners",
       })),
     };
+  }
 
+  if (readAll && want("expenses_vs_profit")) {
     // Last 6 calendar months: expenses vs profit (company + partner shares net of refunds, minus
     // expenses; floored at 0 because the stacked chart cannot draw a negative bar).
     const months = await db.execute<{ m: string; expenses: string; shares: string }>(sql`
@@ -144,7 +150,7 @@ export async function loadDashboardFinance(
     }));
   }
 
-  if (ctx.partnerId) {
+  if (ctx.partnerId && want("my_share")) {
     const sumRows = await db.execute<Record<string, unknown>>(sql`
       select ${rawSumsSql("le")} from ledger_entries le
       where le.partner_id = ${ctx.partnerId} and ${win(range)}`);

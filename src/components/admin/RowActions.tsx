@@ -45,7 +45,8 @@ export function RowActions({ label, actions }: { label: string; actions: RowActi
             ) : (
               <DropdownMenuItem
                 onSelect={a.onSelect}
-                disabled={a.disabled}
+                // No handler = nothing to run: show it disabled rather than as a dead click.
+                disabled={a.disabled || !a.onSelect}
                 variant={a.destructive ? "destructive" : "default"}
               >
                 {a.label}

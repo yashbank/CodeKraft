@@ -44,7 +44,7 @@ function usePrefersReducedMotion(): boolean {
 }
 
 /**
- * Client logo strip (docs/08 §6.5 trust row): greyscale `fg-subtle` at 70 %, colour on hover.
+ * Client logo strip (docs/08 §6.5 trust row): greyscale `fg-muted`, colour on hover.
  * Renders the uploaded logo image (Admin → Content → Testimonials & logos) when there is one,
  * otherwise the client name as text. Scrolls as a marquee (paused on hover/focus) with a
  * macOS-Dock magnify under the pointer; both are off under reduced motion.
@@ -70,7 +70,7 @@ export function LogoStrip({
         <li
           key={`${copy}-${l.id}`}
           data-logo
-          className="group flex h-8 shrink-0 origin-center items-center whitespace-nowrap font-display text-body-lg font-semibold tracking-tight text-fg-subtle opacity-70 transition-[color,opacity,transform] duration-(--ck-motion-duration-sm) hover:text-fg hover:opacity-100"
+          className="group flex h-8 shrink-0 origin-center items-center whitespace-nowrap font-display text-body-lg font-semibold tracking-tight text-fg-muted transition-[color,opacity,transform] duration-(--ck-motion-duration-sm) hover:text-fg"
         >
           {l.href ? (
             <a href={l.href} target="_blank" rel="noopener noreferrer" tabIndex={copy ? -1 : 0}>

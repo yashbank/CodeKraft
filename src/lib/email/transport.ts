@@ -72,13 +72,16 @@ export async function sendEmail(message: EmailMessage): Promise<EmailSendResult>
  */
 export function emailSenderProblem(
   env: Pick<ReturnType<typeof getEnv>, "EMAIL_TRANSPORT" | "EMAIL_FROM" | "RESEND_API_KEY">,
+  /** P14-04: valid admin-set sender (`getStoredEmailFrom`); replaces EMAIL_FROM in the checks. */
+  storedFrom?: string | null,
 ): string | null {
+  const from = storedFrom || env.EMAIL_FROM;
   if (env.EMAIL_TRANSPORT !== "resend")
     return `EMAIL_TRANSPORT is "${env.EMAIL_TRANSPORT}", not "resend"`;
   if (!env.RESEND_API_KEY) return "RESEND_API_KEY is not set";
-  if (!env.EMAIL_FROM) return "EMAIL_FROM is not set";
-  if (/@(?:[^>\s]*\.invalid|resend\.dev)>?\s*$/i.test(env.EMAIL_FROM)) {
-    return `EMAIL_FROM (${env.EMAIL_FROM}) is a placeholder or unverified sender domain`;
+  if (!from) return "EMAIL_FROM is not set";
+  if (/@(?:[^>\s]*\.invalid|resend\.dev)>?\s*$/i.test(from)) {
+    return `EMAIL_FROM (${from}) is a placeholder or unverified sender domain`;
   }
   return null;
 }
@@ -143,8 +146,12 @@ async function deliver(message: EmailMessage): Promise<EmailSendResult> {
     return { transport: "resend", skipped: "daily_cap" };
   }
   if (!env.RESEND_API_KEY) throw new Error("RESEND_API_KEY missing for EMAIL_TRANSPORT=resend");
-  const { getSiteLogo, getSiteName } = await import("@/lib/site-brand");
-  const [siteName, logoUrl] = await Promise.all([getSiteName(), getSiteLogo()]);
+  const { getSiteLogo, getSiteName, getStoredEmailFrom } = await import("@/lib/site-brand");
+  const [siteName, logoUrl, storedFrom] = await Promise.all([
+    getSiteName(),
+    getSiteLogo(),
+    getStoredEmailFrom(),
+  ]);
   const subject = brandSubject(message.subject, siteName);
   const { html, text } = await renderGenericEmail(
     subject,
@@ -154,7 +161,7 @@ async function deliver(message: EmailMessage): Promise<EmailSendResult> {
     logoUrl,
   );
   const res = await getResend(env.RESEND_API_KEY).emails.send({
-    from: brandFromAddress(env.EMAIL_FROM, siteName),
+    from: storedFrom ?? brandFromAddress(env.EMAIL_FROM, siteName),
     to: message.to,
     replyTo: env.EMAIL_REPLY_TO || undefined,
     subject,
@@ -174,7 +181,7 @@ async function deliver(message: EmailMessage): Promise<EmailSendResult> {
       {
         to: message.to,
         template: message.template,
-        from: env.EMAIL_FROM,
+        from: storedFrom ?? env.EMAIL_FROM,
         resendError: { name: res.error.name, message: res.error.message },
       },
       "Resend rejected the email",

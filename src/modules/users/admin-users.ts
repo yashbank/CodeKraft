@@ -218,6 +218,10 @@ export async function inviteAdmin(
 ): Promise<AdminUserChangeResult> {
   assertPermission(ctx, "users.admin.manage");
 
+  if (input.partner && input.role === "staff") {
+    throw new AppError(ErrorCode.VALIDATION, "Only admins and super admins can be partners.");
+  }
+
   const currentAdmins = await countActiveAdmins(database);
   const warning = currentAdmins < 2 ? ("fewer_than_two_admins" as const) : undefined;
 
@@ -433,7 +437,7 @@ export async function applyAdminUserChange(
       })
       .onConflictDoNothing();
 
-    if (p.partner) {
+    if (p.partner && p.role !== "staff") {
       await tx
         .insert(partners)
         .values({
@@ -441,7 +445,11 @@ export async function applyAdminUserChange(
           displayName: p.partner.displayName,
           active: true,
         })
-        .onConflictDoNothing();
+        // A removed admin's partner row is deactivated; re-inviting them as a partner revives it.
+        .onConflictDoUpdate({
+          target: partners.userId,
+          set: { active: true, displayName: p.partner.displayName, updatedAt: new Date() },
+        });
     }
 
     // R8-09: the invite used to create a password-less user and send nothing, so the invitee had

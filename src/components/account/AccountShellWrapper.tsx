@@ -4,16 +4,18 @@ import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 
 import { AccountShell, type AccountNavKey } from "./AccountShell";
+import { KeyboardShortcutsSheet } from "@/components/admin/KeyboardShortcutsSheet";
 import { Banner } from "./Banner";
 import { ResendVerificationButton } from "./ResendVerificationButton";
 import type { NotificationItem } from "./types";
 import { CURRENCY_COOKIE } from "@/lib/currency-prefs";
+import { usePolling } from "@/lib/use-polling";
 import type { Currency } from "@/lib/money";
 import { updateMyAccountSettings } from "@/modules/users/site-mutations";
 import { markAllMyNotificationsRead } from "@/modules/notifications/site-mutations";
 
 /** Re-fetch server state (bell, badge, inbox share it) while the tab is visible. */
-const NOTIFICATION_POLL_MS = 30_000;
+const NOTIFICATION_POLL_MS = 60_000;
 
 interface AccountShellWrapperProps {
   user: { name: string; email: string; initials: string };
@@ -23,6 +25,7 @@ interface AccountShellWrapperProps {
   emailVerified?: boolean;
   currency?: Currency;
   currencyOptions?: readonly Currency[];
+  themeToggle?: boolean;
   children: React.ReactNode;
 }
 
@@ -33,16 +36,18 @@ export function AccountShellWrapper({
   emailVerified = true,
   currency = "INR",
   currencyOptions,
+  themeToggle,
   children,
 }: AccountShellWrapperProps) {
   const pathname = usePathname();
   const router = useRouter();
-  React.useEffect(() => {
-    const id = window.setInterval(() => {
-      if (document.visibilityState === "visible") router.refresh();
-    }, NOTIFICATION_POLL_MS);
-    return () => window.clearInterval(id);
-  }, [router]);
+  usePolling(
+    async () => {
+      router.refresh();
+      return "ok";
+    },
+    { intervalMs: NOTIFICATION_POLL_MS },
+  );
 
   let active: AccountNavKey = "overview";
   if (pathname.startsWith("/account/purchases") || pathname.startsWith("/account/orders"))
@@ -62,6 +67,7 @@ export function AccountShellWrapper({
       active={active}
       currency={currency}
       currencyOptions={currencyOptions}
+      themeToggle={themeToggle}
       onCurrencyChange={(c) => {
         document.cookie = `${CURRENCY_COOKIE}=${c}; path=/; max-age=31536000; samesite=lax`;
         void updateMyAccountSettings({ displayCurrency: c }).finally(() => router.refresh());
@@ -90,6 +96,7 @@ export function AccountShellWrapper({
           it&apos;s verified.
         </Banner>
       ) : null}
+      <KeyboardShortcutsSheet area="account" />
       {children}
     </AccountShell>
   );

@@ -8,6 +8,7 @@ import type { RequestContext } from "@/lib/authz/context";
 import type { DbOrTx, TxCtx } from "@/lib/db";
 import type { EmailMessage, EmailOutboxPort } from "@/lib/email/types";
 import type { Notification } from "../../../drizzle/schema/notifications";
+import type { StoredPrefs } from "./preferences";
 import type {
   EmitResult,
   ListNotificationsInput,
@@ -22,6 +23,7 @@ import type {
   PollNotificationsInput,
   PollNotificationsResult,
   RenderedNotification,
+  UpdateCategoryPreferenceInput,
   UpdateNotificationPreferencesInput,
 } from "./types";
 
@@ -41,6 +43,8 @@ export interface NotificationRecipient {
   roles: readonly string[];
   /** Customer preferences (D-1002); admins have no email channel (X-012). */
   preferences: NotificationPreferences | null;
+  /** Stored per-category switches (customers only); read by `channelEnabled` in `emit`. */
+  prefs?: StoredPrefs | null;
 }
 
 /** A delivery channel (`modules/notifications/channels/{inapp,email,whatsapp}`). */
@@ -107,6 +111,11 @@ export interface NotificationsService {
 
   /** API-NOTIF-04 `getNotificationPreferences` — `account.self` (customer). */
   getNotificationPreferences(ctx: RequestContext): Promise<NotificationPreferences>;
+  /** P14-12b — one category x channel switch; `account.self`. */
+  updateCategoryPreference(
+    ctx: RequestContext,
+    input: UpdateCategoryPreferenceInput,
+  ): Promise<{ category: string; channel: string; enabled: boolean }>;
 
   /** API-NOTIF-04 `updateNotificationPreferences` — `customer_profiles.notification_prefs`. */
   updateNotificationPreferences(

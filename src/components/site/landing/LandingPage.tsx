@@ -78,6 +78,7 @@ export function LandingPage({
         eyebrow={content.build.eyebrow}
         title={content.build.title}
         body={content.build.body}
+        style={content.build.style}
         layout="split"
       >
         <ul className="grid gap-3 sm:grid-cols-2">
@@ -98,6 +99,7 @@ export function LandingPage({
         eyebrow={content.sell.eyebrow}
         title={content.sell.title}
         body={content.sell.body}
+        style={content.sell.style}
         className="bg-[image:var(--ck-gradient-section)]"
       >
         {featuredProducts.length > 0 ? (
@@ -141,6 +143,7 @@ export function LandingPage({
         eyebrow={content.proof.eyebrow}
         title={content.proof.title}
         body={content.proof.body}
+        style={content.proof.style}
       >
         <div className="space-y-12">
           {content.proof.stats.length > 0 ? (
@@ -190,6 +193,7 @@ export function LandingPage({
         eyebrow={content.talk.eyebrow}
         title={content.talk.title}
         body={content.talk.body}
+        style={content.talk.style}
         layout="split"
       >
         <Reveal className="rounded-xl border border-border bg-surface p-6 shadow-1 lg:p-8">

@@ -31,7 +31,9 @@ export default async function CheckoutPage({ params }: PageProps) {
   const session = await getSession();
 
   if (!session) {
-    redirect(`/auth/login?next=/checkout/${offeringId}`);
+    redirect(
+      `/auth/login?next=${encodeURIComponent(`/checkout/${encodeURIComponent(offeringId)}`)}`,
+    );
   }
 
   const ctx = await getSiteRequestContext();

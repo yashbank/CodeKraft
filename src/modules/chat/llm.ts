@@ -9,9 +9,20 @@
 
 export type LLMRole = "user" | "assistant";
 
+/** Anthropic-style content blocks (vision input, P14-06). */
+export type LLMContentBlock =
+  | { type: "text"; text: string }
+  | { type: "image"; source: { type: "base64"; media_type: string; data: string } };
+
 export interface LLMMessage {
   role: LLMRole;
-  content: string;
+  content: string | LLMContentBlock[];
+}
+
+/** Plain-text view of a message for providers without vision support. */
+export function llmContentText(content: LLMMessage["content"]): string {
+  if (typeof content === "string") return content;
+  return content.map((b) => (b.type === "text" ? b.text : "[image attached]")).join("\n");
 }
 
 /** JSON-schema-shaped tool definition (provider-neutral). Release 1 exposes only `capture_lead`. */

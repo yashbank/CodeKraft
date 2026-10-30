@@ -32,15 +32,15 @@ test.beforeAll(async () => {
 
   const snap = JSON.stringify({ name: "Buyer", email: buyer.email, country: "IN" });
   const mkOrder = async (no: string, status: string) => {
-    const ex = await one(`select id from orders where order_no=$1`, [no]);
-    if (ex) return ex.id!;
-    const o = (await one(
+    // Desktop and mobile workers build this fixture at the same time: insert-or-skip, then read.
+    const o = await one(
       `insert into orders (order_no, type, user_id, status, currency, subtotal_minor, total_minor,
          billing_snapshot, fx_rate_to_inr, expires_at, paid_at)
        values ($1,'product',$2,'${status}','INR',100000,100000,$3::jsonb,1, now() + interval '7 days',
-         ${status === "paid" ? "now()" : "null"}) returning id`,
+         ${status === "paid" ? "now()" : "null"}) on conflict (order_no) do nothing returning id`,
       [no, buyer.id, snap],
-    ))!;
+    );
+    if (!o) return (await one(`select id from orders where order_no=$1`, [no]))!.id!;
     await q(
       `insert into order_items (order_id, offering_id, product_id, description, unit_minor, total_minor)
        values ($1,$2,$3,'R914 item',100000,100000)`,

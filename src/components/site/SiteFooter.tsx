@@ -29,7 +29,7 @@ export function SiteFooter({
   const siteName = useSiteName();
   const explore = SITE_NAV.filter((i) => i.href !== "/contact");
   return (
-    <footer className="border-t border-border bg-surface">
+    <footer className="border-t border-border bg-surface print:hidden">
       <Container className="py-12 lg:py-16">
         <div className="grid gap-10 md:grid-cols-4 md:gap-8">
           <div className="space-y-4">
@@ -80,12 +80,12 @@ function FooterColumn({
   return (
     <nav aria-label={title}>
       <h2 className="text-overline tracking-wider text-fg-muted uppercase">{title}</h2>
-      <ul className="mt-4 space-y-2.5">
+      <ul className="mt-3 lg:mt-4 lg:space-y-2.5">
         {links.map((l) => (
           <li key={l.href}>
             <Link
               href={l.href}
-              className="rounded-xs text-body-sm text-fg transition-colors hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex min-h-10 min-w-10 items-center rounded-xs text-body-sm text-fg transition-colors lg:min-h-0 lg:min-w-0 hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               {l.label}
             </Link>

@@ -19,7 +19,7 @@ vi.mock("@/modules/finance/admin-mutations", () => ({
 const { createPartner, ensureSuperAdminPartners } = vi.hoisted(() => ({
   createPartner: vi.fn(async (_input: unknown) => ({
     ok: true,
-    data: { partner: { displayName: "Asha" } },
+    data: { partner: { id: "p-new", displayName: "Asha" } },
   })),
   ensureSuperAdminPartners: vi.fn(async () => ({
     ok: true,

@@ -13,7 +13,7 @@
  *  - `unread` is always `false` -- `QueryRow.unreadForCaller` has no backing read-tracking column
  *    on `queries` (see `modules/queries/service.ts`'s `toQueryRow`), so it's never fabricated true.
  */
-import { toPlainText } from "@/modules/content/render";
+import { toPlainText } from "@/modules/content/plain-text";
 import type { QuerySummary } from "@/components/account/types";
 import type { QueryRow, QueryThread } from "@/modules/queries/types";
 
@@ -45,13 +45,7 @@ export function mapQueryThreadToSummary(t: QueryThread): QuerySummary {
       authorName: m.authorKind === "admin" ? (m.author?.name ?? undefined) : undefined,
       body: toPlainText(m.bodyJson as never),
       at: m.createdAt,
-      attachments:
-        m.attachments.length > 0
-          ? m.attachments.map((a) => ({
-              name: a.name,
-              sizeLabel: `${Math.round(a.sizeBytes / 1024)} KB`,
-            }))
-          : undefined,
+      attachments: m.attachments.length > 0 ? m.attachments : undefined,
     })),
   };
 }

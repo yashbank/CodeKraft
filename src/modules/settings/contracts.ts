@@ -17,11 +17,35 @@ import {
   PATTERN_IDS,
   RADIUS_IDS,
 } from "@/lib/ui-style";
+import { emailFromAddressSchema, emailFromNameSchema } from "@/lib/email/from";
 import { THEMES } from "@/lib/theme";
+import { BUTTON_IDS, CARD_IDS, FONT_FAMILY_IDS, SHADOW_IDS } from "@/lib/theme-catalogue";
+import { DEFAULT_STUDIO_EXTRAS, MAX_PRESETS } from "@/lib/theme-studio";
 import { bpsSchema, currencySchema } from "@/modules/_shared/zod";
 import { text } from "../catalog/contracts";
 import { paymentMethodSchema } from "../offerings/contracts";
 import type { PublicSettings, SiteSettings } from "./types";
+
+const studioExtrasSchema = z.strictObject({
+  headingFont: z.enum(FONT_FAMILY_IDS),
+  bodyFont: z.enum(FONT_FAMILY_IDS),
+  shadow: z.enum(SHADOW_IDS),
+  button: z.enum(BUTTON_IDS),
+  card: z.enum(CARD_IDS),
+});
+const studioValuesSchema = studioExtrasSchema.extend({
+  palette: z.enum(PALETTE_IDS),
+  font: z.enum(FONT_IDS),
+  radius: z.enum(RADIUS_IDS),
+  border: z.enum(BORDER_IDS),
+  pattern: z.enum(PATTERN_IDS),
+  layout: z.enum(LAYOUT_IDS),
+  density: z.enum(DENSITY_IDS),
+});
+const themePresetSchema = z.strictObject({
+  name: z.string().trim().min(1).max(40),
+  values: studioValuesSchema,
+});
 
 export const themeNameSchema = z.enum(THEMES);
 export const flagKeySchema = z.enum(FLAG_KEYS);
@@ -82,12 +106,15 @@ export const bankDetailsSchema = z.strictObject({
 
 /** Max length of the inline UPI QR data URL (~220 KB image). */
 export const UPI_QR_IMAGE_MAX_CHARS = 300_000;
-/** R8-01: admin-uploaded UPI QR image, stored inline as a base64 data URL. */
+/**
+ * Admin-uploaded UPI QR image: the media URL (`payment_qr` upload purpose, public bucket). Legacy
+ * rows saved before P15-01 hold an inline base64 data URL; those still validate until re-saved.
+ */
 export const upiQrImageSchema = z
   .string()
   .max(UPI_QR_IMAGE_MAX_CHARS, "QR image is too large (max ~220 KB)")
   .regex(
-    /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/,
+    /^(data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+|https:\/\/[^\s]+|\/api\/files\/public\/[^\s]+)$/,
     "must be a PNG, JPEG or WebP image",
   );
 
@@ -111,8 +138,11 @@ export const siteSettingsSchema = z.strictObject({
   siteLogo: z
     .string()
     .max(2048)
-    .regex(/^(https:\/\/|\/)/, "logo must be an https URL")
+    // http://localhost is what the local storage driver returns outside production.
+    .regex(/^(https:\/\/|\/|http:\/\/localhost[:/])/, "logo must be an https URL")
     .nullable(),
+  emailFromName: emailFromNameSchema.nullable(),
+  emailFromAddress: emailFromAddressSchema.nullable(),
   baseCurrency: currencySchema,
   enabledCurrencies: z.array(currencySchema).min(1).max(5),
   taxRateBps: bpsSchema,
@@ -134,6 +164,8 @@ export const siteSettingsSchema = z.strictObject({
   uiPattern: z.enum(PATTERN_IDS),
   uiLayout: z.enum(LAYOUT_IDS),
   uiDensity: z.enum(DENSITY_IDS),
+  themeStudio: studioExtrasSchema,
+  themePresets: z.array(themePresetSchema).max(MAX_PRESETS),
   aiModel: text(120),
   aiDailyPlatformCap: z.number().int().min(0).max(1_000_000),
   aiDailyUserCap: z.number().int().min(0).max(10_000),
@@ -146,6 +178,8 @@ export const siteSettingsSchema = z.strictObject({
 export const SITE_SETTINGS_DEFAULTS: SiteSettings = Object.freeze({
   siteName: "CodeKraft",
   siteLogo: null,
+  emailFromName: null,
+  emailFromAddress: null,
   baseCurrency: "INR",
   enabledCurrencies: ["INR", "USD", "EUR", "GBP", "CAD"],
   taxRateBps: 0,
@@ -167,6 +201,8 @@ export const SITE_SETTINGS_DEFAULTS: SiteSettings = Object.freeze({
   uiPattern: DEFAULT_UI_STYLE.pattern,
   uiLayout: DEFAULT_UI_STYLE.layout,
   uiDensity: DEFAULT_UI_STYLE.density,
+  themeStudio: DEFAULT_STUDIO_EXTRAS,
+  themePresets: [],
   aiModel: "claude-sonnet-5-5",
   aiDailyPlatformCap: 2000,
   aiDailyUserCap: 30,

@@ -2,6 +2,7 @@
  * Media validation utilities — docs/09 TM-12, docs/06 API-CAT-06/21, §3.5, SA-13.
  */
 import { AppError, ErrorCode } from "@/lib/errors";
+import { validateAttachmentFile } from "@/lib/attachments";
 import {
   CUSTOMER_UPLOAD_PURPOSES,
   EMBED_HOSTS,
@@ -60,6 +61,16 @@ export function validateUploadIntent(input: CreateUploadIntentInput): void {
       ErrorCode.VALIDATION,
       `File extension .${ext} is forbidden for security reasons`,
     );
+  }
+
+  if (input.purpose === "chat_attachment") {
+    // Extension must be on the attachment allow-list and agree with the declared MIME.
+    const err = validateAttachmentFile({
+      name: input.filename,
+      size: input.sizeBytes,
+      mime: input.mime,
+    });
+    if (err) throw new AppError(ErrorCode.VALIDATION, err);
   }
 
   // 3. MIME type allow-list

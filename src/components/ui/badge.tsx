@@ -22,7 +22,7 @@ const badgeVariants = cva(
         success: "bg-success-soft text-success [&_[data-slot=badge-dot]]:bg-success",
         warning: "bg-warning-soft text-warning [&_[data-slot=badge-dot]]:bg-warning",
         danger: "bg-danger-soft text-danger [&_[data-slot=badge-dot]]:bg-danger",
-        ghost: "border-border bg-transparent text-fg-subtle [&_[data-slot=badge-dot]]:hidden",
+        ghost: "border-border bg-transparent text-fg-muted [&_[data-slot=badge-dot]]:hidden",
       },
       variant: {
         default: "bg-accent text-accent-fg [a&]:hover:bg-accent-hover",

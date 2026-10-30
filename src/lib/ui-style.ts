@@ -1,5 +1,19 @@
 /** Admin-selectable typography, shape and background pattern (P11-01). Applied as `html[data-*]` overrides of existing tokens. */
 import { THEMES, type ThemeName } from "./theme";
+import {
+  BORDER_GEN_IDS,
+  PAD_GEN_IDS,
+  PATTERN_GEN_IDS,
+  RADIUS_GEN_IDS,
+  genBorderValue,
+  genPad,
+  genPatternProps,
+  genRadiusScale,
+  tuple,
+  type GenBorderId,
+  type GenPadId,
+  type GenRadiusId,
+} from "./theme-catalogue";
 
 const SERIF = "ui-serif, Georgia, serif";
 const SANS = "ui-sans-serif, system-ui, sans-serif";
@@ -75,11 +89,13 @@ export const FONT_LABELS = Object.fromEntries(
   FONT_IDS.map((id) => [id, FONTS_RAW[id]?.[0] ?? id]),
 ) as Record<FontId, string>;
 
-export const RADIUS_IDS = ["sharp", "crisp", "soft", "smooth", "round", "pill"] as const;
-export type RadiusId = (typeof RADIUS_IDS)[number];
-export const BORDER_IDS = ["subtle", "defined", "strong", "faint", "accent", "ink"] as const;
-export type BorderId = (typeof BORDER_IDS)[number];
-export const PATTERN_IDS = [
+const RADIUS_NAMED = ["sharp", "crisp", "soft", "smooth", "round", "pill"] as const;
+export type RadiusId = (typeof RADIUS_NAMED)[number] | GenRadiusId;
+export const RADIUS_IDS = tuple<RadiusId>([...RADIUS_NAMED, ...RADIUS_GEN_IDS]);
+const BORDER_NAMED = ["subtle", "defined", "strong", "faint", "accent", "ink"] as const;
+export type BorderId = (typeof BORDER_NAMED)[number] | GenBorderId;
+export const BORDER_IDS = tuple<BorderId>([...BORDER_NAMED, ...BORDER_GEN_IDS]);
+const PATTERN_NAMED = [
   "none",
   "grid",
   "dots",
@@ -90,7 +106,8 @@ export const PATTERN_IDS = [
   "checker",
   "plus",
 ] as const;
-export type PatternId = (typeof PATTERN_IDS)[number];
+export type PatternId = (typeof PATTERN_NAMED)[number] | (typeof PATTERN_GEN_IDS)[number];
+export const PATTERN_IDS = tuple<PatternId>([...PATTERN_NAMED, ...PATTERN_GEN_IDS]);
 export const LAYOUT_IDS = ["standard", "compact", "wide", "focused"] as const;
 export type LayoutId = (typeof LAYOUT_IDS)[number];
 // [label, site column max at xl, at 2xl]; standard = Container's built-in 1320/1440
@@ -114,14 +131,17 @@ export function inlineIds<T extends string>(
   return [current, ...popular.filter((p) => p !== current && all.includes(p))].slice(0, 3);
 }
 
-export const DENSITY_IDS = ["compact", "normal", "comfortable"] as const;
-export type DensityId = (typeof DENSITY_IDS)[number];
+const DENSITY_NAMED = ["compact", "normal", "comfortable"] as const;
+export type DensityId = (typeof DENSITY_NAMED)[number] | GenPadId;
+export const DENSITY_IDS = tuple<DensityId>([...DENSITY_NAMED, ...PAD_GEN_IDS]);
 /** Card padding per density → `--card-pad`; normal = the components' built-in 1.5rem (no override). */
-export const DENSITY_PAD: Record<DensityId, string> = {
+export const DENSITY_PAD: Record<(typeof DENSITY_NAMED)[number], string> = {
   compact: "1rem",
   normal: "1.5rem",
   comfortable: "2rem",
 };
+export const densityPad = (id: DensityId): string =>
+  DENSITY_PAD[id as keyof typeof DENSITY_PAD] ?? genPad(id) ?? DENSITY_PAD.normal;
 
 export interface UiStyle {
   font: FontId;
@@ -160,7 +180,11 @@ const BORDER_MIX: Record<string, string> = {
 
 /** `--ck-color-border` value for a border style on a theme (`undefined` = the theme's own). */
 export const borderValue = (b: BorderId, t: ThemeName): string | undefined =>
-  b === "subtle" ? undefined : b === "defined" ? DEFINED_BORDER[t] : BORDER_MIX[b];
+  b === "subtle"
+    ? undefined
+    : b === "defined"
+      ? DEFINED_BORDER[t]
+      : (BORDER_MIX[b] ?? genBorderValue(b));
 
 const fg = "var(--ck-color-fg)";
 const accent = "var(--ck-color-accent)";
@@ -168,7 +192,10 @@ const NOISE =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.06'/%3E%3C/svg%3E\")";
 const PLUS =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Cpath d='M16 12v8M12 16h8' stroke='%23888' stroke-opacity='.22' stroke-width='1'/%3E%3C/svg%3E\")";
-const PATTERN_BG: Record<Exclude<PatternId, "none">, Record<string, string>> = {
+const PATTERN_BG: Record<
+  Exclude<(typeof PATTERN_NAMED)[number], "none">,
+  Record<string, string>
+> = {
   grid: {
     "background-image": `linear-gradient(color-mix(in srgb,${fg} 5%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,${fg} 5%,transparent) 1px,transparent 1px)`,
     "background-size": "32px 32px",
@@ -195,7 +222,7 @@ const PATTERN_BG: Record<Exclude<PatternId, "none">, Record<string, string>> = {
 };
 /** Pattern as CSS properties (kebab-case) — `{}` for none. */
 export const patternProps = (id: PatternId): Record<string, string> =>
-  id === "none" ? {} : PATTERN_BG[id];
+  id === "none" ? {} : (PATTERN_BG[id as keyof typeof PATTERN_BG] ?? genPatternProps(id) ?? {});
 
 /** Font + radius token overrides for the chosen options (kebab-case custom properties). */
 export function uiStyleVars(o: UiStyle): Record<string, string> {
@@ -209,10 +236,9 @@ export function uiStyleVars(o: UiStyle): Record<string, string> {
       v["--ck-display-style"] = "normal";
     }
   }
-  if (o.radius !== "soft")
-    SIZES.forEach(
-      (s, i) => (v[`--ck-radius-${s}`] = `${RADII[o.radius as keyof typeof RADII][i]}px`),
-    );
+  const scale = RADII[o.radius as keyof typeof RADII] ?? genRadiusScale(o.radius);
+  if (o.radius !== "soft" && scale)
+    SIZES.forEach((s, i) => (v[`--ck-radius-${s}`] = `${scale[i]}px`));
   return v;
 }
 const decl = (v: Record<string, string>) =>
@@ -237,7 +263,7 @@ export function uiStyleCss(o: UiStyle): string {
     ).join("");
   }
   if (o.density !== "normal") {
-    css += `html[data-density="${o.density}"]{--card-pad:${DENSITY_PAD[o.density]}}`;
+    css += `html[data-density="${o.density}"]{--card-pad:${densityPad(o.density)}}`;
   }
   if (o.layout !== "standard") {
     const [, xl, xxl] = LAYOUTS[o.layout];

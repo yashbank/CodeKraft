@@ -75,6 +75,10 @@ export interface NotificationPrefs {
   email: boolean;
   inapp: boolean;
   emailProductUpdates?: boolean;
+  /** P14-12b: per-category switches (orders / queries / marketing x email / inapp); absent = on. */
+  categories?: Partial<
+    Record<"orders" | "queries" | "marketing", Partial<Record<"email" | "inapp", boolean>>>
+  >;
 }
 
 /** T-customer_profiles — one row per customer, keyed by the user id. */

@@ -16,7 +16,7 @@ export function Wordmark({
   return (
     <Link
       href={href}
-      className={cn("inline-flex items-center gap-2 font-display text-fg", className)}
+      className={cn("inline-flex min-h-10 items-center gap-2 font-display text-fg", className)}
     >
       <SiteLogo />
       {tag ? (

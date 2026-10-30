@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
 
 import { SiteBrandProvider } from "@/components/brand/site-brand";
-import { DEFAULT_ICON } from "@/lib/brand-constants";
 import { fontVariables } from "@/lib/fonts";
 import { paletteCss } from "@/lib/palettes";
+import { brandIcons } from "@/lib/seo";
 import { getSiteLogo, getSiteName, getThemeConfig } from "@/lib/site-brand";
+import { DEFAULT_STUDIO_EXTRAS, studioAttrs, studioCss, studioFontsHref } from "@/lib/theme-studio";
 import { uiStyleCss } from "@/lib/ui-style";
 import { DEFAULT_THEME, inlineThemeScript, THEME_COLOR } from "@/lib/theme";
 import "./globals.css";
@@ -17,7 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: siteName, template: `%s · ${siteName}` },
     description: "Premium software studio and digital-product marketplace.",
     // Logo if set, else the existing default mark.
-    icons: { icon: logo ?? DEFAULT_ICON, apple: logo ?? DEFAULT_ICON },
+    icons: brandIcons(logo),
     applicationName: siteName,
     openGraph: { siteName, images },
     twitter: { card: "summary", images },
@@ -26,8 +27,6 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export const viewport: Viewport = { themeColor: THEME_COLOR[DEFAULT_THEME] };
 
-const LIGHT_ENABLED = process.env.FEATURE_THEME_LIGHT_EDITORIAL === "true";
-
 /**
  * Root layout stays static (no cookies()/headers()) so public routes can be ISR-cached (docs/08 §10).
  * The ≤300-byte inline script applies the visitor's cookie theme before first paint; dynamic
@@ -35,9 +34,8 @@ const LIGHT_ENABLED = process.env.FEATURE_THEME_LIGHT_EDITORIAL === "true";
  */
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [siteName, siteLogo] = await Promise.all([getSiteName(), getSiteLogo()]);
-  const { defaultTheme, palette, ui } = await getThemeConfig();
-  // An admin who picks light-editorial as the default has opted in, so it needs no env flag.
-  const lightEnabled = LIGHT_ENABLED || defaultTheme === "light-editorial";
+  const { defaultTheme, palette, ui, studio = DEFAULT_STUDIO_EXTRAS } = await getThemeConfig();
+  const fontsHref = studioFontsHref(studio);
   return (
     <html
       lang="en"
@@ -49,12 +47,25 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       data-pattern={ui.pattern}
       data-layout={ui.layout}
       data-density={ui.density}
+      {...studioAttrs(studio)}
       className={fontVariables}
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: inlineThemeScript(lightEnabled) }} />
-        <style dangerouslySetInnerHTML={{ __html: paletteCss(palette) + uiStyleCss(ui) }} />
+        <script dangerouslySetInnerHTML={{ __html: inlineThemeScript() }} />
+        <style
+          dangerouslySetInnerHTML={{
+            __html: paletteCss(palette) + uiStyleCss(ui) + studioCss(studio),
+          }}
+        />
+        {/* P14-07: admin-chosen Google fonts load on demand; the default site requests none. */}
+        {fontsHref ? (
+          <>
+            <link rel="preconnect" href="https://fonts.googleapis.com" />
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+            <link rel="stylesheet" href={fontsHref} />
+          </>
+        ) : null}
       </head>
       <body className="min-h-screen bg-canvas text-fg antialiased">
         <SiteBrandProvider siteName={siteName} siteLogo={siteLogo}>

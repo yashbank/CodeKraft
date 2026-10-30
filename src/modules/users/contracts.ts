@@ -8,6 +8,7 @@ import { z } from "zod";
 import type { RequestContext } from "@/lib/authz/context";
 import type { DbOrTx, TxCtx } from "@/lib/db";
 import { PASSWORD_MAX } from "../auth/password-policy";
+import { THEME_PREFS } from "@/lib/theme";
 import { type ListResult, currencySchema, listParams, uuidSchema } from "@/modules/_shared/zod";
 import { text } from "../catalog/contracts";
 import {
@@ -15,7 +16,6 @@ import {
   countryCodeSchema,
   gstinSchema,
   postalAddressSchema,
-  themeNameSchema,
 } from "../settings/contracts";
 import {
   ADMIN_INVITE_ROLES,
@@ -65,7 +65,7 @@ export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export const updateAccountSettingsSchema = z
   .strictObject({
     displayCurrency: currencySchema.optional(),
-    themePref: themeNameSchema.nullable().optional(),
+    themePref: z.enum(THEME_PREFS).nullable().optional(),
   })
   .refine((s) => s.displayCurrency !== undefined || s.themePref !== undefined, "nothing to update");
 export type UpdateAccountSettingsInput = z.infer<typeof updateAccountSettingsSchema>;

@@ -62,6 +62,21 @@ describe("admin dashboard widget layout (R8-10)", () => {
     expect(await getAdminWidgetLayout(admin.id)).toEqual([]);
   });
 
+  it("rejects widgets outside the caller's role allow-list (P14-01)", async () => {
+    await truncateAll(sql);
+    const admin = await createUser({ role: "admin" });
+    const ctx = buildContext({
+      user: { id: admin.id },
+      session: { id: `s-${admin.id}` },
+      roles: ["admin"],
+    });
+    const bad = await saveAdminWidgetLayoutAction({ widgets: ["new_leads", "system_health"] }, ctx);
+    expect(bad.ok).toBe(false);
+    expect(await getAdminWidgetLayout(admin.id)).toBeNull();
+    const good = await saveAdminWidgetLayoutAction({ widgets: ["new_leads", "my_share"] }, ctx);
+    expect(good.ok).toBe(true);
+  });
+
   it("rejects unknown and duplicate widget keys", async () => {
     await truncateAll(sql);
     const admin = await createUser({ role: "super_admin" });

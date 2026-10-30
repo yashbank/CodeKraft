@@ -57,6 +57,9 @@ export function revalidateTagSafe(tag: string): void {
   revalidatedTagsHistory.push(tag);
   // The sitemap is a time-revalidated route, not tag-cached: refresh it explicitly.
   if (tag === CATALOG_TAGS.sitemap) revalidatePathSafe("/sitemap.xml");
+  // Public pages are ISR (no tags of their own): any tagged content change must also drop them,
+  // including writes that do not come through an admin mutation wrapper (approvals, cron publish).
+  revalidatePathSafe("/", "layout");
   try {
     revalidateTag(tag);
   } catch {
@@ -75,9 +78,10 @@ export function revalidateTagsSafe(tags: readonly string[]): void {
 }
 
 /** Revalidates a route path safely (same no-op semantics as the tag helpers). */
-export function revalidatePathSafe(path: string): void {
+export function revalidatePathSafe(path: string, type?: "layout" | "page"): void {
   try {
-    revalidatePath(path);
+    if (type) revalidatePath(path, type);
+    else revalidatePath(path);
   } catch {
     // Outside a Next request lifecycle; ignore.
   }

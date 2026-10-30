@@ -7,7 +7,14 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { deleteView, listViews, saveView, type SavedView } from "@/lib/admin/saved-views";
+import { undoToast } from "@/lib/admin/undo";
+import {
+  deleteView,
+  listViews,
+  restoreView,
+  saveView,
+  type SavedView,
+} from "@/lib/admin/saved-views";
 
 /** Current admin's id, provided by AdminShell so saved views are per user. */
 export const AdminUserIdContext = React.createContext<string>("anon");
@@ -47,7 +54,12 @@ export function SavedViews({ screen }: Readonly<{ screen: string }>) {
                 variant="ghost"
                 size="icon"
                 aria-label={`Delete view ${v.name}`}
-                onClick={() => setViews(deleteView(localStorage, userId, screen, v.id))}
+                onClick={() => {
+                  setViews(deleteView(localStorage, userId, screen, v.id));
+                  undoToast(`View “${v.name}” deleted`, () => {
+                    setViews(restoreView(localStorage, userId, screen, v));
+                  });
+                }}
               >
                 <Trash2Icon aria-hidden />
               </Button>

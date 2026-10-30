@@ -199,11 +199,18 @@ export function verifyMagicBytes(buf: Buffer, expectedMime: string): SniffResult
   const normalizedExpected = expectedMime.toLowerCase().trim();
 
   // Handle aliases & text families
-  if (normalizedExpected === "application/x-zip-compressed" && detected === "application/zip") {
+  if (
+    (normalizedExpected === "application/x-zip-compressed" ||
+      normalizedExpected.endsWith("wordprocessingml.document")) &&
+    detected === "application/zip"
+  ) {
     return { ok: true, detectedMime: detected, isDangerous: false };
   }
 
-  if (normalizedExpected === "text/csv" && detected === "text/plain") {
+  if (
+    (normalizedExpected === "text/csv" || normalizedExpected === "text/markdown") &&
+    detected === "text/plain"
+  ) {
     return { ok: true, detectedMime: detected, isDangerous: false };
   }
 

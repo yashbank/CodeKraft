@@ -10,7 +10,12 @@ import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/actions/envelope";
 import { fail } from "@/lib/actions/envelope";
 import type { Context } from "@/lib/authz/context";
-import { markAllReadAction, markReadAction, updateNotificationPreferencesAction } from "./actions";
+import {
+  markAllReadAction,
+  markReadAction,
+  updateCategoryPreferenceAction,
+  updateNotificationPreferencesAction,
+} from "./actions";
 
 async function withSiteCtx<T>(
   action: (raw: unknown, ctx: Context) => Promise<ActionResult<T>>,
@@ -39,4 +44,8 @@ export async function markAllMyNotificationsRead() {
 
 export async function updateMyNotificationPreferences(raw: unknown) {
   return withSiteCtx(updateNotificationPreferencesAction, raw, "/account/settings");
+}
+
+export async function updateMyCategoryPreference(raw: unknown) {
+  return withSiteCtx(updateCategoryPreferenceAction, raw, "/account/settings");
 }

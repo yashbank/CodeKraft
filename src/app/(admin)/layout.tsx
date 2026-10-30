@@ -6,14 +6,18 @@ import { hasAdminClassRole, loadRoles } from "@/modules/auth/roles-port";
 import { getSession, hostFromHeaders } from "@/modules/auth/service";
 import { AdminForbidden } from "@/components/admin/AdminForbidden";
 import { DEFAULT_ADMIN_ICON } from "@/lib/brand-constants";
-import { getSiteLogo } from "@/lib/site-brand";
+import { areaMetadata } from "@/lib/seo";
+import { getSiteLogo, getSiteName, getThemeConfig } from "@/lib/site-brand";
+import { ThemeSync } from "@/components/site/ThemeSync";
+import { isThemePref } from "@/lib/theme";
 import { redirectToLogin } from "@/lib/authz/login-redirect";
 
 export const dynamic = "force-dynamic";
 
 /** BUG-074: tinted favicon so admin tabs are distinguishable from the storefront. */
 export async function generateMetadata() {
-  return { icons: { icon: (await getSiteLogo()) ?? DEFAULT_ADMIN_ICON } };
+  const [siteName, logo] = await Promise.all([getSiteName(), getSiteLogo()]);
+  return areaMetadata("Admin", siteName, logo, DEFAULT_ADMIN_ICON);
 }
 
 /**
@@ -34,5 +38,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     });
     return <AdminForbidden />;
   }
-  return <div data-app="admin">{children}</div>;
+  const { themeToggle } = await getThemeConfig();
+  const themePref = (session.user as { themePref?: string | null }).themePref;
+  return (
+    <div data-app="admin">
+      {themeToggle ? <ThemeSync pref={isThemePref(themePref) ? themePref : null} /> : null}
+      {children}
+    </div>
+  );
 }

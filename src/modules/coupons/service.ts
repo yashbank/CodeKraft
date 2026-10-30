@@ -149,7 +149,7 @@ export class DefaultCouponsService implements CouponsService {
 
       const [updated] = await activeTx
         .update(coupons)
-        .set({ active: false })
+        .set({ active: input.undo === true })
         .where(eq(coupons.id, input.id))
         .returning();
 
@@ -159,7 +159,7 @@ export class DefaultCouponsService implements CouponsService {
 
       await auditService.log(
         ctx,
-        "coupon.deactivated",
+        input.undo ? "coupon.reactivated" : "coupon.deactivated",
         { type: "coupon", id: updated.id },
         existing,
         updated,

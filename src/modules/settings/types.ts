@@ -10,6 +10,7 @@ import type { FlagKey } from "@/lib/feature-flags";
 import type { PaletteId } from "@/lib/palettes";
 import type { BorderId, DensityId, FontId, LayoutId, PatternId, RadiusId } from "@/lib/ui-style";
 import type { ThemeName } from "@/lib/theme";
+import type { StudioExtras, ThemePreset } from "@/lib/theme-studio";
 import type { PaymentMethodValue } from "../offerings/types";
 
 export type { JsonValue, SiteSetting } from "../../../drizzle/schema/settings";
@@ -68,6 +69,9 @@ export interface SiteSettings {
   siteName: string;
   /** Public URL of the uploaded site logo (raster, via `site_logo` upload purpose); null = text wordmark. */
   siteLogo: string | null;
+  /** P14-04: "From" display name / address for outgoing mail; null = fall back to EMAIL_FROM. */
+  emailFromName: string | null;
+  emailFromAddress: string | null;
   baseCurrency: Currency;
   enabledCurrencies: Currency[];
   taxRateBps: number;
@@ -96,6 +100,10 @@ export interface SiteSettings {
   uiPattern: PatternId;
   uiLayout: LayoutId;
   uiDensity: DensityId;
+  /** P14-07 theme studio additions (heading/body font, shadow, button, card); defaults = unchanged site. */
+  themeStudio: StudioExtras;
+  /** P14-07 saved theme presets. */
+  themePresets: ThemePreset[];
   aiModel: string;
   aiDailyPlatformCap: number;
   aiDailyUserCap: number;
@@ -110,6 +118,8 @@ export type SiteSettingField = keyof SiteSettings;
 export const SITE_SETTING_KEYS: Readonly<Record<SiteSettingField, string>> = Object.freeze({
   siteName: "site_name",
   siteLogo: "site_logo",
+  emailFromName: "email_from_name",
+  emailFromAddress: "email_from_address",
   baseCurrency: "base_currency",
   enabledCurrencies: "enabled_currencies",
   taxRateBps: "tax_rate_bps",
@@ -131,6 +141,8 @@ export const SITE_SETTING_KEYS: Readonly<Record<SiteSettingField, string>> = Obj
   uiPattern: "ui_pattern",
   uiLayout: "ui_layout",
   uiDensity: "ui_density",
+  themeStudio: "theme_studio",
+  themePresets: "theme_presets",
   aiModel: "ai_model",
   aiDailyPlatformCap: "ai_daily_platform_cap",
   aiDailyUserCap: "ai_daily_user_cap",

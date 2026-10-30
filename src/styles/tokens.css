@@ -404,6 +404,34 @@
 .admin-page-enter {
   animation: ck-admin-page-enter 180ms ease-out backwards;
 }
+/* P14-02: success check pop and the "just added" row/card highlight (collapsed by the global
+ * reduced-motion rules below, which cap every animation at 0.01ms). */
+@keyframes ck-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+@keyframes ck-draw {
+  from {
+    stroke-dashoffset: 24;
+  }
+}
+@keyframes ck-added {
+  from {
+    background-color: color-mix(in oklab, var(--color-success, #16a34a) 22%, transparent);
+  }
+}
+.ck-success-pop {
+  animation: ck-pop 260ms ease-out backwards;
+}
+.ck-success-pop path {
+  stroke-dasharray: 24;
+  animation: ck-draw 360ms ease-out 120ms backwards;
+}
+.ck-row-added {
+  animation: ck-added 1400ms ease-out;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .admin-page-enter {

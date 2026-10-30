@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { ActivityTimeline } from "../ActivityTimeline";
 import { Banner } from "../Banner";
 import { Gauge } from "../charts/Gauge";
 import { formatDate, formatDateTime, initials, inr, money, timeAgo } from "../format";
@@ -518,16 +519,9 @@ export function CustomerDetail({
                 max={data.chatUsage.cap}
                 label="Chatbot messages today"
               />
-              <ol className="space-y-2 rounded-lg border border-border bg-surface p-4 text-body-sm">
-                {data.activity.map((a) => (
-                  <li key={a.at} className="flex justify-between gap-3">
-                    <span>{a.text}</span>
-                    <time dateTime={a.at} className="shrink-0 text-caption text-fg-muted">
-                      {formatDateTime(a.at)}
-                    </time>
-                  </li>
-                ))}
-              </ol>
+              <div className="rounded-lg border border-border bg-surface p-4">
+                <ActivityTimeline events={data.activity} />
+              </div>
               <Button asChild variant="link" size="sm">
                 <Link href={auditHref}>Full audit trail</Link>
               </Button>

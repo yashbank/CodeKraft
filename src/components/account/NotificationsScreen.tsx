@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -21,7 +22,7 @@ import {
   markAllMyNotificationsRead,
   markMyNotificationRead,
 } from "@/modules/notifications/site-mutations";
-import { applyRead, countUnread } from "@/lib/notifications/read-state";
+import { applyRead, countUnread, readThenOpen } from "@/lib/notifications/read-state";
 import { EmptyState } from "./EmptyState";
 import { dayLabel, formatDateTime, relativeTime } from "./format";
 import type { NotificationItem, NotificationType } from "./types";
@@ -46,6 +47,7 @@ export function NotificationsScreen({
   links: { settings: string };
   loading?: boolean;
 }) {
+  const router = useRouter();
   const [items, setItems] = React.useState(initial);
   const [tab, setTab] = React.useState<"all" | "unread">("all");
   const [type, setType] = React.useState<NotificationType | null>(null);
@@ -62,11 +64,20 @@ export function NotificationsScreen({
   }, []);
 
   function markRead(id: string) {
+    const before = items;
     setItems((prev) => applyRead(prev, new Set([id])));
-    void markMyNotificationRead({ notificationIds: [id] }).then((result) => {
-      if (!result.ok) toast.error(result.error.message);
+    return markMyNotificationRead({ notificationIds: [id] }).then((result) => {
+      if (result.ok) return;
+      setItems(before); // optimistic read not persisted: show it unread again
+      toast.error(result.error.message);
     });
   }
+  const open = (e: React.MouseEvent, n: NotificationItem) =>
+    void readThenOpen(
+      e,
+      () => (n.read ? Promise.resolve() : markRead(n.id)),
+      () => router.push(n.href),
+    );
 
   return (
     <div className="space-y-6">
@@ -80,10 +91,16 @@ export function NotificationsScreen({
           size="sm"
           disabled={unread === 0}
           onClick={async () => {
+            const before = items;
             setItems((prev) => applyRead(prev));
             const result = await markAllMyNotificationsRead();
-            if (result.ok) toast.success("All notifications marked as read");
-            else toast.error(result.error.message);
+            if (result.ok) {
+              toast.success("All notifications marked as read");
+              router.refresh(); // header bell badge
+            } else {
+              setItems(before);
+              toast.error(result.error.message);
+            }
           }}
         >
           Mark all as read
@@ -111,7 +128,7 @@ export function NotificationsScreen({
                 aria-pressed={on}
                 onClick={() => setType(on ? null : t.key)}
                 className={cn(
-                  "h-8 shrink-0 rounded-full border px-3 text-caption font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                  "h-10 shrink-0 lg:h-8 rounded-full border px-3 text-caption font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                   on
                     ? "border-accent bg-accent-soft text-accent-text"
                     : "border-border bg-surface text-fg-muted hover:text-fg",
@@ -165,7 +182,7 @@ export function NotificationsScreen({
                       <div className="min-w-0 flex-1">
                         <Link
                           href={n.href}
-                          onClick={() => markRead(n.id)}
+                          onClick={(e) => open(e, n)}
                           className={cn(
                             "block text-body text-fg hover:underline",
                             !n.read && "font-semibold",
@@ -181,7 +198,7 @@ export function NotificationsScreen({
                       </div>
                       {n.actionLabel ? (
                         <Button size="sm" variant="secondary" className="shrink-0" asChild>
-                          <Link href={n.href} onClick={() => markRead(n.id)}>
+                          <Link href={n.href} onClick={(e) => open(e, n)}>
                             {n.actionLabel}
                           </Link>
                         </Button>
@@ -192,14 +209,11 @@ export function NotificationsScreen({
               </ul>
             </section>
           ))}
-          <Button variant="ghost" className="w-full">
-            Load more
-          </Button>
         </div>
       )}
       <p className="text-caption text-fg-subtle">
         Manage email preferences in{" "}
-        <Link href={links.settings} className="text-accent-text hover:underline">
+        <Link href={links.settings} className="text-accent-text underline underline-offset-2">
           Settings
         </Link>
         .
