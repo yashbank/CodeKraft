@@ -1,4 +1,6 @@
 import { toDecimalString } from "@/lib/money";
+import { documentApprox } from "@/lib/document-fx";
+import { pdfMoney } from "@/lib/document-money";
 import { DEFAULT_SITE_NAME } from "@/lib/brand-constants";
 /**
  * Invoices service implementation (docs/06 §2.3 API-COM-11..13, API-PAY-06, BR-16, D-1501).
@@ -125,7 +127,7 @@ export async function getInvoiceDocument(
   const isAdmin =
     ctx.roles.includes("admin") || ctx.roles.includes("super_admin") || ctx.roles.includes("staff");
   if (isAdmin) assertPermission(ctx, "invoices.read");
-  return await withTx(async (tx) => {
+  const doc = await withTx(async (tx) => {
     const [row] = await tx
       .select({ invoice: invoices, userId: orders.userId })
       .from(invoices)
@@ -137,6 +139,9 @@ export async function getInvoiceDocument(
     }
     return { id: row.invoice.id, props: await loadInvoiceProps(row.invoice, tx) };
   });
+  // Legal amounts stay in the invoice currency; add an indicative "≈" note in the viewer currency.
+  const approx = await documentApprox(doc.props.totalMinor, doc.props.currency);
+  return { id: doc.id, props: { ...doc.props, approx } };
 }
 
 export class DefaultInvoicesService implements InvoicesService {
@@ -613,7 +618,7 @@ export class DefaultInvoicesService implements InvoicesService {
     const lines = [
       `Credit Note: ${cn.creditNo}`,
       `Date: ${cn.issuedAt.toISOString()}`,
-      `Amount: ${cn.currency} ${toDecimalString(cn.amountMinor)}`,
+      `Amount: ${pdfMoney(cn.amountMinor, cn.currency)}`,
     ];
     const pdfBuf = buildPdfBuffer(`Credit Note - ${cn.creditNo}`, lines);
 

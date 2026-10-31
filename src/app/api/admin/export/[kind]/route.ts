@@ -5,10 +5,12 @@
  */
 import {
   exportFormat,
+  isExportCurrency,
   exportResponse,
   type ExportColumn,
   type ExportFormat,
 } from "@/lib/admin/export-builder";
+import { convertedCells, convertedColumns, loadExportFx } from "@/lib/admin/export-fx";
 import { loadExpenseRows } from "@/lib/admin/expenses-data";
 import { parseLedgerFilters, type SearchParams } from "@/lib/admin/finance-filters";
 import { mapLedgerEntries } from "@/lib/admin/finance-view";
@@ -24,18 +26,19 @@ const money = (m: { amountMinor: number; currency: string }) => (m.amountMinor /
 const fail = (status: number, message: string) =>
   new Response(message, { status, headers: { "content-type": "text/plain" } });
 
-const EXPENSE_COLS: ExportColumn[] = [
+const EXPENSE_COLS = (fx: Awaited<ReturnType<typeof loadExportFx>>): ExportColumn[] => [
   { header: "Date", type: "date" },
   { header: "Description", width: 36 },
   { header: "Category" },
   { header: "Product" },
   { header: "Amount", type: "num" },
   { header: "Currency", width: 10 },
-  { header: "Amount INR", type: "money" },
+  { header: "Amount INR", type: "money", currency: "INR" },
+  ...convertedColumns(fx),
   { header: "Shared", width: 10 },
   { header: "Recorded by" },
 ];
-const LEDGER_COLS: ExportColumn[] = [
+const LEDGER_COLS = (fx: Awaited<ReturnType<typeof loadExportFx>>): ExportColumn[] => [
   { header: "Seq", type: "int", width: 10 },
   { header: "Date", type: "date" },
   { header: "Type" },
@@ -44,7 +47,8 @@ const LEDGER_COLS: ExportColumn[] = [
   { header: "Amount", type: "num" },
   { header: "Currency", width: 10 },
   { header: "FX rate", type: "num", width: 12 },
-  { header: "Amount INR", type: "money" },
+  { header: "Amount INR", type: "money", currency: "INR" },
+  ...convertedColumns(fx),
   { header: "Memo", width: 36 },
   { header: "Ref" },
   { header: "Created by" },
@@ -67,10 +71,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ kind: st
     if (kind === "expenses") {
       const { rows, ok } = await loadExpenseRows(sp, ctx);
       if (!ok) return fail(403, "Not allowed");
+      const fx = await loadExportFx();
       return exportResponse(
         format,
         "expenses",
-        EXPENSE_COLS,
+        EXPENSE_COLS(fx),
         rows.map((r) => [
           r.at,
           r.description,
@@ -79,6 +84,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ kind: st
           money(r.amount),
           r.amount.currency,
           (r.amountInr / 100).toFixed(2),
+          ...convertedCells(fx, r.amount.amountMinor, r.amount.currency),
           r.sharedBySplit ? "yes" : "no",
           r.recordedBy,
         ]),
@@ -93,6 +99,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ kind: st
     const names = new Map(
       partners && partners.ok ? partners.data.items.map((p) => [p.id, p.displayName] as const) : [],
     );
+    const fx = await loadExportFx();
     const out: unknown[][] = [];
     for (let i = 0; i < MAX_PAGES; i++) {
       if (!page.ok) return fail(400, page.error.message);
@@ -107,6 +114,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ kind: st
           e.amount.currency,
           e.fxRate,
           (e.amountInr / 100).toFixed(2),
+          ...convertedCells(fx, e.amount.amountMinor, e.amount.currency),
           e.memo,
           e.ref,
           e.createdBy,
@@ -116,7 +124,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ kind: st
       if (!next) break;
       page = await listLedgerEntriesQuery({ filters, limit: 100, cursor: next }, ctx);
     }
-    return exportResponse(format, "ledger", LEDGER_COLS, out);
+    return exportResponse(format, "ledger", LEDGER_COLS(fx), out);
   } catch (err) {
     return isAppError(err) ? fail(err.httpStatus, err.message) : fail(500, "Export failed");
   }
@@ -144,6 +152,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ kind: s
   const columns = b.columns.map((c) => ({
     header: String(c.header),
     type: (["money", "num", "date", "int"] as const).find((t) => t === c.type),
+    currency: isExportCurrency(c.currency) ? c.currency : undefined,
   }));
   return exportResponse(
     exportFormat(b.format),

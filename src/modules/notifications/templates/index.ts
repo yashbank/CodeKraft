@@ -1,4 +1,14 @@
+import { documentMoney } from "@/lib/document-money";
 import type { NotificationPayload, NotificationType, RenderedNotification } from "../types";
+
+/** `amountMinor` + `currency` (preferred) or a legacy preformatted `amount`, shown with symbol and grouping. */
+function payloadMoney(p: Record<string, unknown>): string {
+  const minor = Number(p.amountMinor);
+  if (p.amountMinor != null && Number.isSafeInteger(minor) && typeof p.currency === "string") {
+    return documentMoney(minor, p.currency);
+  }
+  return String(p.amount ?? "");
+}
 
 export function renderNotification(
   type: NotificationType,
@@ -120,7 +130,7 @@ export function renderNotification(
     case "refund.issued":
       return {
         title: `Refund Processed #${p.creditNoteNumber ?? p.orderNumber ?? ""}`.trim(),
-        body: `Refund of ${p.amount ?? ""} has been processed. Credit note issued.`,
+        body: `Refund of ${payloadMoney(p)} has been processed. Credit note issued.`,
         link: "/account/invoices",
         emailTemplate: "refund-issued",
         emailPriority: 1,
@@ -235,7 +245,7 @@ export function renderNotification(
     case "quote.sent":
       return {
         title: `Custom Quote Received: ${p.title ?? "Quote"}`,
-        body: `A custom quote for ${p.amount ?? ""} has been prepared for your review.`,
+        body: `A custom quote for ${payloadMoney(p)} has been prepared for your review.`,
         link: p.token ? `/quote/${p.token}` : "/account/quotes",
         emailTemplate: null,
         emailPriority: 1,

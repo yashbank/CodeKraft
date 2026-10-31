@@ -4,6 +4,7 @@
 import { and, asc, eq, gte, lt, lte, sql } from "drizzle-orm";
 import type { DbOrTx } from "@/lib/db";
 import { db, withTx } from "@/lib/db";
+import { pdfMoney } from "@/lib/document-money";
 import { toDecimalString } from "@/lib/money";
 import { toMinor } from "./minor";
 import { AppError, ErrorCode } from "@/lib/errors";
@@ -105,17 +106,17 @@ export async function exportStatement(
     const textLines = [
       `Partner: ${partner.displayName} (${partner.id})`,
       `Period: ${input.dateFrom} to ${input.dateTo}`,
-      `Opening Balance: INR ${toDecimalString(openingBalanceInrMinor)}`,
-      `Closing Balance: INR ${toDecimalString(closingBalanceInrMinor)}`,
-      `Partner shares earned: INR ${toDecimalString(sharesEarnedInr)}`,
-      `Refund reversals: INR ${toDecimalString(refundReversalsInr)}`,
-      `Payouts: INR ${toDecimalString(payoutsInr)}`,
-      `Expenses / adjustments: INR ${toDecimalString(otherInr)}`,
+      `Opening Balance: ${pdfMoney(openingBalanceInrMinor, "INR")}`,
+      `Closing Balance: ${pdfMoney(closingBalanceInrMinor, "INR")}`,
+      `Partner shares earned: ${pdfMoney(sharesEarnedInr, "INR")}`,
+      `Refund reversals: ${pdfMoney(refundReversalsInr, "INR")}`,
+      `Payouts: ${pdfMoney(payoutsInr, "INR")}`,
+      `Expenses / adjustments: ${pdfMoney(otherInr, "INR")}`,
       `Total Entries in Period: ${entries.length}`,
       "----------------------------------------",
       ...entries.map(
         (e) =>
-          `Seq #${e.seq} | ${e.createdAt.toISOString().slice(0, 10)} | ${e.entryType} | ${e.memo ?? ""} | ${e.currency} ${toDecimalString(e.amountMinor)}`,
+          `Seq #${e.seq} | ${e.createdAt.toISOString().slice(0, 10)} | ${e.entryType} | ${e.memo ?? ""} | ${pdfMoney(e.amountMinor, e.currency)}`,
       ),
     ];
 

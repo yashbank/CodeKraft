@@ -1,5 +1,5 @@
 import React from "react";
-import { toDecimalString } from "@/lib/money";
+import { approxText, documentMoney, groupedAmount, type ApproxNote } from "@/lib/document-money";
 import type {
   BuyerSnapshot,
   GstBreakdown,
@@ -26,6 +26,8 @@ export interface InvoiceProps {
   /** Site accent (palette light variant, white text on it); slate when absent. */
   accent?: string;
   notes?: string | null;
+  /** Indicative amount in the viewer currency; the stored-currency amounts stay the legal ones. */
+  approx?: ApproxNote | null;
 }
 
 export const PAYMENT_LABEL = {
@@ -52,7 +54,7 @@ const cell = { padding: "8px" } as const;
 const right = { ...cell, textAlign: "right" } as const;
 
 export function InvoiceDocument(props: InvoiceProps) {
-  const formatMoney = toDecimalString;
+  const formatMoney = (n: number) => groupedAmount(n, props.currency);
   const g = props.gstBreakdown;
   const ratePct = g ? `${g.rate_bps / 100}%` : "";
   const accent = props.accent ?? DEFAULT_ACCENT;
@@ -60,9 +62,7 @@ export function InvoiceDocument(props: InvoiceProps) {
   const total = (label: string, v: number, extra?: React.CSSProperties) => (
     <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", ...extra }}>
       <span>{label}</span>
-      <span>
-        {props.currency} {formatMoney(v)}
-      </span>
+      <span>{documentMoney(v, props.currency)}</span>
     </div>
   );
   const label: React.CSSProperties = {
@@ -227,6 +227,20 @@ export function InvoiceDocument(props: InvoiceProps) {
             fontWeight: "bold",
             fontSize: "16px",
           })}
+          {props.approx && (
+            <p
+              data-testid="invoice-approx"
+              style={{
+                ...p,
+                marginTop: "6px",
+                fontSize: "11px",
+                color: "#4b5563",
+                textAlign: "right",
+              }}
+            >
+              {approxText(props.approx)}
+            </p>
+          )}
         </div>
       </section>
 

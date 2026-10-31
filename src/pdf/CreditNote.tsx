@@ -1,4 +1,5 @@
 import React from "react";
+import { approxText, documentMoney, type ApproxNote } from "@/lib/document-money";
 import type { BuyerSnapshot, SellerSnapshot } from "@/modules/invoices/types";
 
 export interface CreditNoteProps {
@@ -9,11 +10,11 @@ export interface CreditNoteProps {
   buyer: BuyerSnapshot;
   amountMinor: number;
   currency: string;
+  /** Indicative amount in the viewer currency; the stored amount is the legal one. */
+  approx?: ApproxNote | null;
 }
 
 export function CreditNoteDocument(props: CreditNoteProps) {
-  const formatMoney = (minor: number) => (minor / 100).toFixed(2);
-
   return (
     <div
       style={{
@@ -70,10 +71,13 @@ export function CreditNoteDocument(props: CreditNoteProps) {
         }}
       >
         <span>Credit Amount:</span>
-        <span>
-          {props.currency} {formatMoney(props.amountMinor)}
-        </span>
+        <span>{documentMoney(props.amountMinor, props.currency)}</span>
       </div>
+      {props.approx && (
+        <p style={{ margin: "6px 0 0", fontSize: "11px", color: "#4b5563", textAlign: "right" }}>
+          {approxText(props.approx)}
+        </p>
+      )}
     </div>
   );
 }
