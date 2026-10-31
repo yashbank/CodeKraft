@@ -35,15 +35,8 @@ import { UrlSelect } from "./UrlSelect";
 import { useUrlFilters, useUrlSearch } from "./use-url-filters";
 import { currencySchema } from "@/modules/_shared/zod";
 import { EmptyState } from "../EmptyState";
-import {
-  drCr,
-  formatDateTime,
-  inr,
-  ledgerTotals,
-  money,
-  runningBalances,
-  timeAgo,
-} from "../format";
+import { drCr, formatDateTime, ledgerTotals, runningBalances, timeAgo } from "../format";
+import { useAdminMoney } from "../AdminCurrency";
 import { MoneyCell } from "../MoneyCell";
 import { PageHeader } from "../PageHeader";
 import { StatTile } from "../StatTile";
@@ -85,6 +78,7 @@ export function LedgerScreen({
   summary = null,
   partners = [],
 }: LedgerScreenProps) {
+  const { inr, money } = useAdminMoney();
   const f = useUrlFilters();
   const [search, setSearch] = useUrlSearch();
   const [currency, setCurrency] = React.useState<"native" | "inr">("native");

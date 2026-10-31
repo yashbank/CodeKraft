@@ -47,7 +47,8 @@ import { BulkActionBar } from "../BulkActionBar";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
 import { FilterChips } from "../FilterChips";
-import { daysUntil, formatDate, money, timeAgo } from "../format";
+import { daysUntil, formatDate, timeAgo } from "../format";
+import { useAdminMoney } from "../AdminCurrency";
 import { LaptopNotice } from "../LaptopNotice";
 import { MoneyCell } from "../MoneyCell";
 import { PageHeader } from "../PageHeader";
@@ -81,6 +82,7 @@ export function OrdersList({
   approvalsHref,
   notificationsHref,
 }: OrdersListProps) {
+  const { money } = useAdminMoney();
   const router = useRouter();
   const [queue, setQueue] = React.useState<Queue | null>("awaiting");
   const [confirming, setConfirming] = React.useState<OrderRow | null>(null);

@@ -10,6 +10,7 @@ import { sql } from "drizzle-orm";
 import { can } from "@/lib/authz/assert";
 import type { RequestContext } from "@/lib/authz/context";
 import { db } from "@/lib/db";
+import { STATIC_FX_TABLE } from "@/lib/fx";
 import type { DashboardData, QueueItem, WidgetKey } from "@/components/admin/types";
 import { rawSumsFromRow, rawSumsSql } from "@/modules/finance/metrics-core";
 import { buildMyShare } from "./dashboard-finance-core";
@@ -129,6 +130,11 @@ export async function loadDashboardFinance(
   if (readAll && want("expenses_vs_profit")) {
     // Last 6 calendar months: expenses vs profit (company + partner shares net of refunds, minus
     // expenses; floored at 0 because the stacked chart cannot draw a negative bar).
+    // Expenses are stored in their own currency: sum their INR value at the locked rate (legacy
+    // rows without one fall back to the configured default), never raw mixed-currency minor units.
+    const legacyFxCase = sql.raw(
+      `case e.currency ${(["USD", "EUR", "GBP", "CAD"] as const).map((c) => `when '${c}' then ${STATIC_FX_TABLE[`${c}/INR`] ?? "1"}`).join(" ")} else 1 end`,
+    );
     const months = await db.execute<{ m: string; expenses: string; shares: string }>(sql`
       with months as (
         select to_char(d, 'YYYY-MM') as m
@@ -136,7 +142,9 @@ export async function loadDashboardFinance(
                              date_trunc('month', now()), interval '1 month') d
       )
       select months.m,
-        coalesce((select sum(e.amount_minor) from expenses e
+        coalesce((select sum(case when e.currency = 'INR' then e.amount_minor
+                                   else round(e.amount_minor * coalesce(e.fx_rate_to_inr, ${legacyFxCase})) end)
+                  from expenses e
                   where to_char(e.incurred_on::date, 'YYYY-MM') = months.m), 0) as expenses,
         coalesce((select sum(le.amount_inr_minor) from ledger_entries le
                   where le.entry_type in ('company_cut','refund_company_cut',

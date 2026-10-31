@@ -44,7 +44,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
 import { Banner } from "../Banner";
-import { formatDateTime, initials, money, timeAgo } from "../format";
+import { formatDateTime, initials, timeAgo } from "../format";
+import { useAdminMoney } from "../AdminCurrency";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
 import { RowActions } from "../RowActions";
@@ -78,6 +79,7 @@ export function QueriesInbox({
   customerHref,
   chatbotHref,
 }: QueriesInboxProps) {
+  const { money } = useAdminMoney();
   const router = useRouter();
   const [status, setStatus] = React.useState<QueryRow["status"]>("open");
   const [selectedId, setSelectedId] = React.useState(thread.query.id);

@@ -66,7 +66,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
-import { daysUntil, formatDate, initials, money, timeAgo } from "../format";
+import { daysUntil, formatDate, initials, timeAgo } from "../format";
+import { useAdminMoney } from "../AdminCurrency";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
 import { RowActions } from "../RowActions";
@@ -135,6 +136,7 @@ export function LeadsScreen({
   products = [],
   initialNewLead,
 }: LeadsScreenProps) {
+  const { money } = useAdminMoney();
   const [leads, setLeads] = React.useState(initial);
   // router.refresh() hands down fresh rows; without this the optimistic copy stays stale forever.
   React.useEffect(() => setLeads(initial), [initial]);

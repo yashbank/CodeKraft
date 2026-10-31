@@ -41,7 +41,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { ActivityTimeline } from "../ActivityTimeline";
 import { Banner } from "../Banner";
 import { Gauge } from "../charts/Gauge";
-import { formatDate, formatDateTime, initials, inr, money, timeAgo } from "../format";
+import { formatDate, formatDateTime, initials, timeAgo } from "../format";
+import { useAdminMoney } from "../AdminCurrency";
 import { KeyValue } from "../KeyValue";
 import { MoneyCell } from "../MoneyCell";
 import { Field } from "../RichTextField";
@@ -82,6 +83,7 @@ export function CustomerDetail({
   newOrderHref,
   auditHref,
 }: CustomerDetailProps) {
+  const { inr, money } = useAdminMoney();
   const router = useRouter();
   const c = data.customer;
   const [tags, setTags] = React.useState(c.tags);

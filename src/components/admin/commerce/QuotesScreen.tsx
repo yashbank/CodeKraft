@@ -38,7 +38,8 @@ import { Banner } from "../Banner";
 import { DataToolbar } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
 import { FilterChips } from "../FilterChips";
-import { formatDate, formatDateTime, money } from "../format";
+import { formatDate, formatDateTime } from "../format";
+import { useAdminCurrency, useAdminMoney } from "../AdminCurrency";
 import { MoneyCell } from "../MoneyCell";
 import { PageHeader } from "../PageHeader";
 import { Field, RichTextField } from "../RichTextField";
@@ -80,6 +81,7 @@ export function QuotesScreen({
   customerHref,
   prefill,
 }: QuotesScreenProps) {
+  const { money } = useAdminMoney();
   const router = useRouter();
   const [status, setStatus] = React.useState<QuoteRow["status"] | null>(null);
   const [selected, setSelected] = React.useState<QuoteRow | null>(
@@ -96,7 +98,9 @@ export function QuotesScreen({
   const [customerQuery, setCustomerQuery] = React.useState("");
   const [searching, setSearching] = React.useState(false);
   const [offeringId, setOfferingId] = React.useState("none");
-  const [currency, setCurrency] = React.useState<"INR" | "USD" | "EUR" | "GBP" | "CAD">("INR");
+  const [currency, setCurrency] = React.useState<"INR" | "USD" | "EUR" | "GBP" | "CAD">(
+    useAdminCurrency().currency,
+  );
   const [taxPct, setTaxPct] = React.useState("0");
   const [lines, setLines] = React.useState<Array<{ d: string; q: string; u: string }>>([]);
   const [formError, setFormError] = React.useState<string | null>(null);

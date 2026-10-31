@@ -40,7 +40,8 @@ import { ActivityTimeline } from "../ActivityTimeline";
 import { ApprovalGateNotice, Banner } from "../Banner";
 import { EntitlementStatusChip } from "@/components/account/EntitlementStatusChip";
 import { entitlementStatus } from "@/lib/entitlement-status";
-import { formatDateTime, money, percentFromBps } from "../format";
+import { formatDateTime, percentFromBps } from "../format";
+import { useAdminMoney } from "../AdminCurrency";
 
 function entStatusInput(ent: NonNullable<OrderItemDetail["entitlement"]>) {
   return {
@@ -86,6 +87,7 @@ export function OrderDetail({
   queriesHref,
   deliveryTasks = [],
 }: OrderDetailProps) {
+  const { money } = useAdminMoney();
   const router = useRouter();
   const { order, payment, splitApproval } = data;
   const [confirmOpen, setConfirmOpen] = React.useState(false);

@@ -66,7 +66,8 @@ import { ApprovalGateNotice } from "../Banner";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
 import { FilterChips } from "../FilterChips";
-import { money, timeAgo } from "../format";
+import { timeAgo } from "../format";
+import { useAdminMoney } from "../AdminCurrency";
 import { PageHeader } from "../PageHeader";
 import { RowActions } from "../RowActions";
 import type { CategoryNode, ProductFlag, ProductRow, ProductStatus } from "../types";
@@ -117,6 +118,7 @@ export function ProductsList({
   approvers,
   showCategories = true,
 }: ProductsListProps) {
+  const { money } = useAdminMoney();
   const router = useRouter();
   const [status, setStatus] = React.useState<ProductStatus | null>(null);
   const [categoryFilter, setCategoryFilter] = React.useState<string | null>(null);

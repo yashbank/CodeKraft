@@ -7,6 +7,8 @@ import { getSession } from "@/modules/auth/service";
 import { hasAdminClassRole, loadRoles } from "@/modules/auth/roles-port";
 import { buildContext } from "@/lib/authz/context";
 import { AdminShellWrapper } from "@/components/admin/AdminShellWrapper";
+import { AdminCurrencyProvider } from "@/components/admin/AdminCurrency";
+import { adminPreferredCurrency, loadAdminRateTable } from "@/lib/admin/currency";
 import { listApprovalsAction } from "@/modules/approvals/queries";
 import { listNotificationsQuery } from "@/modules/notifications/queries";
 import { mapNotificationItem } from "@/lib/admin/notifications-view";
@@ -61,7 +63,8 @@ export default async function AdminAppLayout({ children }: { children: React.Rea
     roles,
   });
 
-  const [approvalsRes, notificationsRes] = await Promise.all([
+  const [rateTable, approvalsRes, notificationsRes] = await Promise.all([
+    loadAdminRateTable(),
     listApprovalsAction({ filters: { status: "pending" }, limit: 100 }, ctx),
     listNotificationsQuery({ unreadOnly: true, limit: 20 }, ctx),
   ]);
@@ -78,19 +81,21 @@ export default async function AdminAppLayout({ children }: { children: React.Rea
     appEnv === "production" ? "production" : appEnv === "staging" ? "staging" : "development";
 
   return (
-    <AdminShellWrapper
-      user={user}
-      pendingApprovals={pendingApprovals}
-      notifications={notifications}
-      unreadCount={notificationsRes.ok ? notificationsRes.data.unreadCount : 0}
-      environment={environment}
-    >
-      {emailProblem ? (
-        <Banner tone="danger" role="alert" title="Email sender not configured" className="mb-4">
-          {emailProblem}. Verification, invite, quote and invoice emails will not reach customers.
-        </Banner>
-      ) : null}
-      {children}
-    </AdminShellWrapper>
+    <AdminCurrencyProvider currency={adminPreferredCurrency(session.user)} table={rateTable}>
+      <AdminShellWrapper
+        user={user}
+        pendingApprovals={pendingApprovals}
+        notifications={notifications}
+        unreadCount={notificationsRes.ok ? notificationsRes.data.unreadCount : 0}
+        environment={environment}
+      >
+        {emailProblem ? (
+          <Banner tone="danger" role="alert" title="Email sender not configured" className="mb-4">
+            {emailProblem}. Verification, invite, quote and invoice emails will not reach customers.
+          </Banner>
+        ) : null}
+        {children}
+      </AdminShellWrapper>
+    </AdminCurrencyProvider>
   );
 }

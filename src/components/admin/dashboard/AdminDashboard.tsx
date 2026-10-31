@@ -60,7 +60,8 @@ import { HeatmapChart, type HeatmapVariant } from "../charts/HeatmapChart";
 import { Gauge } from "../charts/Gauge";
 import { Sparkline } from "../charts/Sparkline";
 import { EmptyState } from "../EmptyState";
-import { compactNumber, inr, plainNumber } from "../format";
+import { compactNumber, plainNumber } from "../format";
+import { useAdminMoney } from "../AdminCurrency";
 import { PageHeader } from "../PageHeader";
 import type { DashboardData, ProductStatus, WidgetKey } from "../types";
 import { LIST_CLASS, QueueList } from "./QueueList";
@@ -455,6 +456,7 @@ function Stat({
   /** P14-09 style: only frame/size/delta treatment changes, the numbers always render. */
   variant?: string;
 }) {
+  const { inr } = useAdminMoney();
   return (
     <div
       data-variant={variant}
@@ -514,6 +516,7 @@ export function WidgetBody({
   /** Saved style; invalid or missing falls back to the widget kind's default (P14-09). */
   style?: string;
 }) {
+  const { inr } = useAdminMoney();
   const v = resolveWidgetStyle(widget, style);
   switch (widget) {
     case "revenue_by_period":
