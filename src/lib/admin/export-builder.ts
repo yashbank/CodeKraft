@@ -1,16 +1,34 @@
 /** The ONE export builder: every admin list/route turns columns + rows into a styled .xlsx or a plain CSV here. Server-only. */
 
+import { CURRENCIES, type Currency } from "@/lib/money";
 import { toCsv } from "./csv";
 
 export type ExportColType = "text" | "money" | "num" | "date" | "int";
-export type ExportColumn = { header: string; type?: ExportColType; width?: number };
+export type ExportColumn = {
+  header: string;
+  type?: ExportColType;
+  width?: number;
+  /** Currency of a `money` column (symbol + grouping in the sheet); defaults to INR. */
+  currency?: Currency;
+};
 export type ExportFormat = "xlsx" | "csv";
 
 export const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 export const HEADER_FILL = "FF1E3A5F";
 export const FONT_NAME = "Calibri";
-export const MONEY_FMT = '"₹"#,##0.00';
-const FMT = { money: MONEY_FMT, num: "#,##0.00##", date: "yyyy-mm-dd", int: "#,##0" } as const;
+const SYMBOL: Record<Currency, string> = { INR: "₹", USD: "$", EUR: "€", GBP: "£", CAD: "CA$" };
+
+/** Excel number format per currency; INR uses lakh/crore grouping (1,23,456.00) via conditional sections. */
+export function moneyNumFmt(currency: Currency = "INR"): string {
+  const sym = `"${SYMBOL[currency]}"`;
+  return currency === "INR"
+    ? `[>=10000000]${sym}##\\,##\\,##\\,##0.00;[>=100000]${sym}##\\,##\\,##0.00;${sym}#,##0.00`
+    : `${sym}#,##0.00`;
+}
+export const MONEY_FMT = moneyNumFmt("INR");
+const FMT = { num: "#,##0.00##", date: "yyyy-mm-dd", int: "#,##0" } as const;
+const fmtFor = (c: ExportColumn) =>
+  c.type === "money" ? moneyNumFmt(c.currency) : FMT[c.type as keyof typeof FMT];
 
 /** Coerce a raw cell (string or number) to what the column type needs; unparsable values stay text. */
 function typed(v: unknown, t: ExportColType): unknown {
@@ -46,7 +64,7 @@ export async function buildXlsx(
     return {
       header: c.header,
       width: c.width ?? Math.min(48, Math.max(12, len + 3)),
-      style: { font, ...(t !== "text" ? { numFmt: FMT[t] } : {}) },
+      style: { font, ...(t !== "text" ? { numFmt: fmtFor(c) } : {}) },
     };
   });
   for (const r of rows) {
@@ -78,6 +96,9 @@ export function buildCsv(
     rows,
   )}`;
 }
+
+export const isExportCurrency = (v: unknown): v is Currency =>
+  typeof v === "string" && (CURRENCIES as readonly string[]).includes(v);
 
 export const exportFormat = (v: unknown): ExportFormat => (v === "xlsx" ? "xlsx" : "csv");
 

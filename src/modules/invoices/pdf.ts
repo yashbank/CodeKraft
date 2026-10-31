@@ -6,7 +6,7 @@
  */
 import { inflateSync, deflateSync } from "node:zlib";
 import { DEFAULT_NOTE, PAYMENT_LABEL, type InvoiceProps } from "@/pdf/Invoice";
-import { toDecimalString } from "@/lib/money";
+import { approxText, groupedAmount, pdfMoney } from "@/lib/document-money";
 import { getDocumentsBucketName, getStorageDriver } from "@/lib/storage";
 
 const W = 595;
@@ -165,7 +165,7 @@ export function totalsLayout(y0: number, n: number): { rowYs: number[]; boxY: nu
  */
 export function buildInvoicePdf(inv: InvoiceProps, logo?: PdfImage | null): Buffer {
   const c = new Canvas();
-  const money = (n: number) => toDecimalString(n);
+  const money = (n: number) => groupedAmount(n, inv.currency);
   const cur = inv.currency;
   const g = inv.gstBreakdown;
   const acc = hexToRgb(inv.accent);
@@ -252,14 +252,14 @@ export function buildInvoicePdf(inv: InvoiceProps, logo?: PdfImage | null): Buff
     y -= desc.length * 11 + 6;
   });
 
-  const rows: [string, string, boolean?][] = [["Subtotal:", `${cur} ${money(inv.subtotalMinor)}`]];
-  if (inv.discountMinor > 0) rows.push(["Discount:", `-${cur} ${money(inv.discountMinor)}`]);
+  const rows: [string, string, boolean?][] = [["Subtotal:", pdfMoney(inv.subtotalMinor, cur)]];
+  if (inv.discountMinor > 0) rows.push(["Discount:", `-${pdfMoney(inv.discountMinor, cur)}`]);
   if (g) {
-    if (g.cgst_minor !== undefined) rows.push(["CGST:", `${cur} ${money(g.cgst_minor)}`]);
-    if (g.sgst_minor !== undefined) rows.push(["SGST:", `${cur} ${money(g.sgst_minor)}`]);
-    if (g.igst_minor !== undefined) rows.push(["IGST:", `${cur} ${money(g.igst_minor)}`]);
-  } else if (inv.taxMinor > 0) rows.push(["Tax:", `${cur} ${money(inv.taxMinor)}`]);
-  if (g && inv.taxMinor > 0) rows.push(["Total Tax:", `${cur} ${money(inv.taxMinor)}`]);
+    if (g.cgst_minor !== undefined) rows.push(["CGST:", pdfMoney(g.cgst_minor, cur)]);
+    if (g.sgst_minor !== undefined) rows.push(["SGST:", pdfMoney(g.sgst_minor, cur)]);
+    if (g.igst_minor !== undefined) rows.push(["IGST:", pdfMoney(g.igst_minor, cur)]);
+  } else if (inv.taxMinor > 0) rows.push(["Tax:", pdfMoney(inv.taxMinor, cur)]);
+  if (g && inv.taxMinor > 0) rows.push(["Total Tax:", pdfMoney(inv.taxMinor, cur)]);
   if (y - (rows.length + 5) * 15 < M) {
     c.newPage();
     y = H - M;
@@ -271,8 +271,12 @@ export function buildInvoicePdf(inv: InvoiceProps, logo?: PdfImage | null): Buff
   });
   c.rect(340, t.boxY, W - M - 340, TOTAL_BOX_H, acc);
   c.text(346, t.boxY + 8, "Grand Total:", 11, true, false, WHITE);
-  c.text(W - M - 6, t.boxY + 8, `${cur} ${money(inv.totalMinor)}`, 11, true, true, WHITE);
+  c.text(W - M - 6, t.boxY + 8, pdfMoney(inv.totalMinor, cur), 11, true, true, WHITE);
   y = t.boxY;
+  if (inv.approx) {
+    y -= 14;
+    c.text(W - M - 6, y, approxText(inv.approx, true), 8, false, true, MUTED);
+  }
   y -= 36;
   c.text(M, y, "Notes", 8, true, false, fill);
   c.text(M, y - 12, inv.notes || DEFAULT_NOTE, 8, false, false, MUTED);

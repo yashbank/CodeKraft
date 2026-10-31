@@ -1,6 +1,8 @@
 import React from "react";
 import { render } from "@react-email/components";
+import { documentMoney } from "@/lib/document-money";
 import { brandSubject } from "@/lib/email/branding";
+import { isCurrency, parseMinor } from "@/lib/money";
 import { EmailLayout, emailStyles } from "@/lib/email/render";
 import { Text, Link } from "@react-email/components";
 
@@ -16,6 +18,22 @@ export interface EmailTemplateDefinition {
     data: Record<string, unknown>,
     siteUrl: string,
   ) => Promise<{ html: string; text: string }>;
+}
+
+/** Quote/refund payloads carry a decimal `amount` string + `currency`; render with symbol and grouping. */
+function emailMoney(d: Record<string, unknown>): string {
+  const cur = String(d.currency ?? "");
+  const raw = d.amount;
+  if (typeof d.amountMinor === "number" && isCurrency(cur))
+    return documentMoney(d.amountMinor, cur);
+  if ((typeof raw === "string" || typeof raw === "number") && isCurrency(cur)) {
+    try {
+      return documentMoney(parseMinor(String(raw), cur), cur);
+    } catch {
+      // fall through to the raw text
+    }
+  }
+  return `${cur} ${String(raw ?? "")}`.trim();
 }
 
 function makeTemplate(
@@ -189,9 +207,10 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplateDefinition> = {
   "refund-issued": makeTemplate(
     "refund-issued",
     (d) => `Credit Note Issued #${d.creditNoteNumber ?? ""}`,
-    () => (
+    (d) => (
       <Text style={emailStyles.p}>
-        Your refund has been approved and a credit note has been issued.
+        Your refund{d.amountMinor != null ? ` of ${emailMoney(d)}` : ""} has been approved and a
+        credit note has been issued.
       </Text>
     ),
   ),
@@ -226,12 +245,11 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplateDefinition> = {
   "custom-quote": makeTemplate(
     "custom-quote",
     (d) =>
-      `${d.resend ? "Reminder: your" : "Your"} quote: ${d.title ?? "Custom quote"} (${d.currency ?? ""} ${d.amount ?? ""})`,
+      `${d.resend ? "Reminder: your" : "Your"} quote: ${d.title ?? "Custom quote"} (${emailMoney(d)})`,
     (d) => (
       <>
         <Text style={emailStyles.p}>
-          We prepared a custom quote for you: {String(d.title ?? "")} - {String(d.currency ?? "")}{" "}
-          {String(d.amount ?? "")}
+          We prepared a custom quote for you: {String(d.title ?? "")} - {emailMoney(d)}
           {d.validUntil ? `, valid until ${String(d.validUntil)}` : ""}.
         </Text>
         <Link href={String(d.payUrl ?? "/account/quotes")} style={emailStyles.button}>

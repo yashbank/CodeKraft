@@ -35,7 +35,8 @@ describe("export builder xlsx", () => {
     for (let i = 1; i <= 4; i++) expect(ws.getColumn(i).width).toBeGreaterThanOrEqual(12);
     const amount = ws.getCell("B2");
     expect(amount.value).toBe(1234.5);
-    expect(amount.numFmt).toBe(MONEY_FMT);
+    // exceljs drops the backslash escapes of the lakh format when reading back; the file keeps them
+    expect(amount.numFmt).toBe(MONEY_FMT.replace(/\\(.)/g, "$1"));
     expect(ws.getCell("C2").value).toBeInstanceOf(Date);
     expect(ws.getCell("D2").numFmt).toBe("#,##0");
   });
