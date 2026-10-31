@@ -41,6 +41,27 @@ describe("trusted FX rate (R9-09)", () => {
     expect(convertMinor(83250, USD_PER_INR)).toBe(1000); // reverse direction
   });
 
+  it("1 USD = 83 INR: 100.00 USD expense locks 8300.00 INR (provider gives USD per INR)", async () => {
+    const lock = await resolveExpenseRate({
+      currency: "USD",
+      db: dbWith(null),
+      now: NOW,
+      fetchFn: provider(invertRate("83.00000000")),
+    });
+    expect(Number(lock.rate)).toBeCloseTo(83, 4);
+    expect(toInrMinor(10000, lock.rate)).toBe(830000);
+  });
+
+  it("rejects an inverted/implausible live quote and uses the default instead", async () => {
+    const lock = await resolveExpenseRate({
+      currency: "USD",
+      db: dbWith(null),
+      now: NOW,
+      fetchFn: provider("83.00000000"), // wrong direction: 83 USD per INR
+    });
+    expect(lock.source).toBe("default");
+  });
+
   it("rounds to whole minor units (half up)", () => {
     expect(toInrMinor(1, "83.25000000")).toBe(83); // 83.25 paise -> 83
     expect(toInrMinor(2, "83.25000000")).toBe(167); // 166.5 -> 167

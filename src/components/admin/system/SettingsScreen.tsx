@@ -44,6 +44,7 @@ import { DEFAULT_STUDIO, type StudioValues } from "@/lib/theme-studio";
 import type { ThemeName } from "@/lib/theme";
 import { ThemeStudio } from "./theme-studio/ThemeStudio";
 import { uploadMediaFile } from "@/lib/admin/media-upload";
+import { refreshFxRates } from "@/modules/fx/admin-mutations";
 import { updateRazorpaySettings, updateSettings } from "@/modules/settings/admin-mutations";
 import { sendTestEmail } from "@/modules/settings/email-test";
 import { testRazorpayConnection } from "@/modules/settings/razorpay-test-connection";
@@ -371,6 +372,85 @@ const SECTIONS = [
   ["danger", "Danger zone"],
 ] as const;
 type SectionKey = (typeof SECTIONS)[number][0];
+
+function FxRatesPanel({
+  rows,
+  readOnly,
+}: {
+  rows: SettingsData["currencies"]["fx"];
+  readOnly: boolean;
+}) {
+  const router = useRouter();
+  const [busy, setBusy] = React.useState(false);
+  async function refresh() {
+    setBusy(true);
+    try {
+      const res = await refreshFxRates();
+      if (!res.ok) {
+        toast.error(res.error.message);
+        return;
+      }
+      const { result } = res.data;
+      if (result.error) toast.error(`Refresh failed: ${result.error}`);
+      else toast.success(`FX rates refreshed (${result.written / 2} currencies)`);
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Refresh failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <section className="space-y-2" aria-label="FX rates">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-body-sm font-semibold">FX rates (per 1 INR)</h3>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={refresh}
+          disabled={busy || readOnly}
+        >
+          {busy ? "Refreshing…" : "Refresh now"}
+        </Button>
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-body-sm text-fg-muted">No rates stored yet. Click Refresh now.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-body-sm">
+            <thead>
+              <tr className="text-left text-fg-muted">
+                <th className="py-1 pr-4 font-medium">Currency</th>
+                <th className="py-1 pr-4 font-medium">Rate</th>
+                <th className="py-1 pr-4 font-medium">Fetched</th>
+                <th className="py-1 pr-4 font-medium">Source</th>
+                <th className="py-1 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.quote} className="border-t border-border">
+                  <td className="py-1 pr-4 font-mono">{r.quote}</td>
+                  <td className="py-1 pr-4 font-mono">{r.rate}</td>
+                  <td className="py-1 pr-4">
+                    {r.fetchedAt ? r.fetchedAt.slice(0, 16).replace("T", " ") + " UTC" : r.asOf}
+                  </td>
+                  <td className="py-1 pr-4">{r.source}</td>
+                  <td className="py-1">
+                    <Badge tone={r.stale ? "warning" : "success"}>
+                      {r.stale ? "Stale" : "Fresh"}
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
 
 export interface SettingsScreenProps {
   settings: SettingsData;
@@ -874,8 +954,9 @@ export function SettingsScreen({
               </fieldset>
               <p className="text-body-sm text-fg-muted">
                 Visitors can switch the display currency in the site header; non-INR prices use the
-                daily FX rate.
+                latest FX rate (refreshed automatically every few hours).
               </p>
+              <FxRatesPanel rows={s.currencies.fx} readOnly={ro} />
             </>
           ) : null}
 

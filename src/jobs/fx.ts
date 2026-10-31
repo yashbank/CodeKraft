@@ -1,6 +1,7 @@
 /**
  * Daily FX refresh job — docs/06 §3.3, docs/04 §4, §10, TM-13, PHASE-03 P3.12.
- * Fetches base INR rates from open.er-api.com for USD, EUR, GBP, CAD.
+ * Fetches base INR rates for every non-INR currency: open.er-api.com, then frankfurter.app fallback.
+ * Runs daily from cron and lazily from `modules/fx/convert` (never throws to callers).
  * Enforces ±20% sanity bounds vs previous rates (TM-13); rejects poisoned rates.
  * Upserts rates for both directions into fx_rates table.
  * Detects staleness (> 3 days) and notifies admins with N: system.fx_stale once per day.
@@ -12,7 +13,14 @@ import { jobRuns } from "../../drizzle/schema/ops";
 import { userRoles } from "../../drizzle/schema/auth";
 import { notifications } from "../../drizzle/schema/notifications";
 import type { Currency } from "@/lib/money";
-import { fetchOpenErRates, invertRate, isRateStale, isWithinBounds } from "@/modules/fx/client";
+import {
+  FX_PRIMARY_SOURCE,
+  FX_QUOTE_CURRENCIES,
+  fetchRatesWithFallback,
+  invertRate,
+  isRateStale,
+  isWithinBounds,
+} from "@/modules/fx/client";
 import { FX_REFRESH_JOB_KEY, type FxRefreshResult } from "@/modules/fx/types";
 
 async function getDb() {
@@ -37,8 +45,6 @@ export const fxRefreshJob = {
   ): Promise<FxRefreshResult> {
     const startedAt = new Date();
     const now = inputOrNow instanceof Date ? inputOrNow : new Date();
-    const db = await getDb();
-
     let asOf =
       !(inputOrNow instanceof Date) && inputOrNow?.asOf
         ? inputOrNow.asOf
@@ -47,14 +53,16 @@ export const fxRefreshJob = {
     const currencies: readonly Currency[] =
       !(inputOrNow instanceof Date) && inputOrNow?.currencies
         ? inputOrNow.currencies
-        : runOptions?.currencies || ["USD", "EUR", "GBP", "CAD"];
+        : runOptions?.currencies || FX_QUOTE_CURRENCIES;
 
     let status: "ok" | "error" = "ok";
     let written = 0;
     const errors: string[] = [];
     const poisonedQuotes: string[] = [];
+    let source = FX_PRIMARY_SOURCE;
 
     try {
+      const db = await getDb();
       // 1. Fetch latest previous rates for base INR to perform TM-13 sanity bounds check
       const prevRows = await db
         .select()
@@ -62,9 +70,11 @@ export const fxRefreshJob = {
         .where(and(eq(fxRates.base, "INR"), inArray(fxRates.quote, currencies as string[])))
         .orderBy(desc(fxRates.asOf));
 
+      // Bounds only guard against a bad jump vs a RECENT rate; an old/manual row must not wedge refresh.
       const prevRateMap = new Map<string, string>();
       for (const row of prevRows) {
-        if (!prevRateMap.has(row.quote)) {
+        if (prevRateMap.has(row.quote)) continue;
+        if (row.source !== "manual" && now.getTime() - row.createdAt.getTime() < 14 * 864e5) {
           prevRateMap.set(row.quote, row.rate);
         }
       }
@@ -75,8 +85,12 @@ export const fxRefreshJob = {
         fetchedRates = runOptions.mockRates;
       } else {
         try {
-          const fetchResult = await fetchOpenErRates(runOptions?.customUrl, runOptions?.fetchFn);
+          const fetchResult = await fetchRatesWithFallback(
+            runOptions?.fetchFn,
+            runOptions?.customUrl,
+          );
           fetchedRates = fetchResult.rates;
+          source = fetchResult.source;
           if (fetchResult.asOf) {
             asOf = fetchResult.asOf;
           }
@@ -134,14 +148,14 @@ export const fxRefreshJob = {
             quote,
             rate: newRate,
             asOf,
-            source: "open.er-api.com",
+            source,
             createdAt: now,
           })
           .onConflictDoUpdate({
             target: [fxRates.base, fxRates.quote, fxRates.asOf],
             set: {
               rate: newRate,
-              source: "open.er-api.com",
+              source,
               createdAt: now,
             },
           });
@@ -155,14 +169,14 @@ export const fxRefreshJob = {
             quote: "INR",
             rate: inverseRate,
             asOf,
-            source: "open.er-api.com",
+            source,
             createdAt: now,
           })
           .onConflictDoUpdate({
             target: [fxRates.base, fxRates.quote, fxRates.asOf],
             set: {
               rate: inverseRate,
-              source: "open.er-api.com",
+              source,
               createdAt: now,
             },
           });
@@ -189,7 +203,7 @@ export const fxRefreshJob = {
 
       const result: FxRefreshResult = {
         asOf,
-        source: "open.er-api.com",
+        source,
         written,
         error: errors.length > 0 ? errors.join("; ") : undefined,
         stale,
@@ -217,7 +231,7 @@ export const fxRefreshJob = {
 
       return {
         asOf,
-        source: "open.er-api.com",
+        source,
         written,
         error: errMsg,
         stale: true,

@@ -10,9 +10,8 @@ import { AppError, ErrorCode } from "@/lib/errors";
 import { STATIC_FX_TABLE } from "@/lib/fx";
 import type { Currency } from "@/lib/money";
 import { fxRates } from "../../../drizzle/schema/settings";
-import { fetchOpenErRates, invertRate, to8DecimalString } from "./client";
+import { fetchRatesWithFallback, invertRate, to8DecimalString } from "./client";
 
-export const EXPENSE_FX_TIMEOUT_MS = 5000;
 export const EXPENSE_FX_STORED_MAX_AGE_DAYS = 7;
 export const STORED_PREFIX = "stored:";
 
@@ -61,18 +60,14 @@ export async function resolveExpenseRate(o: ResolveExpenseRateOptions): Promise<
   if (row?.source === "manual" && row.asOf >= today) return fromRow(row);
 
   try {
-    const doFetch = o.fetchFn ?? fetch;
-    const { rates } = await fetchOpenErRates(undefined, (url, init) =>
-      doFetch(url, { ...init, signal: AbortSignal.timeout(EXPENSE_FX_TIMEOUT_MS) }),
-    );
+    const { rates, source } = await fetchRatesWithFallback(o.fetchFn ?? fetch);
     const inrToX = rates[o.currency];
     if (inrToX) {
-      const host = process.env.FX_API_URL
-        ? new URL(process.env.FX_API_URL).host
-        : "open.er-api.com";
-      const rate = invertRate(inrToX);
-      await persistLive(o.db, o.currency, inrToX, rate, today, now, host);
-      return { rate, source: host, at: now.toISOString() };
+      const rate = invertRate(inrToX); // provider gives X per 1 INR; we lock INR per 1 X
+      if (isPlausible(o.currency, rate)) {
+        await persistLive(o.db, o.currency, inrToX, rate, today, now, source);
+        return { rate, source, at: now.toISOString() };
+      }
     }
   } catch {
     // fall through to the stored rate
@@ -91,6 +86,14 @@ export async function resolveExpenseRate(o: ResolveExpenseRateOptions): Promise<
   );
 }
 
+/** Guards direction/magnitude bugs: a live X->INR quote must be within 3x of the configured default. */
+export function isPlausible(currency: Currency, xToInr: string): boolean {
+  const dflt = Number(STATIC_FX_TABLE[`${currency}/INR`]);
+  const v = Number(xToInr);
+  if (!(dflt > 0)) return v > 0;
+  return v >= dflt / 3 && v <= dflt * 3;
+}
+
 /** Best-effort write-through of a live quote (both directions) so storefront/ledger read it too. */
 async function persistLive(
   db: DbOrTx,
@@ -102,13 +105,18 @@ async function persistLive(
   source: string,
 ) {
   try {
-    await db
-      .insert(fxRates)
-      .values([
-        { base: "INR", quote: currency, rate: inrToX, asOf, source, createdAt: now },
-        { base: currency, quote: "INR", rate: xToInr, asOf, source, createdAt: now },
-      ])
-      .onConflictDoNothing();
+    for (const v of [
+      { base: "INR" as const, quote: currency, rate: inrToX },
+      { base: currency, quote: "INR" as const, rate: xToInr },
+    ]) {
+      await db
+        .insert(fxRates)
+        .values({ ...v, asOf, source, createdAt: now })
+        .onConflictDoUpdate({
+          target: [fxRates.base, fxRates.quote, fxRates.asOf],
+          set: { rate: v.rate, source, createdAt: now },
+        });
+    }
   } catch {
     // read-only / mocked db: the lock itself still succeeds
   }

@@ -897,6 +897,8 @@ export interface FxRateRow {
   source: string;
   override?: string;
   stale?: boolean;
+  /** ISO timestamp the row was fetched / entered. */
+  fetchedAt?: string;
 }
 
 export interface FeatureFlagRow {

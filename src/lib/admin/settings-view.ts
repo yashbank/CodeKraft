@@ -20,8 +20,7 @@
  *    query (the same check `settingsService.updateSettings` itself does against `orders` before
  *    allowing a base-currency change) — left as `false`/`0` here (display hint only; the server
  *    still enforces the real lock on write regardless of what this badge shows).
- *  - `currencies.fx`: no FX-rate table/cache is exposed through `modules/settings` — `[]` (an
- *    honest empty "FX rates" table, not fabricated rates).
+ *  - `currencies.fx`: passed in by the page from `modules/fx/convert` `getFxPanelRows()`; `[]` if omitted.
  *  - `tax.sellerState`: not a dedicated field — read from `sellerDetails.address.state` when set.
  *  - `payments.payeeName`/`swift`/`instructions`/`affectedOfferings`: no matching columns on
  *    `bankDetailsSchema` (`accountName`/`accountNumber`/`ifsc`/`bankName`/`branch` only) or
@@ -80,7 +79,10 @@ function mapFlags(flags: SiteSettings["flags"]): FeatureFlagRow[] {
   }));
 }
 
-export function mapSiteSettingsToSettingsData(settings: SiteSettings): SettingsData {
+export function mapSiteSettingsToSettingsData(
+  settings: SiteSettings,
+  fx: SettingsData["currencies"]["fx"] = [],
+): SettingsData {
   const env = getEnv();
   const seller = settings.sellerDetails;
   const bank = settings.bankDetails;
@@ -118,7 +120,7 @@ export function mapSiteSettingsToSettingsData(settings: SiteSettings): SettingsD
       locked: false,
       pendingOrders: 0,
       enabled: settings.enabledCurrencies,
-      fx: [],
+      fx,
     },
     tax: {
       gstin: settings.gstin ?? undefined,

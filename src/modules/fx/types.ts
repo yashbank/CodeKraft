@@ -8,7 +8,7 @@ export type { FxRate } from "../../../drizzle/schema/settings";
 export type { FxProvider, FxQuote } from "@/lib/fx";
 
 /** `fx_rates.source` values. */
-export const FX_SOURCES = ["static", "open.er-api.com", "manual"] as const;
+export const FX_SOURCES = ["static", "open.er-api.com", "frankfurter.app", "manual"] as const;
 export type FxSource = (typeof FX_SOURCES)[number];
 
 /** Daily-job key (docs/06 §3.3, docs/12 §2.3). */
@@ -31,7 +31,7 @@ export interface FxRateView {
 
 export interface FxRefreshResult {
   asOf: string;
-  source: FxSource;
+  source: string;
   /** Rows upserted (both directions per quote currency). */
   written: number;
   /** Set when the provider failed and the previous rates were kept. */

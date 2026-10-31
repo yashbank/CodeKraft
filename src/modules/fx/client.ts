@@ -3,7 +3,7 @@
  * Fetches from open.er-api.com, checks ±20% bounds vs previous rates,
  * computes 8-decimal inverse and cross-rates using pure integer arithmetic on bigint.
  */
-import { divRoundHalfUp, parseDecimalScaled, type Currency } from "@/lib/money";
+import { CURRENCIES, divRoundHalfUp, parseDecimalScaled, type Currency } from "@/lib/money";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { FX_STALE_AFTER_DAYS } from "./types";
 
@@ -111,64 +111,115 @@ export interface OpenErResponse {
   [key: string]: unknown;
 }
 
-/**
- * Fetch base INR rates from open.er-api.com (or mock / custom FX_API_URL).
- */
-export async function fetchOpenErRates(
-  customUrl?: string,
-  fetchFn: typeof fetch = fetch,
-): Promise<{ base: "INR"; rates: Record<string, string>; asOf: string }> {
-  const url = customUrl || process.env.FX_API_URL || "https://open.er-api.com/v6/latest/INR";
+export const FX_FETCH_TIMEOUT_MS = 5000;
+export const FX_PRIMARY_SOURCE = "open.er-api.com";
+export const FX_FALLBACK_SOURCE = "frankfurter.app";
 
+/** All currencies except the INR base. */
+export const FX_QUOTE_CURRENCIES: readonly Currency[] = CURRENCIES.filter((c) => c !== "INR");
+const FALLBACK_URL = `https://api.${FX_FALLBACK_SOURCE}/latest?from=INR&to=${FX_QUOTE_CURRENCIES.join(",")}`;
+
+export interface FetchedRates {
+  base: "INR";
+  /** Units of each currency per 1 INR, 8-decimal strings. */
+  rates: Record<string, string>;
+  asOf: string;
+  source: string;
+}
+
+/** Keeps only positive finite numeric quotes for known currencies. */
+function pickRates(raw: Record<string, unknown> | undefined): Record<string, string> {
+  const rates: Record<string, string> = {};
+  for (const curr of FX_QUOTE_CURRENCIES) {
+    const v = raw?.[curr];
+    const n = typeof v === "string" ? Number(v) : v;
+    if (typeof n === "number" && Number.isFinite(n) && n > 0) rates[curr] = to8DecimalString(n);
+  }
+  return rates;
+}
+
+async function getJson(url: string, fetchFn: typeof fetch): Promise<Record<string, unknown>> {
   let res: Response;
   try {
-    res = await fetchFn(url, { headers: { Accept: "application/json" } });
+    res = await fetchFn(url, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(FX_FETCH_TIMEOUT_MS),
+    });
   } catch (err) {
     throw new AppError(
       ErrorCode.UPSTREAM_UNAVAILABLE,
       `Failed to reach FX provider: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
-
   if (!res.ok) {
     throw new AppError(
       ErrorCode.UPSTREAM_UNAVAILABLE,
       `FX provider returned HTTP status ${res.status}`,
     );
   }
-
-  let data: OpenErResponse;
   try {
-    data = (await res.json()) as OpenErResponse;
+    return (await res.json()) as Record<string, unknown>;
   } catch (err) {
     throw new AppError(
       ErrorCode.UPSTREAM_UNAVAILABLE,
       `Failed to parse FX provider JSON: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
+}
 
+/** Fetch base INR rates from open.er-api.com (or custom / FX_API_URL, same response shape). */
+export async function fetchOpenErRates(
+  customUrl?: string,
+  fetchFn: typeof fetch = fetch,
+): Promise<{ base: "INR"; rates: Record<string, string>; asOf: string }> {
+  const url = customUrl || process.env.FX_API_URL || `https://${FX_PRIMARY_SOURCE}/v6/latest/INR`;
+  const data = (await getJson(url, fetchFn)) as unknown as OpenErResponse;
   if (data.result !== "success" || !data.rates) {
     throw new AppError(
       ErrorCode.UPSTREAM_UNAVAILABLE,
-      `FX provider reported error: ${data.result || "unknown"}`,
+      `FX provider reported error: ${String(data.result || "unknown")}`,
     );
   }
-
-  const rates: Record<string, string> = {};
-  const targetCurrencies: Currency[] = ["USD", "EUR", "GBP", "CAD"];
-
-  for (const curr of targetCurrencies) {
-    const rawVal = data.rates[curr];
-    if (rawVal !== undefined) {
-      rates[curr] = to8DecimalString(rawVal);
-    }
+  const rates = pickRates(data.rates);
+  if (Object.keys(rates).length === 0) {
+    throw new AppError(ErrorCode.UPSTREAM_UNAVAILABLE, "FX provider returned no usable rates");
   }
+  return { base: "INR", rates, asOf: new Date().toISOString().slice(0, 10) };
+}
 
-  const asOf = new Date().toISOString().slice(0, 10);
-
+/** frankfurter.app (keyless, ECB): `{ base: "INR", rates: { USD: 0.012 } }`. */
+export async function fetchFrankfurterRates(fetchFn: typeof fetch = fetch): Promise<FetchedRates> {
+  const data = await getJson(FALLBACK_URL, fetchFn);
+  const rates = pickRates(data.rates as Record<string, unknown> | undefined);
+  if (Object.keys(rates).length === 0) {
+    throw new AppError(ErrorCode.UPSTREAM_UNAVAILABLE, "Fallback FX provider returned no rates");
+  }
   return {
     base: "INR",
     rates,
-    asOf,
+    asOf: new Date().toISOString().slice(0, 10),
+    source: FX_FALLBACK_SOURCE,
   };
+}
+
+/** Primary provider, then keyless fallback. Throws only if both fail (message lists both). */
+export async function fetchRatesWithFallback(
+  fetchFn: typeof fetch = fetch,
+  customUrl?: string,
+): Promise<FetchedRates> {
+  try {
+    const r = await fetchOpenErRates(customUrl, fetchFn);
+    const custom = customUrl || process.env.FX_API_URL;
+    return { ...r, source: custom ? new URL(custom).host : FX_PRIMARY_SOURCE };
+  } catch (primaryErr) {
+    try {
+      return await fetchFrankfurterRates(fetchFn);
+    } catch (fallbackErr) {
+      const m = (e: unknown) => (e instanceof Error ? e.message : String(e));
+      throw new AppError(
+        ErrorCode.UPSTREAM_UNAVAILABLE,
+        `All FX providers failed: ${m(primaryErr)}; ${m(fallbackErr)}`,
+      );
+    }
+  }
 }

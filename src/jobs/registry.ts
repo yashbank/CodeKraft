@@ -29,6 +29,8 @@ export async function runFrequentJobs(now: Date = new Date()): Promise<JobExecut
     { name: "quotes.expire", fn: () => quoteExpiryJob.run(now) },
     { name: "email.outbox_retry", fn: () => emailOutboxRetryJob.run(now) },
     { name: "retention.purge_tokens", fn: () => retentionPurgeTokensJob.run() },
+    // Hobby crons are daily-only: this + the daily run + lazy refresh on read keep rates < 6h old.
+    { name: "fx.refresh", fn: () => fxRefreshJob.run(now) },
   ];
 
   for (const job of frequentJobs) {
