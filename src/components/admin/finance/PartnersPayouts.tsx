@@ -54,7 +54,9 @@ import { Sparkline } from "../charts/Sparkline";
 import { FilterChips } from "../FilterChips";
 import { filterPayoutRows } from "@/lib/admin/finance-filters";
 import { useUrlFilters } from "./use-url-filters";
-import { formatDate, formatDateTime, initials, inr, money } from "../format";
+import { formatDate, formatDateTime, initials } from "../format";
+import { useAdminCurrency, useAdminMoney } from "../AdminCurrency";
+import { convertWithTable } from "@/lib/currency-convert";
 import { MoneyCell } from "../MoneyCell";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
@@ -75,6 +77,11 @@ export interface PartnersPayoutsProps {
   initialTab?: "partners" | "payouts";
 }
 
+/** Payout currency default: the admin's preferred currency when the partner holds it, else the first held. */
+function pickPayoutCurrency(held: Array<{ currency: Currency }>, preferred: Currency): Currency {
+  return held.find((m) => m.currency === preferred)?.currency ?? held[0]?.currency ?? preferred;
+}
+
 /**
  * SCR-ADM-19 — partner balance cards (with 12-month sparkline and balance history) and the
  * payouts table. "Record payout" is dual-approved and rejects amounts above the available
@@ -92,12 +99,14 @@ export function PartnersPayouts({
   approvalsHref,
   initialTab = "partners",
 }: PartnersPayoutsProps) {
+  const { inr, money } = useAdminMoney();
   const router = useRouter();
   const formRef = React.useRef<HTMLFormElement>(null);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [partnerId, setPartnerId] = React.useState(partners[0]?.id ?? "");
-  const [currency, setCurrency] = React.useState<Currency>("INR");
+  const adminCfg = useAdminCurrency();
+  const [currency, setCurrency] = React.useState<Currency>(adminCfg.currency);
   const [amount, setAmount] = React.useState("");
   const uf = useUrlFilters();
   const status = (uf.get("status") || null) as PayoutRow["status"] | null;
@@ -130,19 +139,30 @@ export function PartnersPayouts({
       return Number.NaN;
     }
   })();
-  const over = partner && Number.isFinite(amountMinor) ? amountMinor - partner.balanceInr : 0;
+  // Balance is held in INR paise; compare the entered amount (any currency) in INR.
+  const amountInrMinor = Number.isFinite(amountMinor)
+    ? convertWithTable(amountMinor, currency, "INR", adminCfg.table)
+    : Number.NaN;
+  const over = partner && Number.isFinite(amountInrMinor) ? amountInrMinor - partner.balanceInr : 0;
   const rows = filterPayoutRows(payouts, {
     status: status ?? undefined,
     partner: partners.find((p) => p.id === uf.get("partner"))?.name,
   });
   const historyPartner = partners.find((p) => p.id === selectedHistory);
 
+  // Default currency = admin's preferred (when the partner holds it); amount = full balance in it.
+  const prefill = (p: PartnerBalance) => {
+    const cur = pickPayoutCurrency(p.perCurrency, adminCfg.currency);
+    setCurrency(cur);
+    const minor = convertWithTable(p.balanceInr, "INR", cur, adminCfg.table);
+    setAmount((minor / 100).toFixed(2));
+  };
+
   const openDialog = (id?: string) => {
     const p = partners.find((x) => x.id === (id ?? partnerId)) ?? partners[0];
     if (p) {
       setPartnerId(p.id);
-      setCurrency(p.perCurrency[0]?.currency ?? "INR");
-      setAmount((p.balanceInr / 100).toFixed(2));
+      prefill(p);
     }
     setDialogOpen(true);
   };
@@ -357,7 +377,7 @@ export function PartnersPayouts({
                   </p>
                   <p
                     className="text-[28px] leading-tight font-semibold tnum"
-                    aria-label={`${inr(p.balanceInr)} INR`}
+                    aria-label={inr(p.balanceInr)}
                   >
                     {inr(p.balanceInr)}
                   </p>
@@ -709,8 +729,7 @@ export function PartnersPayouts({
                   setPartnerId(v);
                   const p = partners.find((x) => x.id === v);
                   if (p) {
-                    setAmount((p.balanceInr / 100).toFixed(2));
-                    setCurrency(p.perCurrency[0]?.currency ?? "INR");
+                    prefill(p);
                   }
                 }}
               >
@@ -787,8 +806,8 @@ export function PartnersPayouts({
           >
             After this payout: balance{" "}
             <span className="font-mono tnum">
-              {partner && Number.isFinite(amountMinor)
-                ? inr(Math.max(0, partner.balanceInr - amountMinor))
+              {partner && Number.isFinite(amountInrMinor)
+                ? inr(Math.max(0, partner.balanceInr - amountInrMinor))
                 : "—"}
             </span>
           </p>

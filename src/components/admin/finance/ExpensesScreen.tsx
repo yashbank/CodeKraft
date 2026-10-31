@@ -42,7 +42,8 @@ import { previewExpenseRate, recordExpense } from "@/modules/finance/admin-mutat
 import { Banner } from "../Banner";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
-import { formatDate, inr } from "../format";
+import { formatDate } from "../format";
+import { useAdminCurrency, useAdminMoney } from "../AdminCurrency";
 import { MoneyCell } from "../MoneyCell";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
@@ -82,12 +83,14 @@ export function ExpensesScreen({
   adjustmentsHref,
   productHref,
 }: ExpensesScreenProps) {
+  const { inr } = useAdminMoney();
+  const adminCurrency = useAdminCurrency().currency;
   const router = useRouter();
   const formRef = React.useRef<HTMLFormElement>(null);
   const [open, setOpen] = React.useState(false);
   const [product, setProduct] = React.useState<string>("company");
   const [category, setCategory] = React.useState("Hosting");
-  const [currency, setCurrency] = React.useState<Currency>("INR");
+  const [currency, setCurrency] = React.useState<Currency>(adminCurrency);
   const [shared, setShared] = React.useState(true);
   const [amount, setAmount] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
@@ -416,6 +419,8 @@ export function ExpensesScreen({
                     <SelectItem value="INR">INR (base)</SelectItem>
                     <SelectItem value="USD">USD</SelectItem>
                     <SelectItem value="EUR">EUR</SelectItem>
+                    <SelectItem value="GBP">GBP</SelectItem>
+                    <SelectItem value="CAD">CAD</SelectItem>
                   </SelectContent>
                 </Select>
               </Field>

@@ -35,7 +35,9 @@ import { ApprovalGateNotice, Banner } from "../Banner";
 import { FilterChips } from "../FilterChips";
 import { filterAdjustmentRows } from "@/lib/admin/finance-filters";
 import { useUrlFilters } from "./use-url-filters";
-import { formatDateTime, inr } from "../format";
+import { formatDateTime } from "../format";
+import { useAdminCurrency, useAdminMoney } from "../AdminCurrency";
+import { convertWithTable } from "@/lib/currency-convert";
 import { MoneyCell } from "../MoneyCell";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
@@ -79,6 +81,9 @@ export function AdjustmentsScreen({
   initialView = "list",
   prefillRef,
 }: AdjustmentsScreenProps) {
+  const { inr, money } = useAdminMoney();
+  // Amounts are entered in (and stored as) the admin's preferred currency.
+  const { currency: entryCurrency, table } = useAdminCurrency();
   const router = useRouter();
   const [view, setView] = React.useState(initialView);
   const [submitting, setSubmitting] = React.useState(false);
@@ -93,7 +98,7 @@ export function AdjustmentsScreen({
   const [justify, setJustify] = React.useState(false);
   const minor = (s: string) => {
     try {
-      return parseMinor(s || "0", "INR");
+      return parseMinor(s || "0", entryCurrency);
     } catch {
       return 0;
     }
@@ -122,7 +127,7 @@ export function AdjustmentsScreen({
           partyType: l.partyType,
           ...(partner ? { partnerId: partner.id } : {}),
           amountMinor: minor(l.amount),
-          currency: "INR",
+          currency: entryCurrency,
           memo: l.order ? `${l.memo} (${l.order})` : l.memo,
         };
       }),
@@ -315,7 +320,7 @@ export function AdjustmentsScreen({
                     <TableRow>
                       <TableHead>Party type</TableHead>
                       <TableHead>Partner</TableHead>
-                      <TableHead className="text-right">Amount (INR, signed)</TableHead>
+                      <TableHead className="text-right">Amount ({entryCurrency}, signed)</TableHead>
                       <TableHead>Memo</TableHead>
                       <TableHead>Order / item</TableHead>
                       <TableHead className="w-10">
@@ -459,7 +464,7 @@ export function AdjustmentsScreen({
                 </Button>
                 <p role="status" aria-live="polite" className="ml-auto font-mono text-body-sm tnum">
                   Σ {net < 0 ? "−" : ""}
-                  {inr(Math.abs(net))}
+                  {money({ amountMinor: Math.abs(net), currency: entryCurrency })}
                 </p>
               </div>
             </fieldset>
@@ -494,10 +499,12 @@ export function AdjustmentsScreen({
                           {party}
                         </th>
                         <td className="py-1.5">
-                          <MoneyCell value={{ amountMinor: v, currency: "INR" }} signed />
+                          <MoneyCell value={{ amountMinor: v, currency: entryCurrency }} signed />
                         </td>
                         <td className="py-1.5 text-right font-mono tnum">
-                          {p ? inr(p.balanceInr + v) : "—"}
+                          {p
+                            ? inr(p.balanceInr + convertWithTable(v, entryCurrency, "INR", table))
+                            : "—"}
                         </td>
                       </tr>
                     );

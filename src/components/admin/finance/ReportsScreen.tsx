@@ -30,7 +30,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/components/ui/_utils";
 import { exportStatement } from "@/modules/finance/admin-mutations";
 import { BarChart } from "../charts/BarChart";
-import { formatDateTime, inr } from "../format";
+import { formatDateTime } from "../format";
+import { useAdminMoney } from "../AdminCurrency";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
 import { StatTile } from "../StatTile";
@@ -100,6 +101,7 @@ export function ReportsScreen({
   initialTab = "reports",
   initialReport = "revenue_by_period",
 }: ReportsScreenProps) {
+  const { inr } = useAdminMoney();
   const [key, setKey] = React.useState<ReportKey>(initialReport);
   const uf = useUrlFilters();
   const preset = uf.get("preset") || "this-fy";

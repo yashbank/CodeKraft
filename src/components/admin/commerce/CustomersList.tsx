@@ -54,7 +54,8 @@ import { NewCustomerDialog } from "./NewCustomerDialog";
 import { AccessDialog } from "../system/AccessDialog";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
-import { formatDate, initials, inr, timeAgo } from "../format";
+import { formatDate, initials, timeAgo } from "../format";
+import { useAdminMoney } from "../AdminCurrency";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
 import { RowActions } from "../RowActions";
@@ -81,6 +82,7 @@ export function CustomersList({
   quotesHref,
   newOrderHref,
 }: CustomersListProps) {
+  const { inr } = useAdminMoney();
   const router = useRouter();
   const [statusDialog, setStatusDialog] = React.useState<StatusDialogState | null>(null);
   const [reason, setReason] = React.useState("");

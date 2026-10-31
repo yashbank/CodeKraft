@@ -86,7 +86,10 @@ import {
   reorderProductMedia,
 } from "@/modules/media/admin-mutations";
 import { ApprovalGateNotice, Banner } from "../Banner";
-import { formatDate, formatDateTime, money, percentFromBps } from "../format";
+import { formatDate, formatDateTime, percentFromBps } from "../format";
+import { useAdminCurrency, useAdminMoney } from "../AdminCurrency";
+import { convertWithTable, type RateTable } from "@/lib/currency-convert";
+import { CURRENCIES, type Currency } from "@/lib/money";
 import { productSeo } from "@/lib/seo";
 import { SeoPreview } from "../SeoPreview";
 import { RowActions } from "../RowActions";
@@ -178,6 +181,12 @@ export interface ProductEditorProps {
   isNew?: boolean;
 }
 
+/** Price (minor units) to prefill when editing: the stored row in that currency, else the INR base converted. */
+function offeringPriceDefault(o: OfferingRow, currency: Currency, table: RateTable): number {
+  const row = o.prices.find((p) => p.currency === currency);
+  return row ? row.amountMinor : convertWithTable(o.basePrice.amountMinor, "INR", currency, table);
+}
+
 function flattenCategoryOptions(nodes: CategoryNode[]): Array<{ id: string; label: string }> {
   const out: Array<{ id: string; label: string }> = [];
   for (const c of nodes) {
@@ -206,6 +215,12 @@ export function ProductEditor({
   initialTab = "basics",
   isNew = false,
 }: ProductEditorProps) {
+  const { money } = useAdminMoney();
+  const adminCfg = useAdminCurrency();
+  // Price entry currency: defaults to the admin's preferred currency; stored exactly as entered.
+  const [offeringPriceCurrency, setOfferingPriceCurrency] = React.useState<Currency>(
+    adminCfg.currency,
+  );
   const router = useRouter();
   const [tab, setTab] = React.useState<TabKey>(initialTab);
   const productId = product.id;
@@ -654,6 +669,7 @@ export function ProductEditor({
   /** Opens the offering dialog — `null` for "Add offering", an existing row to edit it prefilled. */
   function openOfferingDialog(offering: OfferingRow | null) {
     setEditingOffering(offering);
+    setOfferingPriceCurrency(adminCfg.currency);
     setOfferingPurchaseModel(offering?.purchaseModel ?? "one_time");
     setOfferingBillingInterval(offering?.billingInterval ?? "monthly");
     setOfferingDeliveryType(offering?.deliveryType ?? "download");
@@ -732,11 +748,33 @@ export function ProductEditor({
     const offeringId = upsertResult.data.offering.id;
 
     // `setOfferingPrices` replaces the whole price set — keep any other currency rows so editing
-    // the INR base price doesn't silently delete them.
-    const otherPrices = (existing?.prices ?? []).filter((p) => p.currency !== "INR");
+    // the entered-currency price doesn't silently delete them. The price is stored exactly as
+    // entered; the server requires an INR base row, so one is derived only when none exists.
+    const enteredMinor = Math.round(priceInr * 100);
+    const otherPrices = (existing?.prices ?? []).filter(
+      (p) => p.currency !== offeringPriceCurrency,
+    );
+    const needsInrBase =
+      offeringPriceCurrency !== "INR" && !otherPrices.some((p) => p.currency === "INR");
     const priceResult = await setOfferingPrices({
       offeringId,
-      prices: [{ currency: "INR", amountMinor: Math.round(priceInr * 100) }, ...otherPrices],
+      prices: [
+        { currency: offeringPriceCurrency, amountMinor: enteredMinor },
+        ...(needsInrBase
+          ? [
+              {
+                currency: "INR",
+                amountMinor: convertWithTable(
+                  enteredMinor,
+                  offeringPriceCurrency,
+                  "INR",
+                  adminCfg.table,
+                ),
+              },
+            ]
+          : []),
+        ...otherPrices,
+      ],
     });
     if (!priceResult.ok) {
       toast.error(priceResult.error.message);
@@ -1653,8 +1691,9 @@ export function ProductEditor({
                       {editingOffering ? `Edit ${editingOffering.name}` : "Add offering"}
                     </DialogTitle>
                     <DialogDescription>
-                      Base price is in INR — saving replaces only the INR row (other currencies, if
-                      any, are kept). Refine delivery config from the Delivery config tab.
+                      The price is stored in the currency you pick (default: your preferred
+                      currency); other currency rows are kept, and an INR base row is derived only
+                      if none exists. Refine delivery config from the Delivery config tab.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
@@ -1667,19 +1706,45 @@ export function ProductEditor({
                         maxLength={120}
                       />
                     </Field>
-                    <Field id="off-price" label="Price (INR)">
-                      <Input
-                        id="off-price"
-                        name="offeringPrice"
-                        type="number"
-                        min="1"
-                        step="0.01"
-                        defaultValue={
-                          editingOffering ? editingOffering.basePrice.amountMinor / 100 : undefined
-                        }
-                        required
-                      />
-                    </Field>
+                    <div className="grid grid-cols-[1fr_7rem] gap-3">
+                      <Field id="off-price" label={`Price (${offeringPriceCurrency})`}>
+                        <Input
+                          id="off-price"
+                          key={offeringPriceCurrency}
+                          name="offeringPrice"
+                          type="number"
+                          min="1"
+                          step="0.01"
+                          defaultValue={
+                            editingOffering
+                              ? offeringPriceDefault(
+                                  editingOffering,
+                                  offeringPriceCurrency,
+                                  adminCfg.table,
+                                ) / 100
+                              : undefined
+                          }
+                          required
+                        />
+                      </Field>
+                      <Field id="off-price-currency" label="Currency">
+                        <Select
+                          value={offeringPriceCurrency}
+                          onValueChange={(v) => setOfferingPriceCurrency(v as Currency)}
+                        >
+                          <SelectTrigger id="off-price-currency">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CURRENCIES.map((c) => (
+                              <SelectItem key={c} value={c}>
+                                {c}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                    </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Field id="off-model" label="Purchase model">
                         <Select

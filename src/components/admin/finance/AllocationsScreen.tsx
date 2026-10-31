@@ -25,7 +25,8 @@ import { cn } from "@/components/ui/_utils";
 import { DataToolbar, ToolbarField } from "../DataToolbar";
 import { UrlSelect } from "./UrlSelect";
 import { useUrlFilters, useUrlSearch } from "./use-url-filters";
-import { formatDate, inr, money, percentFromBps } from "../format";
+import { formatDate, percentFromBps } from "../format";
+import { useAdminMoney } from "../AdminCurrency";
 import { MoneyCell } from "../MoneyCell";
 import { PageHeader } from "../PageHeader";
 import { StatTile } from "../StatTile";
@@ -58,6 +59,7 @@ export function AllocationsScreen({
   isSuperAdmin,
   ownPartnerName = null,
 }: AllocationsScreenProps) {
+  const { inr, money } = useAdminMoney();
   const [expanded, setExpanded] = React.useState<string | null>(null);
   const sum = (f: (r: AllocationRow) => number) => rows.reduce((s, r) => s + f(r), 0);
   const partnerName = (n: string) => (isSuperAdmin || n === ownPartnerName ? n : "Other partner");
@@ -353,6 +355,7 @@ function Waterfall({
   row: AllocationRow;
   partnerName: (n: string) => string;
 }) {
+  const { inr } = useAdminMoney();
   const steps = [
     { label: "Gross", value: Math.abs(row.gross.amountMinor), tone: "bg-chart-1" },
     { label: "− Discount", value: row.discount.amountMinor, tone: "bg-chart-3" },

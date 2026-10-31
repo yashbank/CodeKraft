@@ -36,7 +36,9 @@ import { deactivateCoupon, upsertCoupon } from "@/modules/coupons/admin-mutation
 import { DataToolbar } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
 import { FilterChips } from "../FilterChips";
-import { formatDate, money } from "../format";
+import { formatDate } from "../format";
+import { useAdminCurrency, useAdminMoney } from "../AdminCurrency";
+import { currencySymbol } from "@/lib/currency-prefs";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
 import { RowActions } from "../RowActions";
@@ -57,11 +59,18 @@ export function CouponsList({
   products: CouponProductOption[];
   ordersHref: string;
 }) {
+  const { money } = useAdminMoney();
   const router = useRouter();
   const formRef = React.useRef<HTMLFormElement>(null);
   const [state, setState] = React.useState<CouponRow["state"] | null>(null);
   const [editing, setEditing] = React.useState<CouponRow | "new" | null>(null);
+  const adminCurrency = useAdminCurrency().currency;
   const [kind, setKind] = React.useState<"percent" | "fixed">("percent");
+  // Fixed coupons keep their stored currency when edited; new ones use the admin's preferred one.
+  const couponCurrency =
+    editing !== null && editing !== "new" && editing.amount
+      ? editing.amount.currency
+      : adminCurrency;
   const [value, setValue] = React.useState("10");
   const [endsAt, setEndsAt] = React.useState("");
   const [max, setMax] = React.useState("50");
@@ -89,7 +98,7 @@ export function CouponsList({
     }
   };
 
-  const preview = `${kind === "percent" ? `${value || 0}% off` : `₹${value || 0} off`} any product${endsAt ? `, until ${formatDate(endsAt)}` : ""}${max ? `, max ${max} uses` : ""}`;
+  const preview = `${kind === "percent" ? `${value || 0}% off` : `${currencySymbol(couponCurrency)}${value || 0} off`} any product${endsAt ? `, until ${formatDate(endsAt)}` : ""}${max ? `, max ${max} uses` : ""}`;
 
   async function handleDeactivate(c: CouponRow) {
     const result = await deactivateCoupon({ id: c.id });
@@ -143,7 +152,7 @@ export function CouponsList({
       active: fd.get("active") === "on",
       productIds: fd.getAll("productIds").map(String),
     };
-    if (kind === "fixed") payload.currency = "INR";
+    if (kind === "fixed") payload.currency = couponCurrency;
     if (startsAtRaw) payload.startsAt = new Date(startsAtRaw).toISOString();
     if (endsAt) payload.endsAt = new Date(endsAt).toISOString();
     if (maxRedemptions !== undefined) payload.maxRedemptions = maxRedemptions;
@@ -293,7 +302,8 @@ export function CouponsList({
               {editing === "new" || editing === null ? "New coupon" : `Edit ${editing.code}`}
             </SheetTitle>
             <SheetDescription>
-              Percentage ≤ 100; fixed amounts are in the base currency (INR).
+              Percentage ≤ 100; fixed amounts are stored in {couponCurrency} (your preferred
+              currency) and only apply to orders in that currency.
             </SheetDescription>
           </SheetHeader>
           <form
@@ -352,13 +362,17 @@ export function CouponsList({
                 </div>
                 <div className="flex items-center gap-2">
                   <RadioGroupItem id="cp-kind-fixed" value="fixed" />
-                  <Label htmlFor="cp-kind-fixed">Fixed amount (INR)</Label>
+                  <Label htmlFor="cp-kind-fixed">Fixed amount ({couponCurrency})</Label>
                 </div>
               </RadioGroup>
             </fieldset>
             <Field
               id="cp-value"
-              label={kind === "percent" ? "Percent off" : "Amount off (₹)"}
+              label={
+                kind === "percent"
+                  ? "Percent off"
+                  : `Amount off (${currencySymbol(couponCurrency)})`
+              }
               required
             >
               <Input
