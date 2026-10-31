@@ -577,7 +577,7 @@ export function CheckoutScreen({
               </table>
             </div>
             <p className="text-caption text-fg-muted">
-              You&apos;ll be charged in INR. Other currencies are shown as estimates.
+              You&apos;ll be charged in {total.currency}. Other currencies are shown as estimates.
             </p>
           </Step>
 

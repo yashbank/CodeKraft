@@ -3,6 +3,8 @@ import {
   mapInvoiceRowsToSummaries,
   mapPaymentHistoryToSummaries,
 } from "@/lib/account/invoices-view";
+import { getDisplayCurrency } from "@/lib/display-currency";
+import { toViewerMoney } from "@/lib/account/display-money";
 import { listMyInvoicesQuery } from "@/modules/invoices/queries";
 import { getPaymentHistoryQuery } from "@/modules/users/queries";
 
@@ -27,7 +29,13 @@ export default async function InvoicesPage() {
   ]);
 
   const invoiceRows = invoicesResult.ok ? invoicesResult.data.items : [];
-  const invoices = mapInvoiceRowsToSummaries(invoiceRows);
+  const { currency: viewerCurrency } = await getDisplayCurrency();
+  const invoices = await Promise.all(
+    mapInvoiceRowsToSummaries(invoiceRows).map(async (i) => ({
+      ...i,
+      displayAmount: await toViewerMoney(i.amount, viewerCurrency),
+    })),
+  );
   const payments = paymentsResult.ok ? mapPaymentHistoryToSummaries(paymentsResult.data.items) : [];
   const error =
     !invoicesResult.ok || !paymentsResult.ok

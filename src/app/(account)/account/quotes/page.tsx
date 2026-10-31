@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { format } from "@/lib/money";
 import { assertCurrency } from "@/lib/money";
 import { getSiteRequestContext } from "@/lib/authz/site-request-context";
+import { getDisplayCurrency } from "@/lib/display-currency";
+import { toViewerMoney } from "@/lib/account/display-money";
 import { quoteRelativePath } from "@/lib/routes";
 import { listMyQuotesQuery } from "@/modules/quotes/queries";
 
@@ -13,6 +15,18 @@ export const dynamic = "force-dynamic";
 export default async function AccountQuotesPage() {
   const ctx = await getSiteRequestContext();
   const res = await listMyQuotesQuery({}, ctx);
+  const { currency: viewerCurrency } = await getDisplayCurrency();
+  const approx = new Map<string, string>();
+  if (res.ok) {
+    for (const q of res.data) {
+      const total = q.amountMinor + Math.round((q.amountMinor * q.taxBps) / 10000);
+      const m = await toViewerMoney(
+        { amountMinor: total, currency: assertCurrency(q.currency) },
+        viewerCurrency,
+      );
+      if (m) approx.set(q.id, `≈ ${format(m)}`);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -46,6 +60,9 @@ export default async function AccountQuotesPage() {
                   <span className="font-mono">
                     {format({ amountMinor: total, currency: assertCurrency(q.currency) })}
                   </span>
+                  {approx.get(q.id) ? (
+                    <span className="font-mono text-caption text-fg-muted">{approx.get(q.id)}</span>
+                  ) : null}
                   <Button size="sm" variant={open ? "default" : "secondary"} asChild>
                     <Link href={quoteRelativePath(q.token)}>{open ? "Review" : "View"}</Link>
                   </Button>

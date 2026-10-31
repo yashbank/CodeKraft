@@ -451,17 +451,17 @@ export class DefaultOfferingsService implements OfferingsService {
         .from(offeringPrices)
         .where(eq(offeringPrices.offeringId, off.id));
 
-      const basePrice = prices.find((p) => p.currency === "INR");
+      const basePrice = prices.find((p) => p.currency === "INR") ?? prices[0];
       const displayPrice = await resolveOfferingPrice(prices, displayCurrency);
 
       let priceBlock: OfferingView["price"] = null;
       if (basePrice && displayPrice) {
         priceBlock = {
-          base: { amountMinor: basePrice.amountMinor, currency: "INR" },
-          display: { amountMinor: displayPrice.amountMinor, currency: displayCurrency },
+          base: { amountMinor: basePrice.amountMinor, currency: basePrice.currency as Currency },
+          display: { amountMinor: displayPrice.amountMinor, currency: displayPrice.currency },
           compareAt:
             displayPrice.compareAtMinor !== null
-              ? { amountMinor: displayPrice.compareAtMinor, currency: displayCurrency }
+              ? { amountMinor: displayPrice.compareAtMinor, currency: displayPrice.currency }
               : null,
           displayIsConverted: !displayPrice.explicit,
         };
