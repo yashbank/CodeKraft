@@ -39,9 +39,12 @@ export function CurrencySwitcher({
       onChange={(next) => {
         setCurrent(next);
         document.cookie = `${CURRENCY_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
-        if (signedIn)
-          void updateMyAccountSettings({ displayCurrency: next }).catch(() => undefined);
-        router.refresh();
+        // Signed-in pref outranks the cookie server-side: save it BEFORE refreshing, or the refresh
+        // re-renders with the old pref and prices appear not to change.
+        const saved = signedIn
+          ? updateMyAccountSettings({ displayCurrency: next }).catch(() => undefined)
+          : Promise.resolve();
+        void saved.then(() => router.refresh());
       }}
     />
   );

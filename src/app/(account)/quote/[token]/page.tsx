@@ -1,5 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { QuoteScreen } from "@/components/account/QuoteScreen";
+import { getDisplayCurrency } from "@/lib/display-currency";
+import { add } from "@/lib/money";
+import { toViewerMoney } from "@/lib/account/display-money";
 import { defaultBilling, mapQuoteView } from "@/lib/account/quote-view";
 import { mapProfileToBilling } from "@/lib/account/checkout-view";
 import { getSiteRequestContext } from "@/lib/authz/site-request-context";
@@ -47,6 +50,10 @@ export default async function QuotePage({ params }: PageProps) {
   }
 
   const view = quoteResult.data;
+  const { currency: viewerCurrency } = await getDisplayCurrency();
+  const mapped = mapQuoteView(view, { customerEmail: session.user.email });
+  const quoteTotal = mapped.tax ? add(mapped.amount, mapped.tax) : mapped.amount;
+  const displayAmount = await toViewerMoney(quoteTotal, viewerCurrency);
   const billing = profileResult.ok
     ? mapProfileToBilling(profileResult.data.user, profileResult.data.profile)
     : defaultBilling(session.user.email);
@@ -54,7 +61,7 @@ export default async function QuotePage({ params }: PageProps) {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 lg:py-12">
       <QuoteScreen
-        quote={{ ...mapQuoteView(view, { customerEmail: session.user.email }), token }}
+        quote={{ ...mapped, displayAmount, token }}
         billing={billing}
         customerEmail={session.user.email}
         canAccept={view.canAccept}
