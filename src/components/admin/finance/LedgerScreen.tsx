@@ -78,17 +78,19 @@ export function LedgerScreen({
   summary = null,
   partners = [],
 }: LedgerScreenProps) {
-  const { inr, money } = useAdminMoney();
+  const { inr, money, native, lockedToViewer, currency: viewerCurrency } = useAdminMoney();
   const f = useUrlFilters();
   const [search, setSearch] = useUrlSearch();
-  const [currency, setCurrency] = React.useState<"native" | "inr">("native");
+  const [currency, setCurrency] = React.useState<"viewer" | "native">("viewer");
   const [expanded, setExpanded] = React.useState<number | null>(null);
   const rows = entries; // filtered server-side by the URL params
   const { credits, debits, net } = ledgerTotals(rows.map((e) => e.amountInr));
   // Balance in the displayed currency, after each row (rows are newest-first).
-  const balances = runningBalances(
-    rows.map((e) => (currency === "inr" ? e.amountInr : e.amount.amountMinor)),
-  );
+  // Viewer mode converts each row (locked INR rate); native mode shows posted amounts as stored.
+  const rowAmount = (e: (typeof rows)[number]) =>
+    currency === "native" ? e.amount.amountMinor : lockedToViewer(e.amount, e.amountInr);
+  const mixedNative = currency === "native" && new Set(rows.map((e) => e.amount.currency)).size > 1;
+  const balances = runningBalances(rows.map(rowAmount));
 
   return (
     <TooltipProvider>
@@ -189,8 +191,8 @@ export function LedgerScreen({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="viewer">{viewerCurrency}</SelectItem>
                   <SelectItem value="native">Native</SelectItem>
-                  <SelectItem value="inr">INR</SelectItem>
                 </SelectContent>
               </Select>
             </ToolbarField>
@@ -267,14 +269,15 @@ export function LedgerScreen({
                   const hidden =
                     !isSuperAdmin && e.partyType === "partner" && e.party !== ownPartnerName;
                   const party = hidden ? "Other partner" : e.party;
-                  const shown =
-                    currency === "inr"
-                      ? { amountMinor: e.amountInr, currency: "INR" as const }
-                      : e.amount;
+                  const shown = {
+                    amountMinor: rowAmount(e),
+                    currency: currency === "native" ? e.amount.currency : viewerCurrency,
+                  };
                   const { debit, credit } = drCr(shown.amountMinor);
+                  const fmt = (m: typeof shown) => (currency === "native" ? native(m) : money(m));
                   const amountCell = (n: number, tone: string) => (
                     <TableCell className={cn("py-1.5 text-right font-mono tnum", tone)}>
-                      {n ? money({ amountMinor: n, currency: shown.currency }) : "—"}
+                      {n ? fmt({ amountMinor: n, currency: shown.currency }) : "—"}
                     </TableCell>
                   );
                   return (
@@ -317,7 +320,9 @@ export function LedgerScreen({
                           data-testid="ledger-balance"
                           className="py-1.5 text-right font-mono tnum"
                         >
-                          {money({ amountMinor: balances[idx] ?? 0, currency: shown.currency })}
+                          {mixedNative
+                            ? "—"
+                            : fmt({ amountMinor: balances[idx] ?? 0, currency: shown.currency })}
                         </TableCell>
                         <TableCell className="hidden py-1.5 font-mono text-fg-muted 2xl:table-cell">
                           {e.amount.currency}
