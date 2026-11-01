@@ -30,7 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
-import { format } from "@/lib/money";
+import { useViewerFormat } from "./ViewerMoney";
 import { cancelMyOrder } from "@/modules/orders/customer-mutations";
 import { fromPlainText } from "@/modules/content/plain-text";
 import { createQuery } from "@/modules/queries/customer-mutations";
@@ -148,6 +148,7 @@ function Timeline({ order: o, stage }: { order: OrderView; stage: Stage }) {
 
 /** "Open a query" / "Request refund" both create a query with `source='order'`. */
 function RefundDialog({ order: o }: { order: OrderView }) {
+  const fmt = useViewerFormat();
   const router = useRouter();
   const [note, setNote] = React.useState("");
   const [open, setOpen] = React.useState(false);
@@ -198,7 +199,8 @@ function RefundDialog({ order: o }: { order: OrderView }) {
             maxLength={4000}
           />
           <p className="text-caption text-fg-muted">
-            Opens a query "Refund request · {o.number}" with the amount {format(o.total)}. See the{" "}
+            Opens a query "Refund request · {o.number}" with the amount {fmt(o.total, true)}. See
+            the{" "}
             <Link href="/legal/refunds" className="text-accent-text underline">
               refund policy
             </Link>
@@ -234,6 +236,7 @@ export function OrderStatusScreen({
   links: { purchases: string; entitlement?: string; newQuery: string; product: string };
   loading?: boolean;
 }) {
+  const fmt = useViewerFormat();
   const stage = orderStage(o);
   const [method, setMethod] = React.useState<PaymentProvider>(o.paymentMethod);
   const [reference, setReference] = React.useState(o.payment?.reference ?? "");
@@ -446,8 +449,8 @@ export function OrderStatusScreen({
               {o.payment?.received ? (
                 <p className="text-body-sm text-fg-muted">
                   {o.payment.shortfall && o.payment.shortfall.amountMinor > 0
-                    ? `We received ${format(o.payment.received)} against ${format(o.total)}; the bank charge was absorbed by us — nothing more to pay.`
-                    : `Received ${format(o.payment.received)} via ${METHOD_LABEL[o.paymentMethod]}.`}
+                    ? `We received ${fmt(o.payment.received)} against ${fmt(o.total, true)}; the bank charge was absorbed by us — nothing more to pay.`
+                    : `Received ${fmt(o.payment.received)} via ${METHOD_LABEL[o.paymentMethod]}.`}
                 </p>
               ) : null}
             </div>
@@ -499,7 +502,7 @@ export function OrderStatusScreen({
         <div className="space-y-3 rounded-lg border border-border bg-surface p-5">
           <p className="text-body font-semibold text-fg">
             {o.status === "partially_refunded" ? "Partially refunded" : "Refunded"}:{" "}
-            {o.refund ? format(o.refund.amount) : "—"}
+            {o.refund ? fmt(o.refund.amount) : "—"}
           </p>
           {o.refund ? (
             <p className="text-body-sm text-fg-muted">
@@ -522,35 +525,29 @@ export function OrderStatusScreen({
         {o.lines.map((l) => (
           <li key={l.name} className="flex justify-between gap-3">
             <span className="text-fg">{l.name}</span>
-            <span className="font-mono tnum text-fg">{format(l.total)}</span>
+            <span className="font-mono tnum text-fg">{fmt(l.total)}</span>
           </li>
         ))}
       </ul>
       <dl className="space-y-1.5 border-t border-border pt-3 text-body-sm">
         <div className="flex justify-between">
           <dt className="text-fg-muted">Subtotal</dt>
-          <dd className="font-mono tnum">{format(o.subtotal)}</dd>
+          <dd className="font-mono tnum">{fmt(o.subtotal)}</dd>
         </div>
         {o.discount ? (
           <div className="flex justify-between text-success">
             <dt>Discount ({o.discount.code})</dt>
-            <dd className="font-mono tnum">−{format(o.discount.amount)}</dd>
+            <dd className="font-mono tnum">−{fmt(o.discount.amount)}</dd>
           </div>
         ) : null}
         <div className="flex justify-between">
           <dt className="text-fg-muted">Tax</dt>
-          <dd className="font-mono tnum">{o.tax ? format(o.tax) : "No tax"}</dd>
+          <dd className="font-mono tnum">{o.tax ? fmt(o.tax) : "No tax"}</dd>
         </div>
         <div className="flex justify-between border-t border-border pt-2 text-body font-semibold text-fg">
           <dt>Total</dt>
-          <dd className="font-mono tnum">{format(o.total)}</dd>
+          <dd className="font-mono tnum">{fmt(o.total, true)}</dd>
         </div>
-        {o.displayTotal ? (
-          <div className="flex justify-between text-caption text-fg-muted">
-            <dt>≈ estimate</dt>
-            <dd className="font-mono tnum">≈ {format(o.displayTotal)}</dd>
-          </div>
-        ) : null}
       </dl>
       <div className="border-t border-border pt-3 text-body-sm">
         <p className="text-caption text-fg-muted">Billing</p>
@@ -611,7 +608,7 @@ export function OrderStatusScreen({
         aria-controls="order-summary"
         onClick={() => setSummaryOpen((s) => !s)}
       >
-        Order summary · {format(o.total)}
+        Order summary · {fmt(o.total, true)}
         <ChevronDownIcon
           aria-hidden
           className={cn("size-4 transition-transform", summaryOpen && "rotate-180")}

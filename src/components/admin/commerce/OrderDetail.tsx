@@ -87,7 +87,7 @@ export function OrderDetail({
   queriesHref,
   deliveryTasks = [],
 }: OrderDetailProps) {
-  const { money } = useAdminMoney();
+  const { money, original } = useAdminMoney();
   const router = useRouter();
   const { order, payment, splitApproval } = data;
   const [confirmOpen, setConfirmOpen] = React.useState(false);
@@ -287,7 +287,10 @@ export function OrderDetail({
           <Link href={customerHref} className="text-accent-text hover:underline">
             {order.customer.name} · {order.customer.email}
           </Link>
-          <span className="font-mono tnum text-fg">{money(order.total)}</span>
+          <span className="font-mono tnum text-fg">
+            {money(order.total)}
+            {original(order.total) ? ` · charged ${original(order.total)}` : ""}
+          </span>
           {order.invoiceNumber ? (
             <span className="font-mono">Invoice {order.invoiceNumber}</span>
           ) : null}

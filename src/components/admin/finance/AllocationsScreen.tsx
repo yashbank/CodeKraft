@@ -59,7 +59,7 @@ export function AllocationsScreen({
   isSuperAdmin,
   ownPartnerName = null,
 }: AllocationsScreenProps) {
-  const { inr, money } = useAdminMoney();
+  const { inr, money, toViewer, currency: viewerCurrency } = useAdminMoney();
   const [expanded, setExpanded] = React.useState<string | null>(null);
   const sum = (f: (r: AllocationRow) => number) => rows.reduce((s, r) => s + f(r), 0);
   const partnerName = (n: string) => (isSuperAdmin || n === ownPartnerName ? n : "Other partner");
@@ -79,6 +79,10 @@ export function AllocationsScreen({
     { header: "Company cut", type: "money" },
     { header: "Partners" },
     { header: "Ownership version" },
+    { header: "Currency" },
+    { header: `Gross (≈ ${viewerCurrency})`, type: "money", currency: viewerCurrency },
+    { header: `Distributable (≈ ${viewerCurrency})`, type: "money", currency: viewerCurrency },
+    { header: `Company cut (≈ ${viewerCurrency})`, type: "money", currency: viewerCurrency },
   ];
   const exportData = rows.map((r) => [
     r.at,
@@ -94,6 +98,10 @@ export function AllocationsScreen({
     m(r.companyCut.amount),
     r.partners.map((p) => `${partnerName(p.name)} ${m(p.amount)}`).join("; "),
     r.ownershipVersion,
+    r.gross.currency,
+    m({ amountMinor: toViewer(r.gross) }),
+    m({ amountMinor: toViewer(r.distributable) }),
+    m({ amountMinor: toViewer(r.companyCut.amount) }),
   ]);
   const [search, setSearch] = useUrlSearch();
   // Keep the active choice selectable even when it filtered every row out.

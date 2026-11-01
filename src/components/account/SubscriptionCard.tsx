@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { format } from "@/lib/money";
+import { useViewerFormat } from "./ViewerMoney";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { formatDate } from "./format";
 import type { SubscriptionInfo } from "./types";
@@ -27,6 +27,7 @@ export function SubscriptionCard({
   renewHref: string;
   onCancel?: () => void;
 }) {
+  const fmt = useViewerFormat();
   const ending = s.cancelAtPeriodEnd || s.status === "cancelled";
   return (
     <Card className="gap-4 py-5">
@@ -49,7 +50,7 @@ export function SubscriptionCard({
           {!ending ? (
             <div className="flex justify-between gap-2">
               <dt className="text-fg-muted">Next due</dt>
-              <dd className="font-mono tnum text-fg">{format(s.nextDue)}</dd>
+              <dd className="font-mono tnum text-fg">{fmt(s.nextDue)}</dd>
             </div>
           ) : null}
         </dl>
