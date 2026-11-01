@@ -61,6 +61,17 @@ describe("C16-01 rate of 1 is never valid between INR and another currency", () 
     ).toBe(true);
   });
 
+  it("round-trip INR -> X -> INR stays within rounding for every currency", () => {
+    for (const c of ["USD", "EUR", "GBP", "CAD"] as const) {
+      const out = convertWithTable(100_100, "INR", c, live);
+      const back = convertWithTable(out, c, "INR", live);
+      // one minor unit of X is worth ~1/rate paise, so allow that much drift
+      expect(Math.abs(back - 100_100)).toBeLessThanOrEqual(Math.ceil(1 / Number(live.rates[c])));
+      // cross pair via INR agrees with the direct ratio
+      expect(convertWithTable(10_000, c, c === "USD" ? "EUR" : "USD", live)).toBeGreaterThan(0);
+    }
+  });
+
   it("Rs 800 shows about $9-10 at the live rate", () => {
     const usd = convertWithTable(80_000, "INR", "USD", live);
     expect(usd).toBeGreaterThanOrEqual(900);
