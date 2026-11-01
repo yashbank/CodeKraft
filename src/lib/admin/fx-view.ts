@@ -12,14 +12,19 @@ export interface InrFxRow {
 }
 
 /** Re-bases INR->X panel rows to "1 <viewer> = r <X>"; the INR row reuses the viewer's own metadata. */
-export function viewerFxRows(rows: InrFxRow[], viewer: Currency): InrFxRow[] {
+export function viewerFxRows<R extends Pick<InrFxRow, "quote" | "rate">>(
+  rows: R[],
+  viewer: Currency,
+): R[] {
   if (viewer === "INR" || rows.length === 0) return rows;
   const mine = rows.find((r) => r.quote === viewer);
   if (!mine) return rows;
   const t = { base: "INR", rates: { INR: "1" } } as unknown as RateTable;
   for (const r of rows) t.rates[r.quote] = r.rate;
   const fmt = (c: Currency) => {
-    const s = crossRateScaled(viewer, c, t).toString().padStart(FX_RATE_SCALE + 1, "0");
+    const s = crossRateScaled(viewer, c, t)
+      .toString()
+      .padStart(FX_RATE_SCALE + 1, "0");
     return `${s.slice(0, -FX_RATE_SCALE)}.${s.slice(-FX_RATE_SCALE)}`;
   };
   return [{ ...mine, quote: "INR" as Currency }, ...rows.filter((r) => r.quote !== viewer)].map(
