@@ -49,6 +49,7 @@ import type { GaugeVariant } from "../charts/Gauge";
 import type { SparklineVariant } from "../charts/Sparkline";
 import {
   isWidgetStyle,
+  WIDGET_KIND,
   resolveWidgetStyle,
   stylesFor,
 } from "@/modules/dashboard-widgets/widget-styles";
@@ -65,6 +66,7 @@ import { useAdminMoney } from "../AdminCurrency";
 import { PageHeader } from "../PageHeader";
 import type { DashboardData, ProductStatus, WidgetKey } from "../types";
 import { LIST_CLASS, QueueList } from "./QueueList";
+import { WidgetKindSketch } from "./WidgetKindSketch";
 import { WIDGET_LIBRARY, type WidgetDefinition } from "./widget-library";
 import { defaultLayoutFor } from "./role-widgets";
 import { moveKey } from "./reorder";
@@ -362,6 +364,7 @@ export function AdminDashboard({
                               blocked && "opacity-60",
                             )}
                           >
+                            <WidgetKindSketch kind={WIDGET_KIND[w.key]} />
                             <div className="min-w-0 flex-1">
                               <Label htmlFor={`lib-${w.key}`} className="text-body-sm">
                                 {w.title}

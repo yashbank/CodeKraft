@@ -15,6 +15,7 @@ import {
   type StudioValues,
   type ThemePreset,
 } from "@/lib/theme-studio";
+import { fontsHref } from "@/lib/theme-catalogue";
 import { updateSettings } from "@/modules/settings/admin-mutations";
 import { OptionPreview } from "./OptionPreview";
 import { ThemePreview } from "./ThemePreview";
@@ -93,6 +94,7 @@ export function ThemeStudio({
             labelOf={g.labelOf}
             value={values[g.key]}
             disabled={disabled}
+            fontsHref={g.key === "headingFont" || g.key === "bodyFont" ? fontsHref(g.ids) : null}
             preview={(id) => <OptionPreview group={g.key} id={id} theme={theme} />}
             onChange={(id) => onChange({ ...values, [g.key]: id })}
           />

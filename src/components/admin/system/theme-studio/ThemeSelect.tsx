@@ -24,6 +24,7 @@ export function ThemeSelect({
   onChange,
   disabled,
   preview,
+  fontsHref,
 }: {
   label: string;
   note: string;
@@ -34,8 +35,17 @@ export function ThemeSelect({
   disabled?: boolean;
   /** Decorative sample for an option id (aria-hidden); the name stays the label. */
   preview?: (id: string) => React.ReactNode;
+  /** One stylesheet with every listed font; only added to the page while the list is open. */
+  fontsHref?: string | null;
 }) {
   const [open, setOpen] = React.useState(false);
+  React.useEffect(() => {
+    if (!open || !fontsHref || document.head.querySelector(`link[href="${fontsHref}"]`)) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = fontsHref;
+    document.head.appendChild(link);
+  }, [open, fontsHref]);
   return (
     <div className="grid gap-1">
       <span className="text-body-sm font-medium">{label}</span>

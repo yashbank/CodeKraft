@@ -3,7 +3,7 @@ import type * as React from "react";
 import { Button } from "@/components/ui/button";
 import type { ThemeName } from "@/lib/theme";
 import { DEFAULT_STUDIO, previewVars, studioAttrs, type StudioValues } from "@/lib/theme-studio";
-import { LAYOUT_WIDTH, type LayoutId } from "@/lib/ui-style";
+import { LAYOUT_WIDTH, patternProps, type LayoutId, type PatternId } from "@/lib/ui-style";
 import { toStyle } from "./ThemePreview";
 
 /**
@@ -53,7 +53,12 @@ export function OptionPreview({
       body = <span className={`${box} rounded-sm border-2`} />;
       break;
     case "pattern":
-      body = <span className="bg-canvas border-border block size-6 rounded-sm border" />;
+      body = (
+        <span
+          className="bg-canvas border-border block size-6 rounded-sm border"
+          style={toStyle(patternProps(id as PatternId))}
+        />
+      );
       break;
     case "button":
       body = (
