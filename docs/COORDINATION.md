@@ -117,6 +117,13 @@ Two machines, one repo. Never both on the same task. Never push `main`. Never pu
 | P15-01 | 15 | Media on R2, zero regressions. Prod already runs the S3/R2 driver (R2_* env set). Audit every upload path (product media, versions, PDFs, logos, QR, chat attachments, case-study/blog images): nothing stored in repo/public, DB blobs or Vercel; public media served from the R2 public bucket with long immutable cache; private via signed/proxied routes. Write PARITY tests first (upload -> view -> replace -> delete for each kind, public vs private visibility) and keep them green before and after any change | B |
 | P15-02 | 15 | Vercel load: cache headers + ISR/revalidate on public pages, next/image sizes + TTL, sane polling intervals (bell, widgets, health), trim client bundle (analyze, lazy-load heavy admin/chart/editor code), no duplicate fetches. Report before/after numbers | B |
 
+| C16-01 | 16 | BUG ₹1001 shows as $1001 when currency switched. Find root cause (suspects: product has its own USD price row copied from the admin form; a missing/1.0 rate treated as valid; stale static fallback; ISR/cache). Fix; reject non-INR rate <= 0 or exactly 1 for INR pairs; admin price form must never auto-copy an amount into another currency; show an admin warning when a product has a non-INR row that differs wildly from the converted INR price. ₹800 must display about $9-10 at the live rate | B |
+| C16-02 | 16 | Rates are viewer-relative: Settings > Currencies shows "1 <viewer preferred currency> = x" for every other currency (INR admin: 1 INR = ..; GBP admin: 1 GBP = x INR + others). Keep storage base INR internally; derive via cross rates. Refresh now + fetched/source/stale kept | B |
+| C16-03 | 16 | Every screen uses the same conversion path and previously stored values convert: site, checkout, account, admin lists, finance, LEDGER (running balance + debit/credit in viewer currency, native toggle fixed), dashboard widgets, invoices, exports. No screen formats money without it (add a guard test / lint rule that bans raw format of stored minor amounts outside the helpers) | B |
+| C16-04 | 16 | Theme defaults: the admin-chosen theme, palette, layout, fonts, radius, patterns load by default for everyone (anonymous, customer, admin). Everyone can only toggle dark/light (remembered per user/cookie). Only admins with settings.write can change the design/layout | B |
+| C16-05 | 16 | Visual previews: every theme-studio option (fonts, palettes, radius, borders, patterns, buttons, cards, layouts) shows a swatch/mini-preview next to its name; widget library styles show mini previews | B |
+| C16-06 | 16 | Tests, 3 rounds: (1) unit with known RateTable incl. round-trip and "rate=1" rejection; (2) Playwright matrix currency (INR/USD/EUR/GBP/CAD) x role (anonymous, customer, super_admin, admin, staff) x pages (product, checkout, account, finance, ledger, dashboard, invoice, export); (3) theme-default + dark/light toggle per role at 375/768/1280. Also diagnose + fix the p14-07 theme-studio timeout seen on Mac A (hangs on the Theme button after the 375 width loop). Update docs/SCORECARD.md | B |
+
 Order for B: P1 (all tasks in parallel via agents) -> P2 -> P3 -> P4 -> P5 -> P6 -> P7 -> P8 -> P9 -> P10 -> P11 -> P12 -> R9 (Phase 13). A tests each phase as B marks tasks `ready`; B continues to the next phase without waiting.
 
 ## Token plan (Phase 7-12, both Macs)
@@ -150,3 +157,8 @@ Roles (all agents get only their task rows + files, report <=8 lines, caveman st
 Rounds: Round 1 build + own tests. Round 2 cross-review + full R9 suite + new specs. Round 3 route sweep (all roles, 375/768/1280) + fix. Only then `ready`. Log each round's pass/fail counts in B.md.
 Repeated work: reuse fixtures/helpers in tests/e2e; do not re-run the full suite per task, once per round.
 Mac A already did (do not redo): CI runs on main + PRs only, lint formatting fixed, GitHub scheduler off until secrets are set, Vercel builds only `main`. Branch pushes no longer trigger Vercel deployments.
+
+## Phase 16 rules (extra)
+- LOCAL DB ONLY: pass DATABASE_URL and DATABASE_URL_UNPOOLED inline for every db command (`.env` may hold production URLs; drizzle-kit reads it). Never run db:migrate/seed/reset without the inline local URL.
+- No deploys, no main. A merges and deploys only after all three test rounds are green.
+- Report ETA after each task as before.

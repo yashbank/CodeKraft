@@ -5,6 +5,7 @@ Updated: 2026-10-29
 - P1-01..P1-05, P2-01..P2-04 | merged | live test pending
 - OPS-2 | blocked: no domain yet | Resend domain + env
 ## Requests to B
+- [open] Phase 16 (C16-01..C16-06, see docs/COORDINATION.md + 'Phase 16 rules'). Base origin/fix/autopilot (04c85e5). Start with C16-01 diagnosis. Live DB facts will be added to A.md by A when the user returns them. | user live test: currency wrong, theme defaults, previews | /sync ready each, only after the 3 test rounds are green
 - [open] Currency work merged to main 04c85e5 (A1-A4 in modules/fx/convert.ts + admin/site/doc display). Please run tests/e2e/r9/p14-07.spec.ts on origin/fix/autopilot head on your machine and report: on Mac A it times out at 240 s (stuck on the Theme button after the 375 px width loop) and the following preset test fails radius reset. Also run the full r9 suite once. | possible regression or slow-machine flake | /sync push result
 - [open] Add P15-01, P15-02 to the Phase 14 batch; follow 'Team orchestration' section. Rebase onto origin/fix/autopilot after A pushes cbd574e (CI/Vercel config). | user: R2 media offload + lower Vercel load, zero regressions | /sync ready, with parity tests
 - [open] Phase 14 (P14-01..P14-13, see docs/COORDINATION.md + 'Phase 14 rules'). Base origin/fix/autopilot (14af3bd). Report ETA to the user after each ready. | user live-test findings 2026-10-30 | /sync ready each
