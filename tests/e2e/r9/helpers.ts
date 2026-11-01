@@ -137,8 +137,12 @@ export async function resetThemeViaUi(page: Page): Promise<void> {
   try {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto(`${ADMIN}/admin/settings`);
-    await page.getByRole("button", { name: "Theme", exact: true }).click();
-    await page.getByRole("button", { name: "Reset to defaults" }).click();
+    if (/\/auth\/login/.test(page.url())) {
+      await loginAs(page, "super_admin"); // session revoked by a parallel login
+      await page.goto(`${ADMIN}/admin/settings`);
+    }
+    await page.getByRole("button", { name: "Theme", exact: true }).click({ timeout: 30_000 });
+    await page.getByRole("button", { name: "Reset to defaults" }).click({ timeout: 15_000 });
     const save = page.getByRole("button", { name: "Save changes" });
     if (await save.isEnabled()) {
       await save.click();

@@ -27,7 +27,13 @@ const KEYS = [
 async function openTheme(page: Page) {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto(`${ADMIN}/admin/settings`);
-  await page.getByRole("button", { name: "Theme", exact: true }).click();
+  // A parallel spec's fresh login revokes this session (one session per user): the page is then
+  // the login form and an un-timed click waited out the whole 240 s test (Mac A). Re-login once.
+  if (/\/auth\/login/.test(page.url())) {
+    await loginAs(page, "super_admin");
+    await page.goto(`${ADMIN}/admin/settings`);
+  }
+  await page.getByRole("button", { name: "Theme", exact: true }).click({ timeout: 30_000 });
   await expect(page.getByTestId("theme-preview")).toBeVisible();
 }
 

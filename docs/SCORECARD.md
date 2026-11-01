@@ -1,4 +1,4 @@
-# CodeKraft scorecard (Phase 14 + 15)
+# CodeKraft scorecard (Phase 14 + 15 + 16)
 
 Plain English, for the founder. Test counts are real. Percent and score are our own judgement, based on what the tests cover and what still fails or is skipped.
 
@@ -33,6 +33,24 @@ Test numbers behind this page (branch feat/p14-integration, fresh production bui
 
 Overall: about 90% done, 8.0 out of 10.
 
+## Phase 16 (currency + theme defaults), Mac B, 2026-11-02
+
+Branch feat/c16-06-tests (merges C16-01..05 + tests), fresh production build, local DB.
+- Root cause of "Rs 1001 shows as $1001": the admin offering form defaulted to the admin's own currency and saved the typed number as an explicit USD price; explicit prices beat conversion on the site. Fixed (form defaults to INR, no auto-copied prices, a rate of exactly 1 is rejected, admin warning on prices far from the INR price). Rs 800 now shows about $9.60.
+- Round 1, unit + integration: 2154 of 2156 passed on the first full run. 1 failure was a test written for the old report format (updated). The other (ownership at paid time) is the known load flake and passes alone. Type check and lint clean.
+- Round 2, currency x role matrix (INR/USD/EUR/GBP/CAD x anonymous/customer/super admin/admin/staff; product, checkout, account, dashboard, ledger, invoices, reports, ledger export): 50 of 50 passed (desktop + phone).
+- Round 3, theme: the admin's design loads for all 5 roles at 375/768/1280; the dark/light toggle (now also in the admin header) is remembered after reload; staff sees settings read-only: 6 of 6 passed, twice in a row.
+- Combined R9 + P14 + P15 run (no sweep, no reset): 485 passed, 13 failed. After fixes and reruns: 4 were test-state leaks (fixed in the specs), 6 were caused by running the two C16 specs alongside (they change shared users and the global theme, so they now run in their own invocation), 1 is p14-07 (passes on rerun; see below), and 2 are P14-06 chat upload ("file cannot be empty"; C16 touches no upload code).
+- R9-14 sweep on its own (every page, 5 roles, 3 widths): 255 of 256 passed. The failure is a customer with a leftover pending order from earlier runs, so checkout correctly redirected to "confirming".
+- p14-07 timeout on Mac A: not reproduced here (7 of 7 alone, and passes on rerun). Likely cause: another spec signs the super admin in again, which ends this spec's session (one session per user); the page becomes the login form, and the Theme click had no timeout, so it waited the full 240 s. The reset then never ran, so the next test failed the radius check. Fixed: the spec re-signs in and the click times out after 30 s.
+
+| Area | Done | Reliability /10 | Evidence |
+|---|---|---|---|
+| Currency display (every screen) | 90% | 8 | C16 matrix 50/50; money-path guard test fails the build if a screen formats stored amounts directly |
+| FX rates (viewer-relative table, rate checks) | 90% | 8 | unit: rate of 1 rejected, round trip per currency, GBP viewer table |
+| Theme defaults + dark/light | 90% | 8 | C16 theme round 6/6 at 3 widths; server action needs settings.write |
+| Theme studio previews | 85% | 7 | 20 render tests (12 option kinds, 8 widget kinds); checked by eye only through tests |
+
 ## Fixed in Phase 14-15 (found by tests or review)
 - Admin sidebar approvals badge was always 0, and the approvals dashboard widgets were always empty: both sent a filter the server silently rejected.
 - Notifications: read items came back because the page opened before "mark read" was saved; several notification links pointed at pages that do not exist.
@@ -45,6 +63,8 @@ Overall: about 90% done, 8.0 out of 10.
 - New loading skeletons made "not found" pages return 200 instead of 404; skeletons now only on list pages.
 
 ## Known gaps
+- C16: invoice and PDF legal amounts stay in the charged currency, with one "approx. viewer currency" line. Payment instructions stay in the charged currency, by design. The C16 matrix and theme specs must run on their own (after the combined run), like the sweep.
+- C16: P14-06 chat upload fails locally with "file cannot be empty" against the storage stub (not caused by C16; needs a look on Mac A's setup).
 - Lighthouse budgets are configured but were not run in this round (needs a quiet machine); run `pnpm build && pnpm lhci`.
 - Reports screen: Export, Print, Drill-down and Regenerate only show a message. Lead "Merge" and "Delete" have no backend yet (shown disabled).
 - Undo after delete covers saved views and coupons only (other deletes need approval).

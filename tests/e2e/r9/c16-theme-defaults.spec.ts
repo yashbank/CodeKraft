@@ -38,11 +38,15 @@ test.beforeAll(async ({ browser }) => {
 });
 
 test.afterAll(async ({ browser }) => {
+  // first, so a failed UI reset below cannot leave users on light (p14-09 assumes dark)
+  await q(`update users set theme_pref = null where theme_pref is not null`);
   const page = await browser.newPage();
-  await loginAs(page, "super_admin");
-  await resetThemeViaUi(page);
-  await page.close();
-  await q(`update users set theme_pref = null where theme_pref is not null`).catch(() => {});
+  try {
+    await loginAs(page, "super_admin");
+    await resetThemeViaUi(page);
+  } finally {
+    await page.close();
+  }
 });
 
 for (const viewer of VIEWERS) {

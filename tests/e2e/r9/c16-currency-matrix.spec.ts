@@ -1,9 +1,11 @@
 /**
  * C16-06 round 2: currency (INR/USD/EUR/GBP/CAD) x role (anonymous, customer, super_admin, admin,
- * staff) x pages. Seeds manual INR->X rates for today, so the expected price is exact and no
- * network is needed. Product price must equal the INR base converted (never the INR number with
- * a foreign symbol: the "Rs 1001 -> $1001" bug). Other pages must render in the viewer currency
- * without errors; staff may get a permission notice on finance pages.
+ * staff) x pages. Product and checkout prices must be the INR base converted at a real rate
+ * (within 15% of the static table, which also covers live rates and the server's 5-min rate cache)
+ * and never the INR number with a foreign symbol (the "Rs 1001 -> $1001" bug). Rates are not
+ * written here: r9-09 owns today's manual rate rows. Other pages must render in the viewer
+ * currency without errors; staff may get a permission notice on finance pages.
+ * Mutates the role users' display currency: run it in its own invocation, like the R9-14 sweep.
  */
 import { expect, test, type Page } from "@playwright/test";
 import { ADMIN, ROLE_EMAILS, SITE, loginAs, q, trackIssues, type Role } from "./helpers";
@@ -11,7 +13,7 @@ import { ADMIN, ROLE_EMAILS, SITE, loginAs, q, trackIssues, type Role } from "./
 const SLUG = "resume-portfolio-website";
 const CURRENCIES = ["INR", "USD", "EUR", "GBP", "CAD"] as const;
 type Cur = (typeof CURRENCIES)[number];
-// Same values as STATIC_FX_TABLE, so a cached table from before the seed agrees too.
+// STATIC_FX_TABLE values; live rates sit within the 15% band.
 const RATES: Record<Cur, string> = {
   INR: "1",
   USD: "0.01200000",
@@ -22,27 +24,20 @@ const RATES: Record<Cur, string> = {
 const SYMBOL: Record<Cur, RegExp> = { INR: /₹/, USD: /\$/, EUR: /€/, GBP: /£/, CAD: /CA\$|\$/ };
 
 const major = (minor: number) => (minor / 100).toFixed(2);
-const convert = (inrMinor: number, c: Cur) => Math.round(inrMinor * Number(RATES[c]));
 const text = async (page: Page) => (await page.locator("body").innerText()).replace(/,/g, "");
+/** Some amount on the page is the INR base converted to `c` (+/- 15%). */
+const hasConverted = (body: string, inrMinor: number, c: Cur) => {
+  const want = inrMinor * Number(RATES[c]);
+  return (body.match(/\d+\.\d{2}/g) ?? []).some((n) => {
+    const v = Number(n) * 100;
+    return v >= want * 0.85 && v <= want * 1.15;
+  });
+};
 
 let offeringId = "";
 let inrMinor = 0;
 
 test.beforeAll(async () => {
-  const today = new Date().toISOString().slice(0, 10);
-  for (const c of CURRENCIES.filter((x) => x !== "INR")) {
-    const inv = (1 / Number(RATES[c])).toFixed(8);
-    for (const [b, qt, r] of [
-      ["INR", c, RATES[c]],
-      [c, "INR", inv],
-    ]) {
-      await q(
-        `insert into fx_rates (base, quote, rate, as_of, source) values ($1,$2,$3,$4,'manual')
-         on conflict (base, quote, as_of) do update set rate = excluded.rate, source = 'manual', created_at = now()`,
-        [b, qt, r, today],
-      );
-    }
-  }
   const [row] = await q<{ id: string; amount_minor: string }>(
     `select o.id, op.amount_minor from offerings o
        join products p on p.id = o.product_id
@@ -80,7 +75,7 @@ async function setCurrency(page: Page, viewer: Viewer, c: Cur) {
 async function expectProductPrice(page: Page, c: Cur) {
   await visit(page, `${SITE}/products/${SLUG}`);
   const body = await text(page);
-  expect(body, `product price in ${c}`).toContain(major(convert(inrMinor, c)));
+  expect(hasConverted(body, inrMinor, c), `product price in ${c}`).toBe(true);
   expect(body).toMatch(SYMBOL[c]);
   // the bug: the INR number shown with a foreign symbol
   if (c !== "INR") expect(body).not.toMatch(new RegExp(`[$€£]\\s?${major(inrMinor)}\\b`));
@@ -131,7 +126,7 @@ for (const viewer of VIEWERS) {
           const res = await visit(page, `${SITE}/checkout/${offeringId}`);
           expect(res?.status() ?? 0).toBeLessThan(500);
           if (viewer === "customer") {
-            expect(await text(page), `checkout in ${c}`).toContain(major(convert(inrMinor, c)));
+            expect(hasConverted(await text(page), inrMinor, c), `checkout in ${c}`).toBe(true);
             for (const path of ["/account/purchases", "/account/invoices"]) {
               const r = await visit(page, `${SITE}${path}`);
               expect(r?.status() ?? 0, path).toBeLessThan(500);
