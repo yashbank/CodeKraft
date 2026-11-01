@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { format } from "@/lib/money";
+import { ViewerAmount } from "./ViewerMoney";
 import { Banner } from "./Banner";
 import { ResendVerificationButton } from "./ResendVerificationButton";
 import { EmptyState } from "./EmptyState";
@@ -217,7 +217,7 @@ export function OverviewScreen(props: OverviewScreenProps) {
                           <p className="text-caption text-fg-muted">{formatDate(inv.date)}</p>
                         </div>
                         <span className="font-mono text-body-sm tnum text-fg">
-                          {format(inv.amount)}
+                          <ViewerAmount money={inv.amount} withCharged />
                         </span>
                         <Button
                           variant="ghost"

@@ -38,3 +38,8 @@ export function useViewerFormat(): (m: Money, withCharged?: boolean) => string {
     [cfg],
   );
 }
+
+/** Client leaf for server components: renders `useViewerFormat` text. */
+export function ViewerAmount({ money, withCharged }: { money: Money; withCharged?: boolean }) {
+  return <>{useViewerFormat()(money, withCharged)}</>;
+}

@@ -21,7 +21,6 @@ const ALLOW: Record<string, string> = {
   "src/components/account/ViewerMoney.tsx": "helper (viewer conversion for account/checkout)",
   // legal / transaction-currency documents: stored currency primary, viewer shown as "≈" line
   "src/app/(account)/account/quotes/page.tsx": "legal quote amount + approx viewer line",
-  "src/components/account/OverviewScreen.tsx": "legal invoice amount (stored currency)",
   "src/components/account/PaymentInstructionsCard.tsx":
     "amount the customer must pay, in the charge currency",
   "src/components/account/PaymentInstructionsPanel.tsx":
