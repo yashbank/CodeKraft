@@ -23,6 +23,7 @@ export function ThemeSelect({
   labelOf,
   onChange,
   disabled,
+  preview,
 }: {
   label: string;
   note: string;
@@ -31,6 +32,8 @@ export function ThemeSelect({
   labelOf: (id: string) => string;
   onChange: (id: string) => void;
   disabled?: boolean;
+  /** Decorative sample for an option id (aria-hidden); the name stays the label. */
+  preview?: (id: string) => React.ReactNode;
 }) {
   const [open, setOpen] = React.useState(false);
   return (
@@ -47,7 +50,10 @@ export function ThemeSelect({
             disabled={disabled}
             className="w-full justify-between font-normal"
           >
-            <span className="truncate">{labelOf(value)}</span>
+            <span className="flex min-w-0 items-center gap-2">
+              {preview?.(value)}
+              <span className="truncate">{labelOf(value)}</span>
+            </span>
             <ChevronsUpDownIcon aria-hidden className="opacity-50" />
           </Button>
         </PopoverTrigger>
@@ -69,6 +75,7 @@ export function ThemeSelect({
                     aria-hidden
                     className={cn(id === value ? "opacity-100" : "opacity-0")}
                   />
+                  {preview?.(id)}
                   {labelOf(id)}
                 </CommandItem>
               ))}

@@ -16,6 +16,7 @@ import {
   type ThemePreset,
 } from "@/lib/theme-studio";
 import { updateSettings } from "@/modules/settings/admin-mutations";
+import { OptionPreview } from "./OptionPreview";
 import { ThemePreview } from "./ThemePreview";
 import { ThemeSelect } from "./ThemeSelect";
 
@@ -92,6 +93,7 @@ export function ThemeStudio({
             labelOf={g.labelOf}
             value={values[g.key]}
             disabled={disabled}
+            preview={(id) => <OptionPreview group={g.key} id={id} theme={theme} />}
             onChange={(id) => onChange({ ...values, [g.key]: id })}
           />
         ))}
