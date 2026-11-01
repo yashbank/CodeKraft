@@ -44,6 +44,8 @@ import { DEFAULT_STUDIO, type StudioValues } from "@/lib/theme-studio";
 import type { ThemeName } from "@/lib/theme";
 import { ThemeStudio } from "./theme-studio/ThemeStudio";
 import { uploadMediaFile } from "@/lib/admin/media-upload";
+import { useAdminCurrency } from "@/components/admin/AdminCurrency";
+import { viewerFxRows } from "@/lib/admin/fx-view";
 import { refreshFxRates } from "@/modules/fx/admin-mutations";
 import { updateRazorpaySettings, updateSettings } from "@/modules/settings/admin-mutations";
 import { sendTestEmail } from "@/modules/settings/email-test";
@@ -381,6 +383,8 @@ function FxRatesPanel({
   readOnly: boolean;
 }) {
   const router = useRouter();
+  const { currency: viewer } = useAdminCurrency();
+  const viewRows = React.useMemo(() => viewerFxRows(rows, viewer), [rows, viewer]);
   const [busy, setBusy] = React.useState(false);
   async function refresh() {
     setBusy(true);
@@ -403,7 +407,7 @@ function FxRatesPanel({
   return (
     <section className="space-y-2" aria-label="FX rates">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-body-sm font-semibold">FX rates (per 1 INR)</h3>
+        <h3 className="text-body-sm font-semibold">FX rates (1 {viewer} = …)</h3>
         <Button
           type="button"
           size="sm"
@@ -422,14 +426,14 @@ function FxRatesPanel({
             <thead>
               <tr className="text-left text-fg-muted">
                 <th className="py-1 pr-4 font-medium">Currency</th>
-                <th className="py-1 pr-4 font-medium">Rate</th>
+                <th className="py-1 pr-4 font-medium">Rate (1 {viewer} =)</th>
                 <th className="py-1 pr-4 font-medium">Fetched</th>
                 <th className="py-1 pr-4 font-medium">Source</th>
                 <th className="py-1 font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {viewRows.map((r) => (
                 <tr key={r.quote} className="border-t border-border">
                   <td className="py-1 pr-4 font-mono">{r.quote}</td>
                   <td className="py-1 pr-4 font-mono">{r.rate}</td>
