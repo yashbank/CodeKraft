@@ -1,5 +1,5 @@
 # Mac B status
-Updated: 2026-10-30
+Updated: 2026-11-02
 ## Tasks
 - P1-01 | ready | branch feat/p1-01-ledger | vitest tests/unit/ledger-debit-credit.test.ts: 1 pass
 - P1-02 | ready | branch feat/p1-02-dashboard-widgets | vitest tests/unit/admin/dashboard-finance-core.test.ts: 3 pass (+45 existing widget tests)
@@ -76,6 +76,12 @@ Updated: 2026-10-30
 - P14-13 | ready | branch feat/p14-integration @ 62ff842 | axe on 26 routes (14/48 failing before, fixed), lighthouserc budgets; e2e p14-13-a11y green; R9 suite green; SCORECARD updated
 - P15-01 | ready | branch feat/p14-integration @ 62ff842 | R2 parity suite 78 tests green before+after; QR off DB; nosniff; e2e p15-01 green on local driver
 - P15-02 | ready | branch feat/p14-integration @ 62ff842 | ISR public routes 3->11, idle admin polling 4.3->2/min, editor bundles -30-40%; vitest failed-first; e2e p15-02 green
+- C16-01 | doing | branch feat/c16-01-fx-root-cause | root cause found, see Log 2026-11-02
+- C16-02 | doing | branch feat/c16-02-viewer-rates |
+- C16-03 | doing | branch feat/c16-03-one-money-path |
+- C16-04 | doing | branch feat/c16-04-theme-defaults |
+- C16-05 | doing | branch feat/c16-05-visual-previews |
+- C16-06 | todo | branch feat/c16-06-tests |
 ## Requests to A
 - [open] Delete test objects from the LIVE R2 buckets (Mac B local test servers loaded R2 keys from .env.local; now forced to STORAGE_DRIVER=local and blank live keys). Known keys: public media/2026/10/{c9faf532-f718-4a3e-b009-fe5f0d821f4c,a502af97-dd7f-4ac0-a004-cc90fb2567a9,b84a3087-0c51-4970-9611-1fca39cb8bd0,41bbec9f-8818-44f6-b5e6-1b9e55d58996,788817d9-364d-4a14-94d6-bed8224be07d}.png; private media/2026/10/{b6973b65-68de-43b0-90bc-2fb8401068d6,20531a0c-7dce-4138-9eee-55d06ec7153a,47553342-2f67-42d6-9f34-81df484162dc}.zip. Phase 13 (R9) runs on 2026-10-29 likely left similar tiny objects under media/2026/10/ with no DB row: list objects without a media row and delete | why: test junk in prod storage | verify: no orphan keys
 - [open] P15-01 Vercel/R2 config: set NEXT_PUBLIC_MEDIA_BASE_URL to the R2 public bucket domain (custom domain or r2.dev); bucket CORS must allow PUT from site + admin origins; Cloudflare cache rule 1y immutable on the public bucket domain | why: public media served from R2, not the serverless proxy | verify: curl -I a public image shows R2 host + cache-control immutable
@@ -162,3 +168,4 @@ Run e2e: `pnpm build && pnpm start`, then `playwright test tests/e2e/r9 --projec
 - Vercel/R2 for A (from P15-01): set NEXT_PUBLIC_MEDIA_BASE_URL to the R2 public bucket domain; bucket CORS PUT from site + admin; Cloudflare 1y immutable cache rule. Delete orphan test objects (see Requests).
 - Not done / gaps: Lighthouse budgets configured but not run (run pnpm build && pnpm lhci); Reports Export/Print/Drill-down are toasts only; lead Merge/Delete no backend (disabled); PDF/DOCX attachment text not extracted; manifest icons SVG only.
 - Done 13 of 13 (+ P15-01, P15-02), estimated remaining ~0 h on B. Next for A: merge, apply 0009 + 0010, full gate, deploy on approval, live test.
+- 2026-11-02 C16-01 ROOT CAUSE of "Rs 1001 shows as $1001": not the rate. Commit 674a12d made the admin offering price form default its currency to the admin's preferred currency (e.g. USD) and store the typed number "exactly as entered" as an explicit offering_prices row in that currency. An admin who types 1001 (meaning rupees) into "Price (USD)" saves USD=100100 next to the existing INR=100100 row. On the site, resolveOfferingPrice/cardFromPrice always prefer an explicit row in the viewer currency over converting INR, so USD viewers see $1001. Editing also prefills a converted copy that is then saved as an explicit row (auto-copy). Secondary risks: buildRateTable/hasAllRates accept a rate of exactly 1 (e.g. a manual override "1"), and staticRateTable falls back to "1" for a missing currency; either would also turn Rs 1001 into $1001. Fix: form defaults to INR and never prefills a converted copy; rates of 1 (or <= 0) for non-INR pairs are rejected at read and on override; admin warning when a non-INR row differs from the converted INR price by more than 2x. For A on live: SELECT offering_id, currency, amount_minor FROM offering_prices WHERE currency <> 'INR'; rows that equal the INR amount are the bad copies (delete them after the warning confirms).
