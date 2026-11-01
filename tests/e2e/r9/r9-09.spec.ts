@@ -4,7 +4,7 @@
  * display-currency conversion. 375 / 768 / 1280.
  */
 import { expect, test } from "@playwright/test";
-import { ADMIN, SITE, atWidths, loginAs, q, trackIssues } from "./helpers";
+import { ADMIN, ROLE_EMAILS, SITE, atWidths, loginAs, q, trackIssues } from "./helpers";
 
 const SLUG = "resume-portfolio-website";
 
@@ -28,6 +28,9 @@ test("USD expense converts at the trusted rate; storefront USD matches", async (
     );
   }
 
+  await q(`update users set display_currency = 'INR' where lower(email) = lower($1)`, [
+    ROLE_EMAILS.super_admin,
+  ]);
   await loginAs(page, "super_admin");
   await page.goto(`${ADMIN}/finance/expenses`);
   await page.getByRole("button", { name: "Record expense" }).first().click();
@@ -74,9 +77,16 @@ test("USD expense converts at the trusted rate; storefront USD matches", async (
   });
   const ctx = page.context();
   await ctx.addCookies([{ name: "ck_currency", value: "USD", url: SITE }]);
+  // A signed-in viewer's saved preference wins over the cookie (switcher writes both), so set it too.
+  await q(`update users set display_currency = 'USD' where lower(email) = lower($1)`, [
+    ROLE_EMAILS.super_admin,
+  ]);
   await atWidths(page, `${SITE}/products/${SLUG}`, async () => {
     if (usd.length === 0) await expect(page.getByText(`$${expected}`).first()).toBeVisible();
     else await expect(page.getByText(/\$\s?[\d,]+\.\d{2}/).first()).toBeVisible();
   });
+  await q(`update users set display_currency = 'INR' where lower(email) = lower($1)`, [
+    ROLE_EMAILS.super_admin,
+  ]);
   issues.assertClean();
 });

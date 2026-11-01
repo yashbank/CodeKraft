@@ -93,18 +93,31 @@ async function loadFromDb(now: Date): Promise<RateTable> {
   }
 }
 
+async function refreshNow(): Promise<boolean> {
+  try {
+    const { fxRefreshJob } = await import("@/jobs/fx");
+    const result = await fxRefreshJob.run();
+    if (result.written > 0) return true;
+  } catch {
+    // fall through
+  }
+  lastRefreshFailAt = Date.now();
+  return false;
+}
+
 async function load(): Promise<RateTable> {
   let table = await loadFromDb(new Date());
   const age = Date.now() - new Date(table.fetchedAt).getTime();
-  const needsRefresh = table.source === "static" || table.stale || age > RATE_FRESH_MS;
+  const noData = table.source === "static";
+  const needsRefresh = noData || table.stale || age > RATE_FRESH_MS;
   if (needsRefresh && Date.now() - lastRefreshFailAt > REFRESH_RETRY_MS) {
-    try {
-      const { fxRefreshJob } = await import("@/jobs/fx");
-      const result = await fxRefreshJob.run();
-      if (result.written > 0) table = await loadFromDb(new Date());
-      else lastRefreshFailAt = Date.now();
-    } catch {
-      lastRefreshFailAt = Date.now();
+    if (noData) {
+      // nothing real to show yet: wait for the first fetch
+      if (await refreshNow()) table = await loadFromDb(new Date());
+    } else {
+      // stale-while-revalidate: show the last real rates now, refresh in the background
+      lastRefreshFailAt = Date.now() - REFRESH_RETRY_MS + 60_000; // do not stack refreshes
+      void refreshNow();
     }
   }
   return hasAllRates(table) ? table : staticRateTable();
