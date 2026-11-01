@@ -84,6 +84,7 @@ import { cn } from "@/components/ui/_utils";
 import { applyRead, countUnread, readThenOpen } from "@/lib/notifications/read-state";
 import { initials, timeAgo } from "./format";
 import { LaptopNotice } from "./LaptopNotice";
+import { ThemeToggle } from "@/components/site/ThemeToggle";
 import { filterAdminNav } from "@/lib/authz/admin-routes";
 import { AdminCommandPalette } from "./AdminCommandPalette";
 import { AdminUserIdContext } from "./SavedViews";
@@ -521,6 +522,8 @@ export function AdminShell({
             <Badge tone={envTone} className="hidden capitalize sm:inline-flex" dot>
               {environment}
             </Badge>
+            {/* C16-04: dark/light is the one design choice every user (admins too) can make */}
+            <ThemeToggle enabled />
             <NotificationBell
               notifications={notifications}
               readIds={readIds}
