@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/components/ui/_utils";
-import { format } from "@/lib/money";
+import { useViewerFormat } from "./ViewerMoney";
 import { DELIVERY_LABELS } from "./DeliveryTypeIcon";
 import { EmptyState } from "./EmptyState";
 import { EntitlementCard } from "./EntitlementCard";
@@ -38,6 +38,7 @@ function orderAction(o: OrderSummaryView): string {
 
 /** SCR-ACC-02 `OrderRow`: order no, date, product/offering, total, status, action. */
 export function OrderRow({ order: o, href }: { order: OrderSummaryView; href: string }) {
+  const fmt = useViewerFormat();
   return (
     <article className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 shadow-1 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
@@ -51,7 +52,7 @@ export function OrderRow({ order: o, href }: { order: OrderSummaryView; href: st
         </p>
         <p className="text-caption text-fg-subtle">Placed {formatDate(o.placedAt)}</p>
       </div>
-      <span className="font-mono text-body tnum text-fg">{format(o.total)}</span>
+      <span className="font-mono text-body tnum text-fg">{fmt(o.total, true)}</span>
       <Button
         size="sm"
         variant={o.status === "pending_payment" ? "primary" : "secondary"}

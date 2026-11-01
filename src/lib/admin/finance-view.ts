@@ -27,7 +27,7 @@
  *  - `AdjustmentRow.createdAt` is derived from the approval's `ageHours` (`ApprovalView` has no
  *    exact timestamp field), so it is accurate to the hour, not the second.
  */
-import { format as formatMoney, type Currency } from "@/lib/money";
+import type { Currency } from "@/lib/money";
 import { formatRateLine } from "@/modules/fx/expense-rate";
 import type {
   Expense,
@@ -476,13 +476,12 @@ export function computeCompanyTotals(entries: LedgerEntryView[]): CompanyTotals 
 // Reports & statements (SCR-ADM-22)
 // ---------------------------------------------------------------------------------------------
 
-/** Report cells are integer minor units for `money` columns; format them as INR strings. */
+/** Report cells stay integer minor units (INR) for `money` columns; ReportsScreen converts them to the viewer currency. */
 function formatCell(
   value: ReportCell | undefined,
   kind: "text" | "money" | "count" | "date",
 ): string | number {
-  if (kind === "money") return formatMoney({ amountMinor: numericCell(value), currency: "INR" });
-  if (kind === "count") return numericCell(value);
+  if (kind === "money" || kind === "count") return numericCell(value);
   if (value === null || value === undefined || value === "") return "—";
   return value;
 }
@@ -548,6 +547,7 @@ export function mapReportResultToDefinition(
     columns,
     rows,
     totals: result.rows.length > 0 ? totals : undefined,
+    moneyCols: displayCols.flatMap((c, i) => (c.kind === "money" ? [i] : [])),
   };
 }
 

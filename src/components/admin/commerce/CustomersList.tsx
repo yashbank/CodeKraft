@@ -82,7 +82,7 @@ export function CustomersList({
   quotesHref,
   newOrderHref,
 }: CustomersListProps) {
-  const { inr } = useAdminMoney();
+  const { inr, toViewer, currency: viewerCurrency } = useAdminMoney();
   const router = useRouter();
   const [statusDialog, setStatusDialog] = React.useState<StatusDialogState | null>(null);
   const [reason, setReason] = React.useState("");
@@ -162,6 +162,11 @@ export function CustomersList({
                 { header: "Orders open", type: "int" },
                 { header: "Lifetime spend INR", type: "money" },
                 { header: "Joined", type: "date" },
+                {
+                  header: `Lifetime spend (≈ ${viewerCurrency})`,
+                  type: "money",
+                  currency: viewerCurrency,
+                },
               ]}
               rows={customers.map((c) => [
                 c.name,
@@ -172,6 +177,7 @@ export function CustomersList({
                 c.openOrders,
                 (c.lifetimeSpendInr / 100).toFixed(2),
                 c.joinedAt,
+                (toViewer({ amountMinor: c.lifetimeSpendInr, currency: "INR" }) / 100).toFixed(2),
               ])}
             />
           </>

@@ -22,10 +22,11 @@ describe("report mapper keeps INR minor units (Rs 1 = 100 paise)", () => {
     expect(def.series[0]?.value).toBe(100);
   });
 
-  it("table cells are formatted money, not raw numbers", () => {
+  it("money cells stay INR minor units and are flagged in moneyCols (screen converts to viewer)", () => {
     const def = mapReportResultToDefinition(result, { title: "t", description: "d", formula: "f" });
-    expect(def.rows[0]).toEqual(["2026-10", "₹1.00"]);
-    expect(def.totals).toEqual(["Total", "₹1.00"]);
+    expect(def.rows[0]).toEqual(["2026-10", 100]);
+    expect(def.moneyCols).toEqual([1]);
+    expect(def.totals).toEqual(["Total", 100]);
   });
 });
 

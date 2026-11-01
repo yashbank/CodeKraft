@@ -53,6 +53,16 @@ export function useAdminMoney() {
       },
       /** Converted amount in minor units (for sums/charts/CSV). */
       toViewer: (m: Money) => viewMoney(m, cfg).amountMinor,
+      /** Stored amount exactly as posted (no conversion), for "native currency" views. */
+      native: (m: MoneyLike) => formatMoney({ amountMinor: m.amountMinor, currency: m.currency }),
+      /** Locked-INR-aware amount in viewer minor units (sign preserved), for running balances. */
+      lockedToViewer: (m: Money, lockedInrMinor: number | undefined) =>
+        Math.sign(m.amountMinor) *
+        viewLocked(
+          { ...m, amountMinor: Math.abs(m.amountMinor) },
+          lockedInrMinor === undefined ? undefined : Math.abs(lockedInrMinor),
+          cfg,
+        ).amountMinor,
       locked: (m: MoneyLike, lockedInrMinor: number | undefined) =>
         formatViewed(viewLocked(m, lockedInrMinor, cfg)),
     };

@@ -787,6 +787,8 @@ export interface ReportDefinition {
   columns: string[];
   rows: Array<Array<string | number>>;
   totals?: Array<string | number>;
+  /** Indexes of `columns` holding INR minor amounts; the screen converts them to the viewer currency. */
+  moneyCols?: number[];
   /** Set when the report query failed, so the screen says so instead of rendering blank. */
   error?: string;
 }

@@ -110,6 +110,8 @@ export function ReportsScreen({
   const [stFormat, setStFormat] = React.useState<"pdf" | "csv">("pdf");
   const [generating, setGenerating] = React.useState(false);
   const report = reports.find((r) => r.key === key) ?? reports[0];
+  const fmtCell = (cell: string | number, ci: number) =>
+    typeof cell === "number" && report?.moneyCols?.includes(ci) ? inr(cell) : cell;
   if (!report) return null;
 
   async function handleGenerateStatement() {
@@ -381,7 +383,7 @@ export function ReportsScreen({
                                 {cell}
                               </button>
                             ) : (
-                              cell
+                              fmtCell(cell, ci)
                             )}
                           </TableCell>
                         ))}
@@ -393,7 +395,7 @@ export function ReportsScreen({
                       <TableRow>
                         {report.totals.map((cell, ci) => (
                           <TableCell key={ci} className={cn(ci > 0 && "text-right font-mono tnum")}>
-                            {cell}
+                            {fmtCell(cell, ci)}
                           </TableCell>
                         ))}
                       </TableRow>

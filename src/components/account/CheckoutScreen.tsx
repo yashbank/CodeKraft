@@ -28,7 +28,8 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/components/ui/_utils";
-import { add, convertMinor, format, money, type Money } from "@/lib/money";
+import { add, money, type Money } from "@/lib/money";
+import { useViewerFormat } from "./ViewerMoney";
 import { mapBillingToOrderInput } from "@/lib/account/checkout-view";
 import { createOrder, previewCheckout } from "@/modules/orders/customer-mutations";
 import type { CreateOrderResult } from "@/modules/orders/types";
@@ -278,6 +279,7 @@ export function CheckoutScreen({
   state?: CheckoutPageState;
   links: { dashboard: string; verify: string };
 }) {
+  const fmt = useViewerFormat();
   const [bill, setBill] = React.useState<BillingDetails>(billing);
   const [save, setSave] = React.useState(true);
   const [code, setCode] = React.useState("");
@@ -461,7 +463,7 @@ export function CheckoutScreen({
         aria-controls="checkout-summary"
         onClick={() => setSummaryOpen((o) => !o)}
       >
-        Order summary · {format(total)}
+        Order summary · {fmt(total, true)}
         <ChevronDownIcon
           aria-hidden
           className={cn("size-4 transition-transform", summaryOpen && "rotate-180")}
@@ -512,7 +514,7 @@ export function CheckoutScreen({
               </div>
               {appliedCode ? (
                 <Badge tone="success" className="h-10 gap-2 px-3 text-body-sm">
-                  −{format(discount)} ({appliedCode})
+                  −{fmt(discount)} ({appliedCode})
                   <button
                     type="button"
                     aria-label={`Remove coupon ${appliedCode}`}
@@ -562,15 +564,15 @@ export function CheckoutScreen({
                         {offering.offeringName}
                       </span>
                     </td>
-                    <td className="py-3 text-right font-mono tnum">{format(subtotal)}</td>
+                    <td className="py-3 text-right font-mono tnum">{fmt(subtotal)}</td>
                     <td className="py-3 text-right font-mono tnum text-fg-muted">
-                      {appliedCode ? `−${format(discount)}` : "—"}
+                      {appliedCode ? `−${fmt(discount)}` : "—"}
                     </td>
                     <td className="py-3 text-right text-fg-muted">
-                      {tax ? `${offering.taxLabel} · ${format(tax)}` : "No tax"}
+                      {tax ? `${offering.taxLabel} · ${fmt(tax)}` : "No tax"}
                     </td>
                     <td className="py-3 text-right font-mono tnum font-semibold text-fg">
-                      {format(total)}
+                      {fmt(total, true)}
                     </td>
                   </tr>
                 </tbody>
@@ -640,7 +642,7 @@ export function CheckoutScreen({
                 loading={submitting}
                 disabled={(!consent || offering.enabledMethods.length === 0) && !submitting}
               >
-                {submitting ? "Placing order…" : `Place order · ${format(total)}`}
+                {submitting ? "Placing order…" : `Place order · ${fmt(total, true)}`}
               </Button>
               <p className="mt-2 text-caption text-fg-subtle">
                 Unpaid orders are cancelled automatically after 7 days.
@@ -681,43 +683,22 @@ export function CheckoutScreen({
                 <dl className="space-y-1.5 border-t border-border pt-4 text-body-sm">
                   <div className="flex justify-between">
                     <dt className="text-fg-muted">Subtotal</dt>
-                    <dd className="font-mono tnum">{format(subtotal)}</dd>
+                    <dd className="font-mono tnum">{fmt(subtotal)}</dd>
                   </div>
                   {appliedCode ? (
                     <div className="flex justify-between text-success">
                       <dt>Discount ({appliedCode})</dt>
-                      <dd className="font-mono tnum">−{format(discount)}</dd>
+                      <dd className="font-mono tnum">−{fmt(discount)}</dd>
                     </div>
                   ) : null}
                   <div className="flex justify-between">
                     <dt className="text-fg-muted">{tax ? offering.taxLabel : "Tax"}</dt>
-                    <dd className="font-mono tnum">{tax ? format(tax) : "No tax"}</dd>
+                    <dd className="font-mono tnum">{tax ? fmt(tax) : "No tax"}</dd>
                   </div>
                   <div className="flex justify-between border-t border-border pt-2 text-body font-semibold text-fg">
                     <dt>Total</dt>
-                    <dd className="font-mono tnum">{format(total)}</dd>
+                    <dd className="font-mono tnum">{fmt(total, true)}</dd>
                   </div>
-                  {offering.estimate && offering.estimate.currency !== total.currency ? (
-                    <div className="space-y-0.5 text-caption text-fg-muted">
-                      <div className="flex justify-between">
-                        <dt>≈ in {offering.estimate.currency}</dt>
-                        <dd className="font-mono tnum">
-                          ≈{" "}
-                          {format({
-                            amountMinor: convertMinor(total.amountMinor, offering.estimate.rate),
-                            currency: offering.estimate.currency,
-                          })}
-                        </dd>
-                      </div>
-                      <p>You will be charged in {total.currency}.</p>
-                    </div>
-                  ) : null}
-                  {offering.displayEstimate ? (
-                    <div className="flex justify-between text-caption text-fg-muted">
-                      <dt>≈ in {offering.displayCurrency}</dt>
-                      <dd className="font-mono tnum">≈ {format(offering.displayEstimate)}</dd>
-                    </div>
-                  ) : null}
                 </dl>
                 <div className="border-t border-border pt-4">
                   <p className="mb-2 text-overline font-semibold tracking-wider text-fg-muted uppercase">

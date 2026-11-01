@@ -7,6 +7,9 @@ import { enforcePasswordChange } from "@/lib/authz/must-change";
 import { redirectToLogin } from "@/lib/authz/login-redirect";
 
 import { getSession } from "@/modules/auth/service";
+import { getDisplayCurrency } from "@/lib/display-currency";
+import { getRateTable } from "@/lib/rate-table";
+import { ViewerCurrencyProvider } from "@/components/account/ViewerMoney";
 
 export const dynamic = "force-dynamic";
 
@@ -20,9 +23,12 @@ export default async function AccountLayout({ children }: { children: React.Reac
   const session = await getSession();
   if (!session) return redirectToLogin("/account");
   enforcePasswordChange(session);
+  const [{ currency }, table] = await Promise.all([getDisplayCurrency(), getRateTable()]);
   return (
     <div data-app="account">
-      {children}
+      <ViewerCurrencyProvider currency={currency} table={table}>
+        {children}
+      </ViewerCurrencyProvider>
       <Toaster />
     </div>
   );

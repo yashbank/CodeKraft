@@ -82,7 +82,7 @@ export function OrdersList({
   approvalsHref,
   notificationsHref,
 }: OrdersListProps) {
-  const { money } = useAdminMoney();
+  const { money, original } = useAdminMoney();
   const router = useRouter();
   const [queue, setQueue] = React.useState<Queue | null>("awaiting");
   const [confirming, setConfirming] = React.useState<OrderRow | null>(null);
@@ -285,7 +285,10 @@ export function OrdersList({
                 <p className="text-body-sm">
                   {o.customer.name} <span className="text-fg-muted">· {o.customer.email}</span>
                 </p>
-                <p className="font-mono text-body tnum">{money(o.total)}</p>
+                <p className="font-mono text-body tnum">
+                  {money(o.total)}
+                  {original(o.total) ? ` · charged ${original(o.total)}` : ""}
+                </p>
                 <p className="flex flex-wrap items-center gap-2 text-body-sm">
                   <StatusBadge kind="payments.provider" value={o.payment.provider} size="sm" />
                   <StatusBadge kind="payments.status" value={o.payment.status} size="sm" />

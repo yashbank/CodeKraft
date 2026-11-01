@@ -83,7 +83,7 @@ export function CustomerDetail({
   newOrderHref,
   auditHref,
 }: CustomerDetailProps) {
-  const { inr, money } = useAdminMoney();
+  const { inr, money, original } = useAdminMoney();
   const router = useRouter();
   const c = data.customer;
   const [tags, setTags] = React.useState(c.tags);
@@ -374,7 +374,10 @@ export function CustomerDetail({
                         {o.number}
                       </Link>
                       <span className="flex-1 truncate text-fg-muted">{o.items.join(", ")}</span>
-                      <span className="font-mono tnum">{money(o.total)}</span>
+                      <span className="font-mono tnum">
+                        {money(o.total)}
+                        {original(o.total) ? ` · charged ${original(o.total)}` : ""}
+                      </span>
                       <StatusBadge kind="orders.status" value={o.status} size="sm" />
                     </li>
                   ))}
