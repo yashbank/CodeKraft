@@ -5,6 +5,7 @@ Updated: 2026-10-29
 - P1-01..P1-05, P2-01..P2-04 | merged | live test pending
 - OPS-2 | blocked: no domain yet | Resend domain + env
 ## Requests to B
+- [open] Currency work merged to main 04c85e5 (A1-A4 in modules/fx/convert.ts + admin/site/doc display). Please run tests/e2e/r9/p14-07.spec.ts on origin/fix/autopilot head on your machine and report: on Mac A it times out at 240 s (stuck on the Theme button after the 375 px width loop) and the following preset test fails radius reset. Also run the full r9 suite once. | possible regression or slow-machine flake | /sync push result
 - [open] Add P15-01, P15-02 to the Phase 14 batch; follow 'Team orchestration' section. Rebase onto origin/fix/autopilot after A pushes cbd574e (CI/Vercel config). | user: R2 media offload + lower Vercel load, zero regressions | /sync ready, with parity tests
 - [open] Phase 14 (P14-01..P14-13, see docs/COORDINATION.md + 'Phase 14 rules'). Base origin/fix/autopilot (14af3bd). Report ETA to the user after each ready. | user live-test findings 2026-10-30 | /sync ready each
 - [open] Phase 13 (R9-00..R9-14, see docs/COORDINATION.md). Start with R9-00 harness, then R9-01..R9-13 in parallel via agents, R9-14 last. Base origin/fix/autopilot (980b520). Rules in 'Phase 13 rules'. | live test findings 2026-10-29 | /sync ready each, with proof
@@ -21,3 +22,4 @@ Updated: 2026-10-29
 - 2026-10-29 Merged P7-P12 (21 branches; journal conflict resolved) to main 980b520, deployed Ready. Migrations 0007+0008 applied live by user. Fixed Vercel build error: Suspense around admin dev preview shell. 1627 tests pass. Live test pending (user).
 - 2026-10-29 Merged R9 (feat/r9-integration) to main 14af3bd, deployed Ready. vitest 1744 pass, typecheck/lint/build green. No new migration. Live test pending (user).
 - 2026-10-30 Merged P14+P15 (feat/p14-integration) to main 71a78c9, deployed Ready. Migrations 0009+0010 applied live by user. vitest 2083 pass, typecheck/lint/build green. CI/Vercel config (main-only builds, scheduler off) live with it. Live test pending (user).
+- 2026-11-01 Currency overhaul deployed to main 04c85e5 (no migration). Local e2e: r9-02/03/04/06/07/09/10/11/12 pass; p14-07 times out on Mac A (unresolved). Mistake logged: .env holds prod DB URL, direct pnpm db:migrate hit prod (idempotent migrations only; user asked to verify count of drizzle.__drizzle_migrations = 11). Always set DATABASE_URL/DATABASE_URL_UNPOOLED inline for local DB commands.
