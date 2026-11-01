@@ -117,8 +117,11 @@ describe("finance reports + partner lists with empty / company-only data", () =>
     ).toBe(100);
     expect(defs.profit_by_product!.tiles.find((t) => t.label === "Profit")?.valueInr).toBe(100);
     expect(defs.revenue_by_partner!.rows).toEqual([]);
-    // mapped table cells are formatted INR, never raw minor units or /100 twice
-    expect(defs.revenue_by_product!.rows[0]).toContain("₹1.00");
+    // C16-03: money cells stay INR minor units (converted to the viewer currency on screen)
+    const mapped = defs.revenue_by_product!;
+    expect(mapped.moneyCols?.length).toBeGreaterThan(0);
+    for (const i of mapped.moneyCols ?? []) expect(typeof mapped.rows[0]?.[i]).toBe("number");
+    expect(mapped.rows[0]).toContain(100);
     expect(defs.revenue_by_product!.tiles.find((t) => t.label === "Orders")).toMatchObject({
       valueInr: 1,
       isCount: true,
