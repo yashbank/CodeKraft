@@ -40,6 +40,10 @@ export const setFxOverrideSchema = z
   .refine((i) => i.quote !== "INR", {
     message: "quote must differ from the INR base",
     path: ["quote"],
+  })
+  .refine((i) => Number(i.rate) !== 1, {
+    message: "a rate of exactly 1 between INR and another currency is not valid",
+    path: ["rate"],
   });
 export type SetFxOverrideInput = z.infer<typeof setFxOverrideSchema>;
 

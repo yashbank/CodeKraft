@@ -6,7 +6,12 @@
  * static table and mark the table stale. Never throws.
  */
 import { desc, eq } from "drizzle-orm";
-import { convertWithTable, hasAllRates, type RateTable } from "@/lib/currency-convert";
+import {
+  convertWithTable,
+  hasAllRates,
+  isUsableInrRate,
+  type RateTable,
+} from "@/lib/currency-convert";
 import { STATIC_FX_TABLE } from "@/lib/fx";
 import { type Currency } from "@/lib/money";
 import { fxRates } from "../../../drizzle/schema/settings";
@@ -19,7 +24,7 @@ export const REFRESH_RETRY_MS = 10 * 60_000;
 
 export function staticRateTable(now: Date = new Date()): RateTable {
   const rates = { INR: "1" } as Record<Currency, string>;
-  for (const c of FX_QUOTE_CURRENCIES) rates[c] = STATIC_FX_TABLE[`INR/${c}`] ?? "1";
+  for (const c of FX_QUOTE_CURRENCIES) rates[c] = STATIC_FX_TABLE[`INR/${c}`] ?? "0"; // never "1": a missing rate must not pass as 1:1
   return { base: "INR", rates, fetchedAt: now.toISOString(), stale: true, source: "static" };
 }
 
@@ -36,7 +41,7 @@ export interface RateRowLike {
 export function buildRateTable(rows: readonly RateRowLike[], now: Date = new Date()): RateTable {
   const latest = new Map<string, RateRowLike>();
   const sorted = rows
-    .filter((r) => r.base === "INR" && Number(r.rate) > 0)
+    .filter((r) => r.base === "INR" && isUsableInrRate(r.quote, r.rate))
     .sort((a, b) => b.asOf.localeCompare(a.asOf) || b.createdAt.getTime() - a.createdAt.getTime());
   for (const r of sorted) if (!latest.has(r.quote)) latest.set(r.quote, r);
 

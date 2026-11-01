@@ -88,7 +88,7 @@ import {
 import { ApprovalGateNotice, Banner } from "../Banner";
 import { formatDate, formatDateTime, percentFromBps } from "../format";
 import { useAdminCurrency, useAdminMoney } from "../AdminCurrency";
-import { convertWithTable, type RateTable } from "@/lib/currency-convert";
+import { convertWithTable, mismatchedPriceRows } from "@/lib/currency-convert";
 import { CURRENCIES, type Currency } from "@/lib/money";
 import { productSeo } from "@/lib/seo";
 import { SeoPreview } from "../SeoPreview";
@@ -181,10 +181,12 @@ export interface ProductEditorProps {
   isNew?: boolean;
 }
 
-/** Price (minor units) to prefill when editing: the stored row in that currency, else the INR base converted. */
-function offeringPriceDefault(o: OfferingRow, currency: Currency, table: RateTable): number {
-  const row = o.prices.find((p) => p.currency === currency);
-  return row ? row.amountMinor : convertWithTable(o.basePrice.amountMinor, "INR", currency, table);
+/**
+ * Price (minor units) to prefill when editing: only the stored row in that currency. Never a
+ * converted copy — saving it would pin a stale explicit price in that currency (C16-01).
+ */
+function offeringPriceDefault(o: OfferingRow, currency: Currency): number | undefined {
+  return o.prices.find((p) => p.currency === currency)?.amountMinor;
 }
 
 function flattenCategoryOptions(nodes: CategoryNode[]): Array<{ id: string; label: string }> {
@@ -215,12 +217,12 @@ export function ProductEditor({
   initialTab = "basics",
   isNew = false,
 }: ProductEditorProps) {
-  const { money } = useAdminMoney();
+  const { money, original } = useAdminMoney();
+  // stored-currency text ("$1,001.00"), not converted to the admin's currency
+  const nativeMoney = (m: { amountMinor: number; currency: Currency }) => original(m) ?? money(m);
   const adminCfg = useAdminCurrency();
-  // Price entry currency: defaults to the admin's preferred currency; stored exactly as entered.
-  const [offeringPriceCurrency, setOfferingPriceCurrency] = React.useState<Currency>(
-    adminCfg.currency,
-  );
+  // Price entry currency: defaults to the INR base; another currency is only stored when picked.
+  const [offeringPriceCurrency, setOfferingPriceCurrency] = React.useState<Currency>("INR");
   const router = useRouter();
   const [tab, setTab] = React.useState<TabKey>(initialTab);
   const productId = product.id;
@@ -669,7 +671,7 @@ export function ProductEditor({
   /** Opens the offering dialog — `null` for "Add offering", an existing row to edit it prefilled. */
   function openOfferingDialog(offering: OfferingRow | null) {
     setEditingOffering(offering);
-    setOfferingPriceCurrency(adminCfg.currency);
+    setOfferingPriceCurrency("INR");
     setOfferingPurchaseModel(offering?.purchaseModel ?? "one_time");
     setOfferingBillingInterval(offering?.billingInterval ?? "monthly");
     setOfferingDeliveryType(offering?.deliveryType ?? "download");
@@ -1691,9 +1693,9 @@ export function ProductEditor({
                       {editingOffering ? `Edit ${editingOffering.name}` : "Add offering"}
                     </DialogTitle>
                     <DialogDescription>
-                      The price is stored in the currency you pick (default: your preferred
-                      currency); other currency rows are kept, and an INR base row is derived only
-                      if none exists. Refine delivery config from the Delivery config tab.
+                      The price is stored in the currency you pick (default: the INR base). Other
+                      currencies are converted from INR at the live rate unless you set an explicit
+                      price for them here. Refine delivery config from the Delivery config tab.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
@@ -1715,15 +1717,12 @@ export function ProductEditor({
                           type="number"
                           min="1"
                           step="0.01"
-                          defaultValue={
-                            editingOffering
-                              ? offeringPriceDefault(
-                                  editingOffering,
-                                  offeringPriceCurrency,
-                                  adminCfg.table,
-                                ) / 100
-                              : undefined
-                          }
+                          defaultValue={(() => {
+                            const minor = editingOffering
+                              ? offeringPriceDefault(editingOffering, offeringPriceCurrency)
+                              : undefined;
+                            return minor === undefined ? undefined : minor / 100;
+                          })()}
                           required
                         />
                       </Field>
@@ -1858,6 +1857,18 @@ export function ProductEditor({
                       </TableCell>
                       <TableCell className="text-right font-mono tnum">
                         {o.purchaseModel === "custom_quote" ? "Quote" : money(o.basePrice)}
+                        {mismatchedPriceRows(o.prices, adminCfg.table).map((m) => (
+                          <span
+                            key={m.currency}
+                            role="status"
+                            className="block text-caption text-warning"
+                          >
+                            {m.currency} price{" "}
+                            {nativeMoney({ amountMinor: m.amountMinor, currency: m.currency })} is
+                            far from the INR price (≈{" "}
+                            {nativeMoney({ amountMinor: m.expectedMinor, currency: m.currency })})
+                          </span>
+                        ))}
                         {o.compareAt ? (
                           <span className="block text-caption text-fg-subtle line-through">
                             {money(o.compareAt)}
