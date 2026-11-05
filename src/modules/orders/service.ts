@@ -496,6 +496,8 @@ export class DefaultOrdersService implements OrdersService {
           name: input.billing.name,
           offeringName: offering.name,
           amount: toDecimalString(itemPricing.totalMinor),
+          currency: "INR",
+          url: `/account/orders/${newOrder.id}`,
         },
         priority: 5,
         status: "queued",

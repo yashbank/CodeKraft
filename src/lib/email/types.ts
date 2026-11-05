@@ -19,6 +19,10 @@ export type EmailTemplate =
   | "approval-decided"
   | "payment-confirmed"
   | "custom-quote"
+  | "invoice"
+  | "order-created"
+  | "order-expired"
+  | "payment-failed"
   | "test-email";
 
 export interface EmailMessage {

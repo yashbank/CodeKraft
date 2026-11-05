@@ -16,6 +16,7 @@ const ADMIN_ROUTE_PERMISSIONS: ReadonlyArray<readonly [string, Needs]> = [
   ["/finance/adjustments", "finance.adjustment.propose"],
   ["/admin-users", "admin_class"],
   ["/audit", "audit.read"],
+  ["/email-preview", "settings.read"],
   ["/approvals", "approvals.read"],
 ];
 
