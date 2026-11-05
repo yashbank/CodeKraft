@@ -39,12 +39,13 @@ import { DataToolbar } from "../DataToolbar";
 import { EmptyState } from "../EmptyState";
 import { FilterChips } from "../FilterChips";
 import { formatDate, formatDateTime } from "../format";
-import { useAdminCurrency, useAdminMoney } from "../AdminCurrency";
+import { useAdminCurrency } from "../AdminCurrency";
 import { MoneyCell } from "../MoneyCell";
 import { PageHeader } from "../PageHeader";
 import { Field, RichTextField } from "../RichTextField";
 import { RowActions } from "../RowActions";
 import type { CustomerOption, QuoteOfferingOption, QuoteRow } from "../types";
+import { add, format as formatMoney, mulBps, parseMinor } from "@/lib/money";
 import { SiteName } from "@/components/brand/site-brand";
 
 export interface QuotePrefill {
@@ -81,7 +82,6 @@ export function QuotesScreen({
   customerHref,
   prefill,
 }: QuotesScreenProps) {
-  const { money } = useAdminMoney();
   const router = useRouter();
   const [status, setStatus] = React.useState<QuoteRow["status"] | null>(null);
   const [selected, setSelected] = React.useState<QuoteRow | null>(
@@ -102,6 +102,12 @@ export function QuotesScreen({
     useAdminCurrency().currency,
   );
   const [taxPct, setTaxPct] = React.useState("0");
+  // Mirror of the uncontrolled title/price/date inputs so the email preview follows the form.
+  const [draft, setDraft] = React.useState({
+    title: prefill?.title ?? "",
+    amount: "",
+    expiresAt: "",
+  });
   const [lines, setLines] = React.useState<Array<{ d: string; q: string; u: string }>>([]);
   const [formError, setFormError] = React.useState<string | null>(null);
 
@@ -136,6 +142,7 @@ export function QuotesScreen({
     setOfferingId("none");
     setLines([]);
     setTaxPct("0");
+    setDraft({ title: "", amount: "", expiresAt: "" });
     setFormError(null);
   }
 
@@ -143,6 +150,29 @@ export function QuotesScreen({
     (n, l) => n + Math.round((parseInt(l.q, 10) || 0) * (parseFloat(l.u) || 0) * 100),
     0,
   );
+
+  // Same total the server charges: tax-exclusive amount plus tax rounded to the minor unit.
+  const preview = (() => {
+    const cur = selected ? selected.amount.currency : currency;
+    const bps = selected ? (selected.taxBps ?? 0) : Math.round((parseFloat(taxPct) || 0) * 100);
+    let net: number | null = selected ? selected.amount.amountMinor : null;
+    if (!selected) {
+      try {
+        net = lines.length > 0 ? lineTotalMinor : parseMinor(draft.amount, cur);
+      } catch {
+        net = null;
+      }
+    }
+    const expires = selected ? selected.expiresAt : draft.expiresAt || defaultExpiresOn();
+    const valid = net !== null && net > 0 && bps >= 0 && bps <= 10000;
+    const base = valid ? { amountMinor: net as number, currency: cur } : null;
+    return {
+      title: selected ? selected.title : draft.title.trim(),
+      total: base ? formatMoney(add(base, mulBps(base, bps))) : "—",
+      hasTax: valid && bps > 0,
+      validUntil: expires ? formatDate(expires) : "—",
+    };
+  })();
 
   /** Creates a quote from the form; `alsoSend` sends it right after. Quotes are immutable once created. */
   async function handleCreate(alsoSend: boolean) {
@@ -406,6 +436,12 @@ export function QuotesScreen({
         <form
           ref={formRef}
           className="space-y-4 rounded-lg border border-border bg-surface p-5 lg:col-span-8"
+          onChange={(e) => {
+            const t = e.target as unknown as HTMLInputElement;
+            if (t.name === "title" || t.name === "amount" || t.name === "expiresAt") {
+              setDraft((d) => ({ ...d, [t.name]: t.value }));
+            }
+          }}
           onSubmit={(e) => {
             e.preventDefault();
             handleSaveClick();
@@ -473,6 +509,7 @@ export function QuotesScreen({
                   const amt = formRef.current?.elements.namedItem("amount");
                   if (o && amt instanceof HTMLInputElement) {
                     amt.value = (o.price.amountMinor / 100).toFixed(2);
+                    setDraft((d) => ({ ...d, amount: amt.value }));
                     setCurrency(o.price.currency);
                   }
                 }}
@@ -752,9 +789,8 @@ export function QuotesScreen({
                 Your quote from <SiteName />
               </p>
               <p className="mt-1 text-fg-muted">
-                {selected?.title ?? "Title"} · {selected ? money(selected.amount) : "₹0.00"}
-                {selected?.taxApplies ? " + tax" : ""} · valid until{" "}
-                {selected?.expiresAt ? formatDate(selected.expiresAt) : "—"}
+                {preview.title || "Title"} · {preview.total}
+                {preview.hasTax ? " incl. tax" : ""} · valid until {preview.validUntil}
               </p>
               <p className="mt-2 text-accent-text">Review and pay →</p>
             </div>
