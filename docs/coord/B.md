@@ -1,6 +1,10 @@
 # Mac B status
-Updated: 2026-11-02
+Updated: 2026-11-06
 ## Tasks
+- D17-01 | doing | branch feat/d17-01-instant-email | fixer running
+- D17-08 | doing | branch feat/d17-08-reset-check | fixer running
+- D17-09 | doing | branch feat/d17-09-csp | fixer running
+- D17-02..07, D17-10 | todo | integration branch feat/d17-integration
 - P1-01 | ready | branch feat/p1-01-ledger | vitest tests/unit/ledger-debit-credit.test.ts: 1 pass
 - P1-02 | ready | branch feat/p1-02-dashboard-widgets | vitest tests/unit/admin/dashboard-finance-core.test.ts: 3 pass (+45 existing widget tests)
 - P1-03 | ready | branch feat/p1-03-notifications | vitest tests/unit/notifications/read-state.test.ts: 2 pass; tests/unit/admin + account: 128 pass
@@ -173,3 +177,4 @@ Run e2e: `pnpm build && pnpm start`, then `playwright test tests/e2e/r9 --projec
 - 2026-11-02 p14-07 on A: not reproduced (7/7 alone). Likely a parallel spec re-logging the super admin revokes the session -> settings shows login -> un-timed Theme click waits 240 s -> reset skipped -> next test fails radius. Fixed in feat/c16-06-tests: re-login when redirected to /auth/login + 30 s click timeouts (p14-07 + resetThemeViaUi). r9-09 storefront check made tolerant of the 5-min server rate cache (raw SQL rates) and always restores the super admin to INR (it was leaving USD and breaking r9-10).
 - 2026-11-02 Run order for A: combined suite first, then tests/e2e/r9/c16-currency-matrix.spec.ts and tests/e2e/r9/c16-theme-defaults.spec.ts in their own run (theme with --workers=1), then the sweep. Live data: find bad copies with SELECT offering_id, currency, amount_minor FROM offering_prices WHERE currency <> 'INR' (rows equal to the INR amount are the bug); the admin offerings table now flags them.
 - Done 6 of 6, estimated remaining ~0 h on B. Next for A: merge C16 branches (or just feat/c16-06-tests), full gate, deploy on approval, live test.
+- 2026-11-06 Phase 17 started on Mac B from b7e75c2. Low-disk mode set by the user: one checkout, at most 3 agents, so agents share the tree on feat/d17-integration with separate files instead of worktrees; task branches are built from the same files. Free disk 8.0 GB after cleanup (was 4.5 GB).
