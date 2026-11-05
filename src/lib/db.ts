@@ -11,6 +11,7 @@
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import postgres, { type Sql } from "postgres";
 import { getEnv } from "./env";
+import { scheduleOutboxFlush } from "./email/flush";
 
 if (typeof window !== "undefined") {
   throw new Error("src/lib/db.ts is server-only and must not be imported in the browser");
@@ -93,7 +94,10 @@ export async function withTx<T>(
 ): Promise<T> {
   if (outerTx !== undefined) return fn(outerTx);
   const r: TxRunner = runner ?? getDb();
-  return r.transaction((tx) => fn(tx));
+  const result = await r.transaction((tx) => fn(tx));
+  // Only the app's own root client: send any outbox rows this tx committed (no-op unless resend).
+  if (runner === undefined) scheduleOutboxFlush();
+  return result;
 }
 
 /** Close the pooled client (tests, graceful shutdown). Safe to call when nothing was opened. */
