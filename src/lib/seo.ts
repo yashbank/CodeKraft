@@ -10,7 +10,7 @@ export const NOINDEX = { index: false, follow: false } as const;
 /** Public origin without trailing slash (NEXT_PUBLIC_SITE_URL, then APP_URL, then default). */
 export function siteUrl(): string {
   const raw =
-    process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "https://codekraft.in";
+    process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   return raw.replace(/\/+$/, "");
 }
 

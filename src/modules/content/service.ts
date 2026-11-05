@@ -80,6 +80,7 @@ import type {
 import { FEATURED_PRODUCTS_MAX } from "./types";
 import type { ImageRef } from "../catalog/types";
 import { z } from "zod";
+import { siteUrl } from "@/lib/seo";
 
 function encodeCursor(createdAt: Date, id: string): string {
   return Buffer.from(`${createdAt.getTime()}#${id}`).toString("base64url");
@@ -917,9 +918,7 @@ export class DefaultContentService implements ContentService {
     const faqViews = await this.listFaqs(ctx, { scope: "site" }, tx);
 
     // 6. JSON-LD Organization
-    const domain = process.env.NEXT_PUBLIC_APP_URL
-      ? new URL(process.env.NEXT_PUBLIC_APP_URL).host
-      : "codekraft.dev";
+    const domain = new URL(siteUrl()).host;
 
     const { getSiteName } = await import("@/lib/site-brand");
     const siteName = await getSiteName();
@@ -1150,9 +1149,7 @@ export class DefaultContentService implements ContentService {
       }
     }
 
-    const domain = process.env.NEXT_PUBLIC_APP_URL
-      ? new URL(process.env.NEXT_PUBLIC_APP_URL).host
-      : "codekraft.dev";
+    const domain = new URL(siteUrl()).host;
 
     const jsonLd = {
       "@context": "https://schema.org",

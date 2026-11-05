@@ -102,7 +102,7 @@ export function SettingsTransfer() {
           <DialogHeader>
             <DialogTitle>Import settings</DialogTitle>
             <DialogDescription>
-              Choose a file exported from CodeKraft. You will see what changes before anything is
+              Choose a file exported from Settings. You will see what changes before anything is
               saved. Payment gateway and bank secrets are never imported.
             </DialogDescription>
           </DialogHeader>

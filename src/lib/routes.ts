@@ -2,7 +2,7 @@
  * Application routes and URL builders (MASTER_SPEC §7, ui/sitemap.md §3).
  */
 export function quotePayUrl(token: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://codekraft.dev";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
   return `${baseUrl}/quote/${token}`;
 }
 

@@ -24,7 +24,7 @@ const LEGAL_DOCS: Record<LegalKey, LegalPageView> = {
         id: "acceptance",
         title: "1. Acceptance of terms",
         bodyHtml:
-          "<p>By accessing CodeKraft services, software products, or purchasing customized engineering, you agree to be bound by these Terms of Service.</p>",
+          "<p>By accessing our services, software products, or purchasing customized engineering, you agree to be bound by these Terms of Service.</p>",
       },
       {
         id: "commercial-agreements",
@@ -42,7 +42,7 @@ const LEGAL_DOCS: Record<LegalKey, LegalPageView> = {
         id: "liability",
         title: "4. Limitation of liability",
         bodyHtml:
-          "<p>In no event shall CodeKraft be liable for indirect, incidental, or consequential damages resulting from downtime or service integrations.</p>",
+          "<p>In no event shall we be liable for indirect, incidental, or consequential damages resulting from downtime or service integrations.</p>",
       },
     ],
   },
@@ -82,7 +82,7 @@ const LEGAL_DOCS: Record<LegalKey, LegalPageView> = {
         id: "license-grant",
         title: "1. License grant",
         bodyHtml:
-          "<p>Subject to the terms of your purchase order, CodeKraft grants you a non-exclusive, worldwide license to install, execute, and customize the licensed software for your organization.</p>",
+          "<p>Subject to the terms of your purchase order, we grant you a non-exclusive, worldwide license to install, execute, and customize the licensed software for your organization.</p>",
       },
       {
         id: "restrictions",
@@ -94,7 +94,7 @@ const LEGAL_DOCS: Record<LegalKey, LegalPageView> = {
         id: "audit-keys",
         title: "3. License keys & telemetry",
         bodyHtml:
-          "<p>Self-hosted binaries may validate operational license authenticity against the CodeKraft licensing endpoint periodically without transmitting proprietary customer data.</p>",
+          "<p>Self-hosted binaries may validate operational license authenticity against our licensing endpoint periodically without transmitting proprietary customer data.</p>",
       },
     ],
   },

@@ -56,7 +56,7 @@ import type {
 /** Built-in prompt seeded as version 1 (first chat, or the admin editor on an empty index). */
 const DEFAULT_PROMPT_NAME = "Default Assistant Prompt";
 const DEFAULT_PROMPT_TEXT =
-  "You are CodeKraft Assistant, an AI assistant for CodeKraft software solutions.";
+  "You are the site assistant, an AI assistant for our software solutions.";
 
 export class DefaultChatService implements ChatService {
   private _db?: Db;

@@ -40,7 +40,7 @@ export function HeroPoster({
       <Image
         key={src ?? "default"}
         src={src || "/images/hero-3d.jpg"}
-        alt={alt || "CodeKraft 3D System Architecture Render"}
+        alt={alt || "3D system architecture render"}
         fill
         priority
         sizes="(min-width: 1024px) 50vw, 100vw"

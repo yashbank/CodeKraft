@@ -43,6 +43,7 @@ import type { AdminBlogList, BlogCard, BlogDetail, ProductBlog } from "./types";
 import type { Money } from "@/lib/money";
 import type { ImageRef, ProductCard } from "../catalog/types";
 import { z } from "zod";
+import { siteUrl } from "@/lib/seo";
 import { getSiteName } from "@/lib/site-brand";
 
 function encodeCursor(createdAt: Date, id: string): string {
@@ -587,9 +588,7 @@ export class DefaultBlogService implements BlogService {
       : null;
 
     // JSON-LD Article
-    const domain = process.env.NEXT_PUBLIC_APP_URL
-      ? new URL(process.env.NEXT_PUBLIC_APP_URL).host
-      : "codekraft.dev";
+    const domain = new URL(siteUrl()).host;
 
     const jsonLd: Record<string, unknown> = {
       "@context": "https://schema.org",
