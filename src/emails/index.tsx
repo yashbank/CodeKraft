@@ -50,10 +50,12 @@ function defaultSiteUrl(): string {
   return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 }
 
+type BtnComponent = (props: { href: string; children: React.ReactNode }) => React.ReactElement;
+
 function makeTemplate(
   name: string,
   subjectFn: (data: Record<string, unknown>) => string,
-  bodyFn: (data: Record<string, unknown>) => React.ReactNode,
+  bodyFn: (data: Record<string, unknown>, Btn: BtnComponent) => React.ReactNode,
 ): EmailTemplateDefinition {
   return {
     name,
@@ -62,6 +64,7 @@ function makeTemplate(
       const subject = subjectFn(data);
       const t = theme ?? (await loadEmailTheme());
       const url = siteUrl ?? defaultSiteUrl();
+      const Btn: BtnComponent = (props) => <EmailButton {...props} theme={t} siteUrl={url} />;
       const element = (
         <EmailLayout
           preview={brandSubject(subject, t.siteName)}
@@ -69,7 +72,7 @@ function makeTemplate(
           siteUrl={url}
           theme={t}
         >
-          {bodyFn(data)}
+          {bodyFn(data, Btn)}
         </EmailLayout>
       );
       const html = await render(element);
@@ -83,10 +86,10 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplateDefinition> = {
   "verify-email": makeTemplate(
     "verify-email",
     () => "Verify your CodeKraft email address",
-    (d) => (
+    (d, Btn) => (
       <>
         <Text style={emailStyles.p}>Please click the link below to verify your email address:</Text>
-        <EmailButton href={d.url as string}>Verify Email</EmailButton>
+        <Btn href={d.url as string}>Verify Email</Btn>
         <Text className="ek-muted" style={emailStyles.muted}>
           Or paste this address into your browser: {d.url as string}
         </Text>
@@ -96,10 +99,10 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplateDefinition> = {
   "reset-password": makeTemplate(
     "reset-password",
     () => "Reset your CodeKraft password",
-    (d) => (
+    (d, Btn) => (
       <>
         <Text style={emailStyles.p}>Use this button to reset your password:</Text>
-        <EmailButton href={d.url as string}>Reset Password</EmailButton>
+        <Btn href={d.url as string}>Reset Password</Btn>
         <Text className="ek-muted" style={emailStyles.muted}>
           Or paste this address into your browser: {d.url as string}
         </Text>
@@ -119,13 +122,13 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplateDefinition> = {
   "order-created-instructions": makeTemplate(
     "order-created-instructions",
     (d) => `Payment Instructions for Order #${d.orderNumber ?? ""}`,
-    (d) => (
+    (d, Btn) => (
       <>
         <Text style={emailStyles.p}>Order #{String(d.orderNumber ?? "")} is awaiting payment.</Text>
         <Text style={emailStyles.p}>
           Please complete payment via UPI or Bank transfer and submit your reference.
         </Text>
-        {d.url && <EmailButton href={d.url as string}>Submit Payment Reference</EmailButton>}
+        {d.url && <Btn href={d.url as string}>Submit Payment Reference</Btn>}
       </>
     ),
   ),
@@ -141,19 +144,19 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplateDefinition> = {
   "payment-confirmed-invoice": makeTemplate(
     "payment-confirmed-invoice",
     (d) => `Payment Confirmed & Invoice #${d.orderNumber ?? ""}`,
-    () => (
+    (_d, Btn) => (
       <>
         <Text style={emailStyles.p}>
           Your payment has been verified and your purchase is ready.
         </Text>
-        <EmailButton href="/account/purchases">View Purchases</EmailButton>
+        <Btn href="/account/purchases">View Purchases</Btn>
       </>
     ),
   ),
   "delivery-license-key": makeTemplate(
     "delivery-license-key",
     (d) => `License Ready: ${d.productTitle ?? "Product"}`,
-    () => (
+    (_d, Btn) => (
       <>
         <Text style={emailStyles.p}>
           Your license key has been generated and is ready in your customer portal.
@@ -162,7 +165,7 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplateDefinition> = {
           For security reasons, license keys are never sent over email. Please view and reveal your
           key in your portal.
         </Text>
-        <EmailButton href="/account/purchases">View License Key in Portal</EmailButton>
+        <Btn href="/account/purchases">View License Key in Portal</Btn>
       </>
     ),
   ),
@@ -179,17 +182,17 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplateDefinition> = {
   "query-reply": makeTemplate(
     "query-reply",
     (d) => `Reply to Query: ${d.subject ?? "Support Request"}`,
-    (d) => (
+    (d, Btn) => (
       <>
         <Text style={emailStyles.p}>Our team has replied to your support query.</Text>
-        <EmailButton
+        <Btn
           href={
             (d.url as string) ??
             (d.queryId ? `/account/queries/${String(d.queryId)}` : "/account/queries")
           }
         >
           View Reply
-        </EmailButton>
+        </Btn>
       </>
     ),
   ),
@@ -205,12 +208,12 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplateDefinition> = {
   "admin-overdue-digest": makeTemplate(
     "admin-overdue-digest",
     () => "Daily Admin Digest: Overdue Leads and Tasks",
-    (d) => (
+    (d, Btn) => (
       <>
         <Text style={emailStyles.p}>Here is your daily summary of items needing follow-up:</Text>
         <Text style={emailStyles.p}>Overdue leads: {String(d.overdueCount ?? 0)}</Text>
         <Text style={emailStyles.p}>Open revoke tasks: {String(d.revokeTasksCount ?? 0)}</Text>
-        <EmailButton href="/admin/leads?overdue=true">Open Admin Dashboard</EmailButton>
+        <Btn href="/admin/leads?overdue=true">Open Admin Dashboard</Btn>
       </>
     ),
   ),
@@ -227,24 +230,24 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplateDefinition> = {
   "approval-needed": makeTemplate(
     "approval-needed",
     (d) => `Approval needed: ${d.summary ?? ""}`,
-    (d) => (
+    (d, Btn) => (
       <>
         <Text style={emailStyles.p}>
           {String(d.requesterName ?? "An admin")} requested approval: {String(d.summary ?? "")}
         </Text>
-        <EmailButton href={(d.url as string) ?? "/admin/approvals"}>Review Request</EmailButton>
+        <Btn href={(d.url as string) ?? "/admin/approvals"}>Review Request</Btn>
       </>
     ),
   ),
   "approval-decided": makeTemplate(
     "approval-decided",
     (d) => `Approval ${d.outcome ?? "decided"}: ${d.summary ?? ""}`,
-    (d) => (
+    (d, Btn) => (
       <>
         <Text style={emailStyles.p}>
           Your request ({String(d.summary ?? "")}) was {String(d.outcome ?? "decided")}.
         </Text>
-        <EmailButton href={(d.url as string) ?? "/admin/approvals"}>View Approvals</EmailButton>
+        <Btn href={(d.url as string) ?? "/admin/approvals"}>View Approvals</Btn>
       </>
     ),
   ),
@@ -252,34 +255,34 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplateDefinition> = {
     "custom-quote",
     (d) =>
       `${d.resend ? "Reminder: your" : "Your"} quote: ${d.title ?? "Custom quote"} (${emailMoney(d)})`,
-    (d) => (
+    (d, Btn) => (
       <>
         <Text style={emailStyles.p}>
           We prepared a custom quote for you: {String(d.title ?? "")} - {emailMoney(d)}
           {d.validUntil ? `, valid until ${String(d.validUntil)}` : ""}.
         </Text>
-        <EmailButton href={String(d.payUrl ?? "/account/quotes")}>Review quote</EmailButton>
+        <Btn href={String(d.payUrl ?? "/account/quotes")}>Review quote</Btn>
       </>
     ),
   ),
   invoice: makeTemplate(
     "invoice",
     (d) => `Your invoice${d.invoiceNo ? ` ${d.invoiceNo}` : ""}`,
-    (d) => (
+    (d, Btn) => (
       <>
         <Text style={emailStyles.p}>
           Your invoice{d.invoiceNo ? ` ${String(d.invoiceNo)}` : ""}
           {d.orderNo ? ` for order ${String(d.orderNo)}` : ""} has been issued
           {moneyOrEmpty(d) ? `. Total charged: ${moneyOrEmpty(d)}` : ""}.
         </Text>
-        <EmailButton href={String(d.url ?? "/account/invoices")}>View invoice</EmailButton>
+        <Btn href={String(d.url ?? "/account/invoices")}>View invoice</Btn>
       </>
     ),
   ),
   "order-created": makeTemplate(
     "order-created",
     (d) => `Order ${d.orderNo ?? ""} placed - complete your payment`.replace("  ", " "),
-    (d) => (
+    (d, Btn) => (
       <>
         <Text style={emailStyles.p}>
           {d.name ? `Hi ${String(d.name)}, we` : "We"} received your order
@@ -287,33 +290,33 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplateDefinition> = {
           {d.offeringName ? ` for ${String(d.offeringName)}` : ""}
           {moneyOrEmpty(d) ? ` (${moneyOrEmpty(d)})` : ""}. It is awaiting payment.
         </Text>
-        <EmailButton href={String(d.url ?? "/account/orders")}>Complete payment</EmailButton>
+        <Btn href={String(d.url ?? "/account/orders")}>Complete payment</Btn>
       </>
     ),
   ),
   "order-expired": makeTemplate(
     "order-expired",
     (d) => `Order ${d.orderNo ?? ""} expired`.replace("  ", " "),
-    (d) => (
+    (d, Btn) => (
       <>
         <Text style={emailStyles.p}>
           Order{d.orderNo ? ` ${String(d.orderNo)}` : ""} expired because payment was not received
           in time. Nothing was charged. You can place a new order at any time.
         </Text>
-        <EmailButton href="/products">Browse products</EmailButton>
+        <Btn href="/products">Browse products</Btn>
       </>
     ),
   ),
   "payment-failed": makeTemplate(
     "payment-failed",
     (d) => `Payment failed for order ${d.orderNo ?? ""}`.trim(),
-    (d) => (
+    (d, Btn) => (
       <>
         <Text style={emailStyles.p}>
           We could not confirm your payment for order{d.orderNo ? ` ${String(d.orderNo)}` : ""}.
           Please check your order and try again, or contact support if you were charged.
         </Text>
-        <EmailButton href={String(d.url ?? "/account/orders")}>View order</EmailButton>
+        <Btn href={String(d.url ?? "/account/orders")}>View order</Btn>
       </>
     ),
   ),
