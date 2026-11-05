@@ -9,6 +9,8 @@ import type { DbOrTx } from "@/lib/db";
 import {
   type ListResult,
   currencySchema,
+  SEO_DESCRIPTION_MAX,
+  SEO_TITLE_MAX,
   listParams,
   richTextSchema,
   slugSchema,
@@ -25,8 +27,8 @@ export const upsertProductBlogSchema = z.strictObject({
   excerpt: text(300),
   bodyJson: richTextSchema,
   coverMediaId: uuidSchema.optional(),
-  seoTitle: text(70).optional(),
-  seoDescription: text(160).optional(),
+  seoTitle: text(SEO_TITLE_MAX).optional(),
+  seoDescription: text(SEO_DESCRIPTION_MAX).optional(),
 });
 export type UpsertProductBlogInput = z.infer<typeof upsertProductBlogSchema>;
 

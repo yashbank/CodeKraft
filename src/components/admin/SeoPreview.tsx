@@ -15,7 +15,10 @@ export function SeoPreview({ input }: { input: PageMetaInput }) {
           <p className="truncate text-caption text-fg-subtle" data-testid="seo-preview-url">
             {s.url}
           </p>
-          <p className="text-body font-medium text-accent" data-testid="seo-preview-title">
+          <p
+            className="break-words text-body font-medium text-accent"
+            data-testid="seo-preview-title"
+          >
             {s.title}
           </p>
           <p className="break-words text-body-sm text-fg-muted">{s.description}</p>
@@ -28,7 +31,7 @@ export function SeoPreview({ input }: { input: PageMetaInput }) {
             className="aspect-[1200/630] w-full bg-surface object-cover"
           />
           <div className="p-3">
-            <p className="text-body-sm font-semibold">{s.title}</p>
+            <p className="break-words text-body-sm font-semibold">{s.title}</p>
             <p className="line-clamp-2 text-caption text-fg-muted">{s.description}</p>
           </div>
         </div>

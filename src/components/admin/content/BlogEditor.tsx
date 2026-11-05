@@ -32,6 +32,15 @@ import { RowActions } from "../RowActions";
 import { ContentEditorFrame } from "./ContentEditorFrame";
 import { fromPlainText, toPlainText } from "@/modules/content/plain-text";
 import { slugify } from "@/modules/catalog/slugs";
+import {
+  SEO_DESCRIPTION_HINT,
+  SEO_DESCRIPTION_MAX,
+  SEO_TITLE_HINT,
+  SEO_TITLE_MAX,
+  SLUG_MAX,
+} from "@/modules/_shared/zod";
+
+import { SeoLimitField } from "../SeoLimitField";
 import type { AdminBlogList, AdminBlogPost } from "@/modules/blog/types";
 import {
   publishProductBlogById,
@@ -249,7 +258,13 @@ export function BlogEditor({ posts: initial, productsWithoutBlog }: AdminBlogLis
                 <Input id="blog-title" name="title" maxLength={160} defaultValue={post?.title} />
               </Field>
               <Field id="blog-slug" label="Slug">
-                <Input id="blog-slug" name="slug" className="font-mono" defaultValue={post?.slug} />
+                <Input
+                  id="blog-slug"
+                  name="slug"
+                  className="font-mono"
+                  maxLength={SLUG_MAX}
+                  defaultValue={post?.slug}
+                />
               </Field>
             </div>
             <Field id="blog-excerpt" label="Excerpt" required>
@@ -298,22 +313,25 @@ export function BlogEditor({ posts: initial, productsWithoutBlog }: AdminBlogLis
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="blog-seo-title" label="SEO title" optional>
-                <Input
-                  id="blog-seo-title"
-                  name="seoTitle"
-                  maxLength={70}
-                  defaultValue={post?.seoTitle}
-                />
-              </Field>
-              <Field id="blog-seo-description" label="SEO description" optional>
-                <Input
-                  id="blog-seo-description"
-                  name="seoDescription"
-                  maxLength={160}
-                  defaultValue={post?.seoDescription}
-                />
-              </Field>
+              <SeoLimitField
+                id="blog-seo-title"
+                name="seoTitle"
+                label="SEO title"
+                optional
+                defaultValue={post?.seoTitle}
+                hint={SEO_TITLE_HINT}
+                max={SEO_TITLE_MAX}
+              />
+              <SeoLimitField
+                id="blog-seo-description"
+                name="seoDescription"
+                label="SEO description"
+                optional
+                multiline
+                defaultValue={post?.seoDescription}
+                hint={SEO_DESCRIPTION_HINT}
+                max={SEO_DESCRIPTION_MAX}
+              />
             </div>
             {post ? (
               <SeoPreview

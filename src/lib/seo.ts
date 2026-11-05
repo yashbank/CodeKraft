@@ -1,6 +1,8 @@
 /** P12-03 — SEO helpers: absolute URLs, metadata factory and JSON-LD builders. Pure, no I/O. */
 import type { Metadata } from "next";
 
+import { SEO_DESCRIPTION_HINT, SEO_DESCRIPTION_MAX, SEO_TITLE_HINT } from "@/modules/_shared/zod";
+
 import { DEFAULT_ICON } from "./brand-constants";
 
 export const NOINDEX = { index: false, follow: false } as const;
@@ -38,7 +40,8 @@ export interface PageMetaInput {
 
 /** Title gets the root "%s · site name" template; canonical + OG + Twitter share one source. */
 export function pageMetadata(i: PageMetaInput): Metadata {
-  const description = truncate(i.description);
+  // Cap at the admin hard max so an editor-written description is never silently cut.
+  const description = truncate(i.description, SEO_DESCRIPTION_MAX);
   const url = absoluteUrl(i.path);
   // Next treats an own `images` key (even undefined) as explicit and drops the opengraph-image file.
   const images = i.images ? { images: i.images } : {};
@@ -253,14 +256,17 @@ export function seoSnippet(m: Metadata, siteName: string) {
   const description = typeof m.description === "string" ? m.description : "";
   const url = String(m.alternates?.canonical ?? "");
   const warnings: string[] = [];
-  if (full.length > 60) warnings.push("Title is over 60 characters; Google will cut it off.");
+  if (full.length > SEO_TITLE_HINT)
+    warnings.push(`Title is over ${SEO_TITLE_HINT} characters; Google will cut it off.`);
   if (!description) warnings.push("No description; Google will pick text from the page.");
-  else if (description.endsWith("…"))
-    warnings.push("Description is over 160 characters; Google will cut it off.");
+  else if (description.length > SEO_DESCRIPTION_HINT)
+    warnings.push(
+      `Description is over ${SEO_DESCRIPTION_HINT} characters; Google will cut it off.`,
+    );
   return {
-    title: full.length > 60 ? `${full.slice(0, 59)}…` : full,
+    title: full.length > SEO_TITLE_HINT ? `${full.slice(0, SEO_TITLE_HINT - 1)}…` : full,
     url,
-    description,
+    description: truncate(description, SEO_DESCRIPTION_HINT) ?? "",
     image: `${url}/opengraph-image`,
     warnings,
   };
