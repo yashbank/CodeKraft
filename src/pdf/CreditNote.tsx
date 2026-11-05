@@ -70,7 +70,7 @@ export function CreditNoteDocument(props: CreditNoteProps) {
           fontWeight: "bold",
         }}
       >
-        <span>Credit Amount:</span>
+        <span>Credit Amount ({props.currency}):</span>
         <span>{documentMoney(props.amountMinor, props.currency)}</span>
       </div>
       {props.approx && (
