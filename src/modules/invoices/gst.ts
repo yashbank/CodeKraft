@@ -12,6 +12,12 @@ export interface ComputeGstInput {
   gstin?: string | null;
 }
 
+/** GST state code = first two characters of a GSTIN; null when absent/short. */
+export function gstinState(gstin?: string | null): string | null {
+  const c = gstin?.trim().slice(0, 2);
+  return c && c.length === 2 ? c : null;
+}
+
 /**
  * Computes GST breakdown:
  * - When `gstin` is missing/empty, returns undefined (no tax breakdown).
@@ -25,7 +31,7 @@ export function computeGstBreakdown(input: ComputeGstInput): GstBreakdown | unde
   }
 
   const bState = input.buyerState?.trim().toLowerCase();
-  const sState = input.sellerState?.trim().toLowerCase() || "29"; // default Karnataka
+  const sState = input.sellerState?.trim().toLowerCase();
 
   const isIntraState = Boolean(bState && sState && bState === sState);
 

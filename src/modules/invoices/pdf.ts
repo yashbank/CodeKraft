@@ -194,6 +194,7 @@ export function buildInvoicePdf(inv: InvoiceProps, logo?: PdfImage | null): Buff
   const status = PAYMENT_LABEL[inv.paymentStatus ?? "paid"];
   c.rect(M, y - 4, textWidth(status, 9) + 20, 18, acc);
   c.text(M + 10, y + 1, status, 9, true, false, WHITE);
+  c.text(W - M, y + 1, `All amounts in ${cur}`, 9, false, true, MUTED);
   y -= 30;
 
   const s = inv.seller;
@@ -260,7 +261,7 @@ export function buildInvoicePdf(inv: InvoiceProps, logo?: PdfImage | null): Buff
     if (g.igst_minor !== undefined) rows.push(["IGST:", pdfMoney(g.igst_minor, cur)]);
   } else if (inv.taxMinor > 0) rows.push(["Tax:", pdfMoney(inv.taxMinor, cur)]);
   if (g && inv.taxMinor > 0) rows.push(["Total Tax:", pdfMoney(inv.taxMinor, cur)]);
-  if (y - (rows.length + 5) * 15 < M) {
+  if (y - (rows.length + 7) * 15 < M) {
     c.newPage();
     y = H - M;
   }

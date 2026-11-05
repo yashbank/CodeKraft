@@ -45,7 +45,8 @@ const PRINT_CSS = `@page{size:A4;margin:14mm}
 @media print{body *{visibility:hidden}.ck-invoice,.ck-invoice *{visibility:visible}
 .ck-invoice{position:absolute;left:0;top:0;width:100%;padding:0!important}
 header[role=banner],nav,aside,footer,.ck-no-print{display:none!important}
-.ck-scroll{overflow:visible!important}}
+.ck-scroll{overflow:visible!important}
+.ck-invoice .ck-on-accent,.ck-invoice .ck-on-accent *{color:#fff!important}}
 .ck-lines tbody tr:nth-child(even){background:#f3f4f6}
 .ck-scroll{overflow-x:auto}`;
 
@@ -59,8 +60,11 @@ export function InvoiceDocument(props: InvoiceProps) {
   const ratePct = g ? `${g.rate_bps / 100}%` : "";
   const accent = props.accent ?? DEFAULT_ACCENT;
   const { seller, buyer } = props;
-  const total = (label: string, v: number, extra?: React.CSSProperties) => (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", ...extra }}>
+  const total = (label: string, v: number, extra?: React.CSSProperties, cls?: string) => (
+    <div
+      className={cls}
+      style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", ...extra }}
+    >
       <span>{label}</span>
       <span>{documentMoney(v, props.currency)}</span>
     </div>
@@ -122,11 +126,15 @@ export function InvoiceDocument(props: InvoiceProps) {
           <p style={{ ...p, fontWeight: "bold" }}>Invoice No: {props.invoiceNo}</p>
           {props.orderNo && <p style={{ ...p, color: "#4b5563" }}>Order No: {props.orderNo}</p>}
           <p style={{ ...p, color: "#4b5563" }}>Purchase Date: {props.issuedAt}</p>
+          <p data-testid="invoice-currency" style={{ ...p, color: "#4b5563" }}>
+            Currency: {props.currency}
+          </p>
         </div>
       </header>
 
       <p
         data-testid="payment-status"
+        className="ck-on-accent"
         style={{
           display: "inline-block",
           backgroundColor: accent,
@@ -172,7 +180,10 @@ export function InvoiceDocument(props: InvoiceProps) {
       <div className="ck-scroll" style={{ marginBottom: "28px" }}>
         <table className="ck-lines" style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
-            <tr style={{ backgroundColor: accent, color: "#ffffff", textAlign: "left" }}>
+            <tr
+              className="ck-on-accent"
+              style={{ backgroundColor: accent, color: "#ffffff", textAlign: "left" }}
+            >
               <th style={cell}>#</th>
               <th style={cell}>Description</th>
               <th style={right}>Qty</th>
@@ -218,15 +229,20 @@ export function InvoiceDocument(props: InvoiceProps) {
           ) : (
             props.taxMinor > 0 && total("Tax:", props.taxMinor)
           )}
-          {total("Grand Total:", props.totalMinor, {
-            backgroundColor: accent,
-            color: "#ffffff",
-            borderRadius: "var(--ck-radius-md, 8px)",
-            padding: "10px 12px",
-            marginTop: "12px",
-            fontWeight: "bold",
-            fontSize: "16px",
-          })}
+          {total(
+            "Grand Total:",
+            props.totalMinor,
+            {
+              backgroundColor: accent,
+              color: "#ffffff",
+              borderRadius: "var(--ck-radius-md, 8px)",
+              padding: "10px 12px",
+              marginTop: "12px",
+              fontWeight: "bold",
+              fontSize: "16px",
+            },
+            "ck-on-accent",
+          )}
           {props.approx && (
             <p
               data-testid="invoice-approx"

@@ -44,7 +44,7 @@ import type {
 import { INVOICE_PDF_URL_TTL_SECONDS } from "./types";
 import { computeFy, nextCreditNoteNumber, nextInvoiceNumber } from "./numbering";
 import { PALETTES } from "@/lib/palettes";
-import { computeGstBreakdown } from "./gst";
+import { computeGstBreakdown, gstinState } from "./gst";
 import type { InvoiceProps } from "@/pdf/Invoice";
 import { buildInvoicePdf, buildPdfBuffer, fetchLogo, uploadDocumentPdf } from "./pdf";
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
@@ -58,11 +58,14 @@ export function buildSellerSnapshot(
   return {
     name: d?.name || settings.siteName || DEFAULT_SITE_NAME,
     address: d?.address
-      ? `${d.address.line1}, ${d.address.city}, ${d.address.postalCode}`
+      ? [d.address.line1, d.address.line2, d.address.city, d.address.state, d.address.postalCode]
+          .filter(Boolean)
+          .join(", ")
       : "Address not set",
     gst_number: settings.gstin || null,
     email: d?.email || "",
-    state_code: sellerState ?? "KA",
+    phone: d?.contactPhones.length ? d.contactPhones.join(", ") : null,
+    state_code: sellerState ?? gstinState(settings.gstin) ?? "KA", // "KA" only without a GSTIN (no GST split then)
     logo_url: settings.siteLogo ?? null,
   };
 }
@@ -212,7 +215,9 @@ export class DefaultInvoicesService implements InvoicesService {
       company: order.billingSnapshot.company || null,
       address: order.billingSnapshot.address || null,
       gst_number: order.billingSnapshot.gst_number || null,
-      state_code: order.taxSnapshot?.buyer_state || null,
+      // shortcut: buyer state is not captured at checkout, so a buyer without GSTIN stays on IGST; capture it there to split B2C tax.
+      state_code:
+        order.taxSnapshot?.buyer_state || gstinState(order.billingSnapshot.gst_number) || null,
     };
 
     const gstBreakdown = computeGstBreakdown({
