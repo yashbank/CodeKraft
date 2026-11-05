@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, sql, type SQL } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { EMAIL_TEMPLATES } from "@/emails";
 import { getLogger } from "@/lib/logger";
@@ -9,6 +9,107 @@ import { jobRuns } from "../../drizzle/schema/ops";
 
 const errMessage = (err: unknown, fallback: string) =>
   err instanceof Error ? err.message : fallback;
+
+/**
+ * Send pending outbox rows (queued/failed, attempts < 5, plus `extra`). Shared by the daily cron
+ * and the immediate post-commit send. Each row is claimed by compare-and-set on `attempts`, so
+ * overlapping runs never send the same row twice.
+ */
+async function deliverPending(now: Date, extra?: SQL) {
+  const db = getDb();
+  const pendingRows = await db
+    .select()
+    .from(emailOutbox)
+    .where(
+      and(
+        inArray(emailOutbox.status, ["queued", "failed"]),
+        sql`${emailOutbox.attempts} < 5`,
+        extra,
+      ),
+    )
+    .orderBy(asc(emailOutbox.priority), asc(emailOutbox.createdAt))
+    .limit(50);
+
+  // Runs after every committed transaction, and most of those enqueue nothing.
+  if (pendingRows.length === 0) {
+    return { sentCount: 0, failedCount: 0, deferredCount: 0, pendingChecked: 0 };
+  }
+
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const [sentRes] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(emailOutbox)
+    .where(and(eq(emailOutbox.status, "sent"), gte(emailOutbox.sentAt, todayStart)));
+  const isDailyCapReached = (sentRes?.count ?? 0) >= 90;
+
+  let sentCount = 0;
+  let failedCount = 0;
+  let deferredCount = 0;
+
+  for (const row of pendingRows) {
+    // Defer non-urgent emails if daily soft cap is reached (priority > 2)
+    if (isDailyCapReached && row.priority > 2) {
+      deferredCount++;
+      continue;
+    }
+    const nextAttempts = row.attempts + 1;
+    const [claimed] = await db
+      .update(emailOutbox)
+      .set({ attempts: nextAttempts, updatedAt: now })
+      .where(
+        and(
+          eq(emailOutbox.id, row.id),
+          eq(emailOutbox.attempts, row.attempts),
+          inArray(emailOutbox.status, ["queued", "failed"]),
+        ),
+      )
+      .returning({ id: emailOutbox.id });
+    if (!claimed) continue;
+
+    try {
+      if (process.env.EMAIL_TRANSPORT === "resend") {
+        await sendEmail({
+          to: row.toEmail,
+          subject:
+            EMAIL_TEMPLATES[row.template]?.subject(
+              (row.payload as Record<string, unknown>) ?? {},
+            ) ?? `Notification: ${row.template}`,
+          template: row.template as EmailTemplate,
+          data: (row.payload as Record<string, unknown>) ?? {},
+          priority: row.priority,
+        });
+      }
+      await db
+        .update(emailOutbox)
+        .set({ status: "sent", sentAt: now, updatedAt: now })
+        .where(eq(emailOutbox.id, row.id));
+      sentCount++;
+    } catch (err) {
+      getLogger().error(
+        { err, outboxId: row.id, template: row.template, attempts: nextAttempts },
+        "outbox email send failed",
+      );
+      await db
+        .update(emailOutbox)
+        .set({ status: "failed", lastError: errMessage(err, "Send error"), updatedAt: now })
+        .where(eq(emailOutbox.id, row.id));
+      failedCount++;
+    }
+  }
+  return { sentCount, failedCount, deferredCount, pendingChecked: pendingRows.length };
+}
+
+/** Immediate send of rows enqueued in the last few minutes; call only after their tx committed. */
+export function sendFreshOutbox(now: Date = new Date()) {
+  return deliverPending(
+    now,
+    and(
+      eq(emailOutbox.attempts, 0),
+      gt(emailOutbox.createdAt, new Date(now.getTime() - 5 * 60_000)),
+    ),
+  );
+}
 
 export const emailOutboxRetryJob = {
   key: "email.outbox_retry" as const,
@@ -24,83 +125,7 @@ export const emailOutboxRetryJob = {
       .returning();
 
     try {
-      // Calculate sent today count
-      const todayStart = new Date(now);
-      todayStart.setHours(0, 0, 0, 0);
-
-      const sentTodayCountResult = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(emailOutbox)
-        .where(and(eq(emailOutbox.status, "sent"), gte(emailOutbox.sentAt, todayStart)));
-
-      const sentToday = sentTodayCountResult[0]?.count ?? 0;
-      const isDailyCapReached = sentToday >= 90;
-
-      // Fetch queued/failed rows with attempts < 5
-      const pendingRows = await db
-        .select()
-        .from(emailOutbox)
-        .where(
-          and(inArray(emailOutbox.status, ["queued", "failed"]), sql`${emailOutbox.attempts} < 5`),
-        )
-        .orderBy(asc(emailOutbox.priority), asc(emailOutbox.createdAt))
-        .limit(50);
-
-      let sentCount = 0;
-      let failedCount = 0;
-      let deferredCount = 0;
-
-      for (const row of pendingRows) {
-        // Defer non-urgent emails if daily soft cap is reached (priority > 2)
-        if (isDailyCapReached && row.priority > 2) {
-          deferredCount++;
-          continue;
-        }
-
-        try {
-          if (process.env.EMAIL_TRANSPORT === "resend") {
-            await sendEmail({
-              to: row.toEmail,
-              subject:
-                EMAIL_TEMPLATES[row.template]?.subject(
-                  (row.payload as Record<string, unknown>) ?? {},
-                ) ?? `Notification: ${row.template}`,
-              template: row.template as EmailTemplate,
-              data: (row.payload as Record<string, unknown>) ?? {},
-              priority: row.priority,
-            });
-          }
-
-          await db
-            .update(emailOutbox)
-            .set({
-              status: "sent",
-              sentAt: now,
-              attempts: row.attempts + 1,
-              updatedAt: now,
-            })
-            .where(eq(emailOutbox.id, row.id));
-
-          sentCount++;
-        } catch (err) {
-          const nextAttempts = row.attempts + 1;
-          getLogger().error(
-            { err, outboxId: row.id, template: row.template, attempts: nextAttempts },
-            "outbox email send failed",
-          );
-          await db
-            .update(emailOutbox)
-            .set({
-              status: nextAttempts >= 5 ? "failed" : "failed",
-              attempts: nextAttempts,
-              lastError: errMessage(err, "Send error"),
-              updatedAt: now,
-            })
-            .where(eq(emailOutbox.id, row.id));
-
-          failedCount++;
-        }
-      }
+      const { sentCount, failedCount, deferredCount, pendingChecked } = await deliverPending(now);
 
       if (runRow) {
         await db
@@ -108,7 +133,7 @@ export const emailOutboxRetryJob = {
           .set({
             status: "ok",
             finishedAt: new Date(),
-            detail: { sentCount, failedCount, deferredCount, pendingChecked: pendingRows.length },
+            detail: { sentCount, failedCount, deferredCount, pendingChecked },
           })
           .where(eq(jobRuns.id, runRow.id));
       }
