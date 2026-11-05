@@ -5,6 +5,7 @@
  */
 import { CURRENCIES, divRoundHalfUp, parseDecimalScaled, type Currency } from "@/lib/money";
 import { AppError, ErrorCode } from "@/lib/errors";
+import { STATIC_FX_TABLE } from "@/lib/fx";
 import { FX_STALE_AFTER_DAYS } from "./types";
 
 export const FX_RATE_DECIMALS = 8;
@@ -85,6 +86,18 @@ export function isWithinBounds(prevRateStr: string, newRateStr: string): boolean
   const lower = divRoundHalfUp(prev * 80n, 100n);
   const upper = divRoundHalfUp(prev * 120n, 100n);
   return next >= lower && next <= upper;
+}
+
+/**
+ * Independent sanity check for an INR -> quote rate: within 50% of the static table, never <= 0,
+ * never exactly 1. Unlike isWithinBounds it does not trust the stored rate, so a stored bad rate
+ * cannot block its own correction.
+ */
+export function isSaneInrRate(quote: string, rate: string): boolean {
+  const n = Number(rate);
+  if (!(n > 0) || n === 1) return false;
+  const ref = STATIC_FX_TABLE[`INR/${quote}`];
+  return ref === undefined || (n >= Number(ref) * 0.5 && n <= Number(ref) * 1.5);
 }
 
 /**
@@ -180,7 +193,21 @@ export async function fetchOpenErRates(
       `FX provider reported error: ${String(data.result || "unknown")}`,
     );
   }
-  const rates = pickRates(data.rates);
+  // A provider URL may be pinned to another base (/latest/USD): re-base to INR instead of
+  // storing foreign-base rates as INR rates. No base_code or no INR quote = unusable.
+  let raw: Record<string, unknown> = data.rates;
+  if (data.base_code !== "INR") {
+    const inr = Number(data.rates.INR);
+    if (typeof data.base_code !== "string" || !(inr > 0)) {
+      throw new AppError(
+        ErrorCode.UPSTREAM_UNAVAILABLE,
+        `FX provider base_code is ${String(data.base_code)} and cannot be re-based to INR`,
+      );
+    }
+    raw = { [data.base_code]: 1, ...data.rates };
+    for (const q of Object.keys(raw)) raw[q] = Number(raw[q]) / inr;
+  }
+  const rates = pickRates(raw);
   if (Object.keys(rates).length === 0) {
     throw new AppError(ErrorCode.UPSTREAM_UNAVAILABLE, "FX provider returned no usable rates");
   }
@@ -190,6 +217,12 @@ export async function fetchOpenErRates(
 /** frankfurter.app (keyless, ECB): `{ base: "INR", rates: { USD: 0.012 } }`. */
 export async function fetchFrankfurterRates(fetchFn: typeof fetch = fetch): Promise<FetchedRates> {
   const data = await getJson(FALLBACK_URL, fetchFn);
+  if (data.base !== "INR") {
+    throw new AppError(
+      ErrorCode.UPSTREAM_UNAVAILABLE,
+      `Fallback FX provider base is ${String(data.base)}, expected INR`,
+    );
+  }
   const rates = pickRates(data.rates as Record<string, unknown> | undefined);
   if (Object.keys(rates).length === 0) {
     throw new AppError(ErrorCode.UPSTREAM_UNAVAILABLE, "Fallback FX provider returned no rates");

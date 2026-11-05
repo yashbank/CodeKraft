@@ -110,7 +110,8 @@ for (const viewer of VIEWERS) {
     // reset only this viewer: a file-level afterAll runs per worker and would race other groups
     test.afterAll(async () => {
       if (viewer !== "anonymous")
-        await q(`update users set display_currency = 'INR' where lower(email) = lower($1)`, [
+        // NULL = "no own choice": an 'INR' here would pin the user and hide default changes
+        await q(`update users set display_currency = null where lower(email) = lower($1)`, [
           ROLE_EMAILS[viewer],
         ]);
     });
@@ -150,3 +151,77 @@ for (const viewer of VIEWERS) {
     }
   });
 }
+
+// D17-02: the admin's default (base) currency reaches everyone who has not chosen their own.
+// The base currency is locked once a paid order exists, so this skips on such a database.
+test.describe("admin default currency change", () => {
+  test.describe.configure({ mode: "serial" });
+  const NEW_DEFAULT: Cur = "EUR";
+
+  async function setDefaultViaUi(page: Page, c: Cur) {
+    await page.goto(`${ADMIN}/admin/settings`);
+    await page.getByRole("button", { name: "Currencies", exact: true }).click();
+    await page.locator("#st-base").click();
+    await page.getByRole("option", { name: c, exact: true }).click();
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("Settings saved")).toBeVisible({ timeout: 30_000 });
+  }
+
+  test.beforeAll(async () => {
+    const [paid] = await q<{ n: string }>(`select count(*) n from orders where status = 'paid'`);
+    test.skip(Number(paid?.n) > 0, "base currency is locked once a paid order exists");
+    await q(`update users set display_currency = null where lower(email) = lower($1)`, [
+      ROLE_EMAILS.customer,
+    ]);
+    await q(`update users set display_currency = 'USD' where lower(email) = lower($1)`, [
+      ROLE_EMAILS.admin,
+    ]);
+  });
+
+  test.afterAll(async ({ browser }) => {
+    await q(
+      `update users set display_currency = null where lower(email) in (lower($1), lower($2))`,
+      [ROLE_EMAILS.customer, ROLE_EMAILS.admin],
+    );
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    try {
+      await loginAs(page, "super_admin");
+      await setDefaultViaUi(page, "INR"); // restore
+    } finally {
+      await page.close();
+    }
+  });
+
+  test("anonymous and no-choice customer follow the new default; a chooser does not", async ({
+    browser,
+  }) => {
+    test.setTimeout(240_000);
+    const admin = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await loginAs(admin, "super_admin");
+    await setDefaultViaUi(admin, NEW_DEFAULT);
+    await admin.close();
+
+    const onProduct = async (viewer: Viewer, c: Cur) => {
+      const ctx = await browser.newContext();
+      const page = await ctx.newPage();
+      try {
+        if (viewer !== "anonymous") await loginAs(page, viewer as Role);
+        await expect
+          .poll(
+            async () => {
+              await visit(page, `${SITE}/products/${SLUG}`);
+              return hasConverted(await text(page), inrMinor, c);
+            },
+            { timeout: 60_000, message: `${viewer} sees ${c}` },
+          )
+          .toBe(true);
+        expect(await text(page)).toMatch(SYMBOL[c]);
+      } finally {
+        await ctx.close();
+      }
+    };
+    await onProduct("anonymous", NEW_DEFAULT); // cached twin refreshed by the admin save
+    await onProduct("customer", NEW_DEFAULT); // signed in, no own choice
+    await onProduct("admin", "USD"); // chose USD: unchanged
+  });
+});
