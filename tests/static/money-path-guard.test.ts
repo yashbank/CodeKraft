@@ -29,6 +29,8 @@ const ALLOW: Record<string, string> = {
     "fromPrice already converted server-side (cardFromPrice)",
   "src/components/account/InvoicesScreen.tsx": "legal invoice amount + approx viewer line",
   "src/components/account/QuoteScreen.tsx": "legal quote amount + approx viewer line",
+  "src/components/admin/commerce/QuotesScreen.tsx":
+    "email preview shows the quote in its own charge currency",
   // server text
   "src/lib/admin/approval-text.ts": "approval text states the amount in the currency requested",
   // dev showcase
