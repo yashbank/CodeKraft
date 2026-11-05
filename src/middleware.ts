@@ -51,10 +51,25 @@ export function cspMode(): "enforce" | "report" {
   return process.env.CSP_MODE === "enforce" ? "enforce" : "report";
 }
 
+/**
+ * Only per-request-rendered routes carry a nonce. Strict (nonce + strict-dynamic) is the list of
+ * known dynamic routes; every other path (contact, legal, blog, projects, services, the prerendered
+ * not-found, /ssg) is static or ISR with nonce-less scripts, so it gets the relaxed policy.
+ * `twin` = the request is rewritten to an /ssg ISR twin (static even on "/" and /products*).
+ * tests/static/csp-dynamic-routes.test.ts keeps this list in step with force-dynamic pages.
+ */
+const DYNAMIC_SITE_PATH =
+  /^\/(account|checkout|quote|auth|search|api)(\/|$)|^\/products(\/|$)|^\/$/;
+export function isNonceable(pathname: string, kind: "admin" | "site", twin = false): boolean {
+  if (kind === "admin") return true;
+  return !twin && DYNAMIC_SITE_PATH.test(pathname);
+}
+
 export function buildCsp(
   nonce: string,
   themeHash: string,
   frameAncestors = "'none'",
+  nonceable = true,
 ): { header: string; policy: string } {
   const dev = process.env.NODE_ENV !== "production";
   const media = originOf(process.env.NEXT_PUBLIC_MEDIA_BASE_URL);
@@ -70,7 +85,11 @@ export function buildCsp(
   const policy = [
     "default-src 'self'",
     // 'strict-dynamic' makes browsers ignore host sources; they remain as legacy fallback only.
-    `script-src ${list("'self'", `'nonce-${nonce}'`, `'sha256-${themeHash}'`, "'strict-dynamic'", dev && "'unsafe-eval'", turnstile, razorpayScript, umami)}`,
+    // Prerendered pages: 'unsafe-inline' (a nonce/hash/strict-dynamic would disable it and block
+    // their nonce-less Next scripts). Host allow-list stays; object/base/frame/form rules unchanged.
+    nonceable
+      ? `script-src ${list("'self'", `'nonce-${nonce}'`, `'sha256-${themeHash}'`, "'strict-dynamic'", dev && "'unsafe-eval'", turnstile, razorpayScript, umami)}`
+      : `script-src ${list("'self'", "'unsafe-inline'", dev && "'unsafe-eval'", turnstile, razorpayScript, umami)}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
     `img-src ${list("'self'", "data:", "blob:", media, r2, "https://*.razorpay.com")}`,
@@ -129,10 +148,16 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     }
   }
 
+  const twin = kind === "site" ? staticTwinPath(req) : null;
   const nonce = makeNonce();
   // The inline PDF preview iframes this same-origin route from product pages.
   const framable = pathname.startsWith("/api/files/product-media/");
-  const csp = buildCsp(nonce, await getThemeScriptHash(), framable ? "'self'" : "'none'");
+  const csp = buildCsp(
+    nonce,
+    await getThemeScriptHash(),
+    framable ? "'self'" : "'none'",
+    isNonceable(pathname, kind, twin !== null),
+  );
   const reqHeaders = new Headers(req.headers);
   // Next.js reads the nonce from the request CSP header to stamp its own inline scripts.
   reqHeaders.set(csp.header, csp.policy);
@@ -168,7 +193,6 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     url.pathname = "/__404";
     res = NextResponse.rewrite(url, { request: { headers: reqHeaders } });
   } else {
-    const twin = staticTwinPath(req);
     if (twin) {
       const url = req.nextUrl.clone();
       url.pathname = twin;

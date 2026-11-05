@@ -51,14 +51,41 @@ describe("middleware host matrix (docs/04 §8, docs/09 §3.5)", () => {
     );
     expect(res.headers.get("x-middleware-rewrite") ?? "").not.toMatch(/\/admin(\/|$)/);
   });
+  it("static pages get no nonce/strict-dynamic (would block their nonce-less scripts)", async () => {
+    for (const u of ["/", "/contact", "/legal/terms", "/does-not-exist"]) {
+      const csp =
+        (await middleware(req(`http://localhost:3000${u}`, "localhost:3000"))).headers.get(HDR) ??
+        "";
+      const script = csp.split("; ").find((x) => x.startsWith("script-src")) ?? "";
+      expect(script, u).toContain("'unsafe-inline'");
+      expect(script, u).not.toMatch(/nonce-|strict-dynamic|sha256-/);
+    }
+  });
+  it("dynamic pages keep nonce + strict-dynamic (auth, search, product, cookie'd /)", async () => {
+    const withCookie = new NextRequest("http://localhost:3000/", {
+      headers: { host: "localhost:3000", cookie: "ck_currency=USD" },
+    });
+    const cases = [
+      ...["/auth/login", "/auth/register", "/search", "/products?q=1"].map((u) =>
+        req(`http://localhost:3000${u}`, "localhost:3000"),
+      ),
+      withCookie,
+      req("http://admin.localhost:3000/auth/login", "admin.localhost:3000"),
+    ];
+    for (const r of cases) {
+      const csp = (await middleware(r)).headers.get(HDR) ?? "";
+      expect(csp, r.url).toMatch(/script-src[^;]*'strict-dynamic'/);
+      expect(csp, r.url).not.toMatch(/script-src[^;]*'unsafe-inline'/);
+    }
+  });
   it("sets a nonce and a report-only CSP on every response", async () => {
-    const res = await middleware(req("http://localhost:3000/", "localhost:3000"));
+    const res = await middleware(req("http://localhost:3000/account", "localhost:3000"));
     const nonce = res.headers.get("x-nonce");
     expect(nonce).toMatch(/^[A-Za-z0-9+/=]{20,}$/);
     expect(res.headers.get(HDR)).toContain(`'nonce-${nonce}'`);
   });
   it("hash allow-lists the root layout's inline theme script (BUG-028)", async () => {
-    const res = await middleware(req("http://localhost:3000/", "localhost:3000"));
+    const res = await middleware(req("http://localhost:3000/account", "localhost:3000"));
     expect(res.headers.get(HDR)).toMatch(/'sha256-[A-Za-z0-9+/=]{20,}'/);
   });
   it("allows Cloudflare Turnstile in script/frame/connect-src", async () => {
@@ -75,7 +102,7 @@ describe("middleware host matrix (docs/04 §8, docs/09 §3.5)", () => {
     process.env.CSP_MODE = "enforce";
     (process.env as Record<string, string>).NODE_ENV = "production";
     try {
-      const res = await middleware(req("http://localhost:3000/", "localhost:3000"));
+      const res = await middleware(req("http://localhost:3000/account", "localhost:3000"));
       expect(res.headers.get(HDR)).toBeNull();
       const csp = res.headers.get("Content-Security-Policy") ?? "";
       const script = csp.split("; ").find((x) => x.startsWith("script-src")) ?? "";
