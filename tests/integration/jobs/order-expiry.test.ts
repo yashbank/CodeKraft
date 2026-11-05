@@ -52,6 +52,7 @@ describe("orderExpiryJob integration (docs/06 §3.3, master plan §3)", () => {
         name: "Test Customer",
         email: customer.email,
         country: "IN",
+        stateCode: "29",
       },
     });
 

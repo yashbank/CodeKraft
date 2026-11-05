@@ -30,7 +30,7 @@ const U1 = "11111111-1111-4111-8111-111111111111";
 const U2 = "22222222-2222-4222-8222-222222222222";
 const U3 = "33333333-3333-4333-8333-333333333333";
 
-const billing = { name: "Asha Rao", email: "asha@example.test", country: "in" };
+const billing = { name: "Asha Rao", email: "asha@example.test", country: "in", stateCode: "29" };
 
 function isZod(v: unknown): v is z.ZodType {
   return v instanceof z.ZodType;

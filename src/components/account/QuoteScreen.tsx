@@ -61,6 +61,8 @@ export function QuoteScreen({
   async function handleAccept(e: React.FormEvent) {
     e.preventDefault();
     if (!consent || accepting) return;
+    if (bill.country === "IN" && !bill.stateCode)
+      return void toast.error("Choose your state or union territory");
     setAccepting(true);
     const result = await acceptCustomQuote({
       token: q.token,

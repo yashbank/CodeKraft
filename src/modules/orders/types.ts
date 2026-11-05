@@ -34,6 +34,7 @@ import {
   type SplitSnapshot,
   paymentProvider,
 } from "../../../drizzle/schema/commerce";
+import { isGstStateCode } from "@/lib/gst-states";
 import type { ApprovalStatus } from "../../../drizzle/schema/approvals";
 import type { PaymentInstructions } from "@/modules/payments/provider";
 
@@ -137,9 +138,38 @@ export const zBilling = z
       .toUpperCase()
       .regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/, "GSTIN format")
       .optional(),
+    /** GST state / UT code; required for India by `zCheckoutBilling`, ignored for other countries. */
+    stateCode: z
+      .string()
+      .refine(isGstStateCode, "Choose a valid state or union territory")
+      .optional(),
   })
   .strict();
 export type BillingInput = z.infer<typeof zBilling>;
+
+/** Customer checkout and quote acceptance: an Indian buyer must give a state so GST splits right. */
+export const zCheckoutBilling = zBilling.superRefine((b, ctx) => {
+  if (b.country === "IN" && !b.stateCode) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["stateCode"],
+      message: "Choose your state or union territory",
+    });
+  }
+});
+
+/** Stored billing snapshot (snake_case keys); the state is kept for India only. */
+export function toBillingSnapshot(b: BillingInput): BillingSnapshot {
+  return {
+    name: b.name,
+    email: b.email,
+    country: b.country,
+    company: b.company ?? null,
+    address: b.address ?? null,
+    gst_number: b.gstNumber ?? null,
+    state_code: b.country === "IN" ? (b.stateCode ?? null) : null,
+  };
+}
 
 export const zSplitLine = z.object({ partnerId: zUuid, shareBps: zBps }).strict();
 
@@ -234,7 +264,7 @@ export const createOrderInput = z
     offeringId: zUuid,
     couponCode: zCouponCode.optional(),
     paymentMethod: zManualPaymentMethod,
-    billing: zBilling,
+    billing: zCheckoutBilling,
   })
   .strict();
 export type CreateOrderInput = z.infer<typeof createOrderInput>;

@@ -49,7 +49,7 @@ describe("submitPaymentReference integration (API-PAY-02)", () => {
     const orderRes = await ordersService.createOrder(custCtx, {
       offeringId: offering.id,
       paymentMethod: "manual_upi",
-      billing: { name: "Cust", email: customer.email, country: "IN" },
+      billing: { name: "Cust", email: customer.email, country: "IN", stateCode: "29" },
     });
 
     const submitRes = await paymentsService.submitPaymentReference(custCtx, {
@@ -116,7 +116,7 @@ describe("submitPaymentReference integration (API-PAY-02)", () => {
     const orderRes = await ordersService.createOrder(ctx1, {
       offeringId: offering.id,
       paymentMethod: "manual_upi",
-      billing: { name: "Cust1", email: customer1.email, country: "IN" },
+      billing: { name: "Cust1", email: customer1.email, country: "IN", stateCode: "29" },
     });
 
     await expect(

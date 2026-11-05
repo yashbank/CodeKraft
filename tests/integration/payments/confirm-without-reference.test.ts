@@ -54,7 +54,7 @@ describe("confirmPayment without customer reference (API-PAY-03)", () => {
     const orderRes = await ordersService.createOrder(custCtx, {
       offeringId: offering.id,
       paymentMethod: "manual_bank",
-      billing: { name: "Cust", email: customer.email, country: "IN" },
+      billing: { name: "Cust", email: customer.email, country: "IN", stateCode: "29" },
     });
 
     const [savedOrder] = await db.select().from(orders).where(eq(orders.id, orderRes.orderId));

@@ -100,6 +100,8 @@ export interface BillingSnapshot {
   company?: string | null;
   address?: string | null;
   gst_number?: string | null;
+  /** Buyer GST state code (India only; absent on older orders, which then stay on IGST). */
+  state_code?: string | null;
 }
 
 /** docs/05 T-orders `tax_snapshot` — the tax rule applied at order time (docs/06 §1.10). */

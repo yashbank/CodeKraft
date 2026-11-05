@@ -6,6 +6,7 @@
  */
 import { inflateSync, deflateSync } from "node:zlib";
 import { DEFAULT_NOTE, PAYMENT_LABEL, type InvoiceProps } from "@/pdf/Invoice";
+import { gstStateName } from "@/lib/gst-states";
 import { approxText, groupedAmount, pdfMoney } from "@/lib/document-money";
 import { getDocumentsBucketName, getStorageDriver } from "@/lib/storage";
 
@@ -213,6 +214,7 @@ export function buildInvoicePdf(inv: InvoiceProps, logo?: PdfImage | null): Buff
     b.email,
     ...(b.address ? wrap(b.address, 40) : []),
     b.gst_number ? `GSTIN: ${b.gst_number}` : "",
+    gstStateName(b.state_code) ? `State: ${gstStateName(b.state_code)}` : "",
   ].filter(Boolean);
   c.text(M, y, "SOLD BY", 8, true, false, fill);
   c.text(320, y, "BILLED TO", 8, true, false, fill);

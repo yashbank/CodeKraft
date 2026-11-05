@@ -53,6 +53,7 @@ describe("duplicate purchase prevention (BR-10, docs/06 §2.3)", () => {
         name: "Test Customer",
         email: customer.email,
         country: "IN",
+        stateCode: "29",
       },
     });
 
@@ -77,6 +78,7 @@ describe("duplicate purchase prevention (BR-10, docs/06 §2.3)", () => {
           name: "Test Customer",
           email: customer.email,
           country: "IN",
+          stateCode: "29",
         },
       }),
     ).rejects.toMatchObject({

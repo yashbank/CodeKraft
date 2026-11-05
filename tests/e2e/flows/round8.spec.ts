@@ -415,6 +415,11 @@ test.describe("round 8 end to end", () => {
         .getByRole("checkbox", { name: /license terms|I agree|accept/i })
         .first()
         .check();
+      const gstState = p.getByRole("combobox", { name: /State \/ Union Territory/ });
+      if (await gstState.count()) {
+        await gstState.click();
+        await p.getByRole("option", { name: "Karnataka" }).click();
+      }
       await p.getByRole("button", { name: /Place order/ }).click();
       // payment instructions
       await expect(p.getByRole("heading", { name: /Pay via UPI/ })).toBeVisible({

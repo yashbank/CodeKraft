@@ -118,6 +118,11 @@ test.describe("customer purchase path", () => {
     await customer.getByRole("button", { name: "Apply" }).click();
     await slow(placeBtn, "total drops with coupon").not.toHaveText(before);
     await slow(placeBtn).toContainText(/₹\s?2,699/);
+    const gstState = customer.getByRole("combobox", { name: /State \/ Union Territory/ });
+    if (await gstState.count()) {
+      await gstState.click();
+      await customer.getByRole("option", { name: "Karnataka" }).click();
+    }
     await customer.getByLabel(/I agree/i).check();
     await placeBtn.click();
     const banner = customer.getByRole("status").getByText(/Order .+ placed/);

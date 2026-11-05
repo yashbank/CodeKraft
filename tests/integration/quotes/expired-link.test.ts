@@ -67,6 +67,7 @@ describe("Custom Quotes expired link integration (API-COM-10, BR-10)", () => {
           name: "Late Customer",
           email: customer.email,
           country: "IN",
+          stateCode: "29",
         },
       }),
     ).rejects.toSatisfy((err: unknown) => {

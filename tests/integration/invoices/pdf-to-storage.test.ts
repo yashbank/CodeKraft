@@ -57,7 +57,7 @@ describe("Invoice PDF to storage integration (D-1502, BR-16)", () => {
     const orderRes = await ordersService.createOrder(custCtx, {
       offeringId: offering.id,
       paymentMethod: "manual_upi",
-      billing: { name: "Customer Bob", email: customer.email, country: "IN" },
+      billing: { name: "Customer Bob", email: customer.email, country: "IN", stateCode: "29" },
     });
 
     // Confirm payment which issues invoice

@@ -49,6 +49,7 @@ describe("idempotent pending order checkout (API-COM-02, docs/06 §1.5)", () => 
         name: "Test Customer",
         email: customer.email,
         country: "IN",
+        stateCode: "29",
       },
     });
 
@@ -62,6 +63,7 @@ describe("idempotent pending order checkout (API-COM-02, docs/06 §1.5)", () => 
         name: "Test Customer",
         email: customer.email,
         country: "IN",
+        stateCode: "29",
       },
     });
 

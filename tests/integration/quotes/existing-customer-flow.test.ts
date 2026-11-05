@@ -12,7 +12,12 @@ import { createAdmin, createUser } from "../../factories/users";
 import { buildContext } from "@/lib/authz/context";
 
 const day = 24 * 3600 * 1000;
-const billing = (email: string) => ({ name: "Existing Customer", email, country: "IN" });
+const billing = (email: string) => ({
+  name: "Existing Customer",
+  email,
+  country: "IN",
+  stateCode: "29",
+});
 
 async function setup() {
   await truncateAll();

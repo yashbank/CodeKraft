@@ -50,7 +50,7 @@ describe("Invoice PDF regenerate pending integration (docs/12 §11.3)", () => {
     const orderRes = await ordersService.createOrder(custCtx, {
       offeringId: offering.id,
       paymentMethod: "manual_upi",
-      billing: { name: "Customer Bob", email: customer.email, country: "IN" },
+      billing: { name: "Customer Bob", email: customer.email, country: "IN", stateCode: "29" },
     });
 
     // Manually insert an invoice with pdfMediaId: null

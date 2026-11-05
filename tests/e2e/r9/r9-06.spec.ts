@@ -60,6 +60,11 @@ test("r9-06 confirming screen, redirect, delivery action", async ({ browser }) =
     .getByRole("checkbox", { name: /license terms|I agree|accept/i })
     .first()
     .check();
+  const gstState = cust.getByRole("combobox", { name: /State \/ Union Territory/ });
+  if (await gstState.count()) {
+    await gstState.click();
+    await cust.getByRole("option", { name: "Karnataka" }).click();
+  }
   await cust.getByRole("button", { name: /Place order/ }).click();
   await expect(cust.getByRole("heading", { name: /Pay via UPI/ })).toBeVisible({ timeout: 30_000 });
   const [o] = await q<{ id: string; n: string }>(

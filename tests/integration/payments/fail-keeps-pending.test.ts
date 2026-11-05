@@ -55,7 +55,7 @@ describe("failPayment integration (API-PAY-04)", () => {
     const orderRes = await ordersService.createOrder(custCtx, {
       offeringId: offering.id,
       paymentMethod: "manual_upi",
-      billing: { name: "Cust", email: customer.email, country: "IN" },
+      billing: { name: "Cust", email: customer.email, country: "IN", stateCode: "29" },
     });
 
     const failRes = await paymentsService.failPayment(adminCtx, {
@@ -122,7 +122,7 @@ describe("failPayment integration (API-PAY-04)", () => {
     const orderRes = await ordersService.createOrder(custCtx, {
       offeringId: offering.id,
       paymentMethod: "manual_bank",
-      billing: { name: "Cust", email: customer.email, country: "IN" },
+      billing: { name: "Cust", email: customer.email, country: "IN", stateCode: "29" },
     });
 
     const failRes = await paymentsService.failPayment(adminCtx, {

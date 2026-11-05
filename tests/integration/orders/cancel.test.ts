@@ -52,6 +52,7 @@ describe("cancelMyOrder integration (API-COM-03, docs/06 §2.3)", () => {
         name: "Test Customer",
         email: customer.email,
         country: "IN",
+        stateCode: "29",
       },
     });
 
@@ -116,6 +117,7 @@ describe("cancelMyOrder integration (API-COM-03, docs/06 §2.3)", () => {
         name: "Customer A",
         email: customerA.email,
         country: "IN",
+        stateCode: "29",
       },
     });
 

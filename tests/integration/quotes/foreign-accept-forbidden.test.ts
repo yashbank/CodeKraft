@@ -48,6 +48,7 @@ describe("Custom Quotes foreign accept forbidden (API-COM-10, MASTER_SPEC §7)",
           name: "Stranger Danger",
           email: stranger.email,
           country: "IN",
+          stateCode: "29",
         },
       }),
     ).rejects.toSatisfy((err: unknown) => {

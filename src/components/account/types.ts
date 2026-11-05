@@ -36,6 +36,8 @@ export interface BillingDetails {
   /** ISO 3166-1 alpha-2 (`IN`). */
   country: string;
   gstNumber?: string;
+  /** GST state / UT code (India only), e.g. `29`. */
+  stateCode?: string;
 }
 
 export interface CustomerProfile {

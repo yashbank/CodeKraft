@@ -89,6 +89,7 @@ describe("orders creation & manual payment integration (API-COM-01, API-COM-04, 
         name: "Test Customer",
         email: customer.email,
         country: "IN",
+        stateCode: "29",
       },
     });
 

@@ -75,6 +75,7 @@ describe("first purchase only coupon restriction (docs/06 §2.3, A-401)", () => 
         name: "Test Customer",
         email: customer.email,
         country: "IN",
+        stateCode: "29",
       },
     });
 

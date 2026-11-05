@@ -54,7 +54,7 @@ describe("flagChargeback integration (API-PAY-08)", () => {
     const orderRes = await ordersService.createOrder(custCtx, {
       offeringId: offering.id,
       paymentMethod: "manual_upi",
-      billing: { name: "Cust", email: customer.email, country: "IN" },
+      billing: { name: "Cust", email: customer.email, country: "IN", stateCode: "29" },
     });
 
     const res = await paymentsService.flagChargeback(adminCtx, {

@@ -53,6 +53,7 @@ describe("retryPayment integration (API-COM-04, docs/06 §2.3)", () => {
         name: "Test Customer",
         email: customer.email,
         country: "IN",
+        stateCode: "29",
       },
     });
 
@@ -108,6 +109,7 @@ describe("retryPayment integration (API-COM-04, docs/06 §2.3)", () => {
         name: "Test Customer",
         email: customer.email,
         country: "IN",
+        stateCode: "29",
       },
     });
 

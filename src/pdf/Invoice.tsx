@@ -1,4 +1,5 @@
 import React from "react";
+import { gstStateName } from "@/lib/gst-states";
 import { approxText, documentMoney, groupedAmount, type ApproxNote } from "@/lib/document-money";
 import type {
   BuyerSnapshot,
@@ -174,6 +175,9 @@ export function InvoiceDocument(props: InvoiceProps) {
           <p style={p}>{buyer.email}</p>
           {buyer.address && <p style={p}>{buyer.address}</p>}
           {buyer.gst_number && <p style={p}>GSTIN: {buyer.gst_number}</p>}
+          {gstStateName(buyer.state_code) && (
+            <p style={p}>State: {gstStateName(buyer.state_code)}</p>
+          )}
         </div>
       </section>
 

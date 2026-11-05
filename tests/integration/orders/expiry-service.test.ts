@@ -51,6 +51,7 @@ describe("orders expiry service (MASTER_SPEC §7, docs/06 §2.3)", () => {
         name: "Test Customer",
         email: customer.email,
         country: "IN",
+        stateCode: "29",
       },
     });
 

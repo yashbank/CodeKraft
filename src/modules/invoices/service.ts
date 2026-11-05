@@ -215,9 +215,12 @@ export class DefaultInvoicesService implements InvoicesService {
       company: order.billingSnapshot.company || null,
       address: order.billingSnapshot.address || null,
       gst_number: order.billingSnapshot.gst_number || null,
-      // shortcut: buyer state is not captured at checkout, so a buyer without GSTIN stays on IGST; capture it there to split B2C tax.
+      // The GSTIN's registered state decides the supply, so it beats the state picked at checkout.
       state_code:
-        order.taxSnapshot?.buyer_state || gstinState(order.billingSnapshot.gst_number) || null,
+        order.taxSnapshot?.buyer_state ||
+        gstinState(order.billingSnapshot.gst_number) ||
+        order.billingSnapshot.state_code ||
+        null,
     };
 
     const gstBreakdown = computeGstBreakdown({

@@ -68,7 +68,7 @@ describe("confirmPayment coupon exhausted prompt integration", () => {
       offeringId: offering.id,
       couponCode: "LIMITED1",
       paymentMethod: "manual_upi",
-      billing: { name: "Cust", email: customer.email, country: "IN" },
+      billing: { name: "Cust", email: customer.email, country: "IN", stateCode: "29" },
     });
 
     // Exhaust coupon beforehand

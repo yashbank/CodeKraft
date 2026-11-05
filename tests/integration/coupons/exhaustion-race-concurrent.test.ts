@@ -58,7 +58,7 @@ describe("coupon exhaustion under concurrent confirmPayment", () => {
           offeringId: offering.id,
           couponCode: "RACEONE1",
           paymentMethod: "manual_upi",
-          billing: { name: "C", email: customer.email, country: "IN" },
+          billing: { name: "C", email: customer.email, country: "IN", stateCode: "29" },
         },
       );
       placed.push({ o, adm });

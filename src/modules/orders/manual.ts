@@ -24,6 +24,7 @@ import {
   createManualOrderInput,
   isProjectLine,
   type SplitSnapshot,
+  toBillingSnapshot,
   toSplitSnapshot,
 } from "./types";
 
@@ -245,7 +246,7 @@ export async function createManualOrder(
         discountMinor,
         taxMinor,
         totalMinor,
-        billingSnapshot: input.billing,
+        billingSnapshot: toBillingSnapshot(input.billing),
         taxRateBps,
         fxRateToInr: "1.0",
         expiresAt,

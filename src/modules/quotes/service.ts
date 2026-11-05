@@ -16,7 +16,7 @@ import type { Context, RequestContext } from "@/lib/authz/context";
 import { auditService } from "@/modules/audit/service";
 import { createNotImplemented } from "@/modules/_shared/not-implemented";
 import type { ListResult } from "@/modules/_shared/zod";
-import type { CreateOrderResult } from "@/modules/orders/types";
+import { toBillingSnapshot, type CreateOrderResult } from "@/modules/orders/types";
 import { nextOrderNo } from "@/modules/orders/numbering";
 import type { Currency } from "@/lib/money";
 import { fxService } from "@/modules/fx/service";
@@ -548,14 +548,7 @@ export class DefaultQuotesService implements QuotesService {
           taxMinor,
           totalMinor: quote.amountMinor + taxMinor,
           customQuoteId: quote.id,
-          billingSnapshot: {
-            name: input.billing.name,
-            email: input.billing.email,
-            country: input.billing.country,
-            company: input.billing.company ?? null,
-            address: input.billing.address ?? null,
-            gst_number: input.billing.gstNumber ?? null,
-          },
+          billingSnapshot: toBillingSnapshot(input.billing),
           taxRateBps: quote.taxBps,
           fxRateToInr:
             quote.currency === "INR"

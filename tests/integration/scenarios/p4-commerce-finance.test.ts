@@ -78,6 +78,7 @@ describe("Phase 4 Commerce & Finance Scenarios (S-02..S-22, SA-08..SA-24)", () =
         name: "Buyer One",
         email: buyer.email,
         country: "IN",
+        stateCode: "29",
       },
     });
 
@@ -264,7 +265,7 @@ describe("Phase 4 Commerce & Finance Scenarios (S-02..S-22, SA-08..SA-24)", () =
       offeringId: offering.id,
       couponCode: "FIRSTBUY10",
       paymentMethod: "manual_bank",
-      billing: { name: "Buyer", email: buyer.email, country: "IN" },
+      billing: { name: "Buyer", email: buyer.email, country: "IN", stateCode: "29" },
     });
     expect(checkout1.orderId).toBeDefined();
 
@@ -282,7 +283,7 @@ describe("Phase 4 Commerce & Finance Scenarios (S-02..S-22, SA-08..SA-24)", () =
         offeringId: offering.id,
         couponCode: "FIRSTBUY10",
         paymentMethod: "manual_bank",
-        billing: { name: "Buyer", email: buyer.email, country: "IN" },
+        billing: { name: "Buyer", email: buyer.email, country: "IN", stateCode: "29" },
       }),
     ).rejects.toThrow();
   });
@@ -338,7 +339,7 @@ describe("Phase 4 Commerce & Finance Scenarios (S-02..S-22, SA-08..SA-24)", () =
       quotesService.acceptCustomQuote(strangerCtx, {
         token: quote.token,
         paymentMethod: "manual_bank",
-        billing: { name: "Stranger", email: strangerBuyer.email, country: "IN" },
+        billing: { name: "Stranger", email: strangerBuyer.email, country: "IN", stateCode: "29" },
       }),
     ).rejects.toThrow();
 
@@ -352,7 +353,7 @@ describe("Phase 4 Commerce & Finance Scenarios (S-02..S-22, SA-08..SA-24)", () =
     const acceptRes = await quotesService.acceptCustomQuote(buyerCtx, {
       token: quote.token,
       paymentMethod: "manual_bank",
-      billing: { name: "Invited Buyer", email: invitedBuyer.email, country: "IN" },
+      billing: { name: "Invited Buyer", email: invitedBuyer.email, country: "IN", stateCode: "29" },
     });
     expect(acceptRes.orderId).toBeDefined();
 
@@ -517,7 +518,7 @@ describe("Phase 4 Commerce & Finance Scenarios (S-02..S-22, SA-08..SA-24)", () =
           },
         },
       ],
-      billing: { name: "Acme Corp", email: client.email, country: "IN" },
+      billing: { name: "Acme Corp", email: client.email, country: "IN", stateCode: "29" },
     });
 
     expect(projectOrder.approvalRequestId).toBeDefined();

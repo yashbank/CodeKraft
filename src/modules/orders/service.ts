@@ -52,6 +52,7 @@ import { markFulfilledIfComplete } from "./state";
 import { calculateItemPricing } from "./totals";
 import { expirePendingOrders } from "./expiry";
 import type { OrdersService } from "./contracts";
+import { toBillingSnapshot } from "./types";
 import type {
   CancelMyOrderInput,
   CheckoutPreview,
@@ -420,7 +421,7 @@ export class DefaultOrdersService implements OrdersService {
           taxMinor: itemPricing.taxMinor,
           totalMinor: itemPricing.totalMinor,
           taxRateBps,
-          billingSnapshot: input.billing,
+          billingSnapshot: toBillingSnapshot(input.billing),
           fxRateToInr: "1.00000000",
           expiresAt,
           createdAt: now,

@@ -64,7 +64,7 @@ describe("Scoped presigned invoice URL access (SA-10, BR-16)", () => {
     const orderRes = await ordersService.createOrder(cust1Ctx, {
       offeringId: offering.id,
       paymentMethod: "manual_upi",
-      billing: { name: "Customer 1", email: customer1.email, country: "IN" },
+      billing: { name: "Customer 1", email: customer1.email, country: "IN", stateCode: "29" },
     });
 
     const confirmRes = await paymentsService.confirmPayment(adminCtx, {

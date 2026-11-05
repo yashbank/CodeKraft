@@ -62,7 +62,7 @@ describe("R8-02: confirmPayment survives an object-storage outage", () => {
     const orderRes = await ordersService.createOrder(custCtx, {
       offeringId: offering.id,
       paymentMethod: "manual_upi",
-      billing: { name: "Cust", email: customer.email, country: "IN" },
+      billing: { name: "Cust", email: customer.email, country: "IN", stateCode: "29" },
     });
     expect(orderRes.payment.instructions).toMatchObject({ vpa: "testshop@okhdfc" });
     await paymentsService.submitPaymentReference(custCtx, {

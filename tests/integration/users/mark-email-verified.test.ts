@@ -55,7 +55,7 @@ describe("mark customer email verified (API-ADM-09 fallback)", () => {
       ordersService.createOrder(custCtx, {
         offeringId: offering.id,
         paymentMethod: "manual_upi",
-        billing: { name: "T", email: customer.email, country: "IN" },
+        billing: { name: "T", email: customer.email, country: "IN", stateCode: "29" },
       });
     await expect(order()).rejects.toMatchObject({ code: ErrorCode.EMAIL_UNVERIFIED });
 

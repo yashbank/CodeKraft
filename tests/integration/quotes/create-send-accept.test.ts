@@ -99,6 +99,7 @@ describe("Custom Quotes create-send-accept integration (API-COM-09, API-COM-10)"
         name: "Enterprise Buyer",
         email: customer.email,
         country: "IN",
+        stateCode: "29",
       },
     });
 

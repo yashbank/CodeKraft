@@ -12,7 +12,7 @@ import {
   trimmedString as zTrimmed,
   uuidSchema as zUuid,
 } from "@/modules/_shared/zod";
-import { zBilling, zManualPaymentMethod } from "@/modules/orders/types";
+import { zCheckoutBilling, zManualPaymentMethod } from "@/modules/orders/types";
 
 export const QUOTE_STATUSES = [
   "draft",
@@ -114,7 +114,7 @@ export const getQuoteInput = z.object({ token: zQuoteToken }).strict();
 export type GetQuoteInput = z.infer<typeof getQuoteInput>;
 
 export const acceptCustomQuoteInput = z
-  .object({ token: zQuoteToken, paymentMethod: zManualPaymentMethod, billing: zBilling })
+  .object({ token: zQuoteToken, paymentMethod: zManualPaymentMethod, billing: zCheckoutBilling })
   .strict();
 export type AcceptCustomQuoteInput = z.infer<typeof acceptCustomQuoteInput>;
 

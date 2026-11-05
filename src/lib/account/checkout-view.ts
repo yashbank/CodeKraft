@@ -116,6 +116,7 @@ export function mapBillingToOrderInput(b: BillingDetails, email: string): Billin
     company: b.company || undefined,
     address: address || undefined,
     gstNumber: b.gstNumber || undefined,
+    stateCode: b.country === "IN" ? b.stateCode || undefined : undefined,
   };
 }
 

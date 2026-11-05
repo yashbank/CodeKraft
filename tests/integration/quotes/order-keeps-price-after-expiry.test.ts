@@ -52,6 +52,7 @@ describe("Quote keeps negotiated order price and stays accepted after expiry (AP
         name: "Acme Client",
         email: customer.email,
         country: "IN",
+        stateCode: "29",
       },
     });
 

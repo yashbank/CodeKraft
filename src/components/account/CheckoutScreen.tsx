@@ -30,6 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/components/ui/_utils";
 import { add, money, type Money } from "@/lib/money";
 import { useViewerFormat } from "./ViewerMoney";
+import { GST_STATES } from "@/lib/gst-states";
 import { mapBillingToOrderInput } from "@/lib/account/checkout-view";
 import { createOrder, previewCheckout } from "@/modules/orders/customer-mutations";
 import type { CreateOrderResult } from "@/modules/orders/types";
@@ -144,6 +145,25 @@ export function BillingFields({
           onChange={(e) => set({ company: e.target.value })}
         />
       </div>
+      {value.country === "IN" ? (
+        <div className="space-y-2">
+          <Label htmlFor={`${idPrefix}-gst-state`} required>
+            State / Union Territory
+          </Label>
+          <Select value={value.stateCode ?? ""} onValueChange={(c) => set({ stateCode: c })}>
+            <SelectTrigger id={`${idPrefix}-gst-state`} className="w-full">
+              <SelectValue placeholder="Choose your state" />
+            </SelectTrigger>
+            <SelectContent>
+              {GST_STATES.map((s) => (
+                <SelectItem key={s.code} value={s.code}>
+                  {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
       {value.country === "IN" ? (
         <div className="space-y-2">
           <Label htmlFor={`${idPrefix}-gst`}>GST number (optional)</Label>
@@ -361,6 +381,8 @@ export function CheckoutScreen({
   async function handlePlaceOrder(e: React.FormEvent) {
     e.preventDefault();
     if (!consent || placing) return;
+    if (bill.country === "IN" && !bill.stateCode)
+      return void toast.error("Choose your state or union territory");
     setPlacing(true);
     const result = await createOrder({
       offeringId,
