@@ -14,6 +14,8 @@ import { z } from "zod";
 import {
   currencySchema,
   isoDateTimeSchema,
+  SEO_DESCRIPTION_MAX,
+  SEO_TITLE_MAX,
   listParams,
   richTextSchema,
   slugSchema,
@@ -94,8 +96,8 @@ export const productBulletSchema = z.strictObject({
 export const productBulletsSchema = z.array(productBulletSchema).max(24);
 const tagNamesSchema = z.array(text(40)).max(20);
 const stringListSchema = z.array(text(60)).max(30);
-const seoTitleSchema = text(70);
-const seoDescriptionSchema = text(160);
+const seoTitleSchema = text(SEO_TITLE_MAX);
+const seoDescriptionSchema = text(SEO_DESCRIPTION_MAX);
 
 /** API-CAT-01 `createProduct`. */
 export const createProductSchema = z.strictObject({

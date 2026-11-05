@@ -20,13 +20,21 @@ import { CURRENCIES, type Currency } from "@/lib/money";
 
 export const uuidSchema = z.uuid();
 
-/** `^[a-z0-9]+(?:-[a-z0-9]+)*$`, max 80 (docs/06 §1.3). */
+/** SEO field limits: hard caps (validation, maxLength) vs recommended lengths (live counter hint). */
+export const SEO_TITLE_MAX = 160;
+export const SEO_DESCRIPTION_MAX = 400;
+export const SEO_TITLE_HINT = 60;
+export const SEO_DESCRIPTION_HINT = 160;
+/** Slugs are derived from titles (max 160 words/chars) so they need room; still URL-sized. */
+export const SLUG_MAX = 120;
+
+/** `^[a-z0-9]+(?:-[a-z0-9]+)*$`, max `SLUG_MAX` (docs/06 §1.3). */
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const slugSchema = z
   .string()
   .trim()
   .min(1)
-  .max(80)
+  .max(SLUG_MAX)
   .regex(SLUG_PATTERN, "lower-case letters, digits and single hyphens only");
 
 export const currencySchema = z.enum(CURRENCIES);

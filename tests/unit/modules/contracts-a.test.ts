@@ -58,7 +58,7 @@ describe("every `*Schema` export is a Zod schema", () => {
 describe("shared primitives (docs/06 §1.3)", () => {
   it("slug", () => {
     for (const s of ["a", "abc-123", "x1-y2-z3"]) ok(catalog.slugSchema, s);
-    for (const s of ["", "-a", "a-", "a--b", "A", "a b", "a_b", "a".repeat(81)])
+    for (const s of ["", "-a", "a-", "a--b", "A", "a b", "a_b", "a".repeat(121)])
       bad(catalog.slugSchema, s);
   });
   it("money is integer minor units in a supported currency", () => {

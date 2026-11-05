@@ -91,7 +91,15 @@ import { useAdminCurrency, useAdminMoney } from "../AdminCurrency";
 import { convertWithTable, mismatchedPriceRows } from "@/lib/currency-convert";
 import { CURRENCIES, type Currency } from "@/lib/money";
 import { productSeo } from "@/lib/seo";
+import { SeoLimitField } from "../SeoLimitField";
 import { SeoPreview } from "../SeoPreview";
+import {
+  SEO_DESCRIPTION_HINT,
+  SEO_DESCRIPTION_MAX,
+  SEO_TITLE_HINT,
+  SEO_TITLE_MAX,
+  SLUG_MAX,
+} from "@/modules/_shared/zod";
 import { RowActions } from "../RowActions";
 import { Field, RichTextField } from "../RichTextField";
 import type {
@@ -1261,6 +1269,7 @@ export function ProductEditor({
                   <Input
                     id="p-slug"
                     name="slug"
+                    maxLength={SLUG_MAX}
                     value={slug}
                     onChange={(e) => {
                       setSlug(e.target.value);
@@ -2159,27 +2168,23 @@ export function ProductEditor({
 
           <TabsContent value="seo" className="space-y-5">
             <form onSubmit={saveSeo} className="space-y-5">
-              <Field id="seo-title" label="SEO title" hint={`${product.seo.title.length}/60`}>
-                <Input
-                  id="seo-title"
-                  name="seoTitle"
-                  defaultValue={product.seo.title}
-                  maxLength={60}
-                />
-              </Field>
-              <Field
+              <SeoLimitField
+                id="seo-title"
+                name="seoTitle"
+                label="SEO title"
+                defaultValue={product.seo.title}
+                hint={SEO_TITLE_HINT}
+                max={SEO_TITLE_MAX}
+              />
+              <SeoLimitField
                 id="seo-desc"
+                name="seoDescription"
                 label="Meta description"
-                hint={`${product.seo.description.length}/160`}
-              >
-                <Textarea
-                  id="seo-desc"
-                  name="seoDescription"
-                  defaultValue={product.seo.description}
-                  maxLength={160}
-                  rows={2}
-                />
-              </Field>
+                defaultValue={product.seo.description}
+                hint={SEO_DESCRIPTION_HINT}
+                max={SEO_DESCRIPTION_MAX}
+                multiline
+              />
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field id="seo-canonical" label="Canonical URL" optional>
                   <Input
@@ -2302,20 +2307,25 @@ export function ProductEditor({
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field id="blog-seo-title" label="SEO title" optional>
-                  <Input
-                    id="blog-seo-title"
-                    name="blogSeoTitle"
-                    defaultValue={product.blog.seoTitle}
-                  />
-                </Field>
-                <Field id="blog-seo-description" label="SEO description" optional>
-                  <Input
-                    id="blog-seo-description"
-                    name="blogSeoDescription"
-                    defaultValue={product.blog.seoDescription}
-                  />
-                </Field>
+                <SeoLimitField
+                  id="blog-seo-title"
+                  name="blogSeoTitle"
+                  label="SEO title"
+                  optional
+                  defaultValue={product.blog.seoTitle}
+                  hint={SEO_TITLE_HINT}
+                  max={SEO_TITLE_MAX}
+                />
+                <SeoLimitField
+                  id="blog-seo-description"
+                  name="blogSeoDescription"
+                  label="SEO description"
+                  optional
+                  multiline
+                  defaultValue={product.blog.seoDescription}
+                  hint={SEO_DESCRIPTION_HINT}
+                  max={SEO_DESCRIPTION_MAX}
+                />
               </div>
               <Button type="submit" disabled={savingTab === "blog" || isNew}>
                 Save blog
