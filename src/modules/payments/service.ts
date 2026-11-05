@@ -467,6 +467,7 @@ export class DefaultPaymentsService implements PaymentsService {
             orderId: order.id,
             orderNo: order.orderNo,
             reason: input.reason,
+            url: `/account/orders/${order.id}`,
           },
           priority: 5,
         });

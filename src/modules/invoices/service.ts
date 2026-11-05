@@ -295,6 +295,7 @@ export class DefaultInvoicesService implements InvoicesService {
           orderNo: order.orderNo,
           total: toDecimalString(order.totalMinor),
           currency: order.currency,
+          url: `/account/invoices/${newInvoice.id}`,
         },
         priority: 2,
       });

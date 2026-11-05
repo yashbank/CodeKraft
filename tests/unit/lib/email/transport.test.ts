@@ -31,6 +31,14 @@ vi.mock("@/lib/site-brand", () => ({
   getSiteLogo: async () => null,
   getStoredEmailFrom: async () => null,
 }));
+// D17-06: the send path takes its name/logo from the email theme (one settings read).
+vi.mock("@/lib/email/theme", async (orig) => {
+  const actual = await orig<typeof import("@/lib/email/theme")>();
+  return {
+    ...actual,
+    loadEmailTheme: async () => actual.buildEmailTheme({ siteName: await siteNameMock() }),
+  };
+});
 
 async function load(transport: string) {
   vi.resetModules();
@@ -257,5 +265,39 @@ describe("P1-05 email failure visibility", () => {
       encoding: "utf8",
     });
     expect(out.split("\n").filter(Boolean)).toEqual(["src/lib/email/transport.ts"]);
+  });
+});
+
+describe("render failure never loses the email (D17-06)", () => {
+  it("falls back to the generic body when a template throws", async () => {
+    const t = await load("resend");
+    const { EMAIL_TEMPLATES } = await import("@/emails");
+    const orig = EMAIL_TEMPLATES["verify-email"]!.render;
+    EMAIL_TEMPLATES["verify-email"]!.render = async () => {
+      throw new Error("boom");
+    };
+    sendMock.mockClear();
+    await t.sendEmail({
+      to: "founder@example.com",
+      subject: "Verify",
+      template: "verify-email",
+      data: { url: "https://x/y" },
+    });
+    EMAIL_TEMPLATES["verify-email"]!.render = orig;
+    const sent = (sendMock.mock.calls as unknown as Array<[Record<string, string>]>)[0]![0];
+    expect(sent.html).toContain("https://x/y");
+  });
+
+  it("an unregistered name still gets the generic body", async () => {
+    const t = await load("resend");
+    sendMock.mockClear();
+    await t.sendEmail({
+      to: "founder@example.com",
+      subject: "Hello",
+      template: "phone-otp",
+      data: { code: "424242" },
+    });
+    const sent = (sendMock.mock.calls as unknown as Array<[Record<string, string>]>)[0]![0];
+    expect(sent.html).toContain("424242");
   });
 });

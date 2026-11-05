@@ -9,7 +9,9 @@ import { Resend } from "resend";
 import { getEnv } from "@/lib/env";
 import { getLogger } from "@/lib/logger";
 import { brandFromAddress, brandSubject } from "./branding";
+import { EMAIL_TEMPLATES, renderEmailTemplate } from "@/emails";
 import { renderGenericEmail } from "./render";
+import { loadEmailTheme } from "./theme";
 import type { EmailMessage, EmailOutboxPort, EmailSendResult } from "./types";
 
 let outbox: EmailOutboxPort | null = null;
@@ -146,20 +148,32 @@ async function deliver(message: EmailMessage): Promise<EmailSendResult> {
     return { transport: "resend", skipped: "daily_cap" };
   }
   if (!env.RESEND_API_KEY) throw new Error("RESEND_API_KEY missing for EMAIL_TRANSPORT=resend");
-  const { getSiteLogo, getSiteName, getStoredEmailFrom } = await import("@/lib/site-brand");
-  const [siteName, logoUrl, storedFrom] = await Promise.all([
-    getSiteName(),
-    getSiteLogo(),
-    getStoredEmailFrom(),
-  ]);
+  const { getStoredEmailFrom } = await import("@/lib/site-brand");
+  // Never throws: falls back to safe defaults, so a settings problem cannot lose the email.
+  const theme = await loadEmailTheme();
+  const siteName = theme.siteName;
+  const storedFrom = await getStoredEmailFrom();
   const subject = brandSubject(message.subject, siteName);
-  const { html, text } = await renderGenericEmail(
-    subject,
-    message.data,
-    env.NEXT_PUBLIC_SITE_URL,
-    siteName,
-    logoUrl,
-  );
+  const generic = () =>
+    renderGenericEmail(
+      subject,
+      message.data,
+      env.NEXT_PUBLIC_SITE_URL,
+      siteName,
+      theme.logoUrl,
+      theme,
+    );
+  let rendered: { html: string; text: string };
+  try {
+    rendered = EMAIL_TEMPLATES[message.template]
+      ? await renderEmailTemplate(message.template, message.data, env.NEXT_PUBLIC_SITE_URL, theme)
+      : await generic();
+  } catch (err) {
+    // A template that throws must not strand the row at attempts=5: send the generic body instead.
+    log.error({ err, template: message.template }, "email template render failed; sending generic");
+    rendered = await generic();
+  }
+  const { html, text } = rendered;
   const res = await getResend(env.RESEND_API_KEY).emails.send({
     from: storedFrom ?? brandFromAddress(env.EMAIL_FROM, siteName),
     to: message.to,
@@ -229,7 +243,7 @@ export function emailConfigProblems(
   }
   if (/@resend\.dev>?\s*$/i.test(env.EMAIL_FROM)) {
     problems.push(
-      `EMAIL_FROM uses Resend's test sender (${env.EMAIL_FROM}), which only delivers to the Resend account owner. Verify your domain in Resend and set EMAIL_FROM="CodeKraft <no-reply@your-domain>".`,
+      `EMAIL_FROM uses Resend's test sender (${env.EMAIL_FROM}), which only delivers to the Resend account owner. Verify your domain in Resend and set EMAIL_FROM="Crestline <no-reply@your-domain>".`,
     );
   }
   return problems;

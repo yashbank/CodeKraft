@@ -53,9 +53,26 @@ describe("configured logo reaches every surface", () => {
     );
     expect(html).toContain(LOGO);
     const { EMAIL_TEMPLATES } = await import("@/emails");
-    const out = await EMAIL_TEMPLATES["verify-email"]!.render({ url: "https://x" }, "https://x.y");
+    // The template path now reads the theme from settings (D17-06), not site-brand.
+    const { buildEmailTheme } = await import("@/lib/email/theme");
+    const theme = buildEmailTheme({ siteName: "Acme", siteLogo: LOGO });
+    const out = await EMAIL_TEMPLATES["verify-email"]!.render(
+      { url: "https://x" },
+      "https://x.y",
+      theme,
+    );
     expect(out.html).toContain(LOGO);
     expect(out.html).toContain("Verify your Acme email address");
+  });
+  it("settings logo reaches a rendered template email (no injected theme)", async () => {
+    vi.resetModules();
+    vi.doMock("@/modules/settings/service", () => ({
+      settingsService: { load: async () => ({ siteName: "Acme", siteLogo: LOGO }) },
+    }));
+    const { renderEmailTemplate } = await import("@/emails");
+    const out = await renderEmailTemplate("payment-confirmed", { orderNo: "A1" }, "https://x.y");
+    vi.doUnmock("@/modules/settings/service");
+    expect(out.html).toContain(`src="${LOGO}"`);
   });
   it("metadata icons, apple icon and openGraph/twitter images", async () => {
     const { generateMetadata } = await import("@/app/layout");
