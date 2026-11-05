@@ -46,7 +46,7 @@ export function parseSettingsImport(text: string): ParsedImport {
   }
   const file = raw as Partial<SettingsExportFile> | null;
   if (!file || file.format !== SETTINGS_EXPORT_FORMAT || file.version !== SETTINGS_EXPORT_VERSION) {
-    return { ok: false, error: "Not a CodeKraft settings export (format/version mismatch)." };
+    return { ok: false, error: "Not a settings export (format/version mismatch)." };
   }
   const settings = file.settings;
   if (!settings || typeof settings !== "object" || Array.isArray(settings)) {

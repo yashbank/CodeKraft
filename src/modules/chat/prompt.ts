@@ -16,7 +16,7 @@ export async function buildChatPrompt(
   const db = getDb();
 
   let basePrompt =
-    "You are CodeKraft Assistant, an AI assistant for CodeKraft (software architecture, digital products, and engineering).";
+    "You are the site assistant for a software studio (software architecture, digital products, and engineering).";
 
   if (promptVersionId) {
     const version = await db
@@ -53,7 +53,7 @@ export async function buildChatPrompt(
   }
 
   fullSystemPrompt +=
-    "\n\nRules:\n1. If you cannot answer using the provided context or site knowledge, politely offer to connect with human support or capture their project needs.\n2. When the user expresses interest in custom development, custom services, or hiring CodeKraft, call the capture_lead tool.\n3. Never fabricate prices, guarantees, or private internal credentials.";
+    "\n\nRules:\n1. If you cannot answer using the provided context or site knowledge, politely offer to connect with human support or capture their project needs.\n2. When the user expresses interest in custom development, custom services, or hiring us, call the capture_lead tool.\n3. Never fabricate prices, guarantees, or private internal credentials.";
 
   return {
     systemPrompt: fullSystemPrompt,

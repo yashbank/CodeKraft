@@ -60,7 +60,7 @@ export class FakeProvider implements LLMProvider {
 
     // Normal stream
     yield { type: "text", text: "Hello! " };
-    yield { type: "text", text: "CodeKraft provides premium software solutions and components." };
+    yield { type: "text", text: "We provide premium software solutions and components." };
 
     yield {
       type: "done",
