@@ -16,17 +16,12 @@ import {
   Text,
 } from "@react-email/components";
 import { render } from "@react-email/components";
-import { createContext, useContext, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { DEFAULT_EMAIL_THEME, type EmailTheme } from "./theme";
 
 const INK = "#17181C";
 const MUTED = "#5D6068";
 const RULE = "#E6E3DC";
-
-const Ctx = createContext<{ theme: EmailTheme; siteUrl: string }>({
-  theme: DEFAULT_EMAIL_THEME,
-  siteUrl: "",
-});
 
 /** Every link is resolved against the configured site URL; absolute and mailto links are untouched. */
 export function absUrl(href: string, siteUrl: string): string {
@@ -92,57 +87,65 @@ export function EmailLayout({
           fontFamily: t.fontStack,
         }}
       >
-        <Ctx.Provider value={{ theme: t, siteUrl }}>
-          <Container style={{ width: "100%", maxWidth: 560, margin: "0 auto" }}>
-            <div style={{ padding: "0 4px 16px" }}>
-              {logo ? (
-                <Img
-                  className="ek-logo"
-                  src={absUrl(logo, siteUrl)}
-                  alt={name}
-                  height={28}
-                  style={{ height: 28, width: "auto", display: "block" }}
-                />
-              ) : (
-                <Text style={{ fontSize: 20, fontWeight: 700, color: INK, margin: 0 }}>{name}</Text>
-              )}
-            </div>
-            <div
-              className="ek-card"
-              style={{
-                backgroundColor: "#FFFFFF",
-                border: `1px solid ${RULE}`,
-                borderRadius: t.radius + 4,
-                padding: "28px 24px",
-              }}
+        <Container style={{ width: "100%", maxWidth: 560, margin: "0 auto" }}>
+          <div style={{ padding: "0 4px 16px" }}>
+            {logo ? (
+              <Img
+                className="ek-logo"
+                src={absUrl(logo, siteUrl)}
+                alt={name}
+                height={28}
+                style={{ height: 28, width: "auto", display: "block" }}
+              />
+            ) : (
+              <Text style={{ fontSize: 20, fontWeight: 700, color: INK, margin: 0 }}>{name}</Text>
+            )}
+          </div>
+          <div
+            className="ek-card"
+            style={{
+              backgroundColor: "#FFFFFF",
+              border: `1px solid ${RULE}`,
+              borderRadius: t.radius + 4,
+              padding: "28px 24px",
+            }}
+          >
+            <Heading
+              as="h1"
+              style={{ fontSize: 22, lineHeight: "28px", margin: "0 0 16px", color: INK }}
             >
-              <Heading
-                as="h1"
-                style={{ fontSize: 22, lineHeight: "28px", margin: "0 0 16px", color: INK }}
-              >
-                {title}
-              </Heading>
-              {children}
-            </div>
-            <Text
-              className="ek-foot"
-              style={{ fontSize: 12, lineHeight: "18px", color: MUTED, margin: "16px 4px 0" }}
-            >
-              {name} ·{" "}
-              <Link href={siteUrl} style={{ color: t.accent }}>
-                {siteUrl.replace(/^https?:\/\//, "")}
-              </Link>
-            </Text>
-          </Container>
-        </Ctx.Provider>
+              {title}
+            </Heading>
+            {children}
+          </div>
+          <Text
+            className="ek-foot"
+            style={{ fontSize: 12, lineHeight: "18px", color: MUTED, margin: "16px 4px 0" }}
+          >
+            {name} ·{" "}
+            <Link href={siteUrl} style={{ color: t.accent }}>
+              {siteUrl.replace(/^https?:\/\//, "")}
+            </Link>
+          </Text>
+        </Container>
       </Body>
     </Html>
   );
 }
 
 /** Bulletproof button (table cell fill) with black/white text picked for contrast on the accent. */
-export function EmailButton({ href, children }: { href: string; children: ReactNode }) {
-  const { theme, siteUrl } = useContext(Ctx);
+// theme/siteUrl are props (no React context) so concurrent renders can never share state.
+export function EmailButton({
+  href,
+  children,
+  theme,
+  siteUrl,
+}: {
+  href: string;
+  children: ReactNode;
+  theme: EmailTheme;
+  siteUrl: string;
+}) {
   return (
     <table role="presentation" cellPadding={0} cellSpacing={0} style={{ margin: "8px 0 16px" }}>
       <tbody>
@@ -210,7 +213,9 @@ export async function renderGenericEmail(
           <Text style={emailStyles.p}>
             Use the button below to continue. The link expires soon and works once.
           </Text>
-          <EmailButton href={url}>Continue</EmailButton>
+          <EmailButton href={url} theme={theme ?? DEFAULT_EMAIL_THEME} siteUrl={siteUrl}>
+            Continue
+          </EmailButton>
           <Text className="ek-muted" style={emailStyles.muted}>
             Or paste this address into your browser: {url}
           </Text>
