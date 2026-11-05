@@ -1,7 +1,7 @@
 # Mac B status
 Updated: 2026-11-06
 ## Tasks
-- D17-01 | doing | branch feat/d17-01-instant-email | fixer running
+- D17-01 | ready | branch feat/d17-01-instant-email | outbox tests 45/45 across 9 files, new test 2 of 4 fail with the hook off, eslint/prettier/tsc clean; after() not yet proven on a real Vercel deploy
 - D17-08 | doing | branch feat/d17-08-reset-check | fixer running
 - D17-09 | ready | branch feat/d17-09-csp | vitest middleware + csp-report + static guard 87/87, eslint/prettier/tsc clean; browser proof on production build still pending (batched on integration)
 - D17-02..07, D17-10 | todo | integration branch feat/d17-integration
@@ -179,3 +179,4 @@ Run e2e: `pnpm build && pnpm start`, then `playwright test tests/e2e/r9 --projec
 - Done 6 of 6, estimated remaining ~0 h on B. Next for A: merge C16 branches (or just feat/c16-06-tests), full gate, deploy on approval, live test.
 - 2026-11-06 Phase 17 started on Mac B from b7e75c2. Low-disk mode set by the user: one checkout, at most 3 agents, so agents share the tree on feat/d17-integration with separate files instead of worktrees; task branches are built from the same files. Free disk 8.0 GB after cleanup (was 4.5 GB).
 - 2026-11-06 D17-09 ready. CSP was report-only unless CSP_MODE=enforce, and sent a nonce policy to prerendered pages whose scripts have no nonce. Now: strict nonce policy on admin, account, checkout, quote, auth, search, and on /, /products when not served from a twin; 'unsafe-inline' on prerendered pages and twins only. /auth pages are now dynamic (more function calls on Hobby, low traffic). A: please check whether CSP_MODE is set on Vercel. csp-report has an 8 KB read cap, 30/min per IP, deduped rows. Done 1 of 10, estimated remaining ~2.5 h. Free disk 7.1Gi.
+- 2026-11-06 D17-01 ready. withTx sends committed outbox rows straight after the root transaction, through after(). Failed or killed sends stay for the daily cron. Each row is claimed first, so overlapping runs send once. A function killed after Resend accepted but before the row is marked sent gives one duplicate at the next cron. A live test: send a quote, the email should arrive in seconds. Needs EMAIL_TRANSPORT=resend. Done 2 of 10, estimated remaining ~2 h. Free disk 5.1Gi.
