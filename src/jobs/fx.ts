@@ -19,6 +19,7 @@ import {
   fetchRatesWithFallback,
   invertRate,
   isRateStale,
+  isSaneInrRate,
   isWithinBounds,
 } from "@/modules/fx/client";
 import { FX_REFRESH_JOB_KEY, type FxRefreshResult } from "@/modules/fx/types";
@@ -106,17 +107,18 @@ export const fxRefreshJob = {
         const newRate = fetchedRates[quote];
         if (!newRate) continue;
 
+        // A fresh rate must pass the static check. The +-20% jump rule only applies against a
+        // sane stored rate: a stored rate that fails the check is replaced (self-heal).
         const prevRate = prevRateMap.get(quote);
-        if (prevRate) {
-          const withinBounds = isWithinBounds(prevRate, newRate);
-          if (!withinBounds) {
-            poisonedQuotes.push(quote);
-            errors.push(
-              `Rate for INR/${quote} (${newRate}) exceeds ±20% sanity bound vs previous (${prevRate})`,
-            );
-            status = "error";
-            continue; // Reject poisoned rate
-          }
+        const jumped =
+          prevRate && isSaneInrRate(quote, prevRate) && !isWithinBounds(prevRate, newRate);
+        if (jumped || !isSaneInrRate(quote, newRate)) {
+          poisonedQuotes.push(quote);
+          errors.push(
+            `Rate for INR/${quote} (${newRate}) exceeds ±20% sanity bound vs previous (${prevRate ?? "none"})`,
+          );
+          status = "error";
+          continue; // Reject poisoned rate
         }
 
         // Check if a manual override exists for today

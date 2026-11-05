@@ -114,7 +114,7 @@ export function createAuth(host: AuthHost, opts: { phoneOtp?: boolean; siteName?
       },
       additionalFields: {
         status: { type: "string", required: false, defaultValue: "active", input: false },
-        displayCurrency: { type: "string", required: false, defaultValue: "INR", input: false },
+        displayCurrency: { type: "string", required: false, input: false },
         themePref: { type: "string", required: false, input: false },
         mustChangePassword: {
           type: "boolean",

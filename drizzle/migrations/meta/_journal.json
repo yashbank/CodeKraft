@@ -78,6 +78,13 @@
       "when": 1792508400000,
       "tag": "0010_theme_pref_auto",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792594800000,
+      "tag": "0011_display_currency_nullable",
+      "breakpoints": true
     }
   ]
 }

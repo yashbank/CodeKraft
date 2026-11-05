@@ -13,7 +13,11 @@ vi.mock("next/headers", () => ({
 vi.mock("next/cache", () => ({ unstable_cache: (fn: () => unknown) => fn }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("@/modules/auth/service", () => ({
-  getSession: () => Promise.resolve(state.user ? { user: { displayCurrency: state.user } } : null),
+  // "" = signed in with no own choice (NULL on the profile)
+  getSession: () =>
+    Promise.resolve(
+      state.user === undefined ? null : { user: { displayCurrency: state.user || null } },
+    ),
 }));
 vi.mock("@/modules/settings/service", () => ({
   settingsService: {
@@ -35,6 +39,12 @@ describe("getDisplayCurrency precedence (enabled-only)", () => {
     expect((await getDisplayCurrency()).currency).toBe("USD");
     state.user = "INR";
     expect((await getDisplayCurrency()).currency).toBe("INR");
+  });
+  it("D17-02: signed-in account with no own choice follows the cookie, then the site default", async () => {
+    state.user = "";
+    expect((await getDisplayCurrency()).currency).toBe("INR");
+    state.cookie = "USD";
+    expect((await getDisplayCurrency()).currency).toBe("USD");
   });
   it("disabled user pref and cookie fall back to base", async () => {
     state.user = "EUR";

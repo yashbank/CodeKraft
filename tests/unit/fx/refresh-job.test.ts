@@ -51,6 +51,49 @@ describe("fxRefreshJob", () => {
     expect(r.written).toBe(8);
   });
 
+  it("D17-02: rejects a primary response quoted against another base", async () => {
+    const fetchFn = vi.fn(async (url: string) =>
+      String(url).includes("open.er-api")
+        ? Response.json({ result: "success", base_code: "USD", rates: { USD: 1, EUR: 0.92 } })
+        : Response.json({ base: "INR", rates: ALL }),
+    ) as unknown as typeof fetch;
+    const r = await fxRefreshJob.run(undefined, { fetchFn });
+    expect(r.source).toBe("frankfurter.app");
+  });
+
+  const prev = (rate: string) => ({
+    base: "INR",
+    quote: "USD",
+    rate,
+    asOf: "2026-11-01",
+    source: "open.er-api.com",
+    createdAt: new Date(),
+  });
+  it("D17-02: a stored rate that fails the sanity check heals on the next refresh", async () => {
+    prevRows = [prev("1.00000000")];
+    const fetchFn = vi.fn(async () => ok(ALL)) as unknown as typeof fetch;
+    const r = await fxRefreshJob.run(undefined, { fetchFn });
+    expect(r.written).toBe(8);
+    expect(
+      inserted.some((v) => v.base === "INR" && v.quote === "USD" && v.rate === "0.01200000"),
+    ).toBe(true);
+  });
+  it("D17-02: the +-20% rule still holds against a sane stored rate", async () => {
+    prevRows = [prev("0.01200000")];
+    const fetchFn = vi.fn(async () => ok({ ...ALL, USD: 0.0156 })) as unknown as typeof fetch;
+    const r = await fxRefreshJob.run(undefined, { fetchFn });
+    expect(r.written).toBe(6);
+  });
+  it("D17-02: a USD-based primary (FX_API_URL=/latest/USD) is re-based to INR", async () => {
+    const usd = { INR: 83.33333333, USD: 1, EUR: 0.91666667, GBP: 0.79166667, CAD: 1.35833333 };
+    const fetchFn = vi.fn(async () =>
+      Response.json({ result: "success", base_code: "USD", rates: usd }),
+    ) as unknown as typeof fetch;
+    const r = await fxRefreshJob.run(undefined, { fetchFn });
+    expect(r.source).not.toBe("frankfurter.app");
+    const usdRow = inserted.find((v) => v.base === "INR" && v.quote === "USD");
+    expect(Number(usdRow?.rate)).toBeCloseTo(0.012, 6);
+  });
   it("never throws when every provider is down; writes nothing", async () => {
     const fetchFn = vi.fn(async () => {
       throw new Error("network down");

@@ -6,6 +6,7 @@ import { articleLd, blogSeo, breadcrumbLd, pageMetadata } from "@/lib/seo";
 
 import { BlogPostPage } from "@/components/site/BlogPostPage";
 import { toBlogPost, toBlogTeaser } from "@/lib/blog-view";
+import { getEnabledCurrencies } from "@/lib/display-currency";
 import { anonymousContext } from "@/lib/authz/context";
 import { toProductSummary } from "@/lib/product-summary";
 import { getBlogBySlugQuery, listBlogPostsQuery } from "@/modules/blog/queries";
@@ -25,6 +26,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
+  // Metadata never reads the price, so no currency lookup here.
   const result = await getBlogBySlugQuery({ slug, displayCurrency: "INR" }, anonymousContext());
   if (!result.ok) return {};
   const { blog } = result.data;
@@ -34,8 +36,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function BlogPostRoute({ params }: PageProps) {
   const { slug } = await params;
   const ctx = anonymousContext();
+  // ISR page shared by all visitors: the site default currency, never one visitor's choice.
+  const { base } = await getEnabledCurrencies();
   const [result, listResult, servicesResult] = await Promise.all([
-    getBlogBySlugQuery({ slug, displayCurrency: "INR" }, ctx),
+    getBlogBySlugQuery({ slug, displayCurrency: base }, ctx),
     listBlogPostsQuery({ limit: 100 }, ctx),
     listServicesQuery({}, ctx),
   ]);

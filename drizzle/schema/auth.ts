@@ -41,7 +41,7 @@ export const users = pgTable(
     phoneNumberVerified: boolean("phone_number_verified").notNull().default(false),
     // CodeKraft fields (docs/05 T-users)
     status: userStatus("status").notNull().default("active"),
-    displayCurrency: text("display_currency").notNull().default("INR"),
+    displayCurrency: text("display_currency"), // NULL = follow the admin default currency
     themePref: themePref("theme_pref"),
     /** P10: set for admin-issued temporary passwords; layouts force /auth/change-password until cleared. */
     mustChangePassword: boolean("must_change_password").notNull().default(false),

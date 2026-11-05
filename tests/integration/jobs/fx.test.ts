@@ -95,7 +95,7 @@ describe("FX Refresh Job & Lifecycle (PHASE-03 P3.12, docs/06 §3.3, TM-13)", ()
     // Set manual override for USD
     await fxService.setFxOverride(adminCtx, {
       quote: "USD",
-      rate: "0.01500000",
+      rate: "0.01400000",
       asOf,
     });
 
@@ -113,7 +113,7 @@ describe("FX Refresh Job & Lifecycle (PHASE-03 P3.12, docs/06 §3.3, TM-13)", ()
       .select()
       .from(fxRates)
       .where(and(eq(fxRates.base, "INR"), eq(fxRates.quote, "USD"), eq(fxRates.asOf, asOf)));
-    expect(usdRow?.rate).toBe("0.01500000");
+    expect(usdRow?.rate).toBe("0.01400000");
     expect(usdRow?.source).toBe("manual");
 
     // Other currencies updated from open.er-api.com
@@ -123,6 +123,32 @@ describe("FX Refresh Job & Lifecycle (PHASE-03 P3.12, docs/06 §3.3, TM-13)", ()
       .where(and(eq(fxRates.base, "INR"), eq(fxRates.quote, "EUR"), eq(fxRates.asOf, asOf)));
     expect(eurRow?.rate).toBe("0.01100000");
     expect(eurRow?.source).toBe("open.er-api.com");
+  });
+
+  it("D17-02: a stored bad rate (1.0) does not block the correct override; wild values stay rejected", async () => {
+    await truncateAll();
+    const drizzleDb = toFactoryDb();
+    const admin = await createSuperAdmin();
+    const adminCtx = buildContext({
+      user: { id: admin.id },
+      session: { id: "sess-fx-bounds" },
+      roles: ["super_admin"],
+    });
+    await drizzleDb.insert(fxRates).values({
+      base: "INR",
+      quote: "USD",
+      rate: "1.00000000",
+      asOf: "2026-09-25",
+      source: "open.er-api.com",
+      createdAt: new Date(),
+    });
+    const asOf = "2026-09-26";
+    await expect(
+      fxService.setFxOverride(adminCtx, { quote: "USD", rate: "0.12000000", asOf }),
+    ).rejects.toThrow(/reference/);
+    await fxService.setFxOverride(adminCtx, { quote: "USD", rate: "0.01200000", asOf });
+    const [row] = await drizzleDb.select().from(fxRates).where(eq(fxRates.asOf, asOf)).limit(1);
+    expect(row).toBeDefined();
   });
 
   it("rejects poisoned rate outside ±20% bounds (TM-13) and keeps previous rate", async () => {

@@ -1,5 +1,6 @@
 import { SettingsScreen } from "@/components/account/SettingsScreen";
 import { NO_AUTH_EVENTS, mapCustomerProfile, mapSessionInfo } from "@/lib/account/settings-view";
+import { getDisplayCurrency } from "@/lib/display-currency";
 import { getFlag } from "@/lib/feature-flags";
 import { getMeQuery, getMyProfileQuery, getSecurityOverviewQuery } from "@/modules/users/queries";
 
@@ -25,7 +26,12 @@ export default async function SettingsPage() {
     );
   }
 
-  const profile = mapCustomerProfile(meResult.data.user, meResult.data, profileResult.data.profile);
+  // me.displayCurrency falls back to INR when the account has no own choice: show what the site really uses.
+  const { currency } = await getDisplayCurrency();
+  const profile = {
+    ...mapCustomerProfile(meResult.data.user, meResult.data, profileResult.data.profile),
+    displayCurrency: currency,
+  };
   const session = mapSessionInfo(securityResult.ok ? securityResult.data.sessions : []);
 
   return (

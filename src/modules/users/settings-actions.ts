@@ -60,7 +60,8 @@ export const updateAccountSettingsAction = defineAction({
     const themePref = (updated?.themePref ?? null) as ThemePref | null;
 
     const cookieValues: { ck_currency?: string; ck_theme?: string } = {
-      ck_currency: displayCurrency,
+      // only an explicit choice becomes a cookie; a theme-only save must not pin INR
+      ck_currency: updated?.displayCurrency ?? undefined,
       ck_theme: themePref ?? undefined,
     };
 

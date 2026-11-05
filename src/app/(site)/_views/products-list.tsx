@@ -52,6 +52,7 @@ export async function ProductsView({
     <ProductsListPage
       products={products}
       categories={categories}
+      currency={currency}
       pageSize={12}
       initialQuery={q}
       signedIn={signedIn}

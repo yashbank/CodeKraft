@@ -19,7 +19,7 @@ import type {
   refreshFxRatesSchema,
 } from "./contracts";
 import type { FxRateView, FxRefreshResult, FxSource } from "./types";
-import { computeCrossRate, invertRate, isRateStale } from "./client";
+import { computeCrossRate, invertRate, isRateStale, isSaneInrRate } from "./client";
 import { z } from "zod";
 
 export class DefaultFxService implements FxService {
@@ -76,6 +76,15 @@ export class DefaultFxService implements FxService {
     const client = await this.getDatabase(tx);
     if (!client) {
       throw new AppError(ErrorCode.INTERNAL, "Database unavailable");
+    }
+
+    // Bounds: a typo (0.12 for 0.012) must not reprice the whole site. Checked against the static
+    // reference, not the stored rate: a stored bad rate must not block the correction.
+    if (!isSaneInrRate(input.quote, input.rate)) {
+      throw new AppError(
+        ErrorCode.VALIDATION,
+        `Rate ${input.rate} is not within 50% of the reference INR/${input.quote} rate`,
+      );
     }
 
     const now = new Date();

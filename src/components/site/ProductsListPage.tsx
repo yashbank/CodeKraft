@@ -48,6 +48,7 @@ import {
   type ProductFilterState,
 } from "./ProductFilters";
 import { currencySymbol } from "@/lib/currency-prefs";
+import type { Currency } from "@/lib/money";
 import type { DeliveryType, ProductSummary, PurchaseModel } from "./types";
 
 export type ProductSort = "newest" | "price_asc" | "price_desc" | "popular" | "featured";
@@ -93,6 +94,8 @@ const SORT_LABEL: Readonly<Record<ProductSort, string>> = {
 export interface ProductsListPageProps {
   products: ProductSummary[];
   categories: CategoryNode[];
+  /** Display currency of the list; labels the price filter when no product has a price. */
+  currency?: Currency;
   /** `site_settings.products_intro` */
   intro?: string;
   pageSize?: number;
@@ -158,6 +161,7 @@ function ProductsListBody({
   products,
   categories,
   intro,
+  currency = "INR",
   pageSize = 25,
   loading = false,
   searchUnavailable = false,
@@ -167,7 +171,7 @@ function ProductsListBody({
   wishlistedIds = [],
   searchParams,
 }: ProductsListPageProps & { searchParams: URLSearchParams }) {
-  const symbol = currencySymbol(products.find((p) => p.fromPrice)?.fromPrice?.currency ?? "INR");
+  const symbol = currencySymbol(products.find((p) => p.fromPrice)?.fromPrice?.currency ?? currency);
   const [wishlisted, setWishlisted] = useState<Set<string>>(() => new Set(wishlistedIds));
 
   async function toggleWishlistFor(productId: string) {
