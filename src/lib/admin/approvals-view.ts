@@ -189,6 +189,7 @@ export function mapApprovalToItem(
     status: a.status,
     approvedByIds: a.decisions.filter((d) => d.decision === "approve").map((d) => d.decidedBy),
     pendingApprovers: a.pendingApprovers.length,
+    approvers: a.approvers,
     diff: approvalDetailRows(p),
     note: a.error ?? undefined,
     decision: latestDecision

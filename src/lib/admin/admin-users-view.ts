@@ -23,5 +23,6 @@ export function mapAdminUserRow(row: ModuleAdminUserRow): AdminUserRow {
     ...(row.lastSignInAt ? { lastSignInAt: row.lastSignInAt } : {}),
     status: row.status,
     ...(row.pendingApprovalId ? { pendingApprovalId: row.pendingApprovalId } : {}),
+    ...(row.verification ? { verification: row.verification } : {}),
   };
 }

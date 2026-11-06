@@ -3,7 +3,13 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("@/modules/settings/site-reset-actions", () => ({
-  previewSiteReset: vi.fn(),
+  previewSiteReset: vi.fn(async () => ({
+    ok: true,
+    data: [
+      { table: "payouts", count: 2 },
+      { table: "partners", count: 1 },
+    ],
+  })),
   requestSiteResetAction: vi.fn(),
   backupSiteReset: vi.fn(async () => ({ ok: true, data: "{}" })),
 }));
@@ -23,6 +29,16 @@ describe("DangerZoneSection", () => {
     expect(screen.getByText(/Also removed because they depend on it/i)).toBeInTheDocument();
     await u.click(screen.getByRole("checkbox", { name: /customers/i }));
     expect(screen.queryByText(/Also removed/i)).toBeNull();
+  });
+
+  it("shows counts per category, including payouts and partners, as soon as data is picked", async () => {
+    const u = userEvent.setup();
+    render(<DangerZoneSection siteName="Acme" />);
+    await u.click(screen.getByRole("checkbox", { name: /customers/i }));
+    const preview = await screen.findByRole("group", { name: /rows to delete/i });
+    expect(preview).toHaveTextContent("Payouts");
+    expect(preview).toHaveTextContent("Partners (removed and demo accounts)");
+    expect(preview).toHaveTextContent("3 in total");
   });
 
   it("enables Request only with backup and the exact (trimmed) name", async () => {

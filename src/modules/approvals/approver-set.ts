@@ -6,6 +6,7 @@
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { userRoles, users } from "../../../drizzle/schema/auth";
 import type { DbOrTx } from "@/lib/db";
+import type { ApproverStatusView } from "./types";
 
 /**
  * Who is being removed by an `admin.user_change` remove request. That person is not asked to
@@ -94,4 +95,34 @@ export async function listActiveAdminUsers(database: DbOrTx): Promise<AdminDirec
     }
   }
   return Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Who is required on a request and where each person stands, by name and email.
+ * `needed` is the live approver set; anyone who already decided is listed too, even if they have
+ * since left the set, so the owner sees the whole picture.
+ */
+export async function describeApprovers(
+  database: DbOrTx,
+  needed: readonly string[],
+  decisions: readonly { decidedBy: string; decision: string }[],
+): Promise<ApproverStatusView[]> {
+  const stateOf = new Map<string, ApproverStatusView["state"]>();
+  for (const d of decisions) {
+    stateOf.set(d.decidedBy, d.decision === "reject" ? "rejected" : "approved");
+  }
+  const ids = [...new Set([...needed, ...stateOf.keys()])];
+  if (ids.length === 0) return [];
+  const rows = await database
+    .select({ id: users.id, name: users.name, email: users.email })
+    .from(users)
+    .where(inArray(users.id, ids));
+  return rows
+    .map((r) => ({
+      userId: r.id,
+      name: r.name || r.email,
+      email: r.email,
+      state: stateOf.get(r.id) ?? ("pending" as const),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }

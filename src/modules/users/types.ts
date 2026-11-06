@@ -137,6 +137,15 @@ export interface AdminUserRow {
   lastSignInAt?: string;
   status: "active" | "invited" | "pending_change";
   pendingApprovalId?: string;
+  /** Read-only login check so the owner can confirm a new admin works before removing an old one. */
+  verification?: {
+    emailVerified: boolean;
+    signInMethods: ("password" | "google")[];
+    canSignIn: boolean;
+    hasSignedIn: boolean;
+    verified: boolean;
+    missing: string[];
+  };
 }
 
 /* --- API-DASH-* -------------------------------------------------------------------------- */

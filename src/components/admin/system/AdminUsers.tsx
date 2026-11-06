@@ -307,6 +307,53 @@ export function AdminUsers({
           adjustments) cannot be executed until a second admin is active.
         </Banner>
       ) : null}
+      <section
+        aria-label="Login verification"
+        data-testid="admin-verification"
+        className="mb-4 rounded-lg border border-border bg-surface p-4"
+      >
+        <h2 className="text-body font-medium">Login verification</h2>
+        <p className="mb-3 text-body-sm text-fg-muted">
+          Before removing an old super admin, confirm each new one is ready: email verified, able to
+          sign in, and signed in at least once. Read-only.
+        </p>
+        <ul className="divide-y divide-border text-body-sm">
+          {rows
+            .filter((u) => u.status !== "invited" && u.verification)
+            .map((u) => (
+              <li
+                key={u.id}
+                data-testid="verification-row"
+                data-email={u.email}
+                data-verified={u.verification?.verified ? "yes" : "no"}
+                className="flex flex-col gap-1 py-2 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <span className="min-w-0 break-words">
+                  <span className="font-medium">{u.name}</span>{" "}
+                  <span className="text-fg-muted">{u.email}</span>
+                  <span className="block text-caption text-fg-muted">
+                    {ROLE_LABEL[u.role]} · Partner: {u.partner ? "yes" : "no"}
+                  </span>
+                </span>
+                <span className="flex flex-wrap items-center gap-1.5">
+                  <Badge tone={u.verification?.emailVerified ? "success" : "warning"} size="sm">
+                    Email {u.verification?.emailVerified ? "verified" : "not verified"}
+                  </Badge>
+                  <Badge tone={u.verification?.canSignIn ? "success" : "warning"} size="sm">
+                    {u.verification?.canSignIn
+                      ? `Sign-in: ${u.verification.signInMethods.join(" + ")}`
+                      : "Cannot sign in"}
+                  </Badge>
+                  <Badge tone={u.verification?.hasSignedIn ? "success" : "warning"} size="sm">
+                    {u.lastSignInAt
+                      ? `Last sign-in ${formatDateTime(u.lastSignInAt)}`
+                      : "Never signed in"}
+                  </Badge>
+                </span>
+              </li>
+            ))}
+        </ul>
+      </section>
       <DataToolbar
         searchId="admin-users-search"
         searchPlaceholder="Name or email…"

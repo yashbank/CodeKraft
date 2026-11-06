@@ -344,6 +344,42 @@ function ApprovalDetail({
         <Banner tone="info">You requested this — another admin must approve.</Banner>
       ) : null}
 
+      {a.approvers && a.approvers.length > 0 ? (
+        <section aria-label="Approvers" data-testid="approvers-panel" className="space-y-1.5">
+          <h4 className="text-overline tracking-wider text-fg-muted uppercase">Who must approve</h4>
+          <ul className="space-y-1 text-body-sm">
+            {a.approvers.map((p) => (
+              <li
+                key={p.userId}
+                data-testid="approver-row"
+                data-state={p.state}
+                className="flex flex-wrap items-baseline justify-between gap-x-3"
+              >
+                <span className="min-w-0 break-words">
+                  <span className="font-medium">{p.name}</span>{" "}
+                  <span className="text-fg-muted">{p.email}</span>
+                </span>
+                <span
+                  className={
+                    p.state === "approved"
+                      ? "text-success"
+                      : p.state === "rejected"
+                        ? "text-danger"
+                        : "text-warning"
+                  }
+                >
+                  {p.state === "approved"
+                    ? "Approved"
+                    : p.state === "rejected"
+                      ? "Rejected"
+                      : "Waiting"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {a.diff.length > 0 ? (
         <table className="w-full text-body-sm">
           <caption className="mb-2 text-left text-overline tracking-wider text-fg-muted uppercase">

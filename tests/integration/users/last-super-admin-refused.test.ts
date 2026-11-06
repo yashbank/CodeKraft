@@ -3,6 +3,7 @@ import { buildContext } from "@/lib/authz/context";
 import { ErrorCode } from "@/lib/errors";
 import { usersService } from "@/modules/users/service";
 import { createPartner, createSuperAdmin } from "../../factories/users";
+import { markSignedIn } from "../../factories/sign-in";
 import { createProduct } from "../../factories/catalog";
 import { createOwnership } from "../../factories/ownership";
 import { getTestDb, truncateAll } from "../../setup/db";
@@ -58,6 +59,9 @@ describe("last super_admin and active partner refusal (API-ADM-11, MASTER_SPEC Â
     await truncateAll();
     const super1 = await createSuperAdmin();
     const super2 = await createSuperAdmin();
+    // Two other super admins with a verified login must exist before one can be removed.
+    const super3 = await createSuperAdmin();
+    for (const u of [super1, super3]) await markSignedIn(u.id);
 
     const super1Ctx = buildContext({
       user: { id: super1.id },

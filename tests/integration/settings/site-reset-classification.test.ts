@@ -26,7 +26,8 @@ const ALL: ResetCategory[] = [
   "content",
   "finance",
 ];
-// Tables with a `where` are KEEP tables with a filtered delete (approvals), not wiped tables.
+// Tables with a `where` are KEEP tables with a filtered delete (approvals), not wiped tables;
+// a filtered step on a wiped table (orphan-partner ownerships) is an earlier, narrower delete.
 const wiped = new Set(RESET_STEPS.filter((s) => !s.where).map((s) => s.table));
 const kept = new Set(RESET_KEEP_TABLES);
 // users/user_roles are partially wiped (customers only); admins always survive.
@@ -38,7 +39,9 @@ describe("site reset classification", () => {
     const all = rows.map((r) => r.t);
     expect(all.filter((t) => !wiped.has(t) && !kept.has(t))).toEqual([]);
     expect(all.filter((t) => wiped.has(t) && kept.has(t))).toEqual([]);
-    expect(RESET_STEPS.filter((s) => s.where && !kept.has(s.table))).toEqual([]);
+    expect(RESET_STEPS.filter((s) => s.where && !kept.has(s.table) && !wiped.has(s.table))).toEqual(
+      [],
+    );
     expect([...wiped, ...kept].filter((t) => !all.includes(t))).toEqual([]);
   });
 

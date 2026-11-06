@@ -15,7 +15,8 @@ describe("fewer-than-two-admins warning (API-ADM-11, MASTER_SPEC §7, PHASE-03 P
   it("returns warning: fewer_than_two_admins when removing an admin leaves only 1 active admin", async () => {
     await truncateAll();
     const super1 = await createSuperAdmin();
-    const super2 = await createSuperAdmin();
+    // A plain admin (a super admin needs two verified others before it can go at all).
+    const super2 = await createAdmin();
 
     const super1Ctx = buildContext({
       user: { id: super1.id },
