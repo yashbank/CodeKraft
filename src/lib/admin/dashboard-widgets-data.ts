@@ -165,7 +165,8 @@ export const loadNewCustomers = (days: number): Promise<DashboardData["newCustom
       select count(*) filter (where u.created_at >= now() - make_interval(days => ${days})) as cur,
              count(*) filter (where u.created_at < now() - make_interval(days => ${days})) as prev
       from users u join customer_profiles cp on cp.user_id = u.id
-      where u.created_at >= now() - make_interval(days => ${days * 2})`);
+      where u.created_at >= now() - make_interval(days => ${days * 2})
+        and not exists (select 1 from user_roles r where r.user_id = u.id and r.role_key in ('super_admin','admin','staff'))`);
     const t = [...totals][0];
     const span = Math.min(days, 30);
     const series = await db.execute<{ c: string }>(sql`
@@ -173,6 +174,7 @@ export const loadNewCustomers = (days: number): Promise<DashboardData["newCustom
       from generate_series(current_date - (${span - 1})::int, current_date, interval '1 day') d
       left join users u on u.created_at::date = d::date
         and exists (select 1 from customer_profiles cp where cp.user_id = u.id)
+        and not exists (select 1 from user_roles r where r.user_id = u.id and r.role_key in ('super_admin','admin','staff'))
       group by d order by d`);
     return {
       count: n(t?.cur),

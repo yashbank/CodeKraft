@@ -46,11 +46,10 @@ export function expandCategories(selected: readonly ResetCategory[]): ResetCateg
 
 /**
  * Customers = users holding no admin-class role AND not referenced by a KEEP table with a
- * NO ACTION foreign key (partners, approvals they raised or decided, legal page versions, catalog authors).
+ * NO ACTION foreign key (partners that still have payouts, ledger lines or ownership shares, approvals they raised or decided, legal page versions, catalog authors).
  * Such a user is kept whole (account, sessions, roles) so the wipe cannot abort on that FK.
  */
 export const KEPT_USER_REFS = [
-  ["partners", "user_id"],
   ["approval_requests", "requested_by"],
   ["approval_decisions", "decided_by"],
   ["legal_page_versions", "published_by"],
@@ -62,6 +61,9 @@ export const KEPT_USER_REFS = [
   ["product_versions", "created_by"],
   ["product_ownerships", "created_by"],
 ] as const;
+/** A partner row that still has payouts, ledger lines or ownership shares cannot be deleted (RESTRICT). */
+const PARTNER_BLOCKED = (ref: string) =>
+  ` AND NOT EXISTS (SELECT 1 FROM "partners" "k_pt" WHERE "k_pt"."user_id" = ${ref} AND (EXISTS (SELECT 1 FROM "payouts" "x1" WHERE "x1"."partner_id" = "k_pt"."id") OR EXISTS (SELECT 1 FROM "ledger_entries" "x2" WHERE "x2"."partner_id" = "k_pt"."id") OR EXISTS (SELECT 1 FROM "product_ownership_lines" "x3" WHERE "x3"."partner_id" = "k_pt"."id")))`;
 const STAFF_ROLES = `'super_admin','admin','staff'`;
 /**
  * SQL predicate: `ref` (a qualified user-id column) is a customer. NOT EXISTS + IS NOT NULL on
@@ -70,7 +72,8 @@ const STAFF_ROLES = `'super_admin','admin','staff'`;
 const isCustomer = (ref: string, keptRefs = true) =>
   `${ref} IS NOT NULL AND NOT EXISTS (SELECT 1 FROM "user_roles" "ur" WHERE "ur"."user_id" = ${ref} AND "ur"."role_key" IN (${STAFF_ROLES}))` +
   (keptRefs
-    ? KEPT_USER_REFS.map(
+    ? PARTNER_BLOCKED(ref) +
+      KEPT_USER_REFS.map(
         ([t, c]) =>
           ` AND NOT EXISTS (SELECT 1 FROM "${t}" "k_${t}" WHERE "k_${t}"."${c}" = ${ref})`,
       ).join("")
@@ -180,6 +183,9 @@ export const RESET_STEPS: readonly ResetStep[] = [
   },
   { table: "approval_requests", category: "customers_orders", where: APPROVAL_WIPE_WHERE },
   cu("media", "uploaded_by"),
+  // Former admins/partners left without any role: their partner row goes unless it still has finance
+  // or ownership rows (then the whole user is kept, see PARTNER_BLOCKED).
+  cu("partners", "user_id"),
   cu("customer_profiles", "user_id"),
   cu("sessions", "user_id"),
   cu("two_factor", "user_id"),
@@ -226,7 +232,6 @@ export const RESET_KEEP_TABLES: readonly string[] = [
   "approval_requests",
   "approval_decisions",
   "verifications",
-  "partners",
   // catalog, content, media (wiped only when the products/content categories are picked)
   "categories",
   "tags",

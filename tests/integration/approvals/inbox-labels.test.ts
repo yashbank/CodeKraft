@@ -60,7 +60,7 @@ describe("approvals inbox subject labels", () => {
     expect(subjects.map((s) => s.subject).sort()).toEqual(
       [
         `Archive product "Label Widget"`,
-        `Remove admin access for ${target.email}`,
+        `Delete admin account for ${target.email}`,
         "Delete a product",
       ].sort(),
     );

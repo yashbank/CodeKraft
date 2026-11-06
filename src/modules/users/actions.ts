@@ -11,6 +11,7 @@ import {
   changePasswordSchema,
   createCustomerSchema,
   customerStatusChangeSchema,
+  deleteCustomerSchema,
   markEmailVerifiedSchema,
   deleteAccountSchema,
   disableTotpSchema,
@@ -104,6 +105,13 @@ export const suspendCustomerAction = defineAction({
   input: customerStatusChangeSchema,
   permission: "customers.suspend",
   handler: (input, ctx) => usersService.suspendCustomer(ctx, input),
+});
+
+export const deleteCustomerAction = defineAction({
+  name: "API-ADM-08 customer.delete",
+  input: deleteCustomerSchema,
+  permission: "customers.delete",
+  handler: (input, ctx) => usersService.deleteCustomer(ctx, input),
 });
 
 export const reinstateCustomerAction = defineAction({

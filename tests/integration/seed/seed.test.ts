@@ -122,8 +122,8 @@ describe("runSeed({ mode: 'full' })", () => {
       expect(summary.created).toBeGreaterThan(0);
 
       const counts = await snapshot();
-      expect(counts.permissions).toBe(51);
-      expect(PERMISSIONS).toHaveLength(51);
+      expect(counts.permissions).toBe(52);
+      expect(PERMISSIONS).toHaveLength(52);
       const matrixPairs = ROLES.reduce((n, r) => n + ROLE_PERMISSIONS[r].length, 0);
       expect(counts.role_permissions).toBe(matrixPairs);
       for (const role of ROLES) {
@@ -379,7 +379,7 @@ describe("runSeed({ mode: 'production' })", () => {
       });
       expect(summary.mode).toBe("production");
       const counts = await snapshot();
-      expect(counts.permissions).toBe(51);
+      expect(counts.permissions).toBe(52);
       expect(counts.users).toBe(2);
       expect(counts.partners).toBe(2);
       expect(counts.products).toBe(0);

@@ -87,8 +87,8 @@ describe("site reset classification", () => {
     });
     const n = async (t: string) =>
       Number((await sql.unsafe(`select count(*)::int c from ${t}`))[0]!.c);
-    expect(await n("users")).toBe(2); // admin + partner; the refund-approval customer is removed
-    expect(await n("partners")).toBe(1);
+    expect(await n("users")).toBe(1); // admin only; the ex-partner without finance rows goes too
+    expect(await n("partners")).toBe(0);
     expect(await n("approval_requests")).toBe(2); // site.reset + product.publish survive, refund.issue gone
     expect(await n("coupons")).toBe(1);
     expect(

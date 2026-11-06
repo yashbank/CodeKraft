@@ -568,10 +568,10 @@ describe("LLMProvider contract (docs/04 §9)", () => {
 // ---------------------------------------------------------------------------------------------
 
 describe("permission string list (docs/06 §1.2)", () => {
-  it("has exactly 51 unique entries", () => {
-    expect(PERMISSIONS).toHaveLength(51);
-    expect(new Set(PERMISSIONS).size).toBe(51);
-    expectTypeOf<(typeof PERMISSIONS)["length"]>().toEqualTypeOf<51>();
+  it("has exactly 52 unique entries", () => {
+    expect(PERMISSIONS).toHaveLength(52);
+    expect(new Set(PERMISSIONS).size).toBe(52);
+    expectTypeOf<(typeof PERMISSIONS)["length"]>().toEqualTypeOf<52>();
   });
 
   it("every dashboard widget requires a known permission", () => {

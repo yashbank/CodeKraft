@@ -7,7 +7,23 @@ import { and, eq, inArray, ne } from "drizzle-orm";
 import { userRoles, users } from "../../../drizzle/schema/auth";
 import type { DbOrTx } from "@/lib/db";
 
-export async function computeApproverSet(requesterId: string, database: DbOrTx): Promise<string[]> {
+/**
+ * Who is being removed by an `admin.user_change` remove request. That person is not asked to
+ * approve their own removal, so they are left out of the approver set.
+ */
+export function approverExclusions(type: string, payload: unknown): string[] {
+  if (type !== "admin.user_change" || typeof payload !== "object" || payload === null) return [];
+  const p = payload as { kind?: string; op?: string; userId?: unknown };
+  return (p.kind === "remove" || p.op === "remove") && typeof p.userId === "string"
+    ? [p.userId]
+    : [];
+}
+
+export async function computeApproverSet(
+  requesterId: string,
+  database: DbOrTx,
+  excludeIds: readonly string[] = [],
+): Promise<string[]> {
   const adminRows = await database
     .select({ userId: users.id })
     .from(users)
@@ -21,7 +37,7 @@ export async function computeApproverSet(requesterId: string, database: DbOrTx):
     );
 
   const distinctIds = Array.from(new Set(adminRows.map((r) => r.userId)));
-  return distinctIds;
+  return distinctIds.filter((id) => !excludeIds.includes(id));
 }
 
 export async function countActiveAdmins(database: DbOrTx): Promise<number> {

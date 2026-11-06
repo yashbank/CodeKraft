@@ -80,6 +80,7 @@ const MATRIX: readonly Row[] = [
   ["customers.notes.write", "●", "●", "●", "-"],
   ["customers.suspend", "●", "●", "-", "-"],
   ["customers.reset_link", "●", "●", "-", "-"],
+  ["customers.delete", "●", "-", "-", "-"],
   // Settings
   ["settings.read", "●", "●", "●", "-"],
   ["settings.write", "●", "-", "-", "-"],
@@ -104,8 +105,8 @@ const CUSTOMER_ONLY: readonly Permission[] = [
 ];
 
 describe("PERMISSIONS (docs/06 §1.2)", () => {
-  it("lists exactly the 51 permission strings of the table, in table order, no duplicates", () => {
-    expect(PERMISSIONS).toHaveLength(51);
+  it("lists exactly the 52 permission strings of the table, in table order, no duplicates", () => {
+    expect(PERMISSIONS).toHaveLength(52);
     expect(new Set(PERMISSIONS).size).toBe(PERMISSIONS.length);
     expect([...PERMISSIONS]).toEqual(MATRIX.map((row) => row[0]));
   });

@@ -3,6 +3,7 @@ import type { TxCtx } from "@/lib/db";
 
 vi.mock("@/modules/approvals/approver-set", () => ({
   computeApproverSet: async () => ["admin-b", "admin-c"],
+  approverExclusions: () => [],
   countActiveAdmins: async () => 3,
 }));
 vi.mock("@/modules/audit/service", () => ({ auditService: { log: async () => undefined } }));

@@ -51,6 +51,7 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
       quotesHref="/admin/quotes"
       newOrderHref="/admin/orders/new"
       auditHref="/admin/audit"
+      canDelete={ctx.permissions.has("customers.delete")}
     />
   );
 }

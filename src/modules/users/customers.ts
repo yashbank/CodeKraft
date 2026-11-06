@@ -33,7 +33,9 @@ import type {
   getCustomerSchema,
   sendAuthLinkSchema,
   createCustomerSchema,
+  deleteCustomerSchema,
 } from "./contracts";
+import { purgeUser } from "./purge-user";
 import type { z } from "zod";
 import type { Currency } from "@/lib/money";
 import type { ThemePref } from "@/lib/theme";
@@ -77,7 +79,10 @@ export async function listCustomers(
 
   const limit = input.limit ?? 25;
   const filters = input.filters;
-  const conditions = [];
+  // Admin-class accounts (super admin, admin, staff) are never listed as customers.
+  const conditions = [
+    sql`NOT EXISTS (SELECT 1 FROM ${userRoles} WHERE ${userRoles.userId} = ${users.id} AND ${userRoles.roleKey} IN ('super_admin','admin','staff'))`,
+  ];
 
   if (filters?.status) {
     conditions.push(eq(users.status, filters.status));
@@ -340,6 +345,35 @@ export async function updateCustomerNotes(
     }
 
     return { profile: profileView };
+  }, getOuterTx(database));
+}
+
+/** Permanent delete of one customer. Admin-class accounts go through the admin removal approval. */
+export async function deleteCustomer(
+  ctx: RequestContext,
+  input: z.infer<typeof deleteCustomerSchema>,
+  database: DbOrTx,
+): Promise<{ deleted: true }> {
+  assertPermission(ctx, "customers.delete");
+
+  const { withTx } = await import("@/lib/db");
+  return await withTx(async (tx) => {
+    const [u] = await tx.select().from(users).where(eq(users.id, input.userId)).limit(1);
+    if (!u) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Customer not found");
+    }
+    const roles = await tx
+      .select({ roleKey: userRoles.roleKey })
+      .from(userRoles)
+      .where(eq(userRoles.userId, input.userId));
+    if (roles.some((r) => ["super_admin", "admin", "staff"].includes(r.roleKey))) {
+      throw new AppError(
+        ErrorCode.STATE_INVALID,
+        "This account is an admin or staff member. Remove them from Admin users instead.",
+      );
+    }
+    await purgeUser(tx, { targetId: input.userId, actorId: ctx.userId, actorRole: ctx.roles[0] });
+    return { deleted: true as const };
   }, getOuterTx(database));
 }
 

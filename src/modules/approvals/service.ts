@@ -41,7 +41,7 @@ import {
   approvalPayloadSchemas,
 } from "./types";
 import { defaultHandlerRegistry, InMemoryApplyHandlerRegistry } from "./registry";
-import { computeApproverSet, countActiveAdmins } from "./approver-set";
+import { approverExclusions, computeApproverSet, countActiveAdmins } from "./approver-set";
 
 /** Preserved for freeze and contract tests (PHASE-02 P2.8). */
 export function createNotImplementedApprovalsService(): ApprovalsService {
@@ -235,7 +235,11 @@ export class DefaultApprovalsService implements ApprovalsService {
       tx,
     );
 
-    const approverIds = await computeApproverSet(requesterId, tx);
+    const approverIds = await computeApproverSet(
+      requesterId,
+      tx,
+      approverExclusions(type, payload),
+    );
     if (approverIds.length > 0) {
       const [requester] = await tx
         .select({ name: users.name })
@@ -313,7 +317,7 @@ export class DefaultApprovalsService implements ApprovalsService {
           applied: request.status === "applied",
           waitingFor:
             request.status === "pending"
-              ? await this.outstandingApprovers(request.requestedBy, existingDecisions, tx)
+              ? await this.outstandingApprovers(request, existingDecisions, tx)
               : 0,
         };
       }
@@ -397,7 +401,11 @@ export class DefaultApprovalsService implements ApprovalsService {
       comment: comment?.trim() || null,
     });
 
-    const neededApprovers = await this.approverSet(request.requestedBy, tx);
+    const neededApprovers = await computeApproverSet(
+      request.requestedBy,
+      tx,
+      approverExclusions(request.type, request.payload),
+    );
     const approvedDecisions = [
       ...existingDecisions.filter((d) => d.decision === "approve").map((d) => d.decidedBy),
       adminId,
@@ -434,11 +442,15 @@ export class DefaultApprovalsService implements ApprovalsService {
 
   /** Approvers still owed a decision on this request (approver set minus approve decisions). */
   private async outstandingApprovers(
-    requestedBy: string,
+    request: { requestedBy: string; type: string; payload: unknown },
     decisions: { decidedBy: string; decision: string }[],
     tx: TxCtx,
   ): Promise<number> {
-    const needed = await this.approverSet(requestedBy, tx);
+    const needed = await computeApproverSet(
+      request.requestedBy,
+      tx,
+      approverExclusions(request.type, request.payload),
+    );
     const approved = decisions.filter((d) => d.decision === "approve").map((d) => d.decidedBy);
     return needed.filter((id) => !approved.includes(id)).length;
   }
@@ -451,12 +463,20 @@ export class DefaultApprovalsService implements ApprovalsService {
     const { withTx } = await import("@/lib/db");
     return await withTx(async (tx) => {
       const [req] = await tx
-        .select({ status: approvalRequests.status })
+        .select({
+          status: approvalRequests.status,
+          type: approvalRequests.type,
+          payload: approvalRequests.payload,
+        })
         .from(approvalRequests)
         .where(eq(approvalRequests.id, requestId));
       if (!req || req.status !== "pending") return false;
 
-      const needed = await this.approverSet(requestedBy, tx);
+      const needed = await computeApproverSet(
+        requestedBy,
+        tx,
+        approverExclusions(req.type, req.payload),
+      );
       if (needed.length === 0) return false;
 
       const decisions = await tx
@@ -614,7 +634,11 @@ export class DefaultApprovalsService implements ApprovalsService {
         continue;
       }
 
-      const needed = await computeApproverSet(req.requestedBy, database);
+      const needed = await computeApproverSet(
+        req.requestedBy,
+        database,
+        approverExclusions(req.type, req.payload),
+      );
       const decidedIds = new Set(decisions.map((d) => d.decidedBy));
       const pendingApprovers = needed.filter((id) => !decidedIds.has(id));
 
@@ -667,7 +691,11 @@ export class DefaultApprovalsService implements ApprovalsService {
       .where(eq(approvalDecisions.requestId, req.id))
       .orderBy(approvalDecisions.createdAt);
 
-    const needed = await computeApproverSet(req.requestedBy, database);
+    const needed = await computeApproverSet(
+      req.requestedBy,
+      database,
+      approverExclusions(req.type, req.payload),
+    );
     const decidedIds = new Set(decisions.map((d) => d.decidedBy));
     const pendingApprovers = needed.filter((id) => !decidedIds.has(id));
 

@@ -52,6 +52,7 @@ import {
   changeEmailRequestSchema,
   changePasswordSchema,
   customerStatusChangeSchema,
+  deleteCustomerSchema,
   markEmailVerifiedSchema,
   disableTotpSchema,
   enableTotpSchema,
@@ -73,6 +74,7 @@ import {
   sendAuthLink,
   createCustomer,
   suspendCustomer,
+  deleteCustomer,
   toProfileView,
   toUserView,
   updateCustomerNotes,
@@ -108,6 +110,7 @@ export function createNotImplementedUsersService(): UsersService {
     getCustomer: "async",
     updateCustomerNotes: "async",
     suspendCustomer: "async",
+    deleteCustomer: "async",
     markCustomerEmailVerified: "async",
     reinstateCustomer: "async",
     createCustomer: "async",
@@ -661,6 +664,15 @@ export class DefaultUsersService implements UsersService {
     return await suspendCustomer(ctx, input, db);
   }
 
+  async deleteCustomer(
+    ctx: RequestContext,
+    input: z.infer<typeof deleteCustomerSchema>,
+    tx?: DbOrTx,
+  ): Promise<{ deleted: true }> {
+    const db = await this.getDatabase(tx);
+    return await deleteCustomer(ctx, input, db);
+  }
+
   async markCustomerEmailVerified(
     ctx: RequestContext,
     input: z.infer<typeof markEmailVerifiedSchema>,
@@ -734,8 +746,12 @@ export class DefaultUsersService implements UsersService {
     return await removeAdmin(ctx, input, db);
   }
 
-  async applyAdminUserChange(payload: AdminUserChangePayload, tx: TxCtx): Promise<void> {
-    await applyAdminUserChange(payload, tx);
+  async applyAdminUserChange(
+    payload: AdminUserChangePayload,
+    tx: TxCtx,
+    by?: { requestedBy: string; decidedBy: string },
+  ): Promise<void> {
+    await applyAdminUserChange(payload, tx, by);
   }
 
   async listAdminUsers(
@@ -916,6 +932,9 @@ export class DefaultUsersService implements UsersService {
 export const usersService: UsersService = new DefaultUsersService();
 
 // Register the admin.user_change approval apply handler
-approvalsService.registerApplyHandler("admin.user_change", async (_ctx, payload, tx) => {
-  await applyAdminUserChange(payload, tx);
+approvalsService.registerApplyHandler("admin.user_change", async (ctx, payload, tx) => {
+  await applyAdminUserChange(payload, tx, {
+    requestedBy: ctx.requestedBy,
+    decidedBy: ctx.decidedBy,
+  });
 });

@@ -479,7 +479,7 @@ export function AdminUsers({
                               separatorBefore: true,
                             },
                             {
-                              label: "Remove access",
+                              label: "Delete account…",
                               destructive: true,
                               onSelect: () => openConfirm("remove", u),
                               disabled: lastSuper,
@@ -593,7 +593,7 @@ export function AdminUsers({
           <DialogHeader>
             <DialogTitle>
               {confirm?.kind === "remove"
-                ? `Remove access for ${confirm.user.name}?`
+                ? `Delete ${confirm.user.name} permanently?`
                 : `Change role of ${confirm?.user.name}?`}
             </DialogTitle>
             <DialogDescription>
@@ -605,7 +605,9 @@ export function AdminUsers({
                   ? "This partner holds active shares — reassign ownership first."
                   : activeAdmins.length <= 2 && confirm?.kind === "remove"
                     ? "This leaves fewer than two admin-class users; dual-approval actions will be blocked until another admin is active."
-                    : "Another admin must approve this change."}
+                    : confirm?.kind === "remove"
+                      ? "Another admin must approve. The account is then deleted for good: sign-in, partner record and role are removed, and anything they created moves to the approving admin. The email address can be invited again later."
+                      : "Another admin must approve this change."}
             </DialogDescription>
           </DialogHeader>
           {confirm?.kind === "role" ? (

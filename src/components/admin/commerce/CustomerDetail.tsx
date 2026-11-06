@@ -52,6 +52,7 @@ import { AccessDialog } from "../system/AccessDialog";
 import type { CustomerDetailData } from "../types";
 import { grantEntitlementManual } from "@/modules/entitlements/admin-mutations";
 import {
+  deleteCustomer,
   markCustomerEmailVerified,
   reinstateCustomer,
   sendMagicLink,
@@ -67,6 +68,10 @@ export interface CustomerDetailProps {
   quotesHref: string;
   newOrderHref: string;
   auditHref: string;
+  /** Holds `customers.delete` (super admins): shows the permanent delete button. */
+  canDelete?: boolean;
+  /** Where to go after a delete. */
+  listHref?: string;
 }
 
 /**
@@ -82,6 +87,8 @@ export function CustomerDetail({
   quotesHref,
   newOrderHref,
   auditHref,
+  canDelete = false,
+  listHref = "/admin/customers",
 }: CustomerDetailProps) {
   const { inr, money, original } = useAdminMoney();
   const router = useRouter();
@@ -98,6 +105,9 @@ export function CustomerDetail({
   const [statusDialogOpen, setStatusDialogOpen] = React.useState(false);
   const [statusReason, setStatusReason] = React.useState("");
   const [statusSubmitting, setStatusSubmitting] = React.useState(false);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [deleteConfirm, setDeleteConfirm] = React.useState("");
+  const [deleteSubmitting, setDeleteSubmitting] = React.useState(false);
   const deleted = c.status === "deleted";
   const suspending = c.status !== "suspended";
 
@@ -179,6 +189,20 @@ export function CustomerDetail({
     toast.success(`${c.name} ${suspending ? "suspended" : "reinstated"}`);
     setStatusDialogOpen(false);
     setStatusReason("");
+    router.refresh();
+  }
+
+  async function confirmDelete() {
+    setDeleteSubmitting(true);
+    const result = await deleteCustomer({ userId: c.id });
+    setDeleteSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(`${c.name} deleted`);
+    setDeleteOpen(false);
+    router.push(listHref);
     router.refresh();
   }
 
@@ -304,6 +328,18 @@ export function CustomerDetail({
             >
               {c.status === "suspended" ? "Reinstate" : "Suspend"}
             </Button>
+            {canDelete ? (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  setDeleteConfirm("");
+                  setDeleteOpen(true);
+                }}
+              >
+                Delete permanently
+              </Button>
+            ) : null}
             <RowActions
               label="More customer actions"
               actions={[
@@ -630,6 +666,41 @@ export function CustomerDetail({
               disabled={statusSubmitting}
             >
               {suspending ? "Suspend" : "Reinstate"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {c.name} permanently?</DialogTitle>
+            <DialogDescription>
+              This cannot be undone. The account, sign-ins, downloads and access are removed. Past
+              orders and invoices stay for your records, without the customer attached. The email
+              can be used again.
+            </DialogDescription>
+          </DialogHeader>
+          <Field id="delete-customer-confirm" label={`Type ${c.email} to confirm`} required>
+            <Input
+              id="delete-customer-confirm"
+              autoComplete="off"
+              value={deleteConfirm}
+              onChange={(e) => setDeleteConfirm(e.target.value)}
+            />
+          </Field>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="ghost" disabled={deleteSubmitting}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              variant="destructive"
+              onClick={() => void confirmDelete()}
+              disabled={deleteSubmitting || deleteConfirm.trim() !== c.email}
+            >
+              Delete permanently
             </Button>
           </DialogFooter>
         </DialogContent>

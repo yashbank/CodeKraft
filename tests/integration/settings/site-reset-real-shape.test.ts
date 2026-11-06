@@ -148,6 +148,7 @@ describe("site reset on real-shaped data", () => {
       for (const [t, c] of KEPT_USER_REFS) {
         await tx.unsafe(`alter table "${t}" alter column "${c}" drop not null`);
       }
+      await tx.unsafe(`alter table "partners" alter column "user_id" drop not null`);
       await tx.unsafe(`insert into partners (user_id, display_name) values (null, 'ghost')`);
       await tx.unsafe(
         `insert into approval_requests (type, subject_type, subject_id, payload, requested_by) values ('product.publish','product',gen_random_uuid(),'{}',null)`,

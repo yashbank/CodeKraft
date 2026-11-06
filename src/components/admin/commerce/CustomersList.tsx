@@ -27,6 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -47,7 +48,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { reinstateCustomer, suspendCustomer } from "@/modules/users/admin-mutations";
+import {
+  deleteCustomer,
+  reinstateCustomer,
+  suspendCustomer,
+} from "@/modules/users/admin-mutations";
 import { bulkSummary, runBulk } from "@/lib/admin/bulk";
 import { BulkActionBar } from "../BulkActionBar";
 import { NewCustomerDialog } from "./NewCustomerDialog";
@@ -67,6 +72,8 @@ export interface CustomersListProps {
   detailHref: string;
   quotesHref: string;
   newOrderHref: string;
+  /** Holds `customers.delete` (super admins): shows the permanent delete actions. */
+  canDelete?: boolean;
 }
 
 interface StatusDialogState {
@@ -81,6 +88,7 @@ export function CustomersList({
   detailHref,
   quotesHref,
   newOrderHref,
+  canDelete = false,
 }: CustomersListProps) {
   const { inr, toViewer, currency: viewerCurrency } = useAdminMoney();
   const router = useRouter();
@@ -89,6 +97,8 @@ export function CustomersList({
   const [submitting, setSubmitting] = React.useState(false);
   const [newOpen, setNewOpen] = React.useState(false);
   const [accessFor, setAccessFor] = React.useState<CustomerRow | null>(null);
+  const [deleteTargets, setDeleteTargets] = React.useState<CustomerRow[] | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = React.useState("");
   const [selected, setSelected] = React.useState<ReadonlySet<string>>(new Set());
   const eligible = customers.filter((c) => c.status !== "deleted");
   const picked = customers.filter((c) => selected.has(c.id));
@@ -138,6 +148,34 @@ export function CustomersList({
     setSelected(new Set());
     setStatusDialog(null);
     setReason("");
+    router.refresh();
+  }
+
+  // One customer: type their email. Several: type DELETE.
+  const deletePhrase =
+    deleteTargets?.length === 1 ? (deleteTargets[0]?.email ?? "DELETE") : "DELETE";
+
+  async function confirmDelete() {
+    if (!deleteTargets) return;
+    setSubmitting(true);
+    const result = await runBulk(
+      deleteTargets.map((c) => c.id),
+      (userId) => deleteCustomer({ userId }),
+    ).catch((err: Error) => err);
+    setSubmitting(false);
+    if (result instanceof Error) {
+      toast.error(result.message);
+      return;
+    }
+    if (result.done.length === 0) {
+      toast.error(result.failed[0]?.message ?? "Failed");
+      return;
+    }
+    if (result.failed.length > 0) toast.error(bulkSummary("Deleted", "customer", result));
+    else toast.success(bulkSummary("Deleted", "customer", result));
+    setSelected(new Set());
+    setDeleteTargets(null);
+    setDeleteConfirm("");
     router.refresh();
   }
 
@@ -262,6 +300,18 @@ export function CustomersList({
         <Button size="sm" variant="secondary" onClick={() => openBulk("reinstate")}>
           Reinstate selected
         </Button>
+        {canDelete ? (
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => {
+              setDeleteConfirm("");
+              setDeleteTargets(picked);
+            }}
+          >
+            Delete selected
+          </Button>
+        ) : null}
       </BulkActionBar>
       {customers.length === 0 ? (
         <EmptyState icon={UsersIcon} title="No customers match" />
@@ -404,6 +454,19 @@ export function CustomersList({
                           disabled: c.status === "deleted",
                           destructive: c.status !== "suspended",
                         },
+                        ...(canDelete
+                          ? [
+                              {
+                                label: "Delete permanently",
+                                onSelect: () => {
+                                  setDeleteConfirm("");
+                                  setDeleteTargets([c]);
+                                },
+                                destructive: true,
+                                separatorBefore: true,
+                              },
+                            ]
+                          : []),
                         {
                           label: "New quote",
                           href: quotesHref,
@@ -463,6 +526,46 @@ export function CustomersList({
               disabled={submitting}
             >
               {statusDialog?.mode === "suspend" ? "Suspend" : "Reinstate"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={deleteTargets !== null} onOpenChange={(o) => !o && setDeleteTargets(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Delete{" "}
+              {deleteTargets?.length === 1
+                ? deleteTargets[0]?.name
+                : `${deleteTargets?.length ?? 0} customers`}{" "}
+              permanently?
+            </DialogTitle>
+            <DialogDescription>
+              This cannot be undone. The account, sign-ins, downloads and access are removed. Past
+              orders and invoices stay for your records, without the customer attached. The email
+              can be used again.
+            </DialogDescription>
+          </DialogHeader>
+          <Field id="delete-confirm" label={`Type ${deletePhrase} to confirm`} required>
+            <Input
+              id="delete-confirm"
+              autoComplete="off"
+              value={deleteConfirm}
+              onChange={(e) => setDeleteConfirm(e.target.value)}
+            />
+          </Field>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="ghost" disabled={submitting}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              variant="destructive"
+              onClick={() => void confirmDelete()}
+              disabled={submitting || deleteConfirm.trim() !== deletePhrase}
+            >
+              Delete permanently
             </Button>
           </DialogFooter>
         </DialogContent>

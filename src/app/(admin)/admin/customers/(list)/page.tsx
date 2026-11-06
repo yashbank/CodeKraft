@@ -17,6 +17,7 @@ export default async function AdminCustomersPage() {
       detailHref="/admin/customers"
       quotesHref="/admin/quotes"
       newOrderHref="/admin/orders/new"
+      canDelete={ctx.permissions.has("customers.delete")}
     />
   );
 }

@@ -66,6 +66,7 @@ export const PERMISSIONS = [
   "customers.notes.write",
   "customers.suspend",
   "customers.reset_link",
+  "customers.delete",
   // Settings
   "settings.read",
   "settings.write",
@@ -195,6 +196,7 @@ const SUPER_ADMIN: readonly Permission[] = [
   "customers.notes.write",
   "customers.suspend",
   "customers.reset_link",
+  "customers.delete",
   "settings.read",
   "settings.write",
   "users.admin.manage",

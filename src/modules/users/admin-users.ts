@@ -12,8 +12,8 @@ import type { ApprovalPayloadMap } from "@/modules/approvals/types";
 import { accounts, sessions, twoFactor, userRoles, users } from "../../../drizzle/schema/auth";
 import { partners } from "../../../drizzle/schema/users-ext";
 import { productOwnershipLines, productOwnerships } from "../../../drizzle/schema/ownership";
-import { leads } from "../../../drizzle/schema/leads";
 import { approvalRequests } from "../../../drizzle/schema/approvals";
+import { purgeBlockers, purgeUser } from "./purge-user";
 import type { AdminUserChangePayload, AdminUserRow } from "./types";
 import type {
   AdminUserChangeResult,
@@ -358,6 +358,10 @@ export async function removeAdmin(
     );
   }
 
+  // Refusal 3: payouts / ledger lines / ownership shares tied to the partner row
+  const partnerBlock = await purgeBlockers(database, input.userId);
+  if (partnerBlock) throw new AppError(ErrorCode.STATE_INVALID, partnerBlock);
+
   // Warning check: leaves fewer than two active admins
   const currentAdmins = await countActiveAdmins(database);
   const isCurrentlyAdminClass = roles.some(
@@ -391,6 +395,7 @@ export async function removeAdmin(
 export async function applyAdminUserChange(
   payload: AdminUserChangePayload,
   tx: TxCtx,
+  by?: { requestedBy: string; decidedBy: string },
 ): Promise<void> {
   const isInvite =
     ("kind" in payload && payload.kind === "invite") ||
@@ -483,16 +488,13 @@ export async function applyAdminUserChange(
       .onConflictDoNothing();
   } else if (isRemove) {
     const p = payload as { userId: string };
-    await tx.delete(userRoles).where(eq(userRoles.userId, p.userId));
-
-    await tx
-      .update(partners)
-      .set({ active: false, updatedAt: new Date() })
-      .where(eq(partners.userId, p.userId));
-
-    await tx.delete(sessions).where(eq(sessions.userId, p.userId));
-
-    await tx.update(leads).set({ assignedTo: null }).where(eq(leads.assignedTo, p.userId));
+    // Removing an admin deletes the account for good (the email can be invited again). Records
+    // they authored move to the admin who approved, or the requester when that is the same person.
+    const heir = by && by.decidedBy !== p.userId ? by.decidedBy : by?.requestedBy;
+    if (!heir || heir === p.userId) {
+      throw new AppError(ErrorCode.STATE_INVALID, "No other admin available to take over records");
+    }
+    await purgeUser(tx, { targetId: p.userId, actorId: heir });
   }
 }
 

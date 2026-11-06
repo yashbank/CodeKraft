@@ -68,7 +68,7 @@ export function describeApproval(type: ApprovalType, p: Payload, f: ApprovalFact
       const role = str(p.role) ? words(String(p.role)) : "";
       if (p.kind === "invite") return `Invite ${who} as ${role || "admin"}`;
       if (p.kind === "change_role") return `Change the role of ${who} to ${role || "a new role"}`;
-      return `Remove admin access for ${who}`;
+      return `Delete admin account for ${who}`;
     }
   }
 }

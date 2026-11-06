@@ -134,6 +134,11 @@ export const customerStatusChangeSchema = z.strictObject({
   reason: text(500),
 });
 
+/** `deleteCustomer`: permanent delete of one customer account (customers.delete). */
+export const deleteCustomerSchema = z.strictObject({
+  userId: uuidSchema,
+});
+
 /** API-ADM-09 `markCustomerEmailVerified` (support fallback while email delivery is limited). */
 export const markEmailVerifiedSchema = z.strictObject({
   userId: uuidSchema,
@@ -304,6 +309,12 @@ export interface UsersService {
     input: z.infer<typeof customerStatusChangeSchema>,
     tx?: DbOrTx,
   ): Promise<{ user: UserView }>;
+  /** Permanent delete of a customer (never an admin); orders stay, anonymised. */
+  deleteCustomer(
+    ctx: RequestContext,
+    input: z.infer<typeof deleteCustomerSchema>,
+    tx?: DbOrTx,
+  ): Promise<{ deleted: true }>;
   /** API-ADM-09 — audited manual email verification; idempotent. */
   markCustomerEmailVerified(
     ctx: RequestContext,
@@ -353,7 +364,11 @@ export interface UsersService {
     tx?: DbOrTx,
   ): Promise<AdminUserChangeResult>;
   /** API-ADM-11 apply handler for `admin.user_change`: `user_roles`, `partners`, invitation email. */
-  applyAdminUserChange(payload: AdminUserChangePayload, tx: TxCtx): Promise<void>;
+  applyAdminUserChange(
+    payload: AdminUserChangePayload,
+    tx: TxCtx,
+    by?: { requestedBy: string; decidedBy: string },
+  ): Promise<void>;
   /** Admin users list read (no numbered API row). */
   listAdminUsers(
     ctx: RequestContext,
