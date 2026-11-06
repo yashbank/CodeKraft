@@ -1,7 +1,8 @@
 /**
  * C16-06 round 2: currency (INR/USD/EUR/GBP/CAD) x role (anonymous, customer, super_admin, admin,
  * staff) x pages. Product and checkout prices must be the INR base converted at a real rate
- * (within 15% of the static table, which also covers live rates and the server's 5-min rate cache)
+ * (within 25% of the static table: live rates drift, GBP was 17% off on 2026-11-06, and the bug
+ * this guards against is a 100x error)
  * and never the INR number with a foreign symbol (the "Rs 1001 -> $1001" bug). Rates are not
  * written here: r9-09 owns today's manual rate rows. Other pages must render in the viewer
  * currency without errors; staff may get a permission notice on finance pages.
@@ -13,7 +14,7 @@ import { ADMIN, ROLE_EMAILS, SITE, loginAs, q, trackIssues, type Role } from "./
 const SLUG = "resume-portfolio-website";
 const CURRENCIES = ["INR", "USD", "EUR", "GBP", "CAD"] as const;
 type Cur = (typeof CURRENCIES)[number];
-// STATIC_FX_TABLE values; live rates sit within the 15% band.
+// STATIC_FX_TABLE values; live rates sit within the 25% band.
 const RATES: Record<Cur, string> = {
   INR: "1",
   USD: "0.01200000",
@@ -30,7 +31,7 @@ const hasConverted = (body: string, inrMinor: number, c: Cur) => {
   const want = inrMinor * Number(RATES[c]);
   return (body.match(/\d+\.\d{2}/g) ?? []).some((n) => {
     const v = Number(n) * 100;
-    return v >= want * 0.85 && v <= want * 1.15;
+    return v >= want * 0.75 && v <= want * 1.25;
   });
 };
 
@@ -173,16 +174,12 @@ test.describe("admin default currency change", () => {
     await q(`update users set display_currency = null where lower(email) = lower($1)`, [
       ROLE_EMAILS.customer,
     ]);
-    await q(`update users set display_currency = 'USD' where lower(email) = lower($1)`, [
-      ROLE_EMAILS.admin,
-    ]);
   });
 
   test.afterAll(async ({ browser }) => {
-    await q(
-      `update users set display_currency = null where lower(email) in (lower($1), lower($2))`,
-      [ROLE_EMAILS.customer, ROLE_EMAILS.admin],
-    );
+    await q(`update users set display_currency = null where lower(email) = lower($1)`, [
+      ROLE_EMAILS.customer,
+    ]);
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     try {
       await loginAs(page, "super_admin");
@@ -222,6 +219,10 @@ test.describe("admin default currency change", () => {
     };
     await onProduct("anonymous", NEW_DEFAULT); // cached twin refreshed by the admin save
     await onProduct("customer", NEW_DEFAULT); // signed in, no own choice
-    await onProduct("admin", "USD"); // chose USD: unchanged
+    // A customer who chose USD stays on it. (Admin users are signed in on the admin host only.)
+    await q(`update users set display_currency = 'USD' where lower(email) = lower($1)`, [
+      ROLE_EMAILS.customer,
+    ]);
+    await onProduct("customer", "USD");
   });
 });
