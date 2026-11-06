@@ -66,8 +66,9 @@ test("add partner, allocation after a sale, payout approved, balance drops, ledg
     const reference = `E2E-UTR-${Date.now()}`;
     await ceo
       .locator(`section[aria-label="${before.name} balance"]`)
-      .getByRole("button", { name: "Record payout" })
+      .getByRole("button", { name: /^Actions for / })
       .click();
+    await ceo.getByRole("menuitem", { name: "Record payout" }).click();
     const dlg = ceo.getByRole("dialog");
     await dlg.locator("#po-amount").fill(String(PAYOUT_MAJOR));
     await dlg.locator("#po-ref").fill(reference);

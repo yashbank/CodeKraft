@@ -38,6 +38,11 @@ async function openTheme(page: Page) {
 }
 
 async function pick(page: Page, group: string, option: string, search?: string) {
+  // G18: palette, radius, borders and button style are swatch tiles (radio), the rest dropdowns.
+  if (["Corner radius", "Accent palette", "Button style", "Borders"].includes(group)) {
+    await page.getByRole("radio", { name: option, exact: true }).click();
+    return;
+  }
   await page.getByRole("combobox", { name: group, exact: true }).click();
   if (search) await page.getByPlaceholder(/Search \d+ options/).fill(search);
   await page.getByRole("option", { name: option, exact: true }).first().click();
@@ -80,20 +85,19 @@ test.describe("P14-07 theme studio", () => {
       siteRadius: await rootVar(page, "--ck-radius-lg"),
     };
 
-    await pick(page, "Corner radius", "Pill");
+    await pick(page, "Corner radius", "Round");
     await pick(page, "Heading font", "Playfair Display (serif)", "playf");
-    await pick(page, "Accent palette", "Sunset", "sun");
-    await pick(page, "Button style", "Pill · Caps · Hard", "pill caps hard");
+    await pick(page, "Accent palette", "Amber");
+    await pick(page, "Button style", "Pill");
 
     // Instant, scoped preview: the sample changed ...
-    expect(await previewStyle(page, card, "borderTopLeftRadius")).toBe("32px");
+    expect(await previewStyle(page, card, "borderTopLeftRadius")).toBe("22px");
     expect(await previewStyle(page, title, "fontFamily")).toMatch(/Playfair Display/);
     expect(await previewStyle(page, cta, "backgroundColor")).not.toBe(before.bg);
-    expect(await previewStyle(page, cta, "textTransform")).toBe("uppercase");
     // ... but nothing outside it, and nothing is saved yet.
     expect(await rootVar(page, "--ck-radius-lg")).toBe(before.siteRadius);
-    expect(before.radius).not.toBe("32px");
-    expect(await page.evaluate(() => document.documentElement.dataset.palette)).not.toBe("sunset");
+    expect(before.radius).not.toBe("22px");
+    expect(await page.evaluate(() => document.documentElement.dataset.palette)).not.toBe("amber");
 
     await save(page);
     await expect
@@ -105,7 +109,7 @@ test.describe("P14-07 theme studio", () => {
         },
         { timeout: 30_000 },
       )
-      .toBe("sunset|32px");
+      .toBe("amber|22px");
     expect(await rootVar(page, "--ck-font-display")).toMatch(/Playfair Display/);
     expect(
       await page
@@ -149,8 +153,9 @@ test.describe("P14-07 theme studio", () => {
     // Reset puts the draft (not the saved site) back to defaults.
     await page.getByRole("button", { name: "Reset to defaults" }).click();
     expect(await radius()).toBe(base);
-    await expect(page.getByRole("combobox", { name: "Accent palette", exact: true })).toHaveText(
-      /Violet/,
+    await expect(page.getByRole("radio", { name: "Violet", exact: true })).toHaveAttribute(
+      "aria-checked",
+      "true",
     );
 
     // The preset survives a reload and applies every value again.
@@ -158,11 +163,13 @@ test.describe("P14-07 theme studio", () => {
     await expect(page.locator('[data-preset="P14 warm"]')).toBeVisible();
     await page.getByRole("button", { name: "Apply preset P14 warm" }).click();
     expect(await radius()).toBe(sharp);
-    await expect(page.getByRole("combobox", { name: "Accent palette", exact: true })).toHaveText(
-      /Rose/,
+    await expect(page.getByRole("radio", { name: "Rose", exact: true })).toHaveAttribute(
+      "aria-checked",
+      "true",
     );
-    await expect(page.getByRole("combobox", { name: "Corner radius", exact: true })).toHaveText(
-      /Sharp/,
+    await expect(page.getByRole("radio", { name: "Sharp", exact: true })).toHaveAttribute(
+      "aria-checked",
+      "true",
     );
 
     await page.getByRole("button", { name: "Delete preset P14 warm" }).click();
@@ -173,13 +180,13 @@ test.describe("P14-07 theme studio", () => {
     test.setTimeout(180_000);
     await loginAs(page, "super_admin");
     await openTheme(page);
-    await pick(page, "Accent palette", "Sunset", "sun");
+    await pick(page, "Accent palette", "Amber");
     await save(page);
     const palette = async () => {
       await page.goto(SITE);
       return page.evaluate(() => document.documentElement.dataset.palette);
     };
-    await expect.poll(palette, { timeout: 30_000 }).toBe("sunset");
+    await expect.poll(palette, { timeout: 30_000 }).toBe("amber");
 
     await openTheme(page);
     await page.getByRole("button", { name: "Reset to defaults" }).click();

@@ -128,6 +128,12 @@ async function clickTab(name: RegExp) {
   await user.click(screen.getByRole("tab", { name }));
 }
 
+/** Open the row's single kebab menu and choose an item (the per-row pattern since G18). */
+async function pickRowAction(scope: HTMLElement, item: string) {
+  await userEvent.click(within(scope).getByRole("button", { name: /^Actions for / }));
+  await userEvent.click(await screen.findByRole("menuitem", { name: item }));
+}
+
 describe("ProductEditor — new-product slug auto-fill (overnight item 1, bug #2)", () => {
   afterEach(() => cleanup());
 
@@ -183,7 +189,7 @@ describe("ProductEditor — Offerings tab edit/delete (overnight item 2)", () =>
     await clickTab(/Offerings & prices/);
 
     const row = screen.getByText("Starter").closest("tr") as HTMLElement;
-    fireEvent.click(within(row).getByRole("button", { name: "Edit" }));
+    await pickRowAction(row, "Edit");
 
     expect(screen.getByText("Edit Starter")).toBeInTheDocument();
     const nameInput = document.getElementById("off-name") as HTMLInputElement;
@@ -199,7 +205,7 @@ describe("ProductEditor — Offerings tab edit/delete (overnight item 2)", () =>
     await clickTab(/Offerings & prices/);
 
     const row = screen.getByText("Starter").closest("tr") as HTMLElement;
-    fireEvent.click(within(row).getByRole("button", { name: "Edit" }));
+    await pickRowAction(row, "Edit");
     fireEvent.click(screen.getByRole("button", { name: "Save offering" }));
 
     await screen.findByText("Starter"); // dialog closes, table re-renders; offering is still listed
@@ -240,7 +246,7 @@ describe("ProductEditor — Offerings tab edit/delete (overnight item 2)", () =>
     await clickTab(/Offerings & prices/);
 
     const row = screen.getByText("Team").closest("tr") as HTMLElement;
-    fireEvent.click(within(row).getByRole("button", { name: "Delete" }));
+    await pickRowAction(row, "Delete");
 
     expect(removeOffering).toHaveBeenCalledWith({ offeringId: "off-2" });
   });
@@ -301,10 +307,21 @@ describe("ProductEditor — media reorder (overnight item 3)", () => {
     renderEditor();
     await clickTab(/^Media,/);
 
-    expect(screen.getByRole("button", { name: "Move hero-cover.webp up" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Move fitdesk-overview.pdf down" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Actions for hero-cover.webp" }));
+    expect(screen.getByRole("menuitem", { name: "Move up" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(screen.getByRole("button", { name: "Actions for fitdesk-overview.pdf" }));
+    expect(screen.getByRole("menuitem", { name: "Move down" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await userEvent.keyboard("{Escape}");
 
-    fireEvent.click(screen.getByRole("button", { name: "Move hero-cover.webp down" }));
+    await userEvent.click(screen.getByRole("button", { name: "Actions for hero-cover.webp" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Move down" }));
 
     expect(reorderProductMedia).toHaveBeenCalledWith({
       productId: "prod-1",

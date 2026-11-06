@@ -551,34 +551,23 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
                         )
                       }
                     />
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      aria-label={`Move image ${i + 1} up`}
-                      disabled={i === 0}
-                      onClick={() => moveGallery(i, -1)}
-                    >
-                      ▲
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      aria-label={`Move image ${i + 1} down`}
-                      disabled={i === gallery.length - 1}
-                      onClick={() => moveGallery(i, 1)}
-                    >
-                      ▼
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setGallery((l) => l.filter((_, j) => j !== i))}
-                    >
-                      Remove
-                    </Button>
+                    <RowActions
+                      label={`Actions for image ${i + 1}`}
+                      actions={[
+                        { label: "Move up", disabled: i === 0, onSelect: () => moveGallery(i, -1) },
+                        {
+                          label: "Move down",
+                          disabled: i === gallery.length - 1,
+                          onSelect: () => moveGallery(i, 1),
+                        },
+                        {
+                          label: "Remove",
+                          destructive: true,
+                          separatorBefore: true,
+                          onSelect: () => setGallery((l) => l.filter((_, j) => j !== i)),
+                        },
+                      ]}
+                    />
                   </li>
                 ))}
               </ul>

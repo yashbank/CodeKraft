@@ -1,5 +1,6 @@
 "use client";
 
+import { RowActions } from "../RowActions";
 import * as React from "react";
 import { DownloadIcon, InfoIcon, PrinterIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -598,13 +599,15 @@ export function ReportsScreen({
                           {s.generatedBy} · {formatDateTime(s.generatedAt)}
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="link"
-                            size="sm"
-                            onClick={() => toast("Link expired — regenerate")}
-                          >
-                            Regenerate (5-min link)
-                          </Button>
+                          <RowActions
+                            label={`Actions for ${s.partner} statement ${s.period}`}
+                            actions={[
+                              {
+                                label: "Regenerate (5-min link)",
+                                onSelect: () => toast("Link expired — regenerate"),
+                              },
+                            ]}
+                          />
                         </TableCell>
                       </TableRow>
                     ))}

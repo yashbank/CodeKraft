@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CopyIcon, PlusIcon, TicketPercentIcon } from "lucide-react";
+import { PlusIcon, TicketPercentIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -217,22 +217,7 @@ export function CouponsList({
                 {rows.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell>
-                      <span className="inline-flex items-center gap-1 font-mono">
-                        {c.code}
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={`Copy code ${c.code}`}
-                          onClick={() =>
-                            void navigator.clipboard
-                              .writeText(c.code)
-                              .then(() => toast.success(`Copied ${c.code}`))
-                              .catch(() => toast.error("Couldn't copy — select the code instead"))
-                          }
-                        >
-                          <CopyIcon aria-hidden className="size-3.5" />
-                        </Button>
-                      </span>
+                      <span className="font-mono">{c.code}</span>
                     </TableCell>
                     <TableCell>
                       <span className="inline-flex items-center gap-2">
@@ -276,6 +261,16 @@ export function CouponsList({
                         label={`Actions for ${c.code}`}
                         actions={[
                           { label: "Edit", onSelect: () => openEditor(c) },
+                          {
+                            label: "Copy code",
+                            onSelect: () =>
+                              void navigator.clipboard
+                                .writeText(c.code)
+                                .then(() => toast.success(`Copied ${c.code}`))
+                                .catch(() =>
+                                  toast.error("Couldn't copy — select the code instead"),
+                                ),
+                          },
                           c.state === "inactive"
                             ? { label: "Activate", onSelect: () => openEditor(c) }
                             : {

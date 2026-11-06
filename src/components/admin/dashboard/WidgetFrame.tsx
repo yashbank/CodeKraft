@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/components/ui/_utils";
+import { UpdatedStamp } from "./UpdatedStamp";
 import { WIDGET_BODY_HEIGHT } from "./WidgetSkeleton";
 
 /**
@@ -34,6 +35,7 @@ export function WidgetFrame({
   onMoveDown,
   viewAllHref,
   viewAllLabel,
+  updatedAt,
   styleName,
   dnd,
   children,
@@ -57,6 +59,8 @@ export function WidgetFrame({
   onMoveDown?: () => void;
   viewAllHref?: string;
   viewAllLabel?: string;
+  /** Epoch ms of the data shown; renders the "Updated N min ago" caption. */
+  updatedAt?: number;
   /** Drag-and-drop handlers (edit mode); the move buttons stay as the keyboard path. */
   dnd?: HTMLAttributes<HTMLElement>;
   children: ReactNode;
@@ -150,6 +154,7 @@ export function WidgetFrame({
       <div className="flex flex-1 flex-col p-4" style={{ minHeight: WIDGET_BODY_HEIGHT + 32 }}>
         {children}
       </div>
+      {updatedAt !== undefined ? <UpdatedStamp at={updatedAt} className="px-4 pb-2" /> : null}
       {viewAllHref ? (
         <footer className="border-t border-border px-4 py-2 text-right">
           <Link href={viewAllHref} className="text-body-sm text-accent-text hover:underline">

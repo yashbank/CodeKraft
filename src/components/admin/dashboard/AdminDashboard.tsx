@@ -13,6 +13,7 @@ import { toast } from "sonner";
 
 import {
   refreshDashboardWidget,
+  refreshDashboardWidgets,
   saveDashboardWidgets,
 } from "@/modules/dashboard-widgets/admin-mutations";
 import { Button } from "@/components/ui/button";
@@ -70,6 +71,7 @@ import { WidgetKindSketch } from "./WidgetKindSketch";
 import { WIDGET_LIBRARY, type WidgetDefinition } from "./widget-library";
 import { defaultLayoutFor } from "./role-widgets";
 import { moveKey } from "./reorder";
+import { useVisibleInterval } from "./use-visible-interval";
 import { WidgetFrame } from "./WidgetFrame";
 
 const lakh = (paise: number) => `₹${(paise / 10000000).toFixed(1)}L`;
@@ -86,7 +88,12 @@ export interface AdminDashboardProps {
   greeting: string;
   dateLabel: string;
   routes?: Record<string, string>;
+  /** ISO time the server read this data; seeds every widget's "Updated N min ago" caption. */
+  generatedAt?: string;
 }
+
+/** How often the visible dashboard re-reads its widgets (paused while the tab is hidden). */
+export const WIDGET_REFRESH_MS = 60_000;
 
 /**
  * SCR-ADM-02 — widget dashboard on a static 12-column grid (react-grid-layout replaces it in
@@ -102,6 +109,7 @@ export function AdminDashboard({
   greeting,
   dateLabel,
   routes,
+  generatedAt,
 }: AdminDashboardProps) {
   const href = (route: string) => routes?.[route] ?? route;
   const router = useRouter();
@@ -121,7 +129,17 @@ export function AdminDashboard({
   // (range change, router.refresh) supersedes them.
   const [overrides, setOverrides] = React.useState<Partial<DashboardData>>({});
   const [refreshing, setRefreshing] = React.useState<ReadonlySet<WidgetKey>>(new Set());
-  React.useEffect(() => setOverrides({}), [serverData]);
+  // When each widget's data was read (epoch ms). A fresh server render resets them all.
+  const mountedAt = React.useRef(Date.now());
+  const [baseAt, setBaseAt] = React.useState(
+    () => Date.parse(generatedAt ?? "") || mountedAt.current,
+  );
+  const [stamps, setStamps] = React.useState<Partial<Record<WidgetKey, number>>>({});
+  React.useEffect(() => {
+    setOverrides({});
+    setStamps({});
+    setBaseAt(Date.parse(generatedAt ?? "") || Date.now());
+  }, [serverData, generatedAt]);
   const data: DashboardData = { ...serverData, ...overrides };
 
   const refreshWidget = async (key: WidgetKey, title: string) => {
@@ -129,8 +147,10 @@ export function AdminDashboard({
     setRefreshing((prev) => new Set(prev).add(key));
     try {
       const res = await refreshDashboardWidget({ widget: key, range });
-      if (res.ok) setOverrides((prev) => ({ ...prev, ...res.data.data }));
-      else toast.error(`Couldn't refresh ${title}`, { description: res.error.message });
+      if (res.ok) {
+        setOverrides((prev) => ({ ...prev, ...res.data.data }));
+        setStamps((prev) => ({ ...prev, [key]: Date.now() }));
+      } else toast.error(`Couldn't refresh ${title}`, { description: res.error.message });
     } catch (err) {
       toast.error(`Couldn't refresh ${title}`, {
         description: err instanceof Error ? err.message : "Try again in a moment.",
@@ -143,6 +163,30 @@ export function AdminDashboard({
       });
     }
   };
+  // Timer refresh: one batched call for every widget on screen. It is silent (no skeleton, no
+  // toast) because the old numbers stay visible; a failure just leaves the stamp getting older.
+  const visibleKeys = React.useRef<WidgetKey[]>([]);
+  const inFlight = React.useRef(false);
+  const refreshAll = React.useCallback(async () => {
+    if (inFlight.current || visibleKeys.current.length === 0) return;
+    inFlight.current = true;
+    try {
+      const res = await refreshDashboardWidgets({ widgets: visibleKeys.current, range });
+      if (!res.ok) return;
+      const at = Date.parse(res.data.at) || Date.now();
+      setOverrides((prev) => ({ ...prev, ...res.data.data }));
+      setStamps((prev) => ({
+        ...prev,
+        ...Object.fromEntries(res.data.widgets.map((k) => [k, at])),
+      }));
+    } catch {
+      // Keep showing the last good data.
+    } finally {
+      inFlight.current = false;
+    }
+  }, [range]);
+  useVisibleInterval(() => void refreshAll(), WIDGET_REFRESH_MS);
+
   // Saves are sequenced so a slow earlier request can never overwrite a newer layout.
   const saveChain = React.useRef<Promise<unknown>>(Promise.resolve());
 
@@ -198,6 +242,8 @@ export function AdminDashboard({
   const definitions = enabled
     .map((k) => library.find((w) => w.key === k))
     .filter((w): w is WidgetDefinition => Boolean(w) && !(w?.superAdminOnly && !isSuperAdmin));
+
+  visibleKeys.current = definitions.map((d) => d.key);
 
   return (
     <>
@@ -283,6 +329,7 @@ export function AdminDashboard({
               onRemove={() => toggle(def.key, false)}
               onRefresh={() => void refreshWidget(def.key, def.title)}
               refreshing={refreshing.has(def.key)}
+              updatedAt={stamps[def.key] ?? baseAt}
               onMoveUp={index > 0 ? () => move(def.key, -1) : undefined}
               onMoveDown={index < definitions.length - 1 ? () => move(def.key, 1) : undefined}
               viewAllHref={VIEW_ALL[def.key] ? href(VIEW_ALL[def.key] as string) : undefined}
@@ -660,7 +707,7 @@ export function WidgetBody({
           <Stat
             value={plainNumber(data.visits.total)}
             delta={data.visits.delta}
-            hint="Visits (Umami)"
+            hint="Page and product views"
             variant={v}
           />
           {data.visits.top.length === 0 ? <NoData text="No product views yet" /> : null}
@@ -694,12 +741,14 @@ export function WidgetBody({
             format={plainNumber}
             variant={v as GaugeVariant}
           />
-          <Gauge
-            value={data.chatbotUsage.usersAtCap}
-            max={10}
-            label={`Users at the ${data.chatbotUsage.perUserCap}/day cap`}
-            variant={v as GaugeVariant}
-          />
+          {/* A plain count: there is no meaningful "maximum" for users at the cap. */}
+          <p className="text-body-sm">
+            <span className="font-semibold tnum">{plainNumber(data.chatbotUsage.usersAtCap)}</span>{" "}
+            <span className="text-fg-muted">
+              {data.chatbotUsage.usersAtCap === 1 ? "user" : "users"} at the{" "}
+              {data.chatbotUsage.perUserCap}/day cap
+            </span>
+          </p>
         </div>
       );
     case "catalog_status":

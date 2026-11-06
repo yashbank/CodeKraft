@@ -533,17 +533,13 @@ export function LeadsScreen({
                         </span>
                       ) : (
                         <span className="flex items-center gap-2">
-                          <Badge tone="ghost" size="sm" title="Unassigned — claim to work it">
+                          <Badge
+                            tone="ghost"
+                            size="sm"
+                            title="Unassigned — claim it from the row menu"
+                          >
                             Pool
                           </Badge>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="h-7"
-                            onClick={() => claim(l)}
-                          >
-                            Claim
-                          </Button>
                         </span>
                       )}
                     </TableCell>
@@ -677,24 +673,18 @@ export function LeadsScreen({
                               )}
                             </span>
                           </div>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-full justify-start"
-                              >
-                                Move to…
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                              {STAGES.filter((s) => s !== stage).map((s) => (
-                                <DropdownMenuItem key={s} onSelect={() => move(l, s)}>
-                                  {STAGE_LABEL[s]}
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <div className="flex justify-end">
+                            <RowActions
+                              label={`Actions for ${l.name}`}
+                              actions={[
+                                { label: "Open", href: `${detailHref}/${l.id}` },
+                                ...STAGES.filter((s) => s !== stage).map((s) => ({
+                                  label: `Move to ${STAGE_LABEL[s]}`,
+                                  onSelect: () => move(l, s),
+                                })),
+                              ]}
+                            />
+                          </div>
                         </div>
                       </li>
                     ))}

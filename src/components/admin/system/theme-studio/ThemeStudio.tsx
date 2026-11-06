@@ -11,12 +11,14 @@ import {
   DEFAULT_STUDIO,
   STUDIO_GROUPS,
   addPreset,
+  isCuratedKey,
   removePreset,
   type StudioValues,
   type ThemePreset,
 } from "@/lib/theme-studio";
 import { fontsHref } from "@/lib/theme-catalogue";
 import { updateSettings } from "@/modules/settings/admin-mutations";
+import { CuratedPicker } from "./CuratedPicker";
 import { OptionPreview } from "./OptionPreview";
 import { ThemePreview } from "./ThemePreview";
 import { ThemeSelect } from "./ThemeSelect";
@@ -85,20 +87,32 @@ export function ThemeStudio({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        {STUDIO_GROUPS.map((g) => (
-          <ThemeSelect
-            key={g.key}
-            label={g.label}
-            note={g.note}
-            ids={g.ids}
-            labelOf={g.labelOf}
-            value={values[g.key]}
-            disabled={disabled}
-            fontsHref={g.key === "headingFont" || g.key === "bodyFont" ? fontsHref(g.ids) : null}
-            preview={(id) => <OptionPreview group={g.key} id={id} theme={theme} />}
-            onChange={(id) => onChange({ ...values, [g.key]: id })}
-          />
-        ))}
+        {STUDIO_GROUPS.map((g) =>
+          isCuratedKey(g.key) ? (
+            <div key={g.key} className="sm:col-span-2">
+              <CuratedPicker
+                group={{ ...g, key: g.key }}
+                value={values[g.key]}
+                theme={theme}
+                disabled={disabled}
+                onChange={(id) => onChange({ ...values, [g.key]: id })}
+              />
+            </div>
+          ) : (
+            <ThemeSelect
+              key={g.key}
+              label={g.label}
+              note={g.note}
+              ids={g.ids}
+              labelOf={g.labelOf}
+              value={values[g.key]}
+              disabled={disabled}
+              fontsHref={g.key === "headingFont" || g.key === "bodyFont" ? fontsHref(g.ids) : null}
+              preview={(id) => <OptionPreview group={g.key} id={id} theme={theme} />}
+              onChange={(id) => onChange({ ...values, [g.key]: id })}
+            />
+          ),
+        )}
       </div>
 
       <fieldset className="grid gap-3 rounded-lg border border-border p-4">

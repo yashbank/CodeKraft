@@ -60,6 +60,7 @@ import { convertWithTable } from "@/lib/currency-convert";
 import { MoneyCell } from "../MoneyCell";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
+import { RowActions } from "../RowActions";
 import type { PartnerBalance, PayoutRow } from "../types";
 import { isoDate } from "@/lib/dates";
 
@@ -402,20 +403,19 @@ export function PartnersPayouts({
                 {p.pendingPayoutApprovals > 0 ? (
                   <Badge tone="warning">{p.pendingPayoutApprovals} payout awaiting approval</Badge>
                 ) : null}
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    disabled={!partners.some((x) => x.id === p.id)}
-                    onClick={() => openDialog(p.id)}
-                  >
-                    Record payout
-                  </Button>
-                  <Button asChild size="sm" variant="secondary">
-                    <Link href={statementsHref}>Statement</Link>
-                  </Button>
-                  <Button asChild size="sm" variant="ghost">
-                    <Link href={ledgerHref}>Ledger lines</Link>
-                  </Button>
+                <div className="flex justify-end">
+                  <RowActions
+                    label={`Actions for ${p.name}`}
+                    actions={[
+                      {
+                        label: "Record payout",
+                        disabled: !partners.some((x) => x.id === p.id),
+                        onSelect: () => openDialog(p.id),
+                      },
+                      { label: "Statement", href: statementsHref },
+                      { label: "Ledger lines", href: ledgerHref },
+                    ]}
+                  />
                 </div>
               </section>
             ))}

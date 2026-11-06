@@ -1,6 +1,6 @@
 "use client";
 
-import { BookmarkIcon, Trash2Icon } from "lucide-react";
+import { BookmarkIcon } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 
@@ -15,6 +15,8 @@ import {
   saveView,
   type SavedView,
 } from "@/lib/admin/saved-views";
+
+import { RowActions } from "./RowActions";
 
 /** Current admin's id, provided by AdminShell so saved views are per user. */
 export const AdminUserIdContext = React.createContext<string>("anon");
@@ -42,27 +44,29 @@ export function SavedViews({ screen }: Readonly<{ screen: string }>) {
           ) : null}
           {views.map((v) => (
             <li key={v.id} className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="min-w-0 flex-1 justify-start truncate"
+              {/* The view name is the apply target; everything else sits in the one row menu. */}
+              <button
+                type="button"
+                className="min-w-0 flex-1 truncate rounded-md px-2 py-2 text-left text-body-sm hover:bg-accent-soft"
                 onClick={() => router.replace(v.query ? `${pathname}?${v.query}` : pathname)}
               >
                 {v.name}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={`Delete view ${v.name}`}
-                onClick={() => {
-                  setViews(deleteView(localStorage, userId, screen, v.id));
-                  undoToast(`View “${v.name}” deleted`, () => {
-                    setViews(restoreView(localStorage, userId, screen, v));
-                  });
-                }}
-              >
-                <Trash2Icon aria-hidden />
-              </Button>
+              </button>
+              <RowActions
+                label={`Actions for view ${v.name}`}
+                actions={[
+                  {
+                    label: "Delete view",
+                    destructive: true,
+                    onSelect: () => {
+                      setViews(deleteView(localStorage, userId, screen, v.id));
+                      undoToast(`View “${v.name}” deleted`, () => {
+                        setViews(restoreView(localStorage, userId, screen, v));
+                      });
+                    },
+                  },
+                ]}
+              />
             </li>
           ))}
         </ul>

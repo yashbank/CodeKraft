@@ -357,16 +357,16 @@ export function LandingEditor({
                   total={featuredNames.length}
                   label={p.name}
                   onMove={(f, t) => persistFeatured(moveItem(featuredIds, f, t))}
+                  actions={[
+                    {
+                      label: "Remove from featured",
+                      destructive: true,
+                      onSelect: () => persistFeatured(featuredIds.filter((id) => id !== p.id)),
+                    },
+                  ]}
                 >
                   <span className="flex items-center justify-between gap-2 text-body-sm">
                     {p.name}
-                    <button
-                      type="button"
-                      className="text-caption text-danger hover:underline"
-                      onClick={() => persistFeatured(featuredIds.filter((id) => id !== p.id))}
-                    >
-                      Remove
-                    </button>
                   </span>
                 </SortableRow>
               ))}

@@ -90,7 +90,8 @@ test.describe("P14-12a admin extras", () => {
     await page.getByRole("button", { name: /^Save/ }).click();
     const list = page.getByRole("list", { name: "Saved views" });
     await expect(list.getByText(name)).toBeVisible();
-    await page.getByRole("button", { name: `Delete view ${name}` }).click();
+    await page.getByRole("button", { name: `Actions for view ${name}` }).click();
+    await page.getByRole("menuitem", { name: "Delete view" }).click();
     await expect(list.getByText(name)).toHaveCount(0);
     const toast = page.locator("[data-sonner-toast]", { hasText: `View “${name}” deleted` });
     await expect(toast).toBeVisible();
@@ -98,7 +99,8 @@ test.describe("P14-12a admin extras", () => {
     // clicking the toast is an outside click, so the popover closes: reopen it to see the list
     await page.getByRole("button", { name: "Views (1)" }).click();
     await expect(list.getByText(name)).toBeVisible();
-    await page.getByRole("button", { name: `Delete view ${name}` }).click(); // clean up
+    await page.getByRole("button", { name: `Actions for view ${name}` }).click();
+    await page.getByRole("menuitem", { name: "Delete view" }).click(); // clean up
   });
 
   test("3 reorder: drag a dashboard widget and the order persists; buttons work too", async ({

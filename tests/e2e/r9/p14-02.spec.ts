@@ -139,7 +139,9 @@ test("admin added as partner: card at once, one row, listed, in the split picker
   await expect(page.getByText(`${partnerName} added as a partner`).first()).toBeVisible();
   await expect(dlg).toBeHidden();
   await expect(card).toHaveCount(1);
-  await expect(card.getByRole("button", { name: "Record payout" })).toBeEnabled();
+  await card.getByRole("button", { name: /^Actions for / }).click();
+  await expect(page.getByRole("menuitem", { name: "Record payout" })).toBeEnabled();
+  await page.keyboard.press("Escape");
   const [cnt] = await q<{ n: string }>(
     `select count(*)::text as n from partners where user_id=$1 and active`,
     [userId],

@@ -6,7 +6,7 @@
  */
 import { can } from "@/lib/authz/assert";
 import type { RequestContext } from "@/lib/authz/context";
-import type { DashboardData, ProductStatus, QueueItem, WidgetKey } from "@/components/admin/types";
+import type { DashboardData, QueueItem, WidgetKey } from "@/components/admin/types";
 import { WIDGET_LIBRARY } from "@/components/admin/dashboard/widget-library";
 import { allowedWidgetKeys } from "@/components/admin/dashboard/role-widgets";
 export { WIDGET_DATA_KEYS, pickWidgetData } from "@/components/admin/dashboard/widget-data-keys";
@@ -15,13 +15,13 @@ import { emptyHeatmap } from "@/modules/dashboard-widgets/heatmap";
 import { listApprovalsAction } from "@/modules/approvals/queries";
 import { listQueriesAdminQuery } from "@/modules/queries/queries";
 import { listLeadsQuery } from "@/modules/leads/queries";
-import { listProductsAdminQuery } from "@/modules/catalog/queries";
 import { getReportQuery } from "@/modules/finance/queries";
 import { lastDaysRange, mapRevenueByPeriod } from "./dashboard-view";
 import { loadDashboardFinance } from "./dashboard-finance";
 import {
   RANGE_DAYS,
   deltaText,
+  loadCatalogStatus,
   loadChatbotUsage,
   loadConversionRate,
   loadFunnel,
@@ -85,8 +85,9 @@ export async function loadDashboardData(
     publishRes,
     splitRes,
     queriesRes,
-    leadsRes,
-    productsRes,
+    newLeadsRes,
+    overdueLeadsRes,
+    catalogStatus,
     revenueRes,
     finance,
     serviceChecklists,
@@ -115,10 +116,12 @@ export async function loadDashboardData(
     allowed("open_queries")
       ? listQueriesAdminQuery({ limit: 100, filters: { status: ["open"] } }, ctx)
       : skip,
-    allowed("new_leads") || allowed("overdue_follow_ups")
-      ? listLeadsQuery({ limit: 100 }, ctx)
+    // `total` is the exact role-scoped count; `limit` only bounds the rows listed under it.
+    allowed("new_leads") ? listLeadsQuery({ limit: 5, filters: { status: ["new"] } }, ctx) : skip,
+    allowed("overdue_follow_ups")
+      ? listLeadsQuery({ limit: 5, filters: { overdue: true } }, ctx)
       : skip,
-    allowed("catalog_status") ? listProductsAdminQuery({ limit: 100 }, ctx) : skip,
+    allowed("catalog_status") ? loadCatalogStatus(ctx) : Promise.resolve([]),
     allowed("revenue_by_period")
       ? getReportQuery({ report: "revenue_by_period", ...rangeDates(range) }, ctx).catch(() => ({
           ok: false as const,
@@ -158,13 +161,9 @@ export async function loadDashboardData(
     paymentsAwaiting: [],
   };
 
-  const leads = leadsRes.ok ? leadsRes.data.items : [];
-  const newLeadItems = leads.filter((l) => l.status === "new");
-  const overdueLeadItems = leads.filter((l) => l.overdue);
-
-  const statusCounts = new Map<ProductStatus, number>();
-  for (const p of productsRes.ok ? productsRes.data.items : [])
-    statusCounts.set(p.status, (statusCounts.get(p.status) ?? 0) + 1);
+  const newLeadItems = newLeadsRes.ok ? newLeadsRes.data.items : [];
+  const newLeadCount = newLeadsRes.ok ? (newLeadsRes.data.total ?? newLeadItems.length) : 0;
+  const overdueLeadItems = overdueLeadsRes.ok ? overdueLeadsRes.data.items : [];
 
   return {
     range,
@@ -178,8 +177,8 @@ export async function loadDashboardData(
     serviceChecklists,
     revocationTasks,
     newLeads: {
-      count: newLeadItems.length,
-      delta: newLeadItems.length === 0 ? "No data yet" : deltaText(newLeadItems.length, 0),
+      count: newLeadCount,
+      delta: newLeadCount === 0 ? "No data yet" : deltaText(newLeadCount, 0),
       items: newLeadItems.slice(0, 5).map((l) => ({
         label: l.name,
         meta: l.company ?? l.email ?? undefined,
@@ -203,7 +202,7 @@ export async function loadDashboardData(
       : [],
     visits,
     chatbotUsage,
-    catalogStatus: Array.from(statusCounts.entries()).map(([status, count]) => ({ status, count })),
+    catalogStatus,
     newCustomers,
     ordersHeatmap,
     systemHealth,
