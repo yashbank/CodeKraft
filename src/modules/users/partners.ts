@@ -1,7 +1,7 @@
 /**
  * Partner operations (API-ADM-12, MASTER_SPEC §7, PHASE-03 P3.4).
  */
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, sql } from "drizzle-orm";
 import type { DbOrTx, TxCtx } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { assertAnyPermission } from "@/lib/authz/assert";
@@ -48,6 +48,15 @@ export async function listPartners(
   if (input.filters?.active !== undefined) {
     conditions.push(eq(partners.active, input.filters.active));
   }
+
+  // Hide leftovers: a partner whose user is no longer admin-class AND who has no payouts, ledger
+  // lines or ownership shares has nothing to show. One with money history stays visible.
+  conditions.push(sql`(
+    exists (select 1 from user_roles ur where ur.user_id = ${partners.userId} and ur.role_key in ('super_admin','admin','staff'))
+    or exists (select 1 from payouts x1 where x1.partner_id = ${partners.id})
+    or exists (select 1 from ledger_entries x2 where x2.partner_id = ${partners.id})
+    or exists (select 1 from product_ownership_lines x3 where x3.partner_id = ${partners.id})
+  )`);
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 

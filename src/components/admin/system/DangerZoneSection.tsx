@@ -12,6 +12,8 @@ import {
   RESET_CATEGORIES,
   RESET_CATEGORY_LABELS,
   expandCategories,
+  groupPreview,
+  resetTableLabel,
   type ResetCategory,
 } from "@/modules/settings/site-reset-plan";
 import {
@@ -35,6 +37,19 @@ export function DangerZoneSection({ siteName }: { siteName: string }) {
     setPreview(null);
     setBackedUp(false); // the backup must match the current selection
   }
+
+  // Show the counts as soon as a selection exists, so nothing is requested blind.
+  const key = categories.join(",");
+  React.useEffect(() => {
+    if (!key) return;
+    let live = true;
+    void previewSiteReset({ categories: key.split(",") }).then((res) => {
+      if (live && res.ok) setPreview(res.data);
+    });
+    return () => {
+      live = false;
+    };
+  }, [key]);
 
   async function runPreview() {
     setBusy(true);
@@ -99,11 +114,12 @@ export function DangerZoneSection({ siteName }: { siteName: string }) {
           {implied.map((c) => RESET_CATEGORY_LABELS[c]).join(", ")}
         </p>
       ) : null}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <Button
           type="button"
           variant="outline"
           size="sm"
+          className="w-full sm:w-auto"
           disabled={!categories.length || busy}
           onClick={() => void runPreview()}
         >
@@ -113,6 +129,7 @@ export function DangerZoneSection({ siteName }: { siteName: string }) {
           type="button"
           variant="outline"
           size="sm"
+          className="w-full sm:w-auto"
           disabled={!categories.length || busy}
           onClick={() => void download()}
         >
@@ -123,17 +140,31 @@ export function DangerZoneSection({ siteName }: { siteName: string }) {
         ) : null}
       </div>
       {preview ? (
-        <ul className="grid gap-x-6 text-body-sm sm:grid-cols-2" aria-label="Rows to delete">
-          {preview.map((r) => (
-            <li key={r.table} className="flex justify-between font-mono">
-              <span>{r.table}</span>
-              <span>{r.count}</span>
-            </li>
+        <div className="space-y-3" aria-label="Rows to delete" role="group">
+          <p className="text-body-sm font-medium">
+            Rows that will be deleted:{" "}
+            <span className="font-mono">{preview.reduce((n, r) => n + r.count, 0)}</span> in total
+          </p>
+          {groupPreview(preview).map((g) => (
+            <section key={g.category} data-testid={`reset-preview-${g.category}`}>
+              <h4 className="flex justify-between gap-3 text-body-sm font-medium">
+                <span>{RESET_CATEGORY_LABELS[g.category]}</span>
+                <span className="font-mono">{g.total}</span>
+              </h4>
+              <ul className="mt-1 space-y-0.5 text-body-sm">
+                {g.rows.map((r, i) => (
+                  <li key={`${r.table}-${i}`} className="flex justify-between gap-3">
+                    <span className="min-w-0 break-words">{resetTableLabel(r.table)}</span>
+                    <span className="shrink-0 font-mono">{r.count}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
+        </div>
       ) : null}
       <div className="space-y-1">
-        <Label htmlFor="reset-confirm">
+        <Label htmlFor="reset-confirm" className="block break-words">
           Type <strong>{siteName}</strong> to confirm
         </Label>
         <Input
@@ -146,6 +177,7 @@ export function DangerZoneSection({ siteName }: { siteName: string }) {
       <Button
         type="button"
         variant="destructive"
+        className="w-full sm:w-auto"
         disabled={!canRequest}
         onClick={() => void request()}
       >

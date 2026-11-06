@@ -25,6 +25,7 @@ import { createOrder } from "../../factories/commerce";
 import { createEntitlement } from "../../factories/delivery";
 import { createOwnership } from "../../factories/ownership";
 import { createAdmin, createPartner, createSuperAdmin, createUser } from "../../factories/users";
+import { markSignedIn } from "../../factories/sign-in";
 import { getTestDb, truncateAll } from "../../setup/db";
 import { migrateTestDb } from "../../setup/migrate";
 
@@ -224,6 +225,9 @@ describe("permanent user delete (purgeUser, deleteCustomer, admin removal)", () 
     const [newA] = await db.select().from(users).where(eq(users.email, "new.a@example.com"));
     const [newB] = await db.select().from(users).where(eq(users.email, "new.b@example.com"));
     expect(newA && newB).toBeTruthy();
+    // the guard wants two other verified super admins before an old one can go
+    await markSignedIn(newA!.id);
+    await markSignedIn(newB!.id);
 
     // new A removes old A and old B; new B approves both
     for (const target of [oldA.id, oldB.id]) {
@@ -255,7 +259,7 @@ describe("permanent user delete (purgeUser, deleteCustomer, admin removal)", () 
     expect([...rows]).toHaveLength(1);
   });
 
-  it("reset site data removes ex-admins left without a role, keeps one with ownership shares", async () => {
+  it("reset site data removes ex-admins left without a role, with or without ownership shares", async () => {
     await truncateAll();
     const root = await createSuperAdmin();
     const gone = await createUser({ email: "ex.admin@example.com" });
@@ -277,7 +281,8 @@ describe("permanent user delete (purgeUser, deleteCustomer, admin removal)", () 
 
     const emails = (await sqlc`select email from users order by email`).map((r) => r.email);
     expect(emails).toContain(root.email);
-    expect(emails).toContain("ex.partner@example.com");
+    // Their ownership version goes with them (G18), so nothing keeps the account alive.
+    expect(emails).not.toContain("ex.partner@example.com");
     expect(emails).not.toContain("ex.admin@example.com");
   });
 });

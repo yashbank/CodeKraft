@@ -13,6 +13,7 @@ import { accounts, sessions, twoFactor, userRoles, users } from "../../../drizzl
 import { partners } from "../../../drizzle/schema/users-ext";
 import { productOwnershipLines, productOwnerships } from "../../../drizzle/schema/ownership";
 import { approvalRequests } from "../../../drizzle/schema/approvals";
+import { assertSafeSuperAdminRemoval, listAdminVerification } from "./admin-verification";
 import { purgeBlockers, purgeUser } from "./purge-user";
 import type { AdminUserChangePayload, AdminUserRow } from "./types";
 import type {
@@ -179,11 +180,16 @@ export async function listAdminUsers(
     }
   }
 
+  const verificationByUser = new Map(
+    (await listAdminVerification(database, userIds)).map((v) => [v.userId, v]),
+  );
+
   const items: AdminUserRow[] = userRows.map((u) => {
     const role = roleByUser.get(u.id) ?? "staff";
     const partner = partnerByUser.get(u.id);
     const pendingApprovalId = pendingByUser.get(u.id);
     const lastSignInAt = lastSignInByUser.get(u.id);
+    const verification = verificationByUser.get(u.id);
     return {
       id: u.id,
       name: u.name,
@@ -200,9 +206,23 @@ export async function listAdminUsers(
           }
         : {}),
       totp: totpUsers.has(u.id),
-      ...(lastSignInAt ? { lastSignInAt: lastSignInAt.toISOString() } : {}),
+      ...(verification?.lastSignInAt || lastSignInAt
+        ? { lastSignInAt: verification?.lastSignInAt ?? lastSignInAt?.toISOString() }
+        : {}),
       status: pendingApprovalId ? "pending_change" : "active",
       ...(pendingApprovalId ? { pendingApprovalId } : {}),
+      ...(verification
+        ? {
+            verification: {
+              emailVerified: verification.emailVerified,
+              signInMethods: verification.signInMethods,
+              canSignIn: verification.canSignIn,
+              hasSignedIn: verification.hasSignedIn,
+              verified: verification.verified,
+              missing: verification.missing,
+            },
+          }
+        : {}),
     };
   });
 
@@ -349,6 +369,9 @@ export async function removeAdmin(
     }
   }
 
+  // Refusal 1b: two other super admins must already have a working, verified login
+  await assertSafeSuperAdminRemoval(database, input.userId);
+
   // Refusal 2: removing partner holding an active share
   const hasActiveShare = await hasActiveProductOwnershipShare(input.userId, database);
   if (hasActiveShare) {
@@ -494,6 +517,8 @@ export async function applyAdminUserChange(
     if (!heir || heir === p.userId) {
       throw new AppError(ErrorCode.STATE_INVALID, "No other admin available to take over records");
     }
+    // State may have changed since the request was raised: check again before deleting.
+    await assertSafeSuperAdminRemoval(tx, p.userId);
     await purgeUser(tx, { targetId: p.userId, actorId: heir });
   }
 }

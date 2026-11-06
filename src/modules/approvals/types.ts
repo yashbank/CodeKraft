@@ -213,6 +213,15 @@ export interface ApprovalDecisionView {
   createdAt: string;
 }
 
+/** One admin who must (or did) decide on a request, with where they stand. */
+export interface ApproverStatusView {
+  userId: string;
+  name: string;
+  email: string;
+  /** `pending` = required but has not decided yet. */
+  state: "approved" | "rejected" | "pending";
+}
+
 export interface ApprovalView {
   id: string;
   type: ApprovalType;
@@ -224,6 +233,8 @@ export interface ApprovalView {
   decisions: ApprovalDecisionView[];
   /** Admin-class users (except the requester) who have not decided yet (BR-13, A-1101). */
   pendingApprovers: string[];
+  /** Everyone required (or who decided), by name and email, with approved / rejected / pending. */
+  approvers?: ApproverStatusView[];
   ageHours: number;
   error: string | null;
   appliedAt: string | null;

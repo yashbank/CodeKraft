@@ -41,7 +41,12 @@ import {
   approvalPayloadSchemas,
 } from "./types";
 import { defaultHandlerRegistry, InMemoryApplyHandlerRegistry } from "./registry";
-import { approverExclusions, computeApproverSet, countActiveAdmins } from "./approver-set";
+import {
+  approverExclusions,
+  computeApproverSet,
+  countActiveAdmins,
+  describeApprovers,
+} from "./approver-set";
 
 /** Preserved for freeze and contract tests (PHASE-02 P2.8). */
 export function createNotImplementedApprovalsService(): ApprovalsService {
@@ -659,6 +664,7 @@ export class DefaultApprovalsService implements ApprovalsService {
           createdAt: d.createdAt.toISOString(),
         })),
         pendingApprovers,
+        approvers: await describeApprovers(database, needed, decisions),
         ageHours: Math.max(0, Math.round(ageHours * 10) / 10),
         error: req.error,
         appliedAt: req.appliedAt ? req.appliedAt.toISOString() : null,
@@ -716,6 +722,7 @@ export class DefaultApprovalsService implements ApprovalsService {
         createdAt: d.createdAt.toISOString(),
       })),
       pendingApprovers,
+      approvers: await describeApprovers(database, needed, decisions),
       ageHours: Math.max(0, Math.round(ageHours * 10) / 10),
       error: req.error,
       appliedAt: req.appliedAt ? req.appliedAt.toISOString() : null,

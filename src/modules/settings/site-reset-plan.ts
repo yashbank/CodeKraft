@@ -66,6 +66,14 @@ const PARTNER_BLOCKED = (ref: string) =>
   ` AND NOT EXISTS (SELECT 1 FROM "partners" "k_pt" WHERE "k_pt"."user_id" = ${ref} AND (EXISTS (SELECT 1 FROM "payouts" "x1" WHERE "x1"."partner_id" = "k_pt"."id") OR EXISTS (SELECT 1 FROM "ledger_entries" "x2" WHERE "x2"."partner_id" = "k_pt"."id") OR EXISTS (SELECT 1 FROM "product_ownership_lines" "x3" WHERE "x3"."partner_id" = "k_pt"."id")))`;
 const STAFF_ROLES = `'super_admin','admin','staff'`;
 /**
+ * SQL predicate: `ref` (a partner-id column) belongs to a partner whose user holds no admin-class
+ * role any more (a removed admin or a demo partner). Real admin-class partners are never orphans.
+ */
+export const orphanPartner = (ref: string) =>
+  `EXISTS (SELECT 1 FROM "partners" "op" WHERE "op"."id" = ${ref} AND NOT EXISTS (SELECT 1 FROM "user_roles" "opr" WHERE "opr"."user_id" = "op"."user_id" AND "opr"."role_key" IN (${STAFF_ROLES})))`;
+/** Ownership versions that give a share to an orphan partner (their shares must not outlive them). */
+const ORPHAN_OWNERSHIP_WHERE = `"id" IN (SELECT "ownership_id" FROM "product_ownership_lines" WHERE ${orphanPartner('"product_ownership_lines"."partner_id"')})`;
+/**
  * SQL predicate: `ref` (a qualified user-id column) is a customer. NOT EXISTS + IS NOT NULL on
  * purpose: `x NOT IN (subquery)` is NULL, so matches nothing, as soon as one subquery row is NULL.
  */
@@ -96,6 +104,8 @@ export interface ResetStep {
   where?: string;
   /** Runs first: breaks a circular FK (refunds.credit_note_id <-> credit_notes.refund_id). */
   before?: string;
+  /** Child tables whose rows this step deletes through ON DELETE CASCADE; their guard triggers must be off too. */
+  alsoGuard?: readonly string[];
 }
 
 const s = (category: ResetCategory, ...tables: string[]): ResetStep[] =>
@@ -142,6 +152,15 @@ export const RESET_STEPS: readonly ResetStep[] = [
     "invoice_sequences",
     "credit_note_sequences",
   ),
+  // Shares held by removed or demo partners go with the customers: once their orders are gone the
+  // ownership versions are no longer referenced, and the partner rows below can then be deleted.
+  // Deleting a version cascades to its lines (guard triggers on the lines table are off too).
+  {
+    table: "product_ownerships",
+    category: "customers_orders",
+    where: ORPHAN_OWNERSHIP_WHERE,
+    alsoGuard: ["product_ownership_lines"],
+  },
   {
     table: "coupon_redemptions",
     category: "customers_orders",
@@ -199,6 +218,41 @@ export const RESET_STEPS: readonly ResetStep[] = [
     before: `UPDATE "coupons" SET "created_by" = NULL WHERE ${isCustomer('"coupons"."created_by"')}`,
   },
 ];
+
+/** Plain names for the tables people care about in the preview; others fall back to the table name. */
+export const RESET_TABLE_LABELS: Record<string, string> = {
+  ledger_entries: "Ledger entries",
+  allocations: "Allocations",
+  payouts: "Payouts",
+  expenses: "Expenses",
+  orders: "Orders",
+  payments: "Payments",
+  invoices: "Invoices",
+  refunds: "Refunds",
+  partners: "Partners (removed and demo accounts)",
+  product_ownerships: "Ownership versions held by removed or demo partners",
+  product_ownership_lines: "Ownership shares",
+  users: "Customer accounts",
+  customer_profiles: "Customer profiles",
+  leads: "Leads",
+  custom_quotes: "Quotes",
+  products: "Products",
+  services: "Services",
+};
+export const resetTableLabel = (table: string) =>
+  RESET_TABLE_LABELS[table] ?? table.replace(/_/g, " ");
+
+/** Preview rows grouped under their category, in category order, with a per-category total. */
+export function groupPreview(
+  rows: readonly { table: string; count: number }[],
+): { category: ResetCategory; total: number; rows: { table: string; count: number }[] }[] {
+  const catOf = new Map<string, ResetCategory>();
+  for (const st of RESET_STEPS) if (!catOf.has(st.table)) catOf.set(st.table, st.category);
+  return RESET_CATEGORIES.map((category) => {
+    const inCat = rows.filter((r) => (catOf.get(r.table) ?? "customers_orders") === category);
+    return { category, total: inCat.reduce((n, r) => n + r.count, 0), rows: inCat };
+  }).filter((g) => g.rows.length > 0);
+}
 
 export function stepsFor(selected: readonly ResetCategory[]): ResetStep[] {
   const cats = new Set(expandCategories(selected));

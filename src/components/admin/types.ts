@@ -274,6 +274,13 @@ export interface ApprovalItem {
   approvedByIds?: string[];
   /** Approvers still owed a decision while the request is pending. */
   pendingApprovers?: number;
+  /** Everyone required on this request, by name and email, with approved / rejected / pending. */
+  approvers?: {
+    userId: string;
+    name: string;
+    email: string;
+    state: "approved" | "rejected" | "pending";
+  }[];
   diff: DiffRow[];
   note?: string;
   decision?: {
@@ -1029,6 +1036,15 @@ export interface AdminUserRow {
   lastSignInAt?: string;
   status: "active" | "invited" | "pending_change";
   pendingApprovalId?: string;
+  /** Read-only login check so the owner can confirm a new admin works before removing an old one. */
+  verification?: {
+    emailVerified: boolean;
+    signInMethods: ("password" | "google")[];
+    canSignIn: boolean;
+    hasSignedIn: boolean;
+    verified: boolean;
+    missing: string[];
+  };
 }
 
 /* ---------------------------------------------------------------- dashboard */

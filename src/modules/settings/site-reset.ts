@@ -79,7 +79,9 @@ export async function runReset(
   const steps = stepsFor(categories);
   // Append-only / frozen guard triggers must be off for the wipe; re-enabled in the same tx.
   // audit_logs is KEEP but append-only; deleting a customer SET NULLs its actor_id (an UPDATE).
-  const guarded = [...new Set([...steps.map((st) => st.table), "audit_logs"])];
+  const guarded = [
+    ...new Set([...steps.flatMap((st) => [st.table, ...(st.alsoGuard ?? [])]), "audit_logs"]),
+  ];
   for (const tbl of guarded) await db.run(`ALTER TABLE ${quoteIdent(tbl)} DISABLE TRIGGER USER`);
   const counts = await previewCounts(db, categories);
   for (const st of steps) {
