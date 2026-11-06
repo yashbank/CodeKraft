@@ -86,9 +86,11 @@ describe("site reset plan", () => {
     return runReset(db, all).then(() => {
       const del = log.filter((l) => l.startsWith("DELETE"));
       const userDel = del.find((l) => l.startsWith('DELETE FROM "users"'))!;
-      expect(userDel).toContain("NOT IN (SELECT user_id FROM user_roles");
+      expect(userDel).toContain('NOT EXISTS (SELECT 1 FROM "user_roles"');
       expect(userDel).toContain("'super_admin'");
-      expect(del.filter((l) => l.startsWith('DELETE FROM "user_roles"'))[0]).toContain("NOT IN");
+      expect(del.filter((l) => l.startsWith('DELETE FROM "user_roles"'))[0]).toContain(
+        "NOT EXISTS",
+      );
       // triggers off before, on after
       expect(log[0]).toMatch(/DISABLE TRIGGER USER/);
       expect(log.at(-1)).toMatch(/ENABLE TRIGGER USER/);

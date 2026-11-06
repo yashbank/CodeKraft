@@ -78,13 +78,15 @@ export async function runReset(
 ): Promise<{ table: string; count: number }[]> {
   const steps = stepsFor(categories);
   // Append-only / frozen guard triggers must be off for the wipe; re-enabled in the same tx.
-  for (const st of steps) await db.run(`ALTER TABLE ${quoteIdent(st.table)} DISABLE TRIGGER USER`);
+  // audit_logs is KEEP but append-only; deleting a customer SET NULLs its actor_id (an UPDATE).
+  const guarded = [...new Set([...steps.map((st) => st.table), "audit_logs"])];
+  for (const tbl of guarded) await db.run(`ALTER TABLE ${quoteIdent(tbl)} DISABLE TRIGGER USER`);
   const counts = await previewCounts(db, categories);
   for (const st of steps) {
     if (st.before) await db.run(st.before);
     await db.run(deleteSql(st));
   }
-  for (const st of steps) await db.run(`ALTER TABLE ${quoteIdent(st.table)} ENABLE TRIGGER USER`);
+  for (const tbl of guarded) await db.run(`ALTER TABLE ${quoteIdent(tbl)} ENABLE TRIGGER USER`);
   return counts;
 }
 

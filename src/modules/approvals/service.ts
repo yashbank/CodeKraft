@@ -137,6 +137,15 @@ async function notifyRequester(
   }
 }
 
+/** drizzle wraps the driver error ("Failed query: ..."); the real reason and constraint are on `cause`. */
+function describeApplyError(err: unknown): string {
+  if (!(err instanceof Error)) return "Apply execution failed";
+  const c = (err.cause ?? err) as Error & { constraint_name?: string; table_name?: string };
+  if (c === err) return err.message;
+  const where = [c.table_name, c.constraint_name].filter(Boolean).join(" / ");
+  return `${c.message}${where ? ` (${where})` : ""}`.slice(0, 500);
+}
+
 export class DefaultApprovalsService implements ApprovalsService {
   constructor(
     private readonly registry: InMemoryApplyHandlerRegistry = defaultHandlerRegistry,
@@ -505,7 +514,10 @@ export class DefaultApprovalsService implements ApprovalsService {
     };
 
     try {
-      await handler(applyContext, request.payload as ApprovalPayload, tx);
+      // Savepoint: a failed SQL statement poisons the whole transaction, which would also make the
+      // status/error update below fail. Rolling back to the savepoint undoes a half-applied handler
+      // and leaves the transaction usable so the failure can be recorded.
+      await tx.transaction((sp) => handler(applyContext, request.payload as ApprovalPayload, sp));
 
       await tx
         .update(approvalRequests)
@@ -519,7 +531,8 @@ export class DefaultApprovalsService implements ApprovalsService {
 
       return { status: "applied", applied: true };
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Apply execution failed";
+      const errorMessage = describeApplyError(err);
+      console.error("approval apply failed", requestId, errorMessage);
 
       await tx
         .update(approvalRequests)
