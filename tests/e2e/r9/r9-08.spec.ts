@@ -26,11 +26,17 @@ async function openTheme(page: Page) {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto(`${ADMIN}/admin/settings`);
   await page.getByRole("button", { name: "Theme", exact: true }).click();
-  await expect(page.getByRole("combobox", { name: "Accent palette", exact: true })).toBeVisible();
+  // G18: palette, radius, borders and button style are swatch tiles; the rest are dropdowns.
+  await expect(page.getByRole("radiogroup", { name: "Accent palette", exact: true })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Font pairing", exact: true })).toBeVisible();
 }
 
 /** P14-07: every group is a searchable dropdown; open it, optionally search, pick an option. */
 async function pick(page: Page, group: string, option: string, search?: string) {
+  if (["Corner radius", "Accent palette", "Button style", "Borders"].includes(group)) {
+    await page.getByRole("radio", { name: option, exact: true }).click();
+    return;
+  }
   await page.getByRole("combobox", { name: group, exact: true }).click();
   if (search) await page.getByPlaceholder(/Search \d+ options/).fill(search);
   await page.getByRole("option", { name: option, exact: true }).first().click();
@@ -54,9 +60,9 @@ test.describe("R9-08 theme options", () => {
     await loginAs(page, "super_admin");
     await openTheme(page);
 
-    await pick(page, "Accent palette", "Sunset", "sun");
+    await pick(page, "Accent palette", "Amber");
     await pick(page, "Font pairing", "Poppins", "pop");
-    await pick(page, "Corner radius", "Pill");
+    await pick(page, "Corner radius", "Round");
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText(/saved/i).first()).toBeVisible();
 
@@ -68,13 +74,13 @@ test.describe("R9-08 theme options", () => {
         },
         { timeout: 30_000 },
       )
-      .toBe("sunset");
+      .toBe("amber");
     const theme = await page.evaluate(() => document.documentElement.dataset.theme);
     expect(await rootVar(page, "--ck-color-accent")).toBe(
-      theme === "light-editorial" ? "#a8420a" : "#ff9a5c",
+      theme === "light-editorial" ? "#8a5300" : "#f5b53d",
     );
     expect(await rootVar(page, "--ck-font-display")).toMatch(/poppins/i); // computed custom props are var()-resolved to the family name
-    expect(await rootVar(page, "--ck-radius-md")).toBe("24px");
+    expect(await rootVar(page, "--ck-radius-md")).toBe("16px");
     issues.assertClean();
   });
 
@@ -90,7 +96,7 @@ test.describe("R9-08 theme options", () => {
         await expect(page.getByText(/designed for laptops/i)).toBeVisible();
         continue;
       }
-      const trigger = page.getByRole("combobox", { name: "Accent palette", exact: true });
+      const trigger = page.getByRole("combobox", { name: "Font pairing", exact: true });
       await trigger.click();
       const list = page.getByRole("listbox");
       await expect(list).toBeVisible();
@@ -124,10 +130,22 @@ test.describe("R9-08 theme options", () => {
     await expect.poll(pad, { timeout: 30_000 }).toEqual(["comfortable", "32px"]);
   });
 
-  test("every group is a searchable dropdown with plenty of options", async ({ page }) => {
+  test("curated groups are tiles, the long lists are searchable dropdowns", async ({ page }) => {
     await loginAs(page, "super_admin");
     await openTheme(page);
-    for (const g of ["Accent palette", "Font pairing", "Corner radius", "Borders"]) {
+    // curated groups: a handful of swatch tiles (G18-3b); the long lists stay searchable dropdowns
+    const tiles: Record<string, number> = {
+      "Accent palette": 8,
+      "Corner radius": 3,
+      Borders: 3,
+      "Button style": 3,
+    };
+    for (const [g, n] of Object.entries(tiles))
+      await expect(
+        page.getByRole("radiogroup", { name: g, exact: true }).getByRole("radio"),
+        g,
+      ).toHaveCount(n);
+    for (const g of ["Font pairing", "Heading font", "Body font"]) {
       await page.getByRole("combobox", { name: g, exact: true }).click();
       expect(await page.getByRole("option").count()).toBeGreaterThanOrEqual(20);
       await page.keyboard.press("Escape");

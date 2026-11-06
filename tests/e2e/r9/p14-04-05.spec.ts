@@ -6,7 +6,7 @@ const TAG = String(Date.now() % 100000);
 const FROM_NAME = `P14 Mail ${TAG}`;
 const FROM_ADDR = `p14-${TAG}@example.test`;
 const SITE_NAME = `P14 Brand ${TAG}`;
-const LOGO = `https://example.test/p14-logo-${TAG}.png`;
+const LOGO = `${process.env.E2E_SITE_URL ?? "http://localhost:3000"}/noise.png?p14-${TAG}`; // same origin: the CSP blocks foreign hosts
 
 async function openSettings(page: Page, section?: string) {
   await page.setViewportSize({ width: 1280, height: 900 });

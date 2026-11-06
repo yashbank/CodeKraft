@@ -82,10 +82,11 @@ test.beforeAll(async () => {
      and not is_coming_soon order by created_at limit 1`,
   );
   prod = p!;
-  // Republish is blocked without media (BUG-061 readiness); seeded products have none.
+  // Republish is blocked without media (BUG-061 readiness); seeded products have none. The URL is
+  // same-origin: the storefront plays it in a <video>, and the CSP (media-src) blocks foreign hosts.
   await q(
     `insert into product_media (product_id, kind, embed_url, title)
-     select $1, 'video_embed', 'https://www.youtube.com/embed/r9-04', 'r9-04 media'
+     select $1, 'video_embed', '/noise.png', 'r9-04 media'
      where not exists (select 1 from product_media where product_id = $1)`,
     [prod.id],
   );

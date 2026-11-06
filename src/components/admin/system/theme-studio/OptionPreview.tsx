@@ -62,8 +62,9 @@ export function OptionPreview({
       break;
     case "button":
       body = (
-        <Button type="button" size="sm" tabIndex={-1} className="pointer-events-none h-5 px-2">
-          Go
+        // a <span>, not a <button>: the sample sits inside the picker's own radio button
+        <Button asChild size="sm" className="pointer-events-none h-5 px-2">
+          <span>Go</span>
         </Button>
       );
       break;

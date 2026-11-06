@@ -73,6 +73,8 @@ export function buildCsp(
 ): { header: string; policy: string } {
   const dev = process.env.NODE_ENV !== "production";
   const media = originOf(process.env.NEXT_PUBLIC_MEDIA_BASE_URL);
+  // The admin SEO preview shows the public site's share card (<site>/…/opengraph-image).
+  const siteOrigin = originOf(process.env.NEXT_PUBLIC_SITE_URL);
   const umami = originOf(process.env.NEXT_PUBLIC_UMAMI_SRC);
   const sentry = originOf(process.env.NEXT_PUBLIC_SENTRY_DSN);
   const turnstile = "https://challenges.cloudflare.com";
@@ -92,7 +94,7 @@ export function buildCsp(
       : `script-src ${list("'self'", "'unsafe-inline'", dev && "'unsafe-eval'", turnstile, razorpayScript, umami)}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     `font-src ${list("'self'", "https://fonts.gstatic.com", "data:", media, r2)}`,
-    `img-src ${list("'self'", "data:", "blob:", media, r2, "https://*.razorpay.com")}`,
+    `img-src ${list("'self'", "data:", "blob:", media, r2, siteOrigin, "https://*.razorpay.com")}`,
     `connect-src ${list("'self'", turnstile, ...razorpayApi, "https://lumberjack.razorpay.com", media, r2, umami, sentry, "https://*.ingest.sentry.io", "https://*.ingest.us.sentry.io", dev && "ws:", dev && "wss:")}`,
     // Video and audio uploaded to R2 play from the media host (default-src would otherwise block them).
     `media-src ${list("'self'", "blob:", media, r2)}`,
