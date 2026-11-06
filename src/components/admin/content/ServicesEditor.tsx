@@ -20,7 +20,6 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Field, RichTextField } from "../RichTextField";
-import { RowActions } from "../RowActions";
 import type { ServiceRow } from "../types";
 import { ServiceIcon } from "@/components/site/ServiceIcon";
 import { toServiceIcon } from "@/components/site/service-icons";
@@ -157,6 +156,10 @@ export function ServicesEditor({ services: initial }: { services: ServiceRow[] }
             total={services.length}
             label={s.title}
             onMove={(f, t) => persistOrder(moveItem(services, f, t))}
+            actions={[
+              { label: "Edit", onSelect: () => openEdit(s) },
+              { label: "Delete", destructive: true, onSelect: () => handleDelete(s) },
+            ]}
           >
             <div className="flex items-center gap-3">
               <ServiceIcon name={toServiceIcon(s.icon)} className="size-9 [&>svg]:size-5" />
@@ -197,18 +200,6 @@ export function ServicesEditor({ services: initial }: { services: ServiceRow[] }
                     }
                   }}
                   aria-label={`Published: ${s.title}`}
-                />
-                <RowActions
-                  label={`Actions for ${s.title}`}
-                  actions={[
-                    { label: "Edit", onSelect: () => openEdit(s) },
-                    {
-                      label: "Delete",
-                      destructive: true,
-                      separatorBefore: true,
-                      onSelect: () => handleDelete(s),
-                    },
-                  ]}
                 />
               </div>
             </div>

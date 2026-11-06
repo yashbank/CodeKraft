@@ -43,6 +43,7 @@ import { FilterChips } from "../FilterChips";
 import { formatDate, hoursSince, timeAgo } from "../format";
 import { PageHeader } from "../PageHeader";
 import { Field } from "../RichTextField";
+import { RowActions } from "../RowActions";
 import type { AdminUserRef, DeliveryTaskRow } from "../types";
 
 export interface DeliveryTasksScreenProps {
@@ -175,19 +176,10 @@ export function DeliveryTasksScreen({
                   <React.Fragment key={t.id}>
                     <TableRow>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-expanded={open}
-                          aria-controls={`task-${t.id}`}
-                          aria-label={`${open ? "Collapse" : "Expand"} task for ${t.customer.name}`}
-                          onClick={() => setExpanded(open ? null : t.id)}
-                        >
-                          <ChevronDownIcon
-                            aria-hidden
-                            className={cn("size-4 transition-transform", open && "rotate-180")}
-                          />
-                        </Button>
+                        <ChevronDownIcon
+                          aria-hidden
+                          className={cn("size-4 text-fg-muted transition-transform", open && "rotate-180")}
+                        />
                       </TableCell>
                       <TableCell className="text-fg-muted">{formatDate(t.createdAt)}</TableCell>
                       <TableCell>
@@ -243,18 +235,19 @@ export function DeliveryTasksScreen({
                         {old && t.status === "open" ? " · overdue" : ""}
                       </TableCell>
                       <TableCell>
-                        <span className="flex gap-1">
-                          {t.orderId ? (
-                            <Button asChild variant="ghost" size="sm">
-                              <Link href={orderHref}>Open order</Link>
-                            </Button>
-                          ) : null}
-                          {t.status === "open" ? (
-                            <Button size="sm" variant="secondary" onClick={() => setDoneTask(t)}>
-                              Mark done
-                            </Button>
-                          ) : null}
-                        </span>
+                        <RowActions
+                          label={`Actions for task ${t.customer.name}`}
+                          actions={[
+                            ...(t.status === "open"
+                              ? [{ label: "Mark done", onSelect: () => setDoneTask(t) }]
+                              : []),
+                            ...(t.orderId ? [{ label: "Open order", href: orderHref }] : []),
+                            {
+                              label: open ? "Hide details" : "Show details",
+                              onSelect: () => setExpanded(open ? null : t.id),
+                            },
+                          ]}
+                        />
                       </TableCell>
                     </TableRow>
                     {open ? (

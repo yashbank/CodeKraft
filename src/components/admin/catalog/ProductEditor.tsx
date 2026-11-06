@@ -1641,34 +1641,28 @@ export function ProductEditor({
                   {m.alt ? (
                     <span className="w-64 truncate text-caption text-fg-muted">Alt: {m.alt}</span>
                   ) : null}
-                  <div className="flex items-center gap-1">
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      aria-label={`Move ${m.fileName} up`}
-                      disabled={i === 0 || reorderingMedia}
-                      onClick={() => moveMedia(i, -1)}
-                    >
-                      ▲
-                    </Button>
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      aria-label={`Move ${m.fileName} down`}
-                      disabled={i === product.media.length - 1 || reorderingMedia}
-                      onClick={() => moveMedia(i, 1)}
-                    >
-                      ▼
-                    </Button>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => removeMedia(m.id)}
-                    loading={removingMediaId === m.id}
-                  >
-                    Remove
-                  </Button>
+                  <RowActions
+                    label={`Actions for ${m.fileName}`}
+                    actions={[
+                      {
+                        label: "Move up",
+                        disabled: i === 0 || reorderingMedia,
+                        onSelect: () => moveMedia(i, -1),
+                      },
+                      {
+                        label: "Move down",
+                        disabled: i === product.media.length - 1 || reorderingMedia,
+                        onSelect: () => moveMedia(i, 1),
+                      },
+                      {
+                        label: "Remove",
+                        destructive: true,
+                        separatorBefore: true,
+                        disabled: removingMediaId === m.id,
+                        onSelect: () => removeMedia(m.id),
+                      },
+                    ]}
+                  />
                 </li>
               ))}
               {product.media.length === 0 ? (
@@ -1892,19 +1886,20 @@ export function ProductEditor({
                       </TableCell>
                       <TableCell>{o.isDefault ? "★ Default" : ""}</TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button size="sm" variant="ghost" onClick={() => openOfferingDialog(o)}>
-                            Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-danger"
-                            onClick={() => deleteOfferingRow(o)}
-                            loading={removingOfferingId === o.id}
-                          >
-                            Delete
-                          </Button>
+                        <div className="flex justify-end">
+                          <RowActions
+                            label={`Actions for offering ${o.name}`}
+                            actions={[
+                              { label: "Edit", onSelect: () => openOfferingDialog(o) },
+                              {
+                                label: "Delete",
+                                destructive: true,
+                                separatorBefore: true,
+                                disabled: removingOfferingId === o.id,
+                                onSelect: () => deleteOfferingRow(o),
+                              },
+                            ]}
+                          />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -2501,17 +2496,18 @@ export function ProductEditor({
                       />
                       <Label htmlFor={`tm-pub-${t.id}`}>Published</Label>
                     </div>
-                    <Button size="sm" onClick={() => saveTestimonialAt(i)}>
-                      Save
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-danger"
-                      onClick={() => deleteTestimonialAt(i)}
-                    >
-                      Delete
-                    </Button>
+                    <RowActions
+                      label={`Actions for testimonial ${t.author || i + 1}`}
+                      actions={[
+                        { label: "Save", onSelect: () => saveTestimonialAt(i) },
+                        {
+                          label: "Delete",
+                          destructive: true,
+                          separatorBefore: true,
+                          onSelect: () => deleteTestimonialAt(i),
+                        },
+                      ]}
+                    />
                   </div>
                 </li>
               ))}
@@ -2549,33 +2545,24 @@ export function ProductEditor({
                     />
                   </Field>
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={i === 0}
-                      onClick={() => moveFaq(i, -1)}
-                    >
-                      Move up
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={i === faqs.length - 1}
-                      onClick={() => moveFaq(i, 1)}
-                    >
-                      Move down
-                    </Button>
-                    <Button size="sm" onClick={() => saveFaqAt(i)}>
-                      Save
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-danger"
-                      onClick={() => deleteFaqAt(i)}
-                    >
-                      Delete
-                    </Button>
+                    <RowActions
+                      label={`Actions for FAQ ${f.question || i + 1}`}
+                      actions={[
+                        { label: "Save", onSelect: () => saveFaqAt(i) },
+                        { label: "Move up", disabled: i === 0, onSelect: () => moveFaq(i, -1) },
+                        {
+                          label: "Move down",
+                          disabled: i === faqs.length - 1,
+                          onSelect: () => moveFaq(i, 1),
+                        },
+                        {
+                          label: "Delete",
+                          destructive: true,
+                          separatorBefore: true,
+                          onSelect: () => deleteFaqAt(i),
+                        },
+                      ]}
+                    />
                   </div>
                 </li>
               ))}

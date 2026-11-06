@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/components/ui/_utils";
 import { PageHeader } from "../PageHeader";
+import { RowActions, type RowAction } from "../RowActions";
 
 export interface RailItem {
   key: string;
@@ -168,12 +169,16 @@ export function ContentEditorFrame({
   );
 }
 
-/** Sortable list row with drag handle and keyboard move buttons (dnd arrives with Phase 8). */
+/**
+ * Sortable list row with drag handle. Every per-row control (move up/down plus the caller's own
+ * actions) lives in ONE kebab menu so the row never shows a cluster of buttons.
+ */
 export function SortableRow({
   index,
   total,
   label,
   onMove,
+  actions = [],
   children,
   className,
 }: {
@@ -181,9 +186,24 @@ export function SortableRow({
   total: number;
   label: string;
   onMove: (from: number, to: number) => void;
+  /** Extra row actions, shown above the move items; destructive ones are moved to the end. */
+  actions?: RowAction[];
   children: React.ReactNode;
   className?: string;
 }) {
+  const destructive = actions.filter((a) => a.destructive);
+  const regular = actions.filter((a) => !a.destructive);
+  const items: RowAction[] = [
+    ...regular,
+    {
+      label: "Move up",
+      disabled: index === 0,
+      onSelect: () => onMove(index, index - 1),
+      separatorBefore: regular.length > 0,
+    },
+    { label: "Move down", disabled: index === total - 1, onSelect: () => onMove(index, index + 1) },
+    ...destructive.map((a, i) => ({ ...a, separatorBefore: i === 0 })),
+  ];
   return (
     <li
       className={cn(
@@ -195,26 +215,7 @@ export function SortableRow({
         ⋮⋮
       </span>
       <div className="min-w-0 flex-1">{children}</div>
-      <div className="flex gap-0.5">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={`Move ${label} up`}
-          disabled={index === 0}
-          onClick={() => onMove(index, index - 1)}
-        >
-          ↑
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={`Move ${label} down`}
-          disabled={index === total - 1}
-          onClick={() => onMove(index, index + 1)}
-        >
-          ↓
-        </Button>
-      </div>
+      <RowActions label={`Actions for ${label}`} actions={items} />
     </li>
   );
 }

@@ -24,7 +24,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Banner } from "../Banner";
 import { DataToolbar } from "../DataToolbar";
 import { Field } from "../RichTextField";
-import { RowActions } from "../RowActions";
 import type { FaqItem } from "../types";
 import { ContentEditorFrame, moveItem, SortableRow } from "./ContentEditorFrame";
 import { fromPlainText, toPlainText } from "@/modules/content/plain-text";
@@ -150,6 +149,15 @@ export function FaqsEditor({ faqs: initial, products }: { faqs: FaqItem[]; produ
                 ),
               )
             }
+            actions={[
+              { label: "Edit", onSelect: () => openEdit(item), disabled: scope === "product" },
+              {
+                label: "Delete",
+                destructive: true,
+                disabled: scope === "product",
+                onSelect: () => handleDelete(item),
+              },
+            ]}
           >
             <div className="flex items-start gap-3">
               <div className="min-w-0 flex-1">
@@ -192,23 +200,6 @@ export function FaqsEditor({ faqs: initial, products }: { faqs: FaqItem[]; produ
                     }
                   }}
                   aria-label={`Published: ${item.question}`}
-                />
-                <RowActions
-                  label={`Actions for ${item.question}`}
-                  actions={[
-                    {
-                      label: "Edit",
-                      onSelect: () => openEdit(item),
-                      disabled: scope === "product",
-                    },
-                    {
-                      label: "Delete",
-                      destructive: true,
-                      separatorBefore: true,
-                      disabled: scope === "product",
-                      onSelect: () => handleDelete(item),
-                    },
-                  ]}
                 />
               </div>
             </div>

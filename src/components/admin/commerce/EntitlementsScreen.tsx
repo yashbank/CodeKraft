@@ -581,19 +581,10 @@ export function EntitlementsScreen({
                       <React.Fragment key={t.id}>
                         <TableRow>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-expanded={open}
-                              aria-controls={`task-${t.id}`}
-                              aria-label={`${open ? "Collapse" : "Expand"} task for ${t.customer.name}`}
-                              onClick={() => setExpanded(open ? null : t.id)}
-                            >
-                              <ChevronDownIcon
-                                aria-hidden
-                                className={cn("size-4 transition-transform", open && "rotate-180")}
-                              />
-                            </Button>
+                            <ChevronDownIcon
+                              aria-hidden
+                              className={cn("size-4 text-fg-muted transition-transform", open && "rotate-180")}
+                            />
                           </TableCell>
                           <TableCell className="text-fg-muted">{formatDate(t.createdAt)}</TableCell>
                           <TableCell>
@@ -649,20 +640,19 @@ export function EntitlementsScreen({
                             {old && t.status === "open" ? " · overdue" : ""}
                           </TableCell>
                           <TableCell>
-                            <span className="flex gap-1">
-                              <Button asChild variant="ghost" size="sm">
-                                <Link href={orderHref}>Open order</Link>
-                              </Button>
-                              {t.status === "open" ? (
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  onClick={() => setDoneTask(t)}
-                                >
-                                  Mark done
-                                </Button>
-                              ) : null}
-                            </span>
+                            <RowActions
+                              label={`Actions for task ${t.customer.name}`}
+                              actions={[
+                                ...(t.status === "open"
+                                  ? [{ label: "Mark done", onSelect: () => setDoneTask(t) }]
+                                  : []),
+                                { label: "Open order", href: orderHref },
+                                {
+                                  label: open ? "Hide details" : "Show details",
+                                  onSelect: () => setExpanded(open ? null : t.id),
+                                },
+                              ]}
+                            />
                           </TableCell>
                         </TableRow>
                         {open ? (

@@ -44,7 +44,8 @@ describe("CaseStudiesEditor gallery", () => {
     fireEvent.change(screen.getByLabelText("Gallery image files"), { target: { files } });
     await waitFor(() => screen.getByLabelText("Alt text for image 2"));
     expect((screen.getByLabelText("Alt text for image 1") as HTMLInputElement).value).toBe("one");
-    await userEvent.click(screen.getByLabelText("Move image 1 down"));
+    await userEvent.click(screen.getByRole("button", { name: "Actions for image 1" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Move down" }));
     expect((screen.getByLabelText("Alt text for image 1") as HTMLInputElement).value).toBe("two");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(saveCaseStudy).toHaveBeenCalled());
