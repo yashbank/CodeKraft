@@ -533,7 +533,11 @@ export function LeadsScreen({
                         </span>
                       ) : (
                         <span className="flex items-center gap-2">
-                          <Badge tone="ghost" size="sm" title="Unassigned — claim it from the row menu">
+                          <Badge
+                            tone="ghost"
+                            size="sm"
+                            title="Unassigned — claim it from the row menu"
+                          >
                             Pool
                           </Badge>
                         </span>

@@ -29,9 +29,7 @@ test.beforeAll(async ({ browser }) => {
   await loginAs(page, "super_admin");
   await page.goto(`${ADMIN}/admin/settings`);
   await page.getByRole("button", { name: "Theme", exact: true }).click();
-  await page.getByRole("combobox", { name: "Accent palette", exact: true }).click();
-  await page.getByPlaceholder(/Search \d+ options/).fill("sun");
-  await page.getByRole("option", { name: "Sunset", exact: true }).first().click();
+  await page.getByRole("radio", { name: "Amber", exact: true }).click();
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText("Settings saved")).toBeVisible({ timeout: 30_000 });
   await page.close();
@@ -69,7 +67,7 @@ for (const viewer of VIEWERS) {
           },
           { timeout: 30_000, message: `${viewer} @${w} palette` },
         )
-        .toBe("sunset");
+        .toBe("amber");
     }
 
     // toggle: admin shell keeps it in the header at every width; the site header collapses it
@@ -94,7 +92,7 @@ for (const viewer of VIEWERS) {
       await page.setViewportSize({ width: w, height: 900 });
       await page.reload();
       expect(await theme(page), `${viewer} @${w} theme remembered`).toBe(chosen);
-      expect(await palette(page), `${viewer} @${w} palette unchanged by toggle`).toBe("sunset");
+      expect(await palette(page), `${viewer} @${w} palette unchanged by toggle`).toBe("amber");
     }
     issues.assertClean();
   });

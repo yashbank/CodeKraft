@@ -5,11 +5,9 @@
 import { PALETTES, paletteVars, type PaletteId } from "./palettes";
 import type { ThemeName } from "./theme";
 import {
-  BUTTON_IDS,
   CARD_IDS,
   FONT_FAMILY_IDS,
   SHADOW_IDS,
-  buttonLabel,
   buttonVars,
   cardLabel,
   cardVars,
@@ -25,7 +23,6 @@ import {
   type ShadowId,
 } from "./theme-catalogue";
 import {
-  BORDER_IDS,
   DEFAULT_UI_STYLE,
   DENSITY_IDS,
   FONT_IDS,
@@ -33,10 +30,10 @@ import {
   LAYOUT_IDS,
   LAYOUT_LABELS,
   PATTERN_IDS,
-  RADIUS_IDS,
   borderValue,
   densityPad,
   patternProps,
+  radiusMdPx,
   uiStyleVars,
   type UiStyle,
 } from "./ui-style";
@@ -139,6 +136,77 @@ export function addPreset(list: ThemePreset[], name: string, values: StudioValue
 export const removePreset = (list: ThemePreset[], name: string) =>
   list.filter((p) => p.name !== name);
 
+// ---- curated choices (G18-3b) ------------------------------------------------------------------
+/**
+ * The small set the studio actually offers for the four groups that used to list 40+ options.
+ * Stored values are NOT migrated: every old id is still valid and still renders exactly as before.
+ * The studio only shows the nearest curated option as selected (`nearestCurated`) until the admin
+ * picks one, so nothing changes silently.
+ */
+export const CURATED = {
+  palette: ["violet", "ocean", "emerald", "amber", "rose", "teal", "slate", "crimson"],
+  radius: ["sharp", "soft", "round"],
+  border: ["subtle", "defined", "strong"],
+  button: ["default", "slight-bold-flat", "pill-bold-soft"],
+} as const satisfies Record<string, readonly string[]>;
+export type CuratedKey = keyof typeof CURATED;
+export const isCuratedKey = (k: string): k is CuratedKey => k in CURATED;
+
+const CURATED_LABELS: Record<string, string> = {
+  sharp: "Sharp",
+  soft: "Soft (default)",
+  round: "Round",
+  subtle: "Subtle (default)",
+  defined: "Defined",
+  strong: "Strong",
+  default: "Theme default",
+  "slight-bold-flat": "Classic",
+  "pill-bold-soft": "Pill",
+};
+const curatedLabel = (key: CuratedKey, id: string) =>
+  key === "palette" ? (PALETTES.find((p) => p.id === id)?.label ?? id) : (CURATED_LABELS[id] ?? id);
+
+const hexRgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const dist = (a: number[], b: number[]) => a.reduce((n, v, i) => n + (v - (b[i] ?? 0)) ** 2, 0);
+const lightOf = (id: string) => PALETTES.find((p) => p.id === id)?.light;
+
+/** Map any stored value (including the 40+ legacy ids) to the closest curated option. Pure. */
+export function nearestCurated(key: CuratedKey, id: string): string {
+  const set: readonly string[] = CURATED[key];
+  if (set.includes(id)) return id;
+  if (key === "palette") {
+    const from = lightOf(id);
+    if (!from) return DEFAULT_STUDIO.palette;
+    const a = hexRgb(from);
+    let best = DEFAULT_STUDIO.palette as string;
+    let bestD = Infinity;
+    for (const c of set) {
+      const hex = lightOf(c);
+      const d = hex ? dist(a, hexRgb(hex)) : Infinity;
+      if (d < bestD) [best, bestD] = [c, d];
+    }
+    return best;
+  }
+  if (key === "radius") {
+    const px = radiusMdPx(id);
+    let best = "soft";
+    for (const c of set)
+      if (Math.abs(radiusMdPx(c) - px) < Math.abs(radiusMdPx(best) - px)) best = c;
+    return best;
+  }
+  if (key === "border") {
+    const m = /^(?:ink|tint)-(\d+)$/.exec(id);
+    if (m) {
+      const n = Number(m[1]);
+      return n <= 9 ? "subtle" : n <= 24 ? "defined" : "strong";
+    }
+    return id === "faint" ? "subtle" : id === "defined" ? "defined" : "strong";
+  }
+  // button: ids look like shape-type-elevation
+  const shape = id.split("-")[0];
+  return shape === "pill" || shape === "soft" ? "pill-bold-soft" : "slight-bold-flat";
+}
+
 // ---- groups (what the dropdowns render) ------------------------------------------------------
 export interface StudioGroup {
   key: keyof StudioValues;
@@ -161,8 +229,8 @@ export const STUDIO_GROUPS: readonly StudioGroup[] = [
     key: "palette",
     label: "Accent palette",
     note: "Changes the accent colour of buttons, links and highlights. See it on the buttons and the landing hero.",
-    ids: PALETTES.map((p) => p.id),
-    labelOf: (id) => PALETTES.find((p) => p.id === id)?.label ?? id,
+    ids: CURATED.palette,
+    labelOf: (id) => curatedLabel("palette", id),
   },
   {
     key: "font",
@@ -189,22 +257,15 @@ export const STUDIO_GROUPS: readonly StudioGroup[] = [
     key: "radius",
     label: "Corner radius",
     note: "Changes the corner roundness of buttons, cards and inputs. See it on product cards and the contact form.",
-    ids: RADIUS_IDS,
-    labelOf: (id) => px(id, (s) => (s === "soft" ? "Soft (default)" : cap(s))),
+    ids: CURATED.radius,
+    labelOf: (id) => curatedLabel("radius", id),
   },
   {
     key: "border",
     label: "Borders",
     note: "Changes how strong card and input outlines look. See it on product cards and form fields.",
-    ids: BORDER_IDS,
-    labelOf: (id) => {
-      const m = /^(ink|tint)-(\d+)$/.exec(id);
-      return m
-        ? `${m[1] === "ink" ? "Ink" : "Tint"} ${m[2]}%`
-        : id === "subtle"
-          ? "Subtle (default)"
-          : cap(id);
-    },
+    ids: CURATED.border,
+    labelOf: (id) => curatedLabel("border", id),
   },
   {
     key: "density",
@@ -233,8 +294,8 @@ export const STUDIO_GROUPS: readonly StudioGroup[] = [
     key: "button",
     label: "Button style",
     note: "Changes the shape, weight and depth of buttons. See it on the hero call to action and form submit button.",
-    ids: BUTTON_IDS,
-    labelOf: buttonLabel,
+    ids: CURATED.button,
+    labelOf: (id) => curatedLabel("button", id),
   },
   {
     key: "card",

@@ -35,18 +35,33 @@ describe("ThemeStudio", () => {
     const preview = screen.getByTestId("theme-preview");
     expect(preview.style.getPropertyValue("--ck-radius-lg")).toBe("");
 
-    fireEvent.click(screen.getByRole("combobox", { name: "Corner radius" }));
-    fireEvent.click(screen.getByRole("option", { name: "Pill" }));
-    expect(preview.style.getPropertyValue("--ck-radius-lg")).toBe("32px");
+    fireEvent.click(screen.getByRole("radio", { name: "Round" }));
+    expect(preview.style.getPropertyValue("--ck-radius-lg")).toBe("22px");
 
     fireEvent.click(screen.getByRole("combobox", { name: "Heading font" }));
     fireEvent.click(screen.getByRole("option", { name: "Playfair Display (serif)" }));
     expect(preview.style.getPropertyValue("--ck-font-display")).toContain("Playfair Display");
 
-    fireEvent.click(screen.getByRole("combobox", { name: "Button style" }));
-    fireEvent.click(screen.getByRole("option", { name: "Pill · Caps · Hard" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Pill" }));
     expect(preview.getAttribute("data-ck-btn")).toBe("1");
     expect(preview.style.getPropertyValue("--ck-btn-radius")).toBe("999px");
+  });
+
+  it("shows the nearest curated tile for a legacy stored value without rewriting it", () => {
+    const seen: StudioValues[] = [];
+    render(
+      <ThemeStudio
+        values={{ ...DEFAULT_STUDIO, radius: "r24", palette: "cherry" }}
+        onChange={(v) => seen.push(v)}
+        theme="dark-cinematic"
+        presets={[]}
+        disabled={false}
+      />,
+    );
+    expect(screen.getByRole("radio", { name: "Round" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "Rose" })).toHaveAttribute("aria-checked", "true");
+    expect(seen).toHaveLength(0);
+    expect(screen.getAllByRole("radio").length).toBe(8 + 3 + 3 + 3);
   });
 
   it("reset restores the defaults and every group shows its note", () => {
@@ -55,16 +70,13 @@ describe("ThemeStudio", () => {
     expect(preview.style.getPropertyValue("--ck-radius-lg")).toBe("32px");
     fireEvent.click(screen.getByRole("button", { name: "Reset to defaults" }));
     expect(preview.style.getPropertyValue("--ck-radius-lg")).toBe("");
-    expect(screen.getByRole("combobox", { name: "Accent palette" }).textContent).toContain(
-      "Violet",
-    );
+    expect(screen.getByRole("radio", { name: "Violet" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getAllByText(/^Changes .+\. See it on .+\.$/).length).toBeGreaterThanOrEqual(10);
   });
 
   it("saves, applies and deletes a named preset", async () => {
     render(<Harness />);
-    fireEvent.click(screen.getByRole("combobox", { name: "Corner radius" }));
-    fireEvent.click(screen.getByRole("option", { name: "Sharp" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Sharp" }));
     fireEvent.change(screen.getByLabelText("Preset name"), { target: { value: "Mine" } });
     fireEvent.click(screen.getByRole("button", { name: "Save current as preset" }));
     const row = await screen.findByText("Mine");

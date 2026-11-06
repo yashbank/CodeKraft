@@ -169,6 +169,12 @@ const RADII = {
   pill: [12, 18, 24, 32, 40, 56],
 } as const;
 const SIZES = ["xs", "sm", "md", "lg", "xl", "2xl"];
+/** Medium corner radius in px for any radius id ("soft" = the theme's own 10px). Used to find the nearest curated option. */
+export function radiusMdPx(id: string): number {
+  if (id === "soft") return 10;
+  const scale = RADII[id as keyof typeof RADII] ?? genRadiusScale(id);
+  return scale?.[2] ?? 10;
+}
 const DEFINED_BORDER = { "dark-cinematic": "#3b4157", "light-editorial": "#c8c3b4" } as const;
 // Other border styles are theme-agnostic mixes of existing tokens (never self-referencing).
 const BORDER_MIX: Record<string, string> = {

@@ -583,7 +583,10 @@ export function EntitlementsScreen({
                           <TableCell>
                             <ChevronDownIcon
                               aria-hidden
-                              className={cn("size-4 text-fg-muted transition-transform", open && "rotate-180")}
+                              className={cn(
+                                "size-4 text-fg-muted transition-transform",
+                                open && "rotate-180",
+                              )}
                             />
                           </TableCell>
                           <TableCell className="text-fg-muted">{formatDate(t.createdAt)}</TableCell>

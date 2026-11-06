@@ -308,10 +308,16 @@ describe("ProductEditor — media reorder (overnight item 3)", () => {
     await clickTab(/^Media,/);
 
     await userEvent.click(screen.getByRole("button", { name: "Actions for hero-cover.webp" }));
-    expect(screen.getByRole("menuitem", { name: "Move up" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("menuitem", { name: "Move up" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
     await userEvent.keyboard("{Escape}");
     await userEvent.click(screen.getByRole("button", { name: "Actions for fitdesk-overview.pdf" }));
-    expect(screen.getByRole("menuitem", { name: "Move down" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("menuitem", { name: "Move down" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
     await userEvent.keyboard("{Escape}");
 
     await userEvent.click(screen.getByRole("button", { name: "Actions for hero-cover.webp" }));

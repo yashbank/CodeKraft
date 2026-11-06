@@ -267,7 +267,9 @@ export function CouponsList({
                               void navigator.clipboard
                                 .writeText(c.code)
                                 .then(() => toast.success(`Copied ${c.code}`))
-                                .catch(() => toast.error("Couldn't copy — select the code instead")),
+                                .catch(() =>
+                                  toast.error("Couldn't copy — select the code instead"),
+                                ),
                           },
                           c.state === "inactive"
                             ? { label: "Activate", onSelect: () => openEditor(c) }

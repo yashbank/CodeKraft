@@ -35,9 +35,8 @@ test.describe("R9-07 admin dashboard", () => {
     const before = await widgets.first().evaluate((el) => getComputedStyle(el).borderTopLeftRadius);
     await page.goto(`${ADMIN}/admin/settings`);
     await page.getByRole("button", { name: "Theme", exact: true }).click();
-    // P14-07: the radius picker is now a searchable dropdown (was a radio card)
-    await page.getByRole("combobox", { name: "Corner radius", exact: true }).click();
-    await page.getByRole("option", { name: "Round", exact: true }).click();
+    // G18: radius is one of three swatch tiles
+    await page.getByRole("radio", { name: "Round", exact: true }).click();
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("Settings saved")).toBeVisible({ timeout: 30_000 });
     await page.goto(`${ADMIN}/admin/dashboard`);

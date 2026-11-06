@@ -7,10 +7,12 @@ import {
 } from "@/modules/settings/contracts";
 import {
   DEFAULT_STUDIO,
+  CURATED,
   DEFAULT_STUDIO_EXTRAS,
   MAX_PRESETS,
   STUDIO_GROUPS,
   addPreset,
+  nearestCurated,
   previewVars,
   removePreset,
   studioAttrs,
@@ -20,20 +22,12 @@ import {
   type StudioValues,
 } from "@/lib/theme-studio";
 import { fontStack, fontsHref } from "@/lib/theme-catalogue";
+import { PALETTE_IDS } from "@/lib/palettes";
+import { BORDER_IDS, RADIUS_IDS } from "@/lib/ui-style";
+import { BUTTON_IDS } from "@/lib/theme-catalogue";
 import { borderValue, densityPad, patternProps, uiStyleCss, uiStyleVars } from "@/lib/ui-style";
 
-const FORTY = [
-  "palette",
-  "headingFont",
-  "bodyFont",
-  "radius",
-  "border",
-  "density",
-  "shadow",
-  "pattern",
-  "button",
-  "card",
-] as const;
+const FORTY = ["headingFont", "bodyFont", "density", "shadow", "pattern", "card"] as const;
 const group = (k: string) => STUDIO_GROUPS.find((g) => g.key === k)!;
 
 describe("theme studio catalogue", () => {
@@ -42,6 +36,38 @@ describe("theme studio catalogue", () => {
     expect(g.ids.length).toBeGreaterThanOrEqual(40);
     expect(new Set(g.ids).size).toBe(g.ids.length);
     for (const id of g.ids) expect(g.labelOf(id).length).toBeGreaterThan(0);
+  });
+
+  it("palette, radius, border and button offer only a small curated set, each labelled", () => {
+    expect(group("palette").ids).toHaveLength(8);
+    expect(group("radius").ids).toHaveLength(3);
+    expect(group("border").ids).toHaveLength(3);
+    expect(group("button").ids).toHaveLength(3);
+    for (const k of ["palette", "radius", "border", "button"] as const)
+      for (const id of group(k).ids) expect(group(k).labelOf(id).length).toBeGreaterThan(0);
+  });
+
+  it("existing defaults stay selectable and unchanged", () => {
+    expect(CURATED.palette).toContain(DEFAULT_STUDIO.palette);
+    expect(CURATED.radius).toContain(DEFAULT_STUDIO.radius);
+    expect(CURATED.border).toContain(DEFAULT_STUDIO.border);
+    expect(CURATED.button).toContain(DEFAULT_STUDIO.button);
+  });
+
+  it("every legacy id maps to a curated option at read time and is never rewritten", () => {
+    for (const id of PALETTE_IDS) expect(CURATED.palette).toContain(nearestCurated("palette", id));
+    for (const id of RADIUS_IDS) expect(CURATED.radius).toContain(nearestCurated("radius", id));
+    for (const id of BORDER_IDS) expect(CURATED.border).toContain(nearestCurated("border", id));
+    for (const id of BUTTON_IDS) expect(CURATED.button).toContain(nearestCurated("button", id));
+    expect(nearestCurated("radius", "pill")).toBe("round");
+    expect(nearestCurated("radius", "r0")).toBe("sharp");
+    expect(nearestCurated("palette", "cherry")).toBe("rose");
+    expect(nearestCurated("border", "ink-60")).toBe("strong");
+    expect(nearestCurated("button", "square-caps-hard")).toBe("slight-bold-flat");
+    // The schema still accepts every old stored id, so existing sites keep rendering as before.
+    expect(
+      updateSettingsSchema.parse({ patch: { uiRadius: "pill", uiBorder: "tint-42" } }).patch,
+    ).toMatchObject({ uiRadius: "pill", uiBorder: "tint-42" });
   });
 
   it("every group carries a one-line 'Changes X. See it on Y.' note", () => {
