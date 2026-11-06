@@ -2,6 +2,7 @@
 // real size, type and bytes of what the browser uploaded; any path never PUT answers 200 with an empty
 // body (the invoice PDF upload spec relies on that). Permissive CORS.
 import process from "node:process";
+import { Buffer } from "node:buffer";
 import { createServer } from "node:http";
 
 /** @type {Map<string, {body: Buffer, type: string}>} */
