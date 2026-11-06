@@ -94,6 +94,10 @@ test.describe("G18 3c: widgets match the database", () => {
         [`G18 w ${tag}${i}`, `g18w-${stamp}-${tag}${i}@example.test`],
       );
   };
+  test.beforeAll(async () => {
+    // another spec (p14-09, p14-01...) may have saved a custom widget set for the admin: use the default
+    await q(`delete from dashboard_layouts`);
+  });
   test.afterAll(async () => {
     await q(`delete from leads where email like $1`, [`g18w-${stamp}-%@example.test`]);
   });

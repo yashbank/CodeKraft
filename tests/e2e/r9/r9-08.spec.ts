@@ -47,6 +47,10 @@ const rootVar = (page: Page, name: string) =>
   page.evaluate((n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), name);
 
 test.describe("R9-08 theme options", () => {
+  // Site theme is one global row: the desktop and mobile projects would race on it when run in
+  // parallel. Settings is laptop-only and every test drives its own 1280px viewport, so run it once.
+  test.skip(({ isMobile }) => isMobile, "global theme; viewport is driven explicitly from desktop");
+
   test.afterAll(async ({ browser }) => {
     const page = await browser.newPage();
     await loginAs(page, "super_admin");

@@ -21,7 +21,7 @@ export function renderNotification(
       return {
         title: `Order Created #${p.orderNumber ?? p.orderId ?? ""}`.trim(),
         body: "Your order has been placed. Please complete the payment to activate your access.",
-        link: p.orderId ? `/account/orders/${p.orderId}` : "/account/orders",
+        link: p.orderId ? `/account/orders/${p.orderId}` : "/account/purchases",
         emailTemplate: "order-created-instructions",
         emailPriority: 1,
       };
@@ -50,7 +50,7 @@ export function renderNotification(
         body:
           p.reason ??
           "Your payment could not be processed. Please try again or submit a new reference.",
-        link: p.orderId ? `/account/orders/${p.orderId}` : "/account/orders",
+        link: p.orderId ? `/account/orders/${p.orderId}` : "/account/purchases",
         emailTemplate: null,
         emailPriority: 1,
       };

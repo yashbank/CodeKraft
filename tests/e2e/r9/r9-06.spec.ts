@@ -26,7 +26,12 @@ test("r9-06 confirming screen, redirect, delivery action", async ({ browser }) =
      where o.status='active' and o.purchase_model='one_time' and p.status='published'
        and not exists (select 1 from user_offering_purchases u where u.offering_id=o.id
          and u.user_id=(select id from users where email='buyer@codekraft.test'))
-     order by o.created_at limit 1`,
+       and not exists (select 1 from orders ord join order_items oi on oi.order_id=ord.id
+         where oi.offering_id=o.id
+         and ord.user_id=(select id from users where email='buyer@codekraft.test'))
+     order by o.created_at offset $1 limit 1`,
+    // desktop and mobile run in parallel and must not fight over the same offering
+    [test.info().project.name.includes("mobile") ? 1 : 0],
   );
   expect(off, "an unowned one-time offering").toBeTruthy();
 

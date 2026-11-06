@@ -82,6 +82,8 @@ export function buildCsp(
   const razorpayApi = ["https://api.razorpay.com", "https://checkout.razorpay.com"];
   // Presigned browser PUT to R2 (S3 API endpoint) + public media host.
   const r2 = "https://*.r2.cloudflarestorage.com";
+  // Self-hosted / local S3 endpoint (the e2e storage stub): the browser PUTs to the presigned URL.
+  const storage = originOf(process.env.STORAGE_ENDPOINT);
   const list = (...xs: (string | null | false)[]) => xs.filter(Boolean).join(" ");
   const enforce = cspMode() === "enforce";
   const policy = [
@@ -95,7 +97,7 @@ export function buildCsp(
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     `font-src ${list("'self'", "https://fonts.gstatic.com", "data:", media, r2)}`,
     `img-src ${list("'self'", "data:", "blob:", media, r2, siteOrigin, "https://*.razorpay.com")}`,
-    `connect-src ${list("'self'", turnstile, ...razorpayApi, "https://lumberjack.razorpay.com", media, r2, umami, sentry, "https://*.ingest.sentry.io", "https://*.ingest.us.sentry.io", dev && "ws:", dev && "wss:")}`,
+    `connect-src ${list("'self'", turnstile, ...razorpayApi, "https://lumberjack.razorpay.com", media, r2, storage, umami, sentry, "https://*.ingest.sentry.io", "https://*.ingest.us.sentry.io", dev && "ws:", dev && "wss:")}`,
     // Video and audio uploaded to R2 play from the media host (default-src would otherwise block them).
     `media-src ${list("'self'", "blob:", media, r2)}`,
     `frame-src ${list("'self'", turnstile, ...razorpayApi, media)}`,
