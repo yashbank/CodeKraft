@@ -11,7 +11,8 @@ import { db } from "@/lib/db";
 import { getEnv } from "@/lib/env";
 import { getPrivateBucketName, getStorageDriver } from "@/lib/storage";
 import { runHealthChecks } from "./system-health";
-import type { DashboardData, QueueItem } from "@/components/admin/types";
+import type { DashboardData, ProductStatus, QueueItem } from "@/components/admin/types";
+import type { RequestContext } from "@/lib/authz/context";
 import { HEATMAP_DAYS, bucketWeekdayHour, emptyHeatmap } from "@/modules/dashboard-widgets/heatmap";
 
 const n = (v: unknown) => Number(v ?? 0);
@@ -181,6 +182,20 @@ export const loadNewCustomers = (days: number): Promise<DashboardData["newCustom
       delta: deltaText(n(t?.cur), n(t?.prev)),
       sparkline: [...series].map((r) => n(r.c)),
     };
+  });
+
+/**
+ * Products per status, counted in SQL so it is exact at any catalogue size (the old version
+ * counted a 100-row page). Same scope as the products list: a super admin sees every product,
+ * anyone else only their own (D-512).
+ */
+export const loadCatalogStatus = (ctx: RequestContext): Promise<DashboardData["catalogStatus"]> =>
+  safe("catalogStatus", [], async () => {
+    const own = ctx.roles.includes("super_admin") ? sql`true` : sql`created_by = ${ctx.userId}`;
+    const rows = await db.execute<{ status: ProductStatus; c: string }>(
+      sql`select status::text as status, count(*) as c from products where ${own} group by status order by status`,
+    );
+    return [...rows].map((r) => ({ status: r.status, count: n(r.c) }));
   });
 
 export const loadSystemHealth = (): Promise<DashboardData["systemHealth"]> =>

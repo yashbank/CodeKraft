@@ -59,6 +59,7 @@ export default async function AdminDashboardRoute({
         allowed={allowed}
         styles={styles}
         isSuperAdmin={isSuperAdmin}
+        generatedAt={new Date().toISOString()}
         greeting={`Welcome back, ${firstName}`}
         dateLabel={`FY ${fyFor(new Date())} · ${new Date().toLocaleDateString("en-IN", {
           day: "numeric",
