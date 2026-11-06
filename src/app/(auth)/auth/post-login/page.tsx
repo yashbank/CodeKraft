@@ -32,7 +32,9 @@ export default async function PostLoginPage({
 
   const adminUrl = getEnv().NEXT_PUBLIC_ADMIN_URL;
   const h = await headers();
-  const token = await (await getAuth("site")).api
+  const token = await (
+    await getAuth("site")
+  ).api
     .generateOneTimeToken({ headers: h })
     .then((r) => r.token)
     .catch(() => null);
