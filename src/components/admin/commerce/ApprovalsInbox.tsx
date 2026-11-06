@@ -81,7 +81,8 @@ export function ApprovalsInbox({ approvals, currentUser, now, initialId }: Appro
   const [selectedId, setSelectedId] = React.useState<string | null>(
     initialId ?? list[0]?.id ?? null,
   );
-  const selected = approvals.find((a) => a.id === selectedId) ?? list[0] ?? null;
+  // Only a request that is in the visible list can be open, so switching tab shows that tab's first.
+  const selected = list.find((a) => a.id === selectedId) ?? list[0] ?? null;
 
   const counts = {
     mine: approvals.filter((a) => a.status === "pending" && !isMine(a)).length,
