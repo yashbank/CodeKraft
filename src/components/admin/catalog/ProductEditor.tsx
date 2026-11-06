@@ -1511,7 +1511,7 @@ export function ProductEditor({
               ref={mediaFileInputRef}
               type="file"
               className="sr-only"
-              accept="image/*,video/mp4,video/webm,application/pdf"
+              accept="image/*,video/mp4,video/webm,video/quicktime,.mov,application/pdf"
               onChange={onMediaFileChosen}
             />
             <div className="rounded-lg border-2 border-dashed border-border-strong p-8 text-center">

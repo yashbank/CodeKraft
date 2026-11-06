@@ -38,6 +38,13 @@ const nextConfig: NextConfig = {
     deviceSizes: [640, 828, 1080, 1280, 1920],
     imageSizes: [96, 128, 256, 384],
     minimumCacheTTL: 60 * 60 * 24 * 30,
+    // Uploaded SVG logos/illustrations (content_media only, checked on upload) render through
+    // next/image. The optimizer serves them as a download with a locked-down CSP so a script
+    // inside one can never run if the file is opened directly.
+    dangerouslyAllowSVG: true,
+    contentDispositionType: "attachment",
+    contentSecurityPolicy:
+      "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; sandbox;",
   },
   headers: async () => cacheHeaderRules,
   // A real 307 (a page-level redirect() under a loading.tsx boundary streams as a client redirect).

@@ -10,7 +10,7 @@
  * work for ordinary signed-in customers. Mirrors `resolveRouteContext`'s same fallback.
  */
 import { getSession } from "@/modules/auth/service";
-import { loadRoles } from "@/modules/auth/roles-port";
+import { hasAdminClassRole, loadRoles } from "@/modules/auth/roles-port";
 import { buildContext, type RequestContext } from "./context";
 import { assertNoPasswordChange } from "./must-change";
 import { AppError, ErrorCode } from "@/lib/errors";
@@ -21,6 +21,9 @@ export async function getSiteRequestContext(): Promise<RequestContext> {
   assertNoPasswordChange(session);
 
   const loadedRoles = await loadRoles(session.user.id);
+  // Admin-class users (super_admin, admin, staff) belong in the admin area only: the customer
+  // area and its server actions refuse them even if they hold a site-host session (e.g. Google).
+  if (hasAdminClassRole(loadedRoles)) throw new AppError(ErrorCode.FORBIDDEN);
   const roles = loadedRoles.length > 0 ? loadedRoles : (["customer"] as const);
   return buildContext({
     user: { id: session.user.id },

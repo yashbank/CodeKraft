@@ -3,6 +3,7 @@
  * Editor's hero image picker. Does the network/data flow only — callers own their own UI
  * (dropzone, progress bar, alt-text prompt, etc.).
  */
+import { canonicalMime, mimeForFilename } from "@/lib/upload-formats";
 import { completeMediaUpload, createMediaUploadIntent } from "@/modules/media/admin-mutations";
 
 export interface UploadedMedia {
@@ -16,7 +17,11 @@ export async function uploadMediaFile(file: File, purpose: string): Promise<Uplo
   const intentResult = await createMediaUploadIntent({
     purpose,
     filename: file.name,
-    mime: file.type || "application/octet-stream", // .AppImage/.pkg often report ""
+    // Browsers report "" or odd spellings for mov, md, csv, fonts: fall back to the extension, then map aliases.
+    mime:
+      canonicalMime(file.type) ??
+      mimeForFilename(file.name) ??
+      (file.type || "application/octet-stream"), // .AppImage/.pkg often report ""
     sizeBytes: file.size,
   });
   if (!intentResult.ok) throw new Error(intentResult.error.message);

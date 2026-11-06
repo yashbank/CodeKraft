@@ -40,12 +40,12 @@ export async function ProductsView({
   let wishlistedIds: string[] = [];
   if (signedIn) {
     const { getSiteRequestContext } = await import("@/lib/authz/site-request-context");
-    const wishlistCtx = await getSiteRequestContext();
-    const wishlistResult = await listMyWishlistQuery(
-      { limit: 100, displayCurrency: currency },
-      wishlistCtx,
-    );
-    if (wishlistResult.ok) wishlistedIds = wishlistResult.data.items.map((i) => i.productId);
+    // Admin-class users are refused here: they just see no wishlist.
+    const wishlistCtx = await getSiteRequestContext().catch(() => null);
+    const wishlistResult = wishlistCtx
+      ? await listMyWishlistQuery({ limit: 100, displayCurrency: currency }, wishlistCtx)
+      : null;
+    if (wishlistResult?.ok) wishlistedIds = wishlistResult.data.items.map((i) => i.productId);
   }
 
   return (

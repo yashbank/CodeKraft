@@ -5,6 +5,9 @@ import { getSiteLogo, getSiteName } from "@/lib/site-brand";
 import { Toaster } from "@/components/ui/sonner";
 import { enforcePasswordChange } from "@/lib/authz/must-change";
 import { redirectToLogin } from "@/lib/authz/login-redirect";
+import { isAdminAreaUser } from "@/lib/authz/post-login";
+import { loadRoles } from "@/modules/auth/roles-port";
+import { redirect } from "next/navigation";
 
 import { getSession } from "@/modules/auth/service";
 import { getDisplayCurrency } from "@/lib/display-currency";
@@ -22,6 +25,8 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session) return redirectToLogin("/account");
+  // Admin-class users never see the customer area: the post-login page sends them to admin.
+  if (isAdminAreaUser(await loadRoles(session.user.id))) redirect("/auth/post-login");
   enforcePasswordChange(session);
   const [{ currency }, table] = await Promise.all([getDisplayCurrency(), getRateTable()]);
   return (

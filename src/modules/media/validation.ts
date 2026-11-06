@@ -3,37 +3,21 @@
  */
 import { AppError, ErrorCode } from "@/lib/errors";
 import { validateAttachmentFile } from "@/lib/attachments";
+import { FORBIDDEN_UPLOAD_EXTENSIONS, SVG_MIME } from "@/lib/upload-formats";
 import {
   CUSTOMER_UPLOAD_PURPOSES,
   EMBED_HOSTS,
   UPLOAD_PURPOSES,
   UPLOAD_RULES,
+  maxBytesFor,
   type UploadPurpose,
 } from "./types";
 import type { CreateUploadIntentInput } from "./contracts";
 
-export const FORBIDDEN_EXTENSIONS = new Set([
+// svg is not forbidden outright: content_media may carry it after the safety check (svg-safety.ts).
+export const FORBIDDEN_EXTENSIONS: ReadonlySet<string> = new Set([
+  ...FORBIDDEN_UPLOAD_EXTENSIONS,
   "svg",
-  "html",
-  "htm",
-  "exe",
-  "dll",
-  "so",
-  "dylib",
-  "js",
-  "mjs",
-  "cjs",
-  "ts",
-  "sh",
-  "bash",
-  "bat",
-  "cmd",
-  "vbs",
-  "php",
-  "phtml",
-  "py",
-  "rb",
-  "jar",
 ]);
 
 export function getFileExtension(filename: string): string {
@@ -56,7 +40,8 @@ export function validateUploadIntent(input: CreateUploadIntentInput): void {
   // 2. Disallow forbidden file extensions
   const ext = getFileExtension(input.filename);
   // release_file is admin-only, private and never served inline: installers (.exe) are its purpose.
-  if (FORBIDDEN_EXTENSIONS.has(ext) && input.purpose !== "release_file") {
+  const svgOk = ext === "svg" && input.purpose === "content_media";
+  if (FORBIDDEN_EXTENSIONS.has(ext) && input.purpose !== "release_file" && !svgOk) {
     throw new AppError(
       ErrorCode.VALIDATION,
       `File extension .${ext} is forbidden for security reasons`,
@@ -87,10 +72,19 @@ export function validateUploadIntent(input: CreateUploadIntentInput): void {
     throw new AppError(ErrorCode.VALIDATION, "File size must be greater than 0");
   }
 
-  if (input.sizeBytes > rules.maxBytes) {
+  // The purpose cap, tightened by the format's own cap where one exists (e.g. images 10 MB).
+  const cap = maxBytesFor(input.purpose, normalizedMime);
+  if (input.sizeBytes > cap) {
     throw new AppError(
       ErrorCode.VALIDATION,
-      `File size (${input.sizeBytes} bytes) exceeds maximum allowed (${rules.maxBytes} bytes) for purpose '${input.purpose}'`,
+      `File size (${input.sizeBytes} bytes) exceeds maximum allowed (${cap} bytes) for purpose '${input.purpose}'`,
+    );
+  }
+  // An .svg name must carry the svg MIME and vice versa, so a script cannot hide behind a picture type.
+  if (input.purpose !== "release_file" && (ext === "svg") !== (normalizedMime === SVG_MIME)) {
+    throw new AppError(
+      ErrorCode.VALIDATION,
+      "SVG files must be named .svg and sent as image/svg+xml",
     );
   }
 }

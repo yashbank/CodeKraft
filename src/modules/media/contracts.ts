@@ -6,11 +6,13 @@
 import { z } from "zod";
 import type { Context, RequestContext } from "@/lib/authz/context";
 import type { DbOrTx, TxCtx } from "@/lib/db";
+import { canonicalMime } from "@/lib/upload-formats";
 import { uuidSchema } from "@/modules/_shared/zod";
 import { positionSchema, text } from "../catalog/contracts";
 import {
   EMBED_HOSTS,
   MEDIA_KINDS,
+  maxBytesFor,
   UPLOAD_PURPOSES,
   UPLOAD_RULES,
   type Media,
@@ -84,7 +86,8 @@ export const createUploadIntentSchema = z
   .strictObject({
     purpose: uploadPurposeSchema,
     filename: filenameSchema,
-    mime: mimeSchema,
+    // Browser alias spellings (audio/x-wav, application/x-zip-compressed...) become the canonical MIME.
+    mime: mimeSchema.transform((m) => canonicalMime(m) ?? m),
     sizeBytes: z.number().int().min(1),
     checksumSha256: z
       .string()
@@ -95,7 +98,7 @@ export const createUploadIntentSchema = z
     message: "mime not allowed for this purpose",
     path: ["mime"],
   })
-  .refine((i) => i.sizeBytes <= UPLOAD_RULES[i.purpose].maxBytes, {
+  .refine((i) => i.sizeBytes <= maxBytesFor(i.purpose, i.mime), {
     message: "file exceeds the size cap for this purpose",
     path: ["sizeBytes"],
   });

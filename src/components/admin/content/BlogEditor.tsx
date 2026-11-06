@@ -1,5 +1,6 @@
 "use client";
 
+import { acceptFor } from "@/lib/upload-formats";
 import * as React from "react";
 import { PlusIcon, UploadIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -76,7 +77,7 @@ export function BlogEditor({ posts: initial, productsWithoutBlog }: AdminBlogLis
     setUploading(true);
     try {
       const { uploadMediaFile } = await import("@/lib/admin/media-upload");
-      const up = await uploadMediaFile(file, "product_image");
+      const up = await uploadMediaFile(file, "content_media");
       setCover({ mediaId: up.mediaId, url: up.url ?? URL.createObjectURL(file) });
       toast.success("Cover uploaded — save the post to apply it");
     } catch (err) {
@@ -296,7 +297,7 @@ export function BlogEditor({ posts: initial, productsWithoutBlog }: AdminBlogLis
                 <input
                   ref={fileRef}
                   type="file"
-                  accept="image/*"
+                  accept={acceptFor("image")}
                   className="hidden"
                   onChange={handleCover}
                 />

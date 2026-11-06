@@ -1,5 +1,6 @@
 "use client";
 
+import { acceptFor } from "@/lib/upload-formats";
 import * as React from "react";
 import { PlusIcon, UploadIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -533,7 +534,7 @@ export function TestimonialsLogos({
               ref={logoInputRef}
               type="file"
               className="sr-only"
-              accept="image/*"
+              accept={acceptFor("image")}
               aria-label="Logo image file"
               onChange={handleLogoChosen}
             />

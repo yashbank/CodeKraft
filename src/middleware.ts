@@ -91,9 +91,11 @@ export function buildCsp(
       ? `script-src ${list("'self'", `'nonce-${nonce}'`, `'sha256-${themeHash}'`, "'strict-dynamic'", dev && "'unsafe-eval'", turnstile, razorpayScript, umami)}`
       : `script-src ${list("'self'", "'unsafe-inline'", dev && "'unsafe-eval'", turnstile, razorpayScript, umami)}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com data:",
+    `font-src ${list("'self'", "https://fonts.gstatic.com", "data:", media, r2)}`,
     `img-src ${list("'self'", "data:", "blob:", media, r2, "https://*.razorpay.com")}`,
     `connect-src ${list("'self'", turnstile, ...razorpayApi, "https://lumberjack.razorpay.com", media, r2, umami, sentry, "https://*.ingest.sentry.io", "https://*.ingest.us.sentry.io", dev && "ws:", dev && "wss:")}`,
+    // Video and audio uploaded to R2 play from the media host (default-src would otherwise block them).
+    `media-src ${list("'self'", "blob:", media, r2)}`,
     `frame-src ${list("'self'", turnstile, ...razorpayApi, media)}`,
     "object-src 'none'",
     "base-uri 'self'",

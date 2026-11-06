@@ -2,7 +2,8 @@
  * Magic-byte sniffing for uploaded files — docs/09 TM-12, docs/06 §3.5, docs/12 §6, SA-13.
  *
  * Checks first bytes against signatures to ensure declared MIME matches real content.
- * Explicitly rejects SVG, HTML, JS, and Executables (PE/ELF/Mach-O).
+ * Explicitly rejects HTML, JS, and Executables (PE/ELF/Mach-O). SVG is recognised only when
+ * the declared type is image/svg+xml (its content is then checked by svg-safety.ts).
  */
 
 export interface SniffResult {
@@ -114,6 +115,31 @@ export function sniffMimeType(buf: Buffer): string | null {
     return "application/pdf";
   }
 
+  // Fonts: wOFF, wOF2, TrueType (00 01 00 00), OpenType (OTTO)
+  if (buf.length >= 4) {
+    const tag = buf.subarray(0, 4).toString("latin1");
+    if (tag === "wOFF") return "font/woff";
+    if (tag === "wOF2") return "font/woff2";
+    if (tag === "OTTO") return "font/otf";
+    if (buf[0] === 0x00 && buf[1] === 0x01 && buf[2] === 0x00 && buf[3] === 0x00) return "font/ttf";
+    if (tag === "OggS") return "audio/ogg";
+    if (tag === "fLaC") return "audio/flac";
+  }
+  // MP3: ID3 tag or an MPEG audio frame sync
+  if (buf.subarray(0, 3).toString("latin1") === "ID3") return "audio/mpeg";
+  const b1 = buf[1] ?? 0;
+  if (buf[0] === 0xff && (b1 & 0xe0) === 0xe0 && (b1 & 0x06) !== 0x00) return "audio/mpeg";
+  // WAV: RIFF....WAVE
+  if (
+    buf.length >= 12 &&
+    buf.subarray(0, 4).toString("latin1") === "RIFF" &&
+    buf.subarray(8, 12).toString("latin1") === "WAVE"
+  )
+    return "audio/wav";
+  // Old Office (doc/xls/ppt): OLE compound file D0 CF 11 E0 A1 B1 1A E1
+  if (buf.length >= 8 && buf.subarray(0, 8).toString("hex") === "d0cf11e0a1b11ae1")
+    return "application/x-cfb";
+
   // ZIP: PK\x03\x04 or PK\x05\x06 or PK\x07\x08
   if (
     buf.length >= 4 &&
@@ -155,6 +181,8 @@ export function sniffMimeType(buf: Buffer): string | null {
     if (brand.startsWith("avi") || brand.startsWith("mif1")) {
       return "image/avif";
     }
+    if (brand === "qt  ") return "video/quicktime";
+    if (brand === "M4A " || brand === "M4B ") return "audio/mp4";
     return "video/mp4";
   }
 
@@ -162,6 +190,16 @@ export function sniffMimeType(buf: Buffer): string | null {
   if (buf.length >= 4 && buf[0] === 0x1a && buf[1] === 0x45 && buf[2] === 0xdf && buf[3] === 0xa3) {
     return "video/webm";
   }
+
+  // SVG: an XML/SVG document (the safety check on its content is svg-safety.ts)
+  const head = buf
+    .subarray(0, Math.min(buf.length, 512))
+    .toString("utf8")
+    .replace(/^\uFEFF/, "")
+    .trimStart()
+    .toLowerCase();
+  if (head.startsWith("<svg") || (head.startsWith("<?xml") && head.includes("<svg")))
+    return "image/svg+xml";
 
   // Plain text / CSV: no null bytes in the first 512 bytes, printable ASCII / UTF-8
   let isText = true;
@@ -185,8 +223,14 @@ export function sniffMimeType(buf: Buffer): string | null {
  * and assert that the file is not dangerous (HTML, SVG, EXE, etc.).
  */
 export function verifyMagicBytes(buf: Buffer, expectedMime: string): SniffResult {
+  const declaredSvg = expectedMime.toLowerCase().trim() === "image/svg+xml";
   const dangerous = isDangerousContent(buf);
-  if (dangerous.dangerous) {
+  // An SVG is markup by nature; it passes here only if it is a real <svg> document and no binary executable.
+  const markupOnly = dangerous.reason === "script_or_markup_detected";
+  if (
+    dangerous.dangerous &&
+    !(declaredSvg && markupOnly && sniffMimeType(buf) === "image/svg+xml")
+  ) {
     return {
       ok: false,
       detectedMime: null,
@@ -199,18 +243,36 @@ export function verifyMagicBytes(buf: Buffer, expectedMime: string): SniffResult
   const normalizedExpected = expectedMime.toLowerCase().trim();
 
   // Handle aliases & text families
+  // Office 2007+ files are zip containers; the zip alias and audio/webm-style spellings are the same bytes.
   if (
     (normalizedExpected === "application/x-zip-compressed" ||
-      normalizedExpected.endsWith("wordprocessingml.document")) &&
+      normalizedExpected.startsWith("application/vnd.openxmlformats-officedocument.")) &&
     detected === "application/zip"
   ) {
     return { ok: true, detectedMime: detected, isDangerous: false };
   }
 
   if (
-    (normalizedExpected === "text/csv" || normalizedExpected === "text/markdown") &&
+    (normalizedExpected === "text/csv" ||
+      normalizedExpected === "text/markdown" ||
+      normalizedExpected === "application/json") &&
     detected === "text/plain"
   ) {
+    return { ok: true, detectedMime: detected, isDangerous: false };
+  }
+
+  // Legacy Office (doc/xls/ppt) share one container signature.
+  if (
+    ["application/msword", "application/vnd.ms-excel", "application/vnd.ms-powerpoint"].includes(
+      normalizedExpected,
+    ) &&
+    detected === "application/x-cfb"
+  ) {
+    return { ok: true, detectedMime: detected, isDangerous: false };
+  }
+
+  // WebM audio and Matroska share the EBML header; ogg audio may also carry video/ogg.
+  if (normalizedExpected === "audio/webm" && detected === "video/webm") {
     return { ok: true, detectedMime: detected, isDangerous: false };
   }
 

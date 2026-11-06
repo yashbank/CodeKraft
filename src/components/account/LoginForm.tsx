@@ -119,7 +119,11 @@ export function LoginForm({
           <GoogleButton
             disabled={busy}
             onClick={() => {
-              void authClient.signIn.social({ provider: "google", callbackURL: next });
+              // Land on the shared post-login page so admin-class Google users go to the admin area.
+              void authClient.signIn.social({
+                provider: "google",
+                callbackURL: `/auth/post-login?next=${encodeURIComponent(next)}`,
+              });
             }}
           />
           <div className="flex items-center gap-3 text-caption text-fg-subtle">

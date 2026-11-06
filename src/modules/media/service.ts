@@ -26,6 +26,7 @@ import type {
 } from "./contracts";
 import {
   IMAGE_MEDIA_KINDS,
+  maxBytesFor,
   PRESIGNED_GET_TTL_MS,
   UPLOAD_INTENT_TTL_MS,
   UPLOAD_RULES,
@@ -39,6 +40,8 @@ import {
   validateUploadIntent,
 } from "./validation";
 import { verifyMagicBytes } from "./sniff";
+import { checkSvgSafe } from "./svg-safety";
+import { SVG_MIME } from "@/lib/upload-formats";
 
 export function createNotImplementedMediaService(): MediaService {
   return createNotImplemented<MediaService>("media", "P3", {
@@ -178,10 +181,11 @@ export class DefaultMediaService implements MediaService {
       throw new AppError(ErrorCode.VALIDATION, "Uploaded file cannot be empty");
     }
 
-    if (head.contentLength > rule.maxBytes) {
+    const cap = maxBytesFor(purpose, intent.mime);
+    if (head.contentLength > cap) {
       throw new AppError(
         ErrorCode.VALIDATION,
-        `Uploaded object (${head.contentLength} bytes) exceeds limit (${rule.maxBytes} bytes)`,
+        `Uploaded object (${head.contentLength} bytes) exceeds limit (${cap} bytes)`,
       );
     }
 
@@ -203,6 +207,16 @@ export class DefaultMediaService implements MediaService {
         ErrorCode.VALIDATION,
         sniffResult.reason ?? "Uploaded file failed magic-byte verification",
       );
+    }
+
+    // SVG is markup: read the whole (1 MB capped) file and refuse it if anything in it is active.
+    if (intent.mime === SVG_MIME) {
+      const { body } = await storage.getObject(bucket, intent.objectKey);
+      const svg = checkSvgSafe(body.toString("utf8"));
+      if (!svg.ok) {
+        await storage.deleteObject(bucket, intent.objectKey).catch(() => undefined);
+        throw new AppError(ErrorCode.VALIDATION, `This SVG was rejected: it ${svg.reason}.`);
+      }
     }
 
     // 4. Insert into media table

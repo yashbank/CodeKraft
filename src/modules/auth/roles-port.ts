@@ -3,7 +3,8 @@ import { eq } from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
 import { userRoles } from "../../../drizzle/schema/auth";
-import { ADMIN_CLASS_ROLES, isRole, type Role } from "@/lib/authz/permissions";
+import { isRole, type Role } from "@/lib/authz/permissions";
+import { ADMIN_AREA_ROLES, isAdminAreaUser } from "@/lib/authz/post-login";
 
 export type RolesLoader = (userId: string) => Promise<Role[]>;
 
@@ -28,8 +29,8 @@ export function loadRoles(userId: string): Promise<Role[]> {
  * invited by a super admin could not sign in to admin at all). Staff see only what their
  * permissions allow; `ADMIN_CLASS_ROLES` (super_admin/admin) keeps its narrower meaning elsewhere.
  */
-export const ADMIN_APP_ROLES: readonly Role[] = [...ADMIN_CLASS_ROLES, "staff"];
+export const ADMIN_APP_ROLES: readonly Role[] = ADMIN_AREA_ROLES;
 
 export function hasAdminClassRole(roles: readonly Role[]): boolean {
-  return roles.some((r) => (ADMIN_APP_ROLES as readonly string[]).includes(r));
+  return isAdminAreaUser(roles);
 }

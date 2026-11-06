@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { getSession } from "@/modules/auth/service";
-import { hasAdminClassRole, loadRoles } from "@/modules/auth/roles-port";
+import { postLoginDestination } from "@/lib/authz/post-login";
+import { loadRoles } from "@/modules/auth/roles-port";
 
 /** Tells the shared LoginForm whether the just-authenticated user is admin-class, so a
  * site-host sign-in can hand admin/super_admin accounts off to the admin subdomain instead
@@ -11,5 +12,5 @@ export async function GET(req: Request) {
   if (!session) return NextResponse.json({ isAdminClass: false });
 
   const roles = await loadRoles(session.user.id);
-  return NextResponse.json({ isAdminClass: hasAdminClassRole(roles) });
+  return NextResponse.json({ isAdminClass: postLoginDestination(roles).area === "admin" });
 }

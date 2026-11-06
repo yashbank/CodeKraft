@@ -1,5 +1,6 @@
 "use client";
 
+import { acceptFor } from "@/lib/upload-formats";
 import * as React from "react";
 import { PlusIcon, UploadIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -485,7 +486,7 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
                 ref={coverInputRef}
                 type="file"
                 className="sr-only"
-                accept="image/*"
+                accept={acceptFor("image")}
                 aria-label="Cover image file"
                 onChange={handleCoverChosen}
               />
@@ -524,7 +525,7 @@ export function CaseStudiesEditor({ caseStudies: initial }: { caseStudies: CaseS
                 type="file"
                 multiple
                 className="sr-only"
-                accept="image/*"
+                accept={acceptFor("image")}
                 aria-label="Gallery image files"
                 onChange={handleGalleryChosen}
               />

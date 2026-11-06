@@ -1,5 +1,6 @@
 "use client";
 
+import { acceptFor } from "@/lib/upload-formats";
 import * as React from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -187,7 +188,7 @@ export function LandingEditor({
               ref={posterFileInputRef}
               type="file"
               className="sr-only"
-              accept="image/*"
+              accept={acceptFor("image")}
               onChange={handlePosterChosen}
             />
             <div className="flex items-center gap-3">
