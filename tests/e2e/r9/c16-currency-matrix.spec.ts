@@ -11,7 +11,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { ADMIN, ROLE_EMAILS, SITE, loginAs, q, trackIssues, type Role } from "./helpers";
 
-const SLUG = "resume-portfolio-website";
+const PREFERRED_SLUG = "resume-portfolio-website";
+let SLUG = PREFERRED_SLUG;
 const CURRENCIES = ["INR", "USD", "EUR", "GBP", "CAD"] as const;
 type Cur = (typeof CURRENCIES)[number];
 // STATIC_FX_TABLE values; live rates sit within the 25% band.
@@ -39,15 +40,23 @@ let offeringId = "";
 let inrMinor = 0;
 
 test.beforeAll(async () => {
-  const [row] = await q<{ id: string; amount_minor: string }>(
-    `select o.id, op.amount_minor from offerings o
+  // The buyer is bounced off /checkout/<offering> once they own it or have an order for it, so use an
+  // offering they have not bought (a spec that ran earlier may have bought the preferred one).
+  const buyer = `(select id from users where lower(email) = lower('${ROLE_EMAILS.customer}'))`;
+  const [row] = await q<{ id: string; amount_minor: string; slug: string }>(
+    `select o.id, op.amount_minor, p.slug from offerings o
        join products p on p.id = o.product_id
        join offering_prices op on op.offering_id = o.id and op.currency = 'INR'
-      where p.slug = $1 and o.status = 'active' and o.purchase_model <> 'custom_quote'
-      order by op.amount_minor asc limit 1`,
-    [SLUG],
+      where p.status = 'published' and o.status = 'active' and o.purchase_model = 'one_time'
+        and not exists (select 1 from offering_prices x where x.offering_id = o.id and x.currency <> 'INR')
+        and not exists (select 1 from user_offering_purchases u where u.offering_id = o.id and u.user_id = ${buyer})
+        and not exists (select 1 from order_items oi join orders r on r.id = oi.order_id
+                         where oi.offering_id = o.id and r.user_id = ${buyer})
+      order by (p.slug = $1) desc, op.amount_minor asc limit 1`,
+    [PREFERRED_SLUG],
   );
-  if (!row) throw new Error(`seeded product ${SLUG} has no INR-priced offering`);
+  if (!row) throw new Error("no active one-time offering the buyer has not bought");
+  SLUG = row.slug;
   offeringId = row.id;
   inrMinor = Number(row.amount_minor);
   // the bug's precondition must not exist in the seed: no explicit non-INR copy rows

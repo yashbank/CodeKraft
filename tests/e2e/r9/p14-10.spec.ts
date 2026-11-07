@@ -20,8 +20,12 @@ test.beforeAll(async () => {
   F.product = await one(`select slug x from products where slug='tradeflow'`);
   F.caseStudy = await one(`select slug x from case_studies limit 1`);
   F.blog = await one(`select slug x from product_blogs limit 1`);
-  F.order = await one(`select order_no x from orders where user_id=${buyer} limit 1`);
-  F.entitlement = await one(`select id x from entitlements where user_id=${buyer} limit 1`);
+  F.order = await one(
+    `select order_no x from orders o where user_id=${buyer} and exists (select 1 from order_items oi where oi.order_id = o.id) order by created_at desc limit 1`,
+  );
+  F.entitlement = await one(
+    `select id x from entitlements where user_id=${buyer} order by created_at limit 1`,
+  );
   F.query = await one(`select id x from queries where user_id=${buyer} limit 1`);
   F.invoice = await one(
     `select i.id x from invoices i join orders o on o.id=i.order_id where o.user_id=${buyer} limit 1`,

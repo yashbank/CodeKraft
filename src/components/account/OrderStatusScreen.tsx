@@ -574,7 +574,10 @@ export function OrderStatusScreen({
       <nav aria-label="Breadcrumb">
         <ol className="flex items-center gap-1 text-body-sm text-fg-muted">
           <li>
-            <Link href={links.purchases} className="hover:text-fg">
+            <Link
+              href={links.purchases}
+              className="inline-flex min-h-10 min-w-10 items-center hover:text-fg"
+            >
               Purchases
             </Link>
           </li>
