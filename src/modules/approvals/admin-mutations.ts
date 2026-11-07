@@ -10,10 +10,19 @@
  * `./actions` here would be safe; it is still done lazily inside each function body to match the
  * one established pattern for every other admin-mutations.ts file in this codebase.
  */
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import type { ActionResult } from "@/lib/actions/envelope";
 import { fail } from "@/lib/actions/envelope";
 import type { Context } from "@/lib/authz/context";
+
+const POST_COMMIT_TAGS = [
+  "settings",
+  "content",
+  "catalog",
+  "sitemap",
+  "blog",
+  "case-studies",
+] as const;
 
 async function withCtx<T>(
   action: (raw: unknown, ctx: Context) => Promise<ActionResult<T>>,
@@ -23,7 +32,13 @@ async function withCtx<T>(
     const { getAdminRequestContext } = await import("@/lib/authz/admin-request-context");
     const ctx = await getAdminRequestContext();
     const result = await action(raw, ctx);
-    if (result.ok) revalidatePath("/", "layout");
+    if (result.ok) {
+      revalidatePath("/", "layout");
+      // Apply handlers run inside the approval transaction; tags they drop before COMMIT can be
+      // re-cached with pre-commit data (a stale theme/catalog for the whole TTL). Drop them again
+      // here, after COMMIT.
+      for (const tag of POST_COMMIT_TAGS) revalidateTag(tag);
+    }
     return result;
   } catch (err) {
     return fail(err);
