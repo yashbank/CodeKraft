@@ -146,7 +146,7 @@ export async function resetThemeViaUi(page: Page): Promise<void> {
     const save = page.getByRole("button", { name: "Save changes" });
     if (await save.isEnabled()) {
       await save.click();
-      await expect(page.getByText(/saved/i).first()).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByText("Settings saved")).toBeVisible({ timeout: 30_000 }); // not /saved/i: the "Saved presets" legend matches at once
     }
   } catch {
     /* best effort cleanup */

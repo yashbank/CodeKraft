@@ -68,7 +68,9 @@ test.describe("R9-08 theme options", () => {
     await pick(page, "Font pairing", "Poppins", "pop");
     await pick(page, "Corner radius", "Round");
     await page.getByRole("button", { name: "Save changes" }).click();
-    await expect(page.getByText(/saved/i).first()).toBeVisible();
+    // exact toast: /saved/i also matches the "Saved presets" legend, so the poll below would start before the
+    // save commits and its first storefront request could re-cache the pre-save theme (ISR twin) for 5 min
+    await expect(page.getByText("Settings saved")).toBeVisible();
 
     await expect
       .poll(
@@ -119,7 +121,9 @@ test.describe("R9-08 theme options", () => {
     await openTheme(page);
     await pick(page, "Card padding", "Comfortable");
     await page.getByRole("button", { name: "Save changes" }).click();
-    await expect(page.getByText(/saved/i).first()).toBeVisible();
+    // exact toast: /saved/i also matches the "Saved presets" legend, so the poll below would start before the
+    // save commits and its first storefront request could re-cache the pre-save theme (ISR twin) for 5 min
+    await expect(page.getByText("Settings saved")).toBeVisible();
     const pad = async () => {
       await page.goto(SITE);
       return page.evaluate(() => {
