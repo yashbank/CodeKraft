@@ -358,7 +358,7 @@ export class DefaultPaymentsService implements PaymentsService {
           type: "order.paid",
           title: "Order paid",
           body: `Payment confirmed for order ${order.orderNo}`,
-          link: `/account/orders`,
+          link: `/account/purchases`,
           payload: { orderId: order.id, orderNo: order.orderNo },
         });
       }

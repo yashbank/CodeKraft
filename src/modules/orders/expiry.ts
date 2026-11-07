@@ -62,7 +62,7 @@ export async function expirePendingOrders(
           type: "order.expired",
           title: "Order expired",
           body: `Order ${order.orderNo} has expired without payment.`,
-          link: `/account/orders`,
+          link: `/account/purchases`,
           payload: { orderId: order.id, orderNo: order.orderNo },
         });
       }

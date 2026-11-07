@@ -323,7 +323,7 @@ export async function applyRefund(
       type: "refund.issued",
       title: "Refund issued",
       body: `Refund of ${refund.amountMinor} ${refund.currency} has been approved and processed.`,
-      link: `/account/orders`,
+      link: `/account/purchases`,
       payload: { refundId: refund.id, creditNoteId: creditNoteRes.creditNoteId },
     });
   }
