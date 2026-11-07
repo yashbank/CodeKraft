@@ -86,7 +86,10 @@ for (const viewer of VIEWERS) {
     await expect
       .poll(async () => (await page.context().cookies()).some((c) => c.name === "ck_theme"))
       .toBe(true);
-    await page.waitForTimeout(1_000); // setThemePreference is fire-and-forget
+    // setThemePreference is fire-and-forget: let its server-action POST finish before reloading, a fixed
+    // sleep was too short under load (the reload then read the previous stored pref)
+    await page.waitForLoadState("networkidle", { timeout: 15_000 }).catch(() => undefined);
+    await page.waitForTimeout(500);
     const chosen = await theme(page);
     for (const w of WIDTHS) {
       await page.setViewportSize({ width: w, height: 900 });
