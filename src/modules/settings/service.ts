@@ -58,9 +58,25 @@ async function safeRevalidate(tag: string): Promise<void> {
   }
 }
 
+/** How long an ISR render that began before the commit may still be running (slow DB, cold start). */
+const IN_FLIGHT_RENDER_WINDOW_MS = 5_000;
+
 export async function revalidateSettingsCaches(): Promise<void> {
   await safeRevalidate("settings");
   await safeRevalidate("content");
+  // A page render that read the pre-commit settings and finishes after the invalidation above is
+  // stored as fresh (ISR twin pages: 300 s), so the old theme/site name keeps being served. Drop
+  // the tags once more after such renders have settled. No-op outside a request (jobs, tests).
+  try {
+    const { after } = await import("next/server");
+    after(async () => {
+      await new Promise((resolve) => setTimeout(resolve, IN_FLIGHT_RENDER_WINDOW_MS));
+      await safeRevalidate("settings");
+      await safeRevalidate("content");
+    });
+  } catch {
+    // no request scope
+  }
 }
 
 /** Payee values the seed used to write until real ones were entered (scripts/seed/settings.ts). */
