@@ -64,6 +64,10 @@ async function save(page: Page) {
 }
 
 test.describe("P14-07 theme studio", () => {
+  // The site theme is one global row: desktop and mobile projects would race on it when run in
+  // parallel. Settings is laptop-only and every test drives its own viewport, so run it once.
+  test.skip(({ isMobile }) => isMobile, "global theme; viewport is driven explicitly from desktop");
+
   test.afterEach(async ({ page }) => {
     await resetThemeViaUi(page);
     await q(`delete from site_settings where key = any($1)`, [KEYS]);
@@ -93,7 +97,8 @@ test.describe("P14-07 theme studio", () => {
     // Instant, scoped preview: the sample changed ...
     expect(await previewStyle(page, card, "borderTopLeftRadius")).toBe("22px");
     expect(await previewStyle(page, title, "fontFamily")).toMatch(/Playfair Display/);
-    expect(await previewStyle(page, cta, "backgroundColor")).not.toBe(before.bg);
+    // the button fades its colour (transition), so poll instead of reading mid-fade
+    await expect.poll(() => previewStyle(page, cta, "backgroundColor")).not.toBe(before.bg);
     // ... but nothing outside it, and nothing is saved yet.
     expect(await rootVar(page, "--ck-radius-lg")).toBe(before.siteRadius);
     expect(before.radius).not.toBe("22px");
