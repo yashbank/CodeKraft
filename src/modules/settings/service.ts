@@ -58,6 +58,11 @@ async function safeRevalidate(tag: string): Promise<void> {
   }
 }
 
+export async function revalidateSettingsCaches(): Promise<void> {
+  await safeRevalidate("settings");
+  await safeRevalidate("content");
+}
+
 /** Payee values the seed used to write until real ones were entered (scripts/seed/settings.ts). */
 const PLACEHOLDER_VPAS = new Set(["codekraft@upi"]);
 function isPlaceholderBank(b: BankDetails): boolean {
@@ -459,17 +464,22 @@ export class DefaultSettingsService implements SettingsService {
       );
 
       clearFlagCache();
-      await safeRevalidate("settings");
-      await safeRevalidate("content");
 
       return { settings: nextSettings };
     };
 
     if (tx) {
-      return executeInTx(tx as TxCtx);
+      // The caller owns the commit; revalidating here is the best available (callers revalidate again).
+      const result = await executeInTx(tx as TxCtx);
+      await revalidateSettingsCaches();
+      return result;
     }
     const { withTx } = await import("@/lib/db");
-    return withTx(executeInTx);
+    const result = await withTx(executeInTx);
+    // After COMMIT: invalidating inside the transaction lets a concurrent render re-cache the
+    // pre-commit settings (theme, site name) for the whole 300s TTL.
+    await revalidateSettingsCaches();
+    return result;
   }
 
   /**

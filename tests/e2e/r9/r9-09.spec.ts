@@ -16,6 +16,11 @@ test("USD expense converts at the trusted rate; storefront USD matches", async (
   test.skip(isMobile, "admin finance is laptop-only (LaptopNotice below lg)");
   const issues = trackIssues(page);
   const today = new Date().toISOString().slice(0, 10);
+  // The server caches its rate table for 5 min and earlier specs may already have loaded the real
+  // provider rate (lazy refresh), so remember what the DB holds before this spec overrides it.
+  const [prior] = await q<{ rate: string }>(
+    `select rate from fx_rates where base='INR' and quote='USD' order by as_of desc, created_at desc limit 1`,
+  );
   // admin override for today wins over the live provider: INR->USD 0.0125, USD->INR 80
   for (const [b, qt, rate] of [
     ["INR", "USD", "0.01250000"],
@@ -73,11 +78,13 @@ test("USD expense converts at the trusted rate; storefront USD matches", async (
     [SLUG],
   );
   // The server caches the rate table for 5 min and this spec writes rates with raw SQL, so the
-  // storefront may still use the previous real rate: accept 0.0125 +/- 15% (never the INR number).
+  // storefront shows either the override (0.0125) or the rate the DB held before it (the cached one):
+  // within 2% of one of those two (never the INR number).
   const inrMinor = Number(p?.amount_minor);
+  const known = [0.0125, ...(prior ? [Number(prior.rate)] : [])];
   const inBand = (shown: string) => {
     const v = Number(shown.replace(/[^\d.]/g, "")) * 100;
-    return v >= inrMinor * 0.0125 * 0.85 && v <= inrMinor * 0.0125 * 1.15;
+    return known.some((r) => v >= inrMinor * r * 0.98 && v <= inrMinor * r * 1.02);
   };
   const ctx = page.context();
   await ctx.addCookies([{ name: "ck_currency", value: "USD", url: SITE }]);
