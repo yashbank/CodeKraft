@@ -3,7 +3,6 @@ import type { AttachmentView } from "@/lib/attachments";
 import type { Context, RequestContext } from "@/lib/authz/context";
 import { type Db, type DbOrTx, getDb } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
-import { assertTurnstileVerified, verifyTurnstile } from "@/lib/turnstile";
 import { notificationsService } from "@/modules/notifications/service";
 import type { JobContext, JobOutcome } from "@/modules/analytics/types";
 import type { ListResult } from "@/modules/_shared/zod";
@@ -50,9 +49,6 @@ export class DefaultQueriesService implements QueriesService {
   async createQuery(ctx: Context, input: CreateQueryInput): Promise<QueryCreateResult> {
     await resolveOwnAttachments(this.db, ctx.userId, input.attachments ?? []);
     if (input.guestEmail) {
-      const turnstileRes = await verifyTurnstile(input.turnstileToken ?? "");
-      assertTurnstileVerified(turnstileRes);
-
       const [query] = await this.db
         .insert(queries)
         .values({

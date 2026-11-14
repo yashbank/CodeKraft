@@ -5,7 +5,9 @@
 import { and, eq, ne } from "drizzle-orm";
 import { createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 
+import { randomUUID } from "node:crypto";
 import { audit } from "@/lib/audit-port";
+import { checkFormGuard } from "@/lib/form-guard";
 import { getDb } from "@/lib/db";
 import { sessions, userRoles, users } from "../../../drizzle/schema/auth";
 import { passwordPolicyMessage, validatePassword } from "./password-policy";
@@ -37,6 +39,32 @@ function requestMeta(headers: Headers | undefined) {
 /** Runs before every auth endpoint. Errors are RETURNED (not thrown): Better Auth converts a returned APIError into the response, while thrown before-hook errors propagate to the caller (api/dispatch.mjs runBeforeHooks). */
 export function beforeHook(host: AuthHost) {
   return createAuthMiddleware(async (ctx) => {
+    // Invisible bot guard on public registration: honeypot filled, or submitted < 2 s after the
+    // form rendered (signed timestamp) => accept-and-drop with a normal-looking success, no user.
+    // Only real HTTP requests: server-side `auth.api.signUpEmail` (seed, tests) has no request.
+    if (ctx.path === "/sign-up/email" && ctx.request) {
+      const body = (ctx.body ?? {}) as {
+        email?: unknown;
+        name?: unknown;
+        formGuardHp?: unknown;
+        formGuardToken?: unknown;
+      };
+      if (checkFormGuard({ honeypot: body.formGuardHp, token: body.formGuardToken }) !== "ok") {
+        const now = new Date().toISOString();
+        return ctx.json({
+          token: null,
+          user: {
+            id: randomUUID(),
+            email: typeof body.email === "string" ? body.email : "",
+            name: typeof body.name === "string" ? body.name : "",
+            image: null,
+            emailVerified: false,
+            createdAt: now,
+            updatedAt: now,
+          },
+        });
+      }
+    }
     // Password policy on every password-setting endpoint (docs/09 §3.2)
     if (PASSWORD_PATHS.has(ctx.path)) {
       const body = (ctx.body ?? {}) as {

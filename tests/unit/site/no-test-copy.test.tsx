@@ -10,7 +10,7 @@ import { InquiryForm } from "@/components/site/InquiryForm";
 const BAD = /testing only|for testing|tester|test only|test mode|beta tester/i;
 
 describe("no test/tester copy in user-facing UI (P8-03)", () => {
-  it.each(["idle", "success", "error", "turnstile_down"] as const)(
+  it.each(["idle", "success", "error"] as const)(
     "InquiryForm (%s) renders no test copy",
     (initialStatus) => {
       const { container } = render(

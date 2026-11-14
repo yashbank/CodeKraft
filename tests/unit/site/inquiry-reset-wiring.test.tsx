@@ -1,8 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 const createLeadAction = vi.hoisted(() => vi.fn());
 vi.mock("@/modules/leads/site-actions", () => ({ submitLead: createLeadAction }));
+vi.mock("@/lib/form-guard-action", () => ({ issueFormGuardToken: vi.fn(async () => "tok") }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 const requestPasswordReset = vi.hoisted(() => vi.fn());
 vi.mock("@/modules/auth/client", () => ({ authClient: { requestPasswordReset } }));
@@ -37,6 +38,7 @@ describe("submitInquiry (BUG-049/050)", () => {
         serviceInterest: ["web"],
         phone: undefined,
       }),
+      {},
     );
     expect(r).toEqual({ ok: true, reference: "ABCDEF12" });
   });
@@ -54,9 +56,12 @@ describe("submitInquiry (BUG-049/050)", () => {
   it("InquiryForm default submit hits createLead and shows error on failure", async () => {
     createLeadAction.mockResolvedValue({ ok: false, error: { code: "INTERNAL", message: "Nope" } });
     render(<InquiryForm serviceOptions={[]} defaults={values} />);
+    await act(async () => {}); // let the mount-time render token arrive
     fireEvent.click(screen.getByRole("button", { name: /send inquiry/i }));
     await waitFor(() => expect(screen.getByText("Nope")).toBeTruthy());
     expect(createLeadAction).toHaveBeenCalledTimes(1);
+    // hidden bot guard rides along: empty honeypot + signed render token
+    expect(createLeadAction.mock.calls[0]?.[1]).toEqual({ honeypot: "", token: "tok" });
   });
 });
 

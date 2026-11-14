@@ -10,7 +10,7 @@ export { uuidSchema as uuid, isoDateTimeSchema as isoDateTime } from "@/modules/
 
 export const LEAD_SOURCES = ["inquiry_form", "product_cta", "chatbot", "manual"] as const;
 export type LeadSource = (typeof LEAD_SOURCES)[number];
-/** Sources reachable without a session — Turnstile mandatory (D-1204). */
+/** Sources reachable without a session. */
 export const PUBLIC_LEAD_SOURCES = [
   "inquiry_form",
   "product_cta",
@@ -46,14 +46,15 @@ const leadFields = {
 
 /**
  * API-LEAD-01 `createLead` — public inquiry form (`/contact`, landing "Start a project" sheet)
- * or product CTA; visitor or customer. Turnstile token required (D-1204; `CAPTCHA_FAILED`),
+ * or product CTA; visitor or customer. Bot protection is the honeypot + time trap (`lib/form-guard`),
  * rate class `public_form`. `productId` only with `product_cta`.
  */
 export const createLeadSchema = z
   .object({
     source: z.enum(PUBLIC_LEAD_SOURCES),
     ...leadFields,
-    turnstileToken: z.string().min(1).max(2048),
+    /** Deprecated and ignored: tolerated so a stale cached client bundle still validates. */
+    turnstileToken: z.string().max(2048).optional(),
   })
   .strict()
   .superRefine((v, ctx) => {
@@ -242,7 +243,6 @@ export interface LeadDetail {
     serviceInterest: string[];
     budgetHint: string | null;
     lostReason: string | null;
-    turnstileVerified: boolean;
   };
   activities: LeadActivityRow[];
   linkedProduct: { id: string; name: string; slug: string } | null;

@@ -25,7 +25,12 @@ export default function RegisterPage() {
   const [sentTo, setSentTo] = useState("");
   const [errorMessage, setErrorMessage] = useState<ReactNode>(null);
 
-  const handleSubmit = async (values: { name: string; email: string; password: string }) => {
+  const handleSubmit = async (values: {
+    name: string;
+    email: string;
+    password: string;
+    guard: { honeypot: string; token: string | null };
+  }) => {
     setState("loading");
     try {
       const { error } = await authClient.signUp.email({
@@ -34,6 +39,11 @@ export default function RegisterPage() {
         name: values.name,
         // The emailed link verifies the token, then lands on /auth/verify's "verified" state.
         callbackURL: VERIFY_CALLBACK_URL,
+        // Invisible bot guard fields, checked in the Better Auth before-hook (modules/auth/hooks.ts).
+        ...({
+          formGuardHp: values.guard.honeypot,
+          formGuardToken: values.guard.token ?? "",
+        } as Record<string, string>),
       });
 
       if (error) {

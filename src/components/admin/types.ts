@@ -581,7 +581,6 @@ export interface LeadDetailData {
   message: string;
   budgetHint?: string;
   submittedAt: string;
-  turnstileVerified: boolean;
   ipCountry: string;
   activities: LeadActivity[];
   transcript?: Array<{ role: "user" | "assistant"; text: string }>;

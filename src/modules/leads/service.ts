@@ -2,7 +2,6 @@ import { type SQL, and, desc, eq, inArray, isNull, lt, notInArray, or, sql } fro
 import type { Context, RequestContext } from "@/lib/authz/context";
 import { type Db, type DbOrTx, getDb } from "@/lib/db";
 import { AppError, ErrorCode } from "@/lib/errors";
-import { assertTurnstileVerified, checkHoneypot, verifyTurnstile } from "@/lib/turnstile";
 import { notificationsService } from "@/modules/notifications/service";
 import type { JobContext, JobOutcome } from "@/modules/analytics/types";
 import type { ListResult } from "@/modules/_shared/zod";
@@ -41,11 +40,6 @@ export class DefaultLeadsService implements LeadsService {
   }
 
   async createLead(ctx: Context, input: CreateLeadInput): Promise<LeadCreateResult> {
-    const turnstileRes = await verifyTurnstile(input.turnstileToken);
-    assertTurnstileVerified(turnstileRes);
-
-    checkHoneypot((input as { website?: string }).website);
-
     const [lead] = await this.db
       .insert(leads)
       .values({
@@ -61,7 +55,7 @@ export class DefaultLeadsService implements LeadsService {
         budgetHint: input.budgetHint ?? null,
         status: "new",
         priority: "normal",
-        turnstileVerified: true,
+        turnstileVerified: false,
       })
       .returning();
 
@@ -372,7 +366,6 @@ export class DefaultLeadsService implements LeadsService {
         serviceInterest: lead.serviceInterest,
         budgetHint: lead.budgetHint,
         lostReason: lead.lostReason,
-        turnstileVerified: lead.turnstileVerified,
       },
       activities: activities.map((a) => ({
         activityId: a.activity.id,

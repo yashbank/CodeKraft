@@ -100,7 +100,6 @@ export function mapLeadDetail(
     message: d.lead.message ?? "",
     budgetHint: d.lead.budgetHint ?? undefined,
     submittedAt: d.lead.createdAt,
-    turnstileVerified: d.lead.turnstileVerified,
     ipCountry: "—",
     activities: d.activities.map((a) => mapActivity(a, adminMap)),
     transcript: undefined,

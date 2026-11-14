@@ -27,18 +27,17 @@ describe("Phase 6 Gate Scenarios (P6.1..P6.9)", () => {
     await truncateAll();
   });
 
-  it("Scenario 1 (S-14, SA-16): Public lead creation, Turnstile validation, assignment conflict, and overdue digest", async () => {
+  it("Scenario 1 (S-14, SA-16): Public lead creation, assignment conflict, and overdue digest", async () => {
     const admin1 = await createAdmin({ email: "lead-admin-1@test.com" });
     const admin2 = await createAdmin({ email: "lead-admin-2@test.com" });
 
-    // Step 1: Turnstile validation & lead creation
+    // Step 1: lead creation
     const leadRes = await leadsService.createLead({ userId: null, roles: [] } as any, {
       source: "inquiry_form",
       name: "Enterprise Buyer",
       email: "enterprise@client.com",
       company: "Global Tech Inc",
       message: "We need custom enterprise architecture and implementation support",
-      turnstileToken: "test-valid-token",
     });
 
     expect(leadRes.leadId).toBeDefined();

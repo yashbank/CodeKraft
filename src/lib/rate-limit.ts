@@ -131,7 +131,10 @@ export const RATE_LIMIT_CLASSES = Object.freeze({
     { scope: "phone", limit: 5, windowMs: HOUR_MS },
     { scope: "ip", limit: 10, windowMs: HOUR_MS },
   ],
-  public_form: [{ scope: "ip", limit: 5, windowMs: HOUR_MS, note: "plus Turnstile" }],
+  public_form: [
+    { scope: "ip", limit: 5, windowMs: HOUR_MS, note: "plus honeypot + time trap" },
+    { scope: "email", limit: 5, windowMs: HOUR_MS },
+  ],
   chat: [
     {
       scope: "user",

@@ -77,7 +77,6 @@ export function buildCsp(
   const siteOrigin = originOf(process.env.NEXT_PUBLIC_SITE_URL);
   const umami = originOf(process.env.NEXT_PUBLIC_UMAMI_SRC);
   const sentry = originOf(process.env.NEXT_PUBLIC_SENTRY_DSN);
-  const turnstile = "https://challenges.cloudflare.com";
   const razorpayScript = "https://checkout.razorpay.com";
   const razorpayApi = ["https://api.razorpay.com", "https://checkout.razorpay.com"];
   // Presigned browser PUT to R2 (S3 API endpoint) + public media host.
@@ -92,15 +91,15 @@ export function buildCsp(
     // Prerendered pages: 'unsafe-inline' (a nonce/hash/strict-dynamic would disable it and block
     // their nonce-less Next scripts). Host allow-list stays; object/base/frame/form rules unchanged.
     nonceable
-      ? `script-src ${list("'self'", `'nonce-${nonce}'`, `'sha256-${themeHash}'`, "'strict-dynamic'", dev && "'unsafe-eval'", turnstile, razorpayScript, umami)}`
-      : `script-src ${list("'self'", "'unsafe-inline'", dev && "'unsafe-eval'", turnstile, razorpayScript, umami)}`,
+      ? `script-src ${list("'self'", `'nonce-${nonce}'`, `'sha256-${themeHash}'`, "'strict-dynamic'", dev && "'unsafe-eval'", razorpayScript, umami)}`
+      : `script-src ${list("'self'", "'unsafe-inline'", dev && "'unsafe-eval'", razorpayScript, umami)}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     `font-src ${list("'self'", "https://fonts.gstatic.com", "data:", media, r2)}`,
     `img-src ${list("'self'", "data:", "blob:", media, r2, siteOrigin, "https://*.razorpay.com")}`,
-    `connect-src ${list("'self'", turnstile, ...razorpayApi, "https://lumberjack.razorpay.com", media, r2, storage, umami, sentry, "https://*.ingest.sentry.io", "https://*.ingest.us.sentry.io", dev && "ws:", dev && "wss:")}`,
+    `connect-src ${list("'self'", ...razorpayApi, "https://lumberjack.razorpay.com", media, r2, storage, umami, sentry, "https://*.ingest.sentry.io", "https://*.ingest.us.sentry.io", dev && "ws:", dev && "wss:")}`,
     // Video and audio uploaded to R2 play from the media host (default-src would otherwise block them).
     `media-src ${list("'self'", "blob:", media, r2)}`,
-    `frame-src ${list("'self'", turnstile, ...razorpayApi, media)}`,
+    `frame-src ${list("'self'", ...razorpayApi, media)}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self' https://api.razorpay.com https://checkout.razorpay.com",

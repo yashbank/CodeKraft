@@ -1,7 +1,7 @@
 import { RegisterScreen, type RegisterState } from "@/components/account/RegisterScreen";
 import { PreviewFrame, readState, type SearchParams } from "../_preview";
 
-const STATES = ["default", "loading", "error", "turnstile", "sent", "phone-flag"] as const;
+const STATES = ["default", "loading", "error", "sent", "phone-flag"] as const;
 
 export default async function Page({ searchParams }: { searchParams: SearchParams }) {
   const state = await readState(searchParams, STATES);

@@ -31,7 +31,7 @@ export const queryAttachmentsSchema = z.array(uuid).max(ATTACHMENT_MAX_FILES);
 
 /**
  * API-CHAT-01 `createQuery` — customer (`support.self`) with `source` dashboard/order, or a
- * visitor (`source='form'`, `guestEmail` + `turnstileToken`, rate class `public_form`).
+ * visitor (`source='form'`, `guestEmail`, not reachable from any public action, rate class `public_form`).
  * `refundRequest` only with `source='order'` on a paid/fulfilled/partially_refunded order of the
  * caller; a second refund request returns the existing thread (`existing=true`, BR-09).
  */
@@ -45,7 +45,8 @@ export const createQuerySchema = z
     refundRequest: z.boolean().optional(),
     attachments: queryAttachmentsSchema.optional(),
     guestEmail: z.email().max(254).optional(),
-    turnstileToken: z.string().min(1).max(2048).optional(),
+    /** Deprecated and ignored (Turnstile removed). */
+    turnstileToken: z.string().max(2048).optional(),
   })
   .strict()
   .superRefine((v, ctx) => {
@@ -61,13 +62,6 @@ export const createQuerySchema = z
         code: "custom",
         path: ["refundRequest"],
         message: "refundRequest requires source order",
-      });
-    }
-    if (v.guestEmail !== undefined && v.turnstileToken === undefined) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["turnstileToken"],
-        message: "turnstileToken is required for guest queries",
       });
     }
     if (v.guestEmail !== undefined && v.source !== "form") {

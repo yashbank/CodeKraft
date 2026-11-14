@@ -20,7 +20,6 @@ import { CountdownButton } from "./CountdownButton";
 import { EmptyState } from "./EmptyState";
 import { maskPhone } from "./format";
 import { OtpInput } from "./OtpInput";
-import { TurnstilePlaceholder } from "./TurnstilePlaceholder";
 
 export type PhoneOtpStep = "phone" | "code" | "email";
 
@@ -109,7 +108,6 @@ export function PhoneOtpScreen({
                 />
               </div>
             </div>
-            <TurnstilePlaceholder />
             <Button type="submit" className="w-full" size="lg" loading={loading}>
               Send code
             </Button>

@@ -378,10 +378,6 @@ export function LeadDetail({
                 { label: "Budget hint", value: data.budgetHint ?? "—" },
                 { label: "Product", value: lead.product ?? "—" },
                 { label: "Submitted", value: formatDateTime(data.submittedAt) },
-                {
-                  label: "Turnstile",
-                  value: data.turnstileVerified ? "Verified ✔" : "Not verified",
-                },
                 { label: "IP country", value: data.ipCountry },
               ]}
             />

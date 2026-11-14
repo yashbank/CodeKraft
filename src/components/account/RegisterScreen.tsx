@@ -13,13 +13,13 @@ import { ResendVerificationButton } from "./ResendVerificationButton";
 import { GoogleButton } from "./GoogleButton";
 import { PasswordInput } from "./PasswordInput";
 import { PasswordRules, passwordChecks } from "./PasswordRules";
-import { TurnstilePlaceholder } from "./TurnstilePlaceholder";
+import { HoneypotField, HONEYPOT_NAME, useFormGuardToken } from "@/components/forms/HoneypotField";
 
-export type RegisterState = "default" | "loading" | "error" | "turnstile" | "sent";
+export type RegisterState = "default" | "loading" | "error" | "sent";
 
 /**
  * SCR-AUTH-02 — create account: name, email, password with live policy hints, consent line,
- * invisible Turnstile, then the "Check your inbox" panel. Phase 7 wires `signUp.email`.
+ * hidden honeypot + time trap (no visible captcha), then the "Check your inbox" panel. Phase 7 wires `signUp.email`.
  */
 export function RegisterScreen({
   state = "default",
@@ -36,11 +36,17 @@ export function RegisterScreen({
   continueHref?: string;
   errorMessage?: React.ReactNode;
   phoneOtpEnabled?: boolean;
-  onSubmit?: (values: { name: string; email: string; password: string }) => void;
+  onSubmit?: (values: {
+    name: string;
+    email: string;
+    password: string;
+    guard: { honeypot: string; token: string | null };
+  }) => void;
   onGoogleClick?: () => void;
 }) {
   const [password, setPassword] = React.useState("");
   const [fieldErrors, setFieldErrors] = React.useState<{ name?: string; email?: string }>({});
+  const { getToken } = useFormGuardToken();
   const loading = state === "loading";
   const rulesOk = passwordChecks(password).every((c) => c.ok);
   const passwordInvalid = password.length > 0 && !rulesOk;
@@ -85,7 +91,8 @@ export function RegisterScreen({
           aria-busy={loading || undefined}
           onSubmit={(e) => {
             e.preventDefault();
-            const fd = new FormData(e.currentTarget);
+            const form = e.currentTarget;
+            const fd = new FormData(form);
             const name = String(fd.get("name") ?? "");
             const email = String(fd.get("email") ?? "");
             const next: { name?: string; email?: string } = {};
@@ -93,7 +100,10 @@ export function RegisterScreen({
             if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) next.email = "Enter a valid email";
             setFieldErrors(next);
             if (Object.keys(next).length > 0 || password.length === 0 || !rulesOk) return;
-            onSubmit?.({ name, email, password });
+            const honeypot = String(fd.get(HONEYPOT_NAME) ?? "");
+            void getToken().then((token) =>
+              onSubmit?.({ name, email, password, guard: { honeypot, token } }),
+            );
           }}
         >
           <GoogleButton disabled={loading} onClick={onGoogleClick} />
@@ -185,7 +195,7 @@ export function RegisterScreen({
             />
             <PasswordRules value={password} id="reg-password-rules" />
           </div>
-          <TurnstilePlaceholder failed={state === "turnstile"} />
+          <HoneypotField />
           <p className="text-caption text-fg-muted">
             By creating an account you agree to the{" "}
             <Link href="/legal/terms" className="text-accent-text hover:underline">

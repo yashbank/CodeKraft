@@ -27,7 +27,7 @@ import type {
 
 export interface QueriesService {
   /**
-   * API-CHAT-01 `createQuery` — customer (`support.self`) or visitor with Turnstile. Writes
+   * API-CHAT-01 `createQuery` — customer (`support.self`) or visitor. Writes
    * `queries(status='open')` + first `query_messages(author_kind='customer')`; `N: query.new` to
    * admins; `A: inquiry_submitted` for the visitor form. `refundRequest=true` returns the existing
    * open refund thread for the order (`existing=true`) instead of creating another (BR-09);

@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2Icon, CircleAlertIcon, ShieldCheckIcon } from "lucide-react";
+import { CheckCircle2Icon, CircleAlertIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 
@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/_utils";
 
 import { submitInquiry } from "./submit-inquiry";
-import { TURNSTILE_DEV_TOKEN, TurnstileWidget, turnstileEnabled } from "./TurnstileWidget";
+import { HoneypotField, useFormGuardToken } from "@/components/forms/HoneypotField";
 import type { InquiryResult, InquiryValues, ServiceOption } from "./types";
 
 export type InquirySource = "inquiry_form" | "product_cta";
@@ -35,7 +35,7 @@ export interface InquiryFormProps {
   /** Defaults to the real `createLead` Server Action (`submitInquiry`). */
   onSubmit?: (values: InquiryValues, source: InquirySource) => Promise<InquiryResult>;
   /** Previews: render straight into a state. */
-  initialStatus?: "idle" | "success" | "error" | "turnstile_down";
+  initialStatus?: "idle" | "success" | "error";
   /** Called after a successful submit (sheets close on "Done"). */
   onDone?: () => void;
   className?: string;
@@ -59,7 +59,7 @@ const EMPTY: InquiryValues = {
  * Inquiry form — SCR-SITE-09 (full page) and the shared `InquirySheet` (compact). Creates a lead
  * via `createLead` (API-LEAD-01) in P7. Validates on blur, shows a `role="alert"` summary, keeps
  * values on server error, replaces itself with a success panel (focus moves to its heading).
- * Turnstile is a labelled placeholder box until the widget lands (D-1204).
+ * Bot protection is invisible: a hidden honeypot field plus a server-signed render timestamp.
  */
 export function InquiryForm({
   serviceOptions,
@@ -79,14 +79,12 @@ export function InquiryForm({
   // The top summary only appears after a submit attempt: showing it on blur shifted the
   // layout mid-click and swallowed the Send button's click (BUG-093).
   const [attempted, setAttempted] = useState(false);
-  const [status, setStatus] = useState<
-    "idle" | "submitting" | "success" | "error" | "turnstile_down"
-  >(initialStatus);
+  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">(initialStatus);
   const [result, setResult] = useState<InquiryResult | null>(
     initialStatus === "success" ? { ok: true, reference: "CK-L-3F9A" } : null,
   );
-  const [captcha, setCaptcha] = useState<string | null>(null);
-  const [captchaReset, setCaptchaReset] = useState(0);
+  const honeypot = useRef<HTMLInputElement>(null);
+  const { getToken } = useFormGuardToken();
   const successHeading = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -121,13 +119,13 @@ export function InquiryForm({
     setErrors(next);
     setTouched({ name: true, email: true, message: true });
     if (Object.keys(next).length > 0) return;
-    if (turnstileEnabled && !captcha) return;
     setStatus("submitting");
     const res = onSubmit
       ? await onSubmit(values, source)
-      : await submitInquiry(values, source, productId, captcha ?? TURNSTILE_DEV_TOKEN);
-    setCaptcha(null);
-    setCaptchaReset((n) => n + 1);
+      : await submitInquiry(values, source, productId, {
+          honeypot: honeypot.current?.value ?? "",
+          token: await getToken(),
+        });
     setResult(res);
     setStatus(res.ok ? "success" : "error");
   }
@@ -175,7 +173,6 @@ export function InquiryForm({
   }
 
   const errorEntries = attempted ? Object.entries(errors).filter(([, v]) => Boolean(v)) : [];
-  const turnstileDown = status === "turnstile_down";
   const busy = status === "submitting";
   const field = (k: keyof InquiryValues) => `${id}-${k}`;
 
@@ -217,16 +214,6 @@ export function InquiryForm({
             <p className="font-semibold">Couldn&rsquo;t send — try again</p>
             <p>{result?.error ?? "Your details are still here."}</p>
           </div>
-        </div>
-      ) : null}
-
-      {turnstileDown ? (
-        <div
-          role="alert"
-          className="flex items-start gap-3 rounded-md border-l-4 border-warning bg-warning-soft px-4 py-3 text-body-sm text-warning"
-        >
-          <CircleAlertIcon aria-hidden className="mt-0.5 size-4 shrink-0" />
-          <p>Our form protection is temporarily unavailable — please try again shortly.</p>
         </div>
       ) : null}
 
@@ -358,14 +345,7 @@ export function InquiryForm({
         </Field>
       </div>
 
-      <TurnstileWidget onToken={setCaptcha} resetKey={captchaReset} />
-      <div
-        aria-label="Browser verification"
-        className="flex items-center gap-3 rounded-md border border-dashed border-border-strong bg-canvas px-4 py-3 text-body-sm text-fg-muted"
-      >
-        <ShieldCheckIcon aria-hidden className="size-5 shrink-0 text-fg-subtle" />
-        <span>Protected against automated spam</span>
-      </div>
+      <HoneypotField ref={honeypot} />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-caption text-fg-muted">
@@ -379,7 +359,6 @@ export function InquiryForm({
           type="submit"
           size={variant === "full" ? "lg" : "md"}
           loading={busy}
-          disabled={turnstileDown || (turnstileEnabled && !captcha)}
           className="sm:shrink-0"
         >
           Send inquiry

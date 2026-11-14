@@ -88,13 +88,11 @@ describe("middleware host matrix (docs/04 §8, docs/09 §3.5)", () => {
     const res = await middleware(req("http://localhost:3000/account", "localhost:3000"));
     expect(res.headers.get(HDR)).toMatch(/'sha256-[A-Za-z0-9+/=]{20,}'/);
   });
-  it("allows Cloudflare Turnstile in script/frame/connect-src", async () => {
+  it("does not allow Cloudflare Turnstile anywhere in the CSP (hidden honeypot replaced it)", async () => {
     const res = await middleware(req("http://localhost:3000/", "localhost:3000"));
     const csp = res.headers.get(HDR) ?? "";
-    for (const d of ["script-src", "frame-src", "connect-src"]) {
-      const dir = csp.split("; ").find((x) => x.startsWith(d)) ?? "";
-      expect(dir).toContain("https://challenges.cloudflare.com");
-    }
+    expect(csp).not.toContain("challenges.cloudflare.com");
+    expect(csp).not.toContain("cloudflare.com/turnstile");
   });
   it("enforces with CSP_MODE=enforce and drops unsafe-eval / blanket https:", async () => {
     const prev = { a: process.env.APP_ENV, n: process.env.NODE_ENV, c: process.env.CSP_MODE };

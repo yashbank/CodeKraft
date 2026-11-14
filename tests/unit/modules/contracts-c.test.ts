@@ -284,14 +284,9 @@ describe("leads (API-LEAD-01..07)", () => {
     message: "We need a portal for our clinic.",
   };
 
-  it("public createLead requires a Turnstile token; manual does not", () => {
+  it("public createLead needs no captcha token (a stale one is tolerated); manual stays separate", () => {
+    good(leads.createLeadSchema, { source: "inquiry_form", ...base });
     good(leads.createLeadSchema, { source: "inquiry_form", ...base, turnstileToken: "tok" });
-    bad(leads.createLeadSchema, { source: "inquiry_form", ...base }, "turnstileToken");
-    bad(
-      leads.createLeadSchema,
-      { source: "inquiry_form", ...base, turnstileToken: "" },
-      "turnstileToken",
-    );
     bad(leads.createLeadSchema, { source: "manual", ...base, turnstileToken: "tok" }, "source");
     bad(
       leads.createLeadSchema,
@@ -311,8 +306,8 @@ describe("leads (API-LEAD-01..07)", () => {
     );
     good(leads.createLeadManualSchema, { source: "manual", name: "Walk-in", phone: "9999999999" });
     bad(leads.createLeadManualSchema, { source: "inquiry_form", ...base }, "source");
-    // union: the public branch still demands the token
-    bad(leads.leadCreateInputSchema, { source: "inquiry_form", ...base });
+    // union: the public branch needs no captcha token any more
+    good(leads.leadCreateInputSchema, { source: "inquiry_form", ...base });
     good(leads.leadCreateInputSchema, {
       source: "chatbot",
       conversationId: U1,
@@ -353,7 +348,7 @@ describe("leads (API-LEAD-01..07)", () => {
 });
 
 describe("queries (API-CHAT-01..05, 14)", () => {
-  it("createQuery: refund requests need source order; guests need Turnstile", () => {
+  it("createQuery: refund requests need source order; guests need no captcha", () => {
     good(queries.createQuerySchema, { subject: "Help", bodyJson: DOC, source: "dashboard" });
     good(queries.createQuerySchema, {
       subject: "Refund",
@@ -372,11 +367,12 @@ describe("queries (API-CHAT-01..05, 14)", () => {
       { subject: "Refund", bodyJson: DOC, source: "order" },
       "orderId",
     );
-    bad(
-      queries.createQuerySchema,
-      { subject: "Hi", bodyJson: DOC, source: "form", guestEmail: "g@example.com" },
-      "turnstileToken",
-    );
+    good(queries.createQuerySchema, {
+      subject: "Hi there",
+      bodyJson: DOC,
+      source: "form",
+      guestEmail: "g@example.com",
+    });
     good(queries.createQuerySchema, {
       subject: "Hi there",
       bodyJson: DOC,

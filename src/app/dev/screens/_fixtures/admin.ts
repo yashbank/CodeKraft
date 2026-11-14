@@ -1809,7 +1809,6 @@ export const LEAD_DETAIL: LeadDetailData = {
     "We run three ShopSync stores on a legacy host and want to migrate to your hosted plan before Diwali. Need SSO and a data migration plan.",
   budgetHint: "₹3–5 lakh",
   submittedAt: "2026-09-15T10:00:00Z",
-  turnstileVerified: true,
   ipCountry: "IN",
   activities: [
     {

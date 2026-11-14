@@ -27,8 +27,8 @@ import type { ListResult } from "@/modules/_shared/zod";
 
 export interface LeadsService {
   /**
-   * API-LEAD-01 `createLead` — public; verifies Turnstile (`CAPTCHA_FAILED`), rate class
-   * `public_form`. Writes `leads(status='new', turnstile_verified=true, user_id when signed in)`
+   * API-LEAD-01 `createLead` — public; honeypot + time trap at the entry (`public-submit.ts`), rate class
+   * `public_form`. Writes `leads(status='new', user_id when signed in)`
    * + `lead_activities(note, 'created from …')`; `N: lead.new` to all admins; `A: inquiry_submitted`.
    */
   createLead(ctx: Context, input: CreateLeadInput): Promise<LeadCreateResult>;

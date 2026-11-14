@@ -9,13 +9,11 @@ const STATES = [
   { id: "default", label: "Default" },
   { id: "success", label: "Success" },
   { id: "error", label: "Server error" },
-  { id: "turnstile_down", label: "Turnstile outage" },
 ];
 
 export default async function Page({ searchParams }: { searchParams: SearchParams }) {
   const state = await readState(searchParams);
-  const initialStatus =
-    state === "success" || state === "error" || state === "turnstile_down" ? state : "idle";
+  const initialStatus = state === "success" || state === "error" ? state : "idle";
   return (
     <SitePreview
       href="/dev/screens/site/contact"

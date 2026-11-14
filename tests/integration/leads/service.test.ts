@@ -15,13 +15,12 @@ describe("Leads Integration (P6.3 & P6.4)", () => {
     await truncateAll();
   });
 
-  it("creates public lead with Turnstile verification and activity history", async () => {
+  it("creates public lead and activity history", async () => {
     const res = await leadsService.createLead({ userId: null, roles: [] } as any, {
       source: "inquiry_form",
       name: "Jane Doe",
       email: "jane@company.com",
       message: "Need a high-performance web platform",
-      turnstileToken: "test-valid-token",
     });
 
     expect(res.leadId).toBeDefined();
@@ -33,7 +32,6 @@ describe("Leads Integration (P6.3 & P6.4)", () => {
 
     expect(detail.lead.name).toBe("Jane Doe");
     expect(detail.lead.status).toBe("new");
-    expect(detail.lead.turnstileVerified).toBe(true);
     expect(detail.activities.length).toBeGreaterThanOrEqual(1);
     expect(defined(detail.activities[0], "detail.activities[0]").body).toContain("inquiry_form");
   });
@@ -47,7 +45,6 @@ describe("Leads Integration (P6.3 & P6.4)", () => {
       name: "Acme Corp",
       email: "contact@acme.com",
       message: "Enterprise custom architecture",
-      turnstileToken: "test-valid-token",
     });
 
     // Admin 1 claims
@@ -71,7 +68,6 @@ describe("Leads Integration (P6.3 & P6.4)", () => {
       name: "Pipeline Test",
       email: "pipe@test.com",
       message: "Custom development inquiry",
-      turnstileToken: "test-valid-token",
     });
 
     // new -> contacted
@@ -104,7 +100,6 @@ describe("Leads Integration (P6.3 & P6.4)", () => {
       name: "Overdue Lead",
       email: "overdue@test.com",
       message: "Need urgent consultation",
-      turnstileToken: "test-valid-token",
     });
 
     // Assign to admin
@@ -149,7 +144,6 @@ describe("Leads admin notifications", () => {
       name: "Buyer",
       email: "buyer@x.com",
       message: "Quote please",
-      turnstileToken: "test-valid-token",
     });
     const rows = await getDb().select().from(notifications);
     const ids = rows.map((r) => r.userId);

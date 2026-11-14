@@ -15,7 +15,6 @@ import { authClient } from "@/modules/auth/client";
 import { maskEmail } from "./format";
 import { PasswordInput } from "./PasswordInput";
 import { PasswordRules, passwordChecks } from "./PasswordRules";
-import { TurnstilePlaceholder } from "./TurnstilePlaceholder";
 
 export type ResetPasswordStep = "request" | "sent" | "set" | "done" | "invalid";
 
@@ -119,7 +118,6 @@ export function ResetPasswordScreen({
                 className="h-12 lg:h-10"
               />
             </div>
-            <TurnstilePlaceholder />
             <Button type="submit" className="w-full" size="lg" loading={loading}>
               Send reset link
             </Button>
