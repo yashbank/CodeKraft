@@ -20,6 +20,18 @@ export const ROLE_EMAILS: Record<Role, string> = {
 };
 export const WIDTHS = [375, 768, 1280] as const;
 
+/** Time trap (src/lib/form-guard.ts MIN_FILL_MS = 2000). */
+export const FORM_MIN_FILL_MS = 2000;
+/**
+ * Call right after `goto` on a form guarded by the invisible time trap (register, public
+ * inquiry). Waits for hydration + the signed render-token fetch, then lets MIN_FILL_MS pass so
+ * an instant scripted submit is not rejected with "Please wait a moment and try again.".
+ */
+export async function waitForFormReady(page: Page): Promise<void> {
+  await page.waitForLoadState("networkidle");
+  await page.waitForTimeout(FORM_MIN_FILL_MS + 400);
+}
+
 function dbUrl(): string {
   const url = process.env.DATABASE_URL ?? "";
   if (!/@(localhost|127\.0\.0\.1)[:/]/.test(url))

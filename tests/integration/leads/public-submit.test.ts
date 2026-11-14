@@ -55,13 +55,21 @@ describe("public lead entry: honeypot, time trap, rate limit", () => {
     expect(await count()).toBe(0);
   });
 
-  it("submitted too fast after render: success shape, nothing stored", async () => {
+  it("submitted too fast after render: retryable RATE_LIMITED error, nothing stored", async () => {
     const res = await submitPublicLead(body(), ctx, "203.0.113.7", {
       honeypot: "",
       token: issueFormToken(Date.now() - 300),
     });
-    expect(res.ok).toBe(true);
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe("RATE_LIMITED");
+      expect(res.error.message).toBe("Please wait a moment and try again.");
+    }
     expect(await count()).toBe(0);
+    // retry once the token has matured succeeds
+    const retry = await submitPublicLead(body(), ctx, "203.0.113.7", { token: humanToken() });
+    expect(retry.ok).toBe(true);
+    expect(await count()).toBe(1);
   });
 
   it("missing or forged token: success shape, nothing stored", async () => {

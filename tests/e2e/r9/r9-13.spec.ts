@@ -4,7 +4,16 @@
  */
 import { expect, test } from "@playwright/test";
 
-import { ADMIN, SITE, atWidths, expectNoOverflow, loginAs, q, trackIssues } from "./helpers";
+import {
+  ADMIN,
+  SITE,
+  atWidths,
+  expectNoOverflow,
+  loginAs,
+  q,
+  trackIssues,
+  waitForFormReady,
+} from "./helpers";
 
 // Must satisfy the register form's rules (upper+lower, digit, symbol, 12+); helpers' PASSWORD is lowercase-only.
 const NEW_PASSWORD = "R9-Thirteen-Pass#2026";
@@ -23,6 +32,7 @@ test("R9-13 new customer chat + handoff reach the admin chatbot list and bell", 
   const ip = `10.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
   await page.context().setExtraHTTPHeaders({ "x-forwarded-for": ip });
   await page.goto(`${SITE}/auth/register`);
+  await waitForFormReady(page);
   await page.locator("#reg-name").fill("R9 Thirteen");
   await page.locator("#reg-email").fill(email);
   await page.locator("#reg-password").fill(NEW_PASSWORD);

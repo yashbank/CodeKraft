@@ -7,7 +7,7 @@ import { createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 
 import { randomUUID } from "node:crypto";
 import { audit } from "@/lib/audit-port";
-import { checkFormGuard } from "@/lib/form-guard";
+import { TOO_FAST_MESSAGE, checkFormGuard } from "@/lib/form-guard";
 import { checkClass, type RateLimitClass, type RateLimitScope } from "@/lib/rate-limit";
 import { getDb } from "@/lib/db";
 import { sessions, userRoles, users } from "../../../drizzle/schema/auth";
@@ -96,7 +96,8 @@ export function beforeHook(host: AuthHost) {
       }
     }
     // Invisible bot guard on public registration: honeypot filled, or submitted < 2 s after the
-    // form rendered (signed timestamp) => accept-and-drop with a normal-looking success, no user.
+    // form rendered (signed timestamp): honeypot/forged => accept-and-drop with a fake success, no user;
+    // too fast => retryable 429 error, no user.
     // Only real HTTP requests: server-side `auth.api.signUpEmail` (seed, tests) has no request.
     if (ctx.path === "/sign-up/email" && ctx.request) {
       const body = (ctx.body ?? {}) as {
@@ -105,7 +106,12 @@ export function beforeHook(host: AuthHost) {
         formGuardHp?: unknown;
         formGuardToken?: unknown;
       };
-      if (checkFormGuard({ honeypot: body.formGuardHp, token: body.formGuardToken }) !== "ok") {
+      const verdict = checkFormGuard({ honeypot: body.formGuardHp, token: body.formGuardToken });
+      if (verdict === "too_fast") {
+        // Possibly a real person (autofill + instant click): retryable error, no user created.
+        return ctx.error("TOO_MANY_REQUESTS", { message: TOO_FAST_MESSAGE, code: "RATE_LIMITED" });
+      }
+      if (verdict !== "ok") {
         const now = new Date().toISOString();
         return ctx.json({
           token: null,

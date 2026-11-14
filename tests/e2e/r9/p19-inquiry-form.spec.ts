@@ -10,6 +10,13 @@ import { SITE, q } from "./helpers";
 test.skip(({ viewport }) => (viewport?.width ?? 1280) < 1000, "desktop only");
 
 const stamp = Date.now();
+
+// public_form allows 5 submits/hour/IP (in-memory limiter in the server): give each test its own IP.
+test.beforeEach(async ({ context }) => {
+  const o = () => Math.floor(Math.random() * 250);
+  await context.setExtraHTTPHeaders({ "x-forwarded-for": `10.${o()}.${o()}.${o()}` });
+});
+
 const leadCount = async (email: string) =>
   Number(
     (await q<{ n: string }>(`select count(*)::int n from leads where email=$1`, [email]))[0]?.n,
@@ -69,7 +76,9 @@ test("filled honeypot: same success, no lead", async ({ page }) => {
   expect(await leadCount(email)).toBe(0);
 });
 
-test("instant submit (time trap): same success, no lead", async ({ page }) => {
+test("instant submit (time trap): retry message, nothing stored, resubmit after waiting succeeds", async ({
+  page,
+}) => {
   const email = `p19-fast-${String(stamp)}@example.com`;
   await page.goto(`${SITE}/contact`);
   await expect(page.getByRole("button", { name: "Send inquiry" })).toBeVisible();
@@ -77,7 +86,48 @@ test("instant submit (time trap): same success, no lead", async ({ page }) => {
   await page.waitForTimeout(400);
   await fill(page, email);
   await page.getByRole("button", { name: "Send inquiry" }).click();
-  await expect(page.getByText(/your inquiry is in/i)).toBeVisible({ timeout: 15_000 });
-  await page.waitForTimeout(1500);
+  await expect(page.getByRole("alert").filter({ hasText: "Please wait a moment" })).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(page.getByText(/your inquiry is in/i)).toHaveCount(0);
   expect(await leadCount(email)).toBe(0);
+  // typed values are kept
+  await expect(page.getByLabel("Work email")).toHaveValue(email);
+  await expect(page.getByLabel("Full name")).toHaveValue("P19 Tester");
+  // a human retries a moment later: same form, same token, now old enough
+  await page.waitForTimeout(2300);
+  await page.getByRole("button", { name: /send inquiry|try again/i }).click();
+  await expect(page.getByText(/your inquiry is in/i)).toBeVisible({ timeout: 15_000 });
+  await expect.poll(() => leadCount(email), { timeout: 10_000 }).toBe(1);
+});
+
+test("register: instant submit shows retry message, then succeeds and creates the user", async ({
+  page,
+}) => {
+  const email = `p19-reg-${String(stamp)}@example.com`;
+  await q(`delete from rate_limit_buckets`);
+  const ip = `10.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
+  await page.context().setExtraHTTPHeaders({ "x-forwarded-for": ip });
+  await page.goto(`${SITE}/auth/register`);
+  await page.waitForLoadState("networkidle");
+  await page.waitForTimeout(300);
+  await page.locator("#reg-name").fill("P19 Register");
+  await page.locator("#reg-email").fill(email);
+  await page.locator("#reg-password").fill("R9-Thirteen-Pass#2026");
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page.getByText(/Please wait a moment and try again/i)).toBeVisible({
+    timeout: 15_000,
+  });
+  const users = async () =>
+    Number(
+      (await q<{ n: string }>(`select count(*)::int n from users where email=$1`, [email]))[0]?.n,
+    );
+  expect(await users()).toBe(0);
+  await expect(page.locator("#reg-email")).toHaveValue(email);
+  await page.waitForTimeout(2300);
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(
+    page.getByText(/check your email|verification|Continue to your account/i).first(),
+  ).toBeVisible({ timeout: 90_000 });
+  expect(await users()).toBe(1);
 });

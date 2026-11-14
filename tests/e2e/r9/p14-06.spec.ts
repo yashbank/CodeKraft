@@ -6,7 +6,15 @@
  */
 import { expect, test, type Page } from "@playwright/test";
 
-import { ADMIN, SITE, expectNoOverflow, loginAs, q, trackIssues } from "./helpers";
+import {
+  ADMIN,
+  SITE,
+  expectNoOverflow,
+  loginAs,
+  q,
+  trackIssues,
+  waitForFormReady,
+} from "./helpers";
 
 test.setTimeout(240_000);
 
@@ -118,6 +126,7 @@ test("P14-06 customer attaches in chat and query, admin sees and downloads, stra
   await stranger.setExtraHTTPHeaders({ "x-forwarded-for": ip });
   await q(`delete from rate_limit_buckets`);
   await sp.goto(`${SITE}/auth/register`);
+  await waitForFormReady(sp);
   await sp.locator("#reg-name").fill("P1406 Stranger");
   await sp.locator("#reg-email").fill(`${TAG}@codekraft.test`);
   await sp.locator("#reg-password").fill("R9-Thirteen-Pass#2026");

@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import postgres from "postgres";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { waitForFormReady } from "../r9/helpers";
 
 const SITE = process.env.E2E_SITE_URL ?? "http://localhost:3000";
 const ADMIN = process.env.E2E_ADMIN_URL ?? "http://admin.localhost:3000";
@@ -138,6 +139,7 @@ async function signUp(page: Page, name: string, email: string): Promise<void> {
   const ip = `10.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
   await page.context().setExtraHTTPHeaders({ "x-forwarded-for": ip });
   await page.goto(`${SITE}/auth/register`);
+  await waitForFormReady(page);
   await page.locator("#reg-name").fill(name);
   await page.locator("#reg-email").fill(email);
   await page.locator("#reg-password").fill(NEWPW);
@@ -636,6 +638,7 @@ test.describe("round 8 end to end", () => {
       async () => {
         const p = C2p.page;
         await p.goto(`${SITE}/contact`);
+        await waitForFormReady(p);
         await p.locator('input[id*="name"]').first().fill("E2E Customer Two");
         await p.locator('input[type="email"]').first().fill(C2);
         await p

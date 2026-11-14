@@ -2,12 +2,15 @@
  * Invisible bot protection for public forms (replaces Cloudflare Turnstile).
  *  - Honeypot: a hidden field real users never fill; any value => bot.
  *  - Time trap: a server-signed render timestamp; submissions < MIN_FILL_MS after it are bots.
- * A flagged submission is silently accepted-and-dropped (callers return a normal-looking
- * success and store nothing) so bots get no signal to adapt to.
+ * Honeypot / forged-token submissions are silently accepted-and-dropped (callers return a
+ * normal-looking success and store nothing) so bots get no signal to adapt to. A too-fast
+ * submission with a valid token may be a real person (password-manager autofill), so callers
+ * return the retryable `TOO_FAST_MESSAGE` (HTTP 429) and store nothing.
  */
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const MIN_FILL_MS = 2000;
+export const TOO_FAST_MESSAGE = "Please wait a moment and try again.";
 const FUTURE_SKEW_MS = 5000;
 
 function secret(): string {

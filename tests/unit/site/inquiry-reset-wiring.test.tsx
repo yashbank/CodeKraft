@@ -65,6 +65,29 @@ describe("submitInquiry (BUG-049/050)", () => {
   });
 });
 
+describe("InquiryForm time-trap retry", () => {
+  it("shows the retry message, keeps typed values, and a second submit succeeds", async () => {
+    createLeadAction
+      .mockResolvedValueOnce({
+        ok: false,
+        error: { code: "RATE_LIMITED", message: "Please wait a moment and try again." },
+      })
+      .mockResolvedValueOnce({ ok: true, data: { leadId: "abcdef12-0000" } });
+    render(<InquiryForm serviceOptions={[]} defaults={values} />);
+    await act(async () => {});
+    fireEvent.click(screen.getByRole("button", { name: /send inquiry/i }));
+    await waitFor(() =>
+      expect(screen.getByText("Please wait a moment and try again.")).toBeTruthy(),
+    );
+    expect((screen.getByLabelText(/full name/i) as HTMLInputElement).value).toBe("Ada");
+    fireEvent.click(screen.getByRole("button", { name: /send inquiry/i }));
+    await waitFor(() => expect(createLeadAction).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.queryByText("Please wait a moment and try again.")).toBeNull(),
+    );
+  });
+});
+
 describe("ResetPasswordScreen request (BUG-051)", () => {
   function submit(email: string) {
     render(<ResetPasswordScreen step="request" />);
