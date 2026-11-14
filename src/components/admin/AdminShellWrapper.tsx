@@ -17,6 +17,7 @@ import type { PollNotificationsResult } from "@/modules/notifications/types";
 import { usePolling } from "@/lib/use-polling";
 import { orderAlertText, type NewOrderAlerts } from "@/modules/orders/alerts-text";
 import { PRIYA } from "@/app/dev/screens/_fixtures/admin";
+import type { SitePhase } from "@/lib/site-phase";
 
 const ADMIN_ROUTE_MAP: Record<string, string> = {
   "/dashboard": "/admin/dashboard",
@@ -92,7 +93,7 @@ interface AdminShellWrapperProps {
   pendingApprovals?: number;
   notifications?: AdminNotification[];
   unreadCount?: number;
-  environment?: "development" | "staging" | "production";
+  sitePhase?: SitePhase;
   children: React.ReactNode;
 }
 
@@ -101,7 +102,7 @@ export function AdminShellWrapper({
   pendingApprovals = 0,
   notifications = [],
   unreadCount,
-  environment = "development",
+  sitePhase = "live",
   children,
 }: AdminShellWrapperProps) {
   const pathname = usePathname();
@@ -124,7 +125,7 @@ export function AdminShellWrapper({
     <AdminShell
       active={active}
       user={user}
-      environment={environment}
+      sitePhase={sitePhase}
       pendingApprovals={pendingApprovals}
       notifications={notifications}
       unreadCount={unreadCount}

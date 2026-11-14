@@ -90,6 +90,7 @@ import { AdminCommandPalette } from "./AdminCommandPalette";
 import { AdminUserIdContext } from "./SavedViews";
 import { isPaletteShortcut, quickActionsFor } from "@/lib/admin/palette";
 import { useSiteLogo, useSiteName } from "@/components/brand/site-brand";
+import { phaseBadge, type SitePhase } from "@/lib/site-phase";
 import type { AdminNotification, AdminUserRef, SearchItem } from "./types";
 
 /** Admin routes (docs/07 §2.4). `routes` can remap them (the previews point at /dev/screens). */
@@ -215,7 +216,8 @@ export interface AdminShellProps {
   /** Route key of the current screen (e.g. "/orders"); drives the active sidebar item. */
   active: AdminRoute;
   user: AdminUserRef;
-  environment: "development" | "staging" | "production";
+  /** Site phase; the top-bar badge shows only to super admins and only when not live. */
+  sitePhase?: SitePhase;
   pendingApprovals: number;
   notifications: AdminNotification[];
   /** Server-side unread total (the list is capped); falls back to counting the list. */
@@ -244,14 +246,14 @@ export interface AdminShellProps {
 
 /**
  * Admin shell — docs/07 §3.4, docs/08 §6.4. Sidebar (256 px, collapsible to a 64 px icon rail),
- * 56 px top bar with breadcrumb, ⌘K search, "Create" menu, environment badge, notification bell
+ * 56 px top bar with breadcrumb, ⌘K search, "Create" menu, site-phase badge (super admin), notification bell
  * popover and avatar menu. Below `lg` the sidebar becomes a Sheet with the three supported
  * destinations, and non-read-mostly screens render the "Open on a laptop" notice.
  */
 export function AdminShell({
   active,
   user,
-  environment,
+  sitePhase = "live",
   pendingApprovals,
   notifications,
   unreadCount,
@@ -342,8 +344,7 @@ export function AdminShell({
   }, []);
 
   const isActive = (route: AdminRoute) => active === route || active.startsWith(`${route}/`);
-  const envTone =
-    environment === "production" ? "danger" : environment === "staging" ? "warning" : "neutral";
+  const phaseBadgeInfo = phaseBadge(user.role, sitePhase);
 
   return (
     <AdminUserIdContext.Provider value={user.id}>
@@ -519,9 +520,16 @@ export function AdminShell({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Badge tone={envTone} className="hidden capitalize sm:inline-flex" dot>
-              {environment}
-            </Badge>
+            {phaseBadgeInfo ? (
+              <Badge
+                tone={phaseBadgeInfo.tone}
+                className="hidden sm:inline-flex"
+                dot
+                data-testid="site-phase-badge"
+              >
+                {phaseBadgeInfo.label}
+              </Badge>
+            ) : null}
             {/* C16-04: dark/light is the one design choice every user (admins too) can make */}
             <ThemeToggle enabled />
             <NotificationBell

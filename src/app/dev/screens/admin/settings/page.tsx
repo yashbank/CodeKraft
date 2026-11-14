@@ -14,7 +14,6 @@ export default function Page() {
       <SettingsScreen
         settings={SETTINGS}
         isSuperAdmin
-        environment="staging"
         chatbotHref={href("/chatbot")}
         auditHref={href("/audit")}
       />

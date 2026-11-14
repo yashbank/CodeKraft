@@ -11,6 +11,7 @@ import type { PaletteId } from "@/lib/palettes";
 import type { BorderId, DensityId, FontId, LayoutId, PatternId, RadiusId } from "@/lib/ui-style";
 import type { ThemeName } from "@/lib/theme";
 import type { StudioExtras, ThemePreset } from "@/lib/theme-studio";
+import type { SitePhase } from "@/lib/site-phase";
 import type { PaymentMethodValue } from "../offerings/types";
 
 export type { JsonValue, SiteSetting } from "../../../drizzle/schema/settings";
@@ -110,6 +111,8 @@ export interface SiteSettings {
   chatTimeoutMs: number;
   retention: RetentionSettings;
   flags: Record<FlagKey, boolean>;
+  /** Site phase: `live` (default), `testing` (noindex, test banner, customer email off) or `maintenance` (503 storefront). */
+  sitePhase: SitePhase;
 }
 
 export type SiteSettingField = keyof SiteSettings;
@@ -148,6 +151,7 @@ export const SITE_SETTING_KEYS: Readonly<Record<SiteSettingField, string>> = Obj
   aiDailyUserCap: "ai_daily_user_cap",
   chatTimeoutMs: "chat_timeout_ms",
   retention: "retention",
+  sitePhase: "site_phase",
   flags: "feature_flags",
 });
 

@@ -42,6 +42,7 @@ import { CHAT_MODELS, chatModelOptionLabel } from "@/modules/chat/models";
 import { CURRENCIES } from "@/lib/money";
 import { DEFAULT_STUDIO, type StudioValues } from "@/lib/theme-studio";
 import type { ThemeName } from "@/lib/theme";
+import type { SitePhase } from "@/lib/site-phase";
 import { ThemeStudio } from "./theme-studio/ThemeStudio";
 import { uploadMediaFile } from "@/lib/admin/media-upload";
 import { useAdminCurrency } from "@/components/admin/AdminCurrency";
@@ -360,6 +361,20 @@ const HIDDEN_FLAGS: ReadonlySet<string> = new Set([
   "automated_provisioning",
 ]);
 
+const SITE_PHASE_OPTIONS: readonly { value: SitePhase; label: string; help: string }[] = [
+  { value: "live", label: "Live", help: "The normal, public site. Nothing special is shown." },
+  {
+    value: "testing",
+    label: "Testing",
+    help: "Shows a \u201cTest site\u201d banner, asks search engines not to index it, and does not email customers. Admin and staff emails still send.",
+  },
+  {
+    value: "maintenance",
+    label: "Maintenance",
+    help: "Visitors see a \u201cback soon\u201d page. Admin, payments and signed-in admins keep working.",
+  },
+];
+
 const SECTIONS = [
   ["general", "General / seller"],
   ["currencies", "Currencies"],
@@ -459,7 +474,8 @@ function FxRatesPanel({
 export interface SettingsScreenProps {
   settings: SettingsData;
   isSuperAdmin: boolean;
-  environment: "development" | "staging" | "production";
+  /** Current site phase (super admin only can change it); defaults to live. */
+  sitePhase?: SitePhase;
   initialSection?: SectionKey;
   chatbotHref: string;
   auditHref: string;
@@ -524,7 +540,7 @@ function mapSettingsFieldErrors(fe: Record<string, string[]> | undefined): Recor
 export function SettingsScreen({
   settings: s,
   isSuperAdmin,
-  environment,
+  sitePhase: savedPhase = "live",
   initialSection = "general",
   chatbotHref,
   auditHref,
@@ -541,6 +557,7 @@ export function SettingsScreen({
   const router = useRouter();
   const formRef = React.useRef<HTMLFormElement>(null);
   const [theme, setTheme] = React.useState(s.theme.defaultTheme);
+  const [phase, setPhase] = React.useState<SitePhase>(savedPhase);
   const [refreshInv, setRefreshInv] = React.useState(s.general.refreshOldInvoices);
   const [themeToggle, setThemeToggle] = React.useState(s.theme.toggle);
   const studioFromSaved = (): StudioValues =>
@@ -630,6 +647,7 @@ export function SettingsScreen({
       const anySeller =
         legal || addr.line1 || addr.city || addr.postalCode || email || phones.length;
       patch = { siteName, refreshOldInvoices: refreshInv };
+      if (phase !== savedPhase) patch.sitePhase = phase;
       // All-blank seller block with no existing seller means "not set"; otherwise validate it.
       if (anySeller || seller) {
         patch.sellerDetails = { name: legal, address: addr, contactPhones: phones, email };
@@ -883,16 +901,27 @@ export function SettingsScreen({
                   Update old invoices when business details change
                 </Label>
               </div>
-              <p className="flex items-center gap-2 text-body-sm">
-                Environment{" "}
-                <Badge
-                  tone={environment === "production" ? "danger" : "warning"}
-                  dot
-                  className="capitalize"
+              <div className="space-y-2" data-testid="site-phase-card">
+                <Label id="st-phase-label">Site phase</Label>
+                <RadioGroup
+                  value={phase}
+                  onValueChange={(v) => setPhase(v as SitePhase)}
+                  aria-labelledby="st-phase-label"
+                  className="grid gap-3 sm:grid-cols-3"
+                  disabled={ro}
                 >
-                  {environment}
-                </Badge>
-              </p>
+                  {SITE_PHASE_OPTIONS.map((o) => (
+                    <RadioGroupCard
+                      key={o.value}
+                      value={o.value}
+                      data-testid={`site-phase-${o.value}`}
+                    >
+                      <span className="text-body font-semibold">{o.label}</span>
+                      <span className="text-caption text-fg-muted">{o.help}</span>
+                    </RadioGroupCard>
+                  ))}
+                </RadioGroup>
+              </div>
             </>
           ) : null}
 

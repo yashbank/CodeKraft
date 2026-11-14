@@ -1,7 +1,6 @@
 import { SettingsScreen } from "@/components/admin/system/SettingsScreen";
 import { getAdminRequestContext } from "@/lib/authz/admin-request-context";
 import { getSiteName } from "@/lib/site-brand";
-import { getEnv } from "@/lib/env";
 import { getSettingsQuery } from "@/modules/settings/queries";
 import { mapSiteSettingsToSettingsData } from "@/lib/admin/settings-view";
 import { getFxPanelRows } from "@/modules/fx/convert";
@@ -20,17 +19,11 @@ export default async function AdminSettingsPage() {
 
   const resetSiteName = isSuperAdmin ? await getSiteName() : undefined;
 
-  // Same derivation as `admin/layout.tsx`'s env badge: collapse the 4-value `AppEnv` union down
-  // to the 3-value badge the screen expects.
-  const appEnv = getEnv().APP_ENV;
-  const environment =
-    appEnv === "production" ? "production" : appEnv === "staging" ? "staging" : "development";
-
   return (
     <SettingsScreen
       settings={settings}
       isSuperAdmin={isSuperAdmin}
-      environment={environment}
+      sitePhase={siteSettings.sitePhase}
       chatbotHref="/admin/chatbot"
       auditHref="/admin/audit"
       resetSiteName={resetSiteName}

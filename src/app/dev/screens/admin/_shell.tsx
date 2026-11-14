@@ -30,7 +30,6 @@ export function PreviewShell({
     <AdminShell
       active={active}
       user={CURRENT_ADMIN}
-      environment="staging"
       pendingApprovals={
         APPROVALS.filter((a) => a.status === "pending" && a.requestedBy.id !== CURRENT_ADMIN.id)
           .length

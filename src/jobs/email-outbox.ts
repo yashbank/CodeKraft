@@ -4,11 +4,26 @@ import { EMAIL_TEMPLATES } from "@/emails";
 import { getLogger } from "@/lib/logger";
 import { sendEmail } from "@/lib/email/transport";
 import type { EmailTemplate } from "@/lib/email/types";
+import { SKIPPED_BY_PHASE, shouldSuppressEmail } from "@/lib/site-phase";
+import { getSitePhaseFresh } from "@/lib/site-phase-server";
+import { hasAdminClassRole } from "@/modules/auth/roles-port";
+import { isRole } from "@/lib/authz/permissions";
 import { emailOutbox } from "../../drizzle/schema/notifications";
+import { userRoles, users } from "../../drizzle/schema/auth";
 import { jobRuns } from "../../drizzle/schema/ops";
 
 const errMessage = (err: unknown, fallback: string) =>
   err instanceof Error ? err.message : fallback;
+
+/** Is this address an admin-area user (super admin, admin or staff)? */
+async function isStaffEmail(email: string): Promise<boolean> {
+  const rows = await getDb()
+    .select({ role: userRoles.roleKey })
+    .from(users)
+    .innerJoin(userRoles, eq(userRoles.userId, users.id))
+    .where(sql`lower(${users.email}) = lower(${email})`);
+  return hasAdminClassRole(rows.map((r) => r.role).filter(isRole));
+}
 
 /**
  * Send pending outbox rows (queued/failed, attempts < 5, plus `extra`). Shared by the daily cron
@@ -46,8 +61,23 @@ async function deliverPending(now: Date, extra?: SQL) {
   let sentCount = 0;
   let failedCount = 0;
   let deferredCount = 0;
+  const phase = await getSitePhaseFresh();
 
   for (const row of pendingRows) {
+    // Testing phase: never send to customers/external addresses; record the skip (status
+    // `failed`, attempts maxed so no retry, reason in last_error). Staff mail still goes out.
+    if (phase === "testing" && shouldSuppressEmail(phase, await isStaffEmail(row.toEmail))) {
+      await db
+        .update(emailOutbox)
+        .set({
+          status: "failed",
+          attempts: 5,
+          lastError: `${SKIPPED_BY_PHASE}: ${phase}`,
+          updatedAt: now,
+        })
+        .where(and(eq(emailOutbox.id, row.id), inArray(emailOutbox.status, ["queued", "failed"])));
+      continue;
+    }
     // Defer non-urgent emails if daily soft cap is reached (priority > 2)
     if (isDailyCapReached && row.priority > 2) {
       deferredCount++;

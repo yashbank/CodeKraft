@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import { siteUrl } from "@/lib/seo";
+import { getSitePhase } from "@/lib/site-phase-server";
 
 import { anonymousContext } from "@/lib/authz/context";
 import { listBlogPostsQuery } from "@/modules/blog/queries";
@@ -13,6 +14,9 @@ import { LEGAL_NAV } from "@/app/dev/screens/_fixtures/site";
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // Testing / maintenance: an empty sitemap (this file is ISR-cached up to an hour; robots.txt
+  // disallows everything immediately and middleware adds X-Robots-Tag on pages).
+  if ((await getSitePhase()) !== "live") return [];
   const baseUrl = siteUrl();
   const now = new Date();
   const ctx = anonymousContext();
