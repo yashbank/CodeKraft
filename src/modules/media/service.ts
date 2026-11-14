@@ -177,15 +177,25 @@ export class DefaultMediaService implements MediaService {
       throw new AppError(ErrorCode.NOT_FOUND, "Uploaded object not found in storage");
     }
 
+    // Any validation failure below removes the stored object so rejected uploads never linger.
+    const reject = async (message: string): Promise<never> => {
+      await storage.deleteObject(bucket, intent.objectKey).catch(() => undefined);
+      throw new AppError(ErrorCode.VALIDATION, message);
+    };
+
     if (head.contentLength === 0) {
-      throw new AppError(ErrorCode.VALIDATION, "Uploaded file cannot be empty");
+      return reject("Uploaded file cannot be empty");
     }
 
     const cap = maxBytesFor(purpose, intent.mime);
     if (head.contentLength > cap) {
-      throw new AppError(
-        ErrorCode.VALIDATION,
-        `Uploaded object (${head.contentLength} bytes) exceeds limit (${cap} bytes)`,
+      return reject(`Uploaded object (${head.contentLength} bytes) exceeds limit (${cap} bytes)`);
+    }
+
+    // The presigned PUT cannot bind a length, so enforce the size declared at intent time.
+    if (head.contentLength > intent.sizeBytes) {
+      return reject(
+        `Uploaded object (${head.contentLength} bytes) is larger than the declared size (${intent.sizeBytes} bytes)`,
       );
     }
 
@@ -203,10 +213,7 @@ export class DefaultMediaService implements MediaService {
         ? { ok: true as const, reason: undefined }
         : verifyMagicBytes(sniffBytes, intent.mime);
     if (!sniffResult.ok) {
-      throw new AppError(
-        ErrorCode.VALIDATION,
-        sniffResult.reason ?? "Uploaded file failed magic-byte verification",
-      );
+      return reject(sniffResult.reason ?? "Uploaded file failed magic-byte verification");
     }
 
     // SVG is markup: read the whole (1 MB capped) file and refuse it if anything in it is active.

@@ -9,10 +9,34 @@ import { webhookEvents } from "../../../../../drizzle/schema/ops";
 import { emailOutbox } from "../../../../../drizzle/schema/notifications";
 import { customerProfiles } from "../../../../../drizzle/schema/users-ext";
 import { users } from "../../../../../drizzle/schema/auth";
+import { verifySvixSignature } from "@/lib/svix-verify";
+import { getLogger } from "@/lib/logger";
 
 export async function POST(req: Request) {
   try {
     const rawBody = await req.text();
+
+    // Svix signature (Resend). Fail closed in production when the secret is not configured;
+    // dev/test (or EMAIL_TRANSPORT=log) keep working unsigned.
+    const secret = process.env.RESEND_WEBHOOK_SECRET;
+    if (secret) {
+      const verdict = verifySvixSignature({
+        secret,
+        id: req.headers.get("svix-id"),
+        timestamp: req.headers.get("svix-timestamp"),
+        signature: req.headers.get("svix-signature"),
+        rawBody,
+      });
+      if (verdict !== "ok") {
+        return NextResponse.json({ ok: false, error: "Invalid signature" }, { status: 401 });
+      }
+    } else if (process.env.NODE_ENV === "production" && process.env.EMAIL_TRANSPORT !== "log") {
+      getLogger().warn("resend webhook rejected: RESEND_WEBHOOK_SECRET is not configured");
+      return NextResponse.json(
+        { ok: false, error: "Webhook secret not configured" },
+        { status: 503 },
+      );
+    }
     const payload = JSON.parse(rawBody || "{}");
     const eventId = payload.id ?? `event-${Date.now()}`;
     const eventType = payload.type ?? "email.delivered"; // e.g. email.delivered, email.bounced, email.complained

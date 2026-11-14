@@ -7,6 +7,8 @@ import { resolveRouteContext } from "@/lib/authz/resolve-route-context";
 import { requireContext } from "@/lib/authz/context";
 import { mediaService } from "@/modules/media/service";
 import { createUploadIntentSchema } from "@/modules/media/contracts";
+import { isCustomerPurpose } from "@/modules/media/validation";
+import { checkClass } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
@@ -31,6 +33,16 @@ export async function POST(req: Request) {
       );
     }
 
+    // Per-user cap (class `upload`, 30/hour) on customer uploads; admin uploads are permission-gated.
+    if (isCustomerPurpose(parse.data.purpose) && authedCtx.userId) {
+      const limited = await checkClass("upload", { user: authedCtx.userId });
+      if (!limited.allowed) {
+        throw new AppError(ErrorCode.RATE_LIMITED, undefined, {
+          retryAfterMs: Math.max(0, limited.resetAt - Date.now()),
+        });
+      }
+    }
+
     const result = await mediaService.createUploadIntent(authedCtx, parse.data);
     return NextResponse.json({ ok: true, data: result });
   } catch (err) {
@@ -43,9 +55,11 @@ export async function POST(req: Request) {
             ? 403
             : err.code === ErrorCode.NOT_FOUND
               ? 404
-              : err.code === ErrorCode.VALIDATION || err.code === ErrorCode.STATE_INVALID
-                ? 400
-                : 500
+              : err.code === ErrorCode.RATE_LIMITED
+                ? 429
+                : err.code === ErrorCode.VALIDATION || err.code === ErrorCode.STATE_INVALID
+                  ? 400
+                  : 500
         : 500;
     return NextResponse.json(res, { status });
   }

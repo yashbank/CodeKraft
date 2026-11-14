@@ -91,6 +91,8 @@ export interface RazorpayProviderDeps {
   createClient(keyId: string, keySecret: string): RazorpayClient;
   /** Inserts into `webhook_events(provider="razorpay", event_id)`; `false` when already recorded. */
   recordWebhookEvent(eventId: string, payload: Json): Promise<boolean>;
+  /** Removes a `webhook_events` row so the provider's retry of a failed delivery is processed. */
+  forgetWebhookEvent?(eventId: string): Promise<void>;
 }
 
 export const defaultRazorpayDeps: RazorpayProviderDeps = {
@@ -123,6 +125,12 @@ export const defaultRazorpayDeps: RazorpayProviderDeps = {
       processedAt: new Date(),
     });
     return true;
+  },
+  async forgetWebhookEvent(eventId: string): Promise<void> {
+    const { getDb } = await import("@/lib/db");
+    await getDb()
+      .delete(webhookEvents)
+      .where(and(eq(webhookEvents.provider, "razorpay"), eq(webhookEvents.eventId, eventId)));
   },
 };
 
@@ -270,6 +278,14 @@ export class RazorpayProvider implements PaymentProvider {
       reference: result.id,
       providerPayload: { razorpayRefundId: result.id, razorpayPaymentId },
     };
+  }
+
+  /**
+   * Release an event recorded by `handleWebhook` after processing failed, so Razorpay's retry is
+   * not mistaken for a duplicate. Best effort: a failure here is logged by the caller only.
+   */
+  async forgetWebhookEvent(eventId: string): Promise<void> {
+    await this.deps.forgetWebhookEvent?.(eventId);
   }
 
   /**

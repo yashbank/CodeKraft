@@ -17,6 +17,7 @@ import { hashPassword, verifyPassword } from "./hash";
 import { afterHook, beforeHook, type AuthHost } from "./hooks";
 import { getLogger } from "@/lib/logger";
 import { sendAuthMail } from "./mailer";
+import { resolveTrustedOrigins } from "./trusted-origins";
 
 export const SESSION_IDLE_SECONDS: Record<AuthHost, number> = { site: 60 * 60, admin: 30 * 60 };
 export const SESSION_ABSOLUTE_SECONDS: Record<AuthHost, number> = {
@@ -69,16 +70,17 @@ export function createAuth(host: AuthHost, opts: { phoneOtp?: boolean; siteName?
     baseURL,
     basePath: "/api/auth",
     secret: env.BETTER_AUTH_SECRET,
-    trustedOrigins: [
-      env.NEXT_PUBLIC_SITE_URL,
-      env.NEXT_PUBLIC_ADMIN_URL,
-      "https://*.vercel.app",
-      ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
-      ...(process.env.VERCEL_PROJECT_PRODUCTION_URL
-        ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`]
-        : []),
-      ...(process.env.VERCEL_BRANCH_URL ? [`https://${process.env.VERCEL_BRANCH_URL}`] : []),
-    ].filter((url): url is string => Boolean(url)),
+    trustedOrigins: resolveTrustedOrigins({
+      appEnv: env.APP_ENV,
+      siteUrl: env.NEXT_PUBLIC_SITE_URL,
+      adminUrl: env.NEXT_PUBLIC_ADMIN_URL,
+      adminHost: process.env.ADMIN_HOST,
+      vercel: {
+        url: process.env.VERCEL_URL,
+        productionUrl: process.env.VERCEL_PROJECT_PRODUCTION_URL,
+        branchUrl: process.env.VERCEL_BRANCH_URL,
+      },
+    }),
     database: drizzleAdapter(getDb(), { provider: "pg", schema, usePlural: true }),
     emailAndPassword: {
       enabled: true,
