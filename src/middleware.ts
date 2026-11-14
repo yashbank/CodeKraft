@@ -4,6 +4,7 @@
  */
 import { NextResponse, type NextRequest } from "next/server";
 import { inlineThemeScript } from "@/lib/theme";
+import { sitePhaseGate } from "@/lib/site-phase-edge";
 
 const ADMIN_HOST = process.env.ADMIN_HOST ?? "";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "";
@@ -154,6 +155,10 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     }
   }
 
+  // Site phase (testing/maintenance): decided here, before any ISR twin can answer (see site-phase-edge.ts).
+  const phaseGate = kind === "site" ? await sitePhaseGate(req) : null;
+  if (phaseGate?.response) return phaseGate.response as NextResponse;
+
   const twin = kind === "site" ? staticTwinPath(req) : null;
   const nonce = makeNonce();
   // The inline PDF preview iframes this same-origin route from product pages.
@@ -208,7 +213,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     }
   }
 
-  if (APP_ENV === "staging" || APP_ENV === "preview") {
+  if (APP_ENV === "staging" || APP_ENV === "preview" || phaseGate?.phase === "testing") {
     res.headers.set("X-Robots-Tag", "noindex, nofollow");
   }
 

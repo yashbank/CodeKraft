@@ -24,7 +24,6 @@ function renderAt(
     <SettingsScreen
       settings={SETTINGS}
       isSuperAdmin={true}
-      environment="development"
       initialSection={initialSection}
       chatbotHref="/admin/chatbot"
       auditHref="/admin/audit"

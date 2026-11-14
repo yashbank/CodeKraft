@@ -15,6 +15,7 @@ import { mapNotificationItem } from "@/lib/admin/notifications-view";
 import { Banner } from "@/components/admin/Banner";
 import { emailSenderProblem } from "@/lib/email/transport";
 import { getEnv } from "@/lib/env";
+import { getSitePhase } from "@/lib/site-phase-server";
 import { getStoredEmailFrom } from "@/lib/site-brand";
 import { enforcePasswordChange } from "@/lib/authz/must-change";
 
@@ -76,9 +77,7 @@ export default async function AdminAppLayout({ children }: { children: React.Rea
 
   const env = getEnv();
   const emailProblem = emailSenderProblem(env, await getStoredEmailFrom());
-  const appEnv = env.APP_ENV;
-  const environment =
-    appEnv === "production" ? "production" : appEnv === "staging" ? "staging" : "development";
+  const sitePhase = await getSitePhase();
 
   return (
     <AdminCurrencyProvider currency={adminPreferredCurrency(session.user)} table={rateTable}>
@@ -87,7 +86,7 @@ export default async function AdminAppLayout({ children }: { children: React.Rea
         pendingApprovals={pendingApprovals}
         notifications={notifications}
         unreadCount={notificationsRes.ok ? notificationsRes.data.unreadCount : 0}
-        environment={environment}
+        sitePhase={sitePhase}
       >
         {emailProblem ? (
           <Banner tone="danger" role="alert" title="Email sender not configured" className="mb-4">

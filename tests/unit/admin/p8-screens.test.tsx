@@ -455,7 +455,6 @@ describe("Phase 8: Admin App UI Screen Integration Tests", () => {
       <SettingsScreen
         settings={SETTINGS}
         isSuperAdmin={true}
-        environment="development"
         chatbotHref="/admin/chatbot"
         auditHref="/admin/audit"
       />,

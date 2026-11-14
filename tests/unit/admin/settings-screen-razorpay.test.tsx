@@ -36,7 +36,6 @@ function renderOnPaymentsSection() {
     <SettingsScreen
       settings={{ ...SETTINGS, payments: { ...SETTINGS.payments, razorpay: RAZORPAY_FIXTURE } }}
       isSuperAdmin={true}
-      environment="development"
       initialSection="payment-methods"
       chatbotHref="/admin/chatbot"
       auditHref="/admin/audit"

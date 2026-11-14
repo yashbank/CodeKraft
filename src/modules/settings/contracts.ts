@@ -19,6 +19,7 @@ import {
 } from "@/lib/ui-style";
 import { emailFromAddressSchema, emailFromNameSchema } from "@/lib/email/from";
 import { THEMES } from "@/lib/theme";
+import { SITE_PHASES } from "@/lib/site-phase";
 import { BUTTON_IDS, CARD_IDS, FONT_FAMILY_IDS, SHADOW_IDS } from "@/lib/theme-catalogue";
 import { DEFAULT_STUDIO_EXTRAS, MAX_PRESETS } from "@/lib/theme-studio";
 import { bpsSchema, currencySchema } from "@/modules/_shared/zod";
@@ -172,6 +173,7 @@ export const siteSettingsSchema = z.strictObject({
   chatTimeoutMs: z.number().int().min(1_000).max(120_000),
   retention: retentionSchema,
   flags: z.record(flagKeySchema, z.boolean()),
+  sitePhase: z.enum(SITE_PHASES),
 }) satisfies z.ZodType<SiteSettings>;
 
 /** Release-1 defaults (docs/13 §6, MASTER_SPEC §7). */
@@ -220,6 +222,7 @@ export const SITE_SETTINGS_DEFAULTS: SiteSettings = Object.freeze({
     bundles: false,
     vendor_marketplace: false,
   },
+  sitePhase: "live",
 }) as SiteSettings;
 
 /**
