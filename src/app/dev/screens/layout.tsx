@@ -11,11 +11,7 @@ export const metadata = {
 
 /** /dev/screens — every designed screen rendered with fixture data, both themes. Not in production. */
 export default function ScreensLayout({ children }: { children: React.ReactNode }) {
-  if (
-    process.env.APP_ENV === "production" &&
-    !process.env.VERCEL &&
-    process.env.ENABLE_DEV_SCREENS !== "true"
-  ) {
+  if (process.env.APP_ENV === "production" && process.env.ENABLE_DEV_SCREENS !== "true") {
     notFound();
   }
   const groups = ["site", "auth", "account", "admin"] as const;

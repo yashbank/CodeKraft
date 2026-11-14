@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isCronAuthorized } from "@/lib/cron-auth";
 import { runDailyJobs } from "@/jobs/registry";
 
 export const dynamic = "force-dynamic";
@@ -8,10 +9,7 @@ export const dynamic = "force-dynamic";
  * Docs/06 §3.3, docs/12 §2.3.
  */
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!isCronAuthorized(req.headers.get("authorization"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

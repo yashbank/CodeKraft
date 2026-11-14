@@ -8,6 +8,7 @@ import { createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { randomUUID } from "node:crypto";
 import { audit } from "@/lib/audit-port";
 import { checkFormGuard } from "@/lib/form-guard";
+import { checkClass, type RateLimitClass, type RateLimitScope } from "@/lib/rate-limit";
 import { getDb } from "@/lib/db";
 import { sessions, userRoles, users } from "../../../drizzle/schema/auth";
 import { passwordPolicyMessage, validatePassword } from "./password-policy";
@@ -29,6 +30,38 @@ const SIGN_IN_PATHS = new Set([
   "/two-factor/verify-backup-code",
 ]);
 
+/** Auth endpoints -> rate-limit class and the body field that identifies the account. */
+const RATE_LIMITED_PATHS: Record<string, { cls: RateLimitClass; field?: string }> = {
+  "/sign-in/email": { cls: "login", field: "email" },
+  "/sign-in/phone-number": { cls: "login", field: "phoneNumber" },
+  "/sign-up/email": { cls: "signup" },
+  "/request-password-reset": { cls: "reset", field: "email" },
+  "/forget-password": { cls: "reset", field: "email" },
+  "/reset-password": { cls: "reset" },
+  "/phone-number/send-otp": { cls: "otp", field: "phoneNumber" },
+  "/phone-number/verify": { cls: "otp", field: "phoneNumber" },
+};
+const ACCOUNT_SCOPE: Record<string, RateLimitScope> = {
+  login: "account",
+  reset: "email",
+  otp: "phone",
+};
+
+/**
+ * Headroom over the canonical docs/06 §1.7 table for the HTTP wiring (shared NAT IPs, e2e runs).
+ * The store is in-memory per serverless instance, so these are best-effort brute-force brakes.
+ */
+function authLimitScale(): number {
+  const n = Number(process.env.AUTH_RATE_LIMIT_SCALE);
+  return Number.isFinite(n) && n >= 1 ? n : 4;
+}
+
+function clientIp(headers: Headers | undefined): string | null {
+  return (
+    headers?.get("x-forwarded-for")?.split(",")[0]?.trim() || headers?.get("x-real-ip") || null
+  );
+}
+
 function requestMeta(headers: Headers | undefined) {
   return {
     ip: headers?.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
@@ -39,6 +72,29 @@ function requestMeta(headers: Headers | undefined) {
 /** Runs before every auth endpoint. Errors are RETURNED (not thrown): Better Auth converts a returned APIError into the response, while thrown before-hook errors propagate to the caller (api/dispatch.mjs runBeforeHooks). */
 export function beforeHook(host: AuthHost) {
   return createAuthMiddleware(async (ctx) => {
+    // Brute-force brakes (login / signup / reset / otp classes), per IP and per account key.
+    // Only real HTTP requests: server-side `auth.api.*` calls (seed, tests) have no request.
+    const limited = ctx.request ? RATE_LIMITED_PATHS[ctx.path] : undefined;
+    if (limited) {
+      const body = (ctx.body ?? {}) as Record<string, unknown>;
+      const raw = limited.field ? body[limited.field] : undefined;
+      const subjects: Partial<Record<RateLimitScope, string>> = {};
+      const ip = clientIp(ctx.request?.headers);
+      if (ip) subjects.ip = ip;
+      const accountScope = ACCOUNT_SCOPE[limited.cls];
+      if (accountScope && typeof raw === "string" && raw.trim() !== "") {
+        subjects[accountScope] = raw.trim().toLowerCase();
+      }
+      if (Object.keys(subjects).length > 0) {
+        const res = await checkClass(limited.cls, subjects, { scale: authLimitScale() });
+        if (!res.allowed) {
+          return ctx.error("TOO_MANY_REQUESTS", {
+            message: "Too many attempts. Please wait a while and try again.",
+            code: "RATE_LIMITED",
+          });
+        }
+      }
+    }
     // Invisible bot guard on public registration: honeypot filled, or submitted < 2 s after the
     // form rendered (signed timestamp) => accept-and-drop with a normal-looking success, no user.
     // Only real HTTP requests: server-side `auth.api.signUpEmail` (seed, tests) has no request.

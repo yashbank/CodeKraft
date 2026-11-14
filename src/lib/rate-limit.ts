@@ -168,12 +168,15 @@ export function rateLimitKey(cls: RateLimitClass, scope: RateLimitScope, subject
 /**
  * Apply every rule of a class for which a subject is supplied (e.g. `{ ip, account }`) and
  * return the strictest outcome; a blocked result wins, otherwise the lowest `remaining`.
- * Rules whose scope has no subject are skipped, so callers pass what they know.
+ * Rules whose scope has no subject are skipped, so callers pass what they know. `scale` multiplies
+ * every rule limit (callers that need more headroom than the canonical table, e.g. NAT-shared IPs).
  */
 export async function checkClass(
   cls: RateLimitClass,
   subjects: Partial<Record<RateLimitScope, string>>,
+  opts: { scale?: number } = {},
 ): Promise<RateLimitResult> {
+  const scale = opts.scale !== undefined && opts.scale >= 1 ? Math.floor(opts.scale) : 1;
   const rules: readonly RateLimitRule[] = RATE_LIMIT_CLASSES[cls];
   let strictest: RateLimitResult | undefined;
   for (const rule of rules) {
@@ -181,7 +184,11 @@ export async function checkClass(
     if (subject === undefined) continue;
     const windowMs =
       rule.lockMs === undefined ? rule.windowMs : Math.max(rule.windowMs, rule.lockMs);
-    const result = await store.hit(rateLimitKey(cls, rule.scope, subject), rule.limit, windowMs);
+    const result = await store.hit(
+      rateLimitKey(cls, rule.scope, subject),
+      rule.limit * scale,
+      windowMs,
+    );
     if (
       strictest === undefined ||
       (!result.allowed && strictest.allowed) ||

@@ -36,8 +36,12 @@ function webhookCtx() {
 }
 
 export async function POST(req: Request) {
+  // Set once `handleWebhook` has recorded the event; cleared on success. If processing throws, the
+  // event row is removed so Razorpay's retry is processed instead of being dropped as a duplicate.
+  let pendingEventId: string | null = null;
   try {
     const outcome = await razorpayProvider.handleWebhook(req);
+    if (outcome.kind !== "ignored") pendingEventId = outcome.eventId;
 
     if (outcome.kind === "ignored" || outcome.kind === "refund.processed") {
       return NextResponse.json({
@@ -100,8 +104,14 @@ export async function POST(req: Request) {
       });
     }
 
+    pendingEventId = null;
     return NextResponse.json({ ok: true, kind: outcome.kind });
   } catch (caught) {
+    if (pendingEventId) {
+      await razorpayProvider.forgetWebhookEvent(pendingEventId).catch((e: unknown) => {
+        console.error("Razorpay webhook: could not release event for retry:", e);
+      });
+    }
     if (caught instanceof AppError) {
       return NextResponse.json(
         { ok: false, error: caught.toActionError() },

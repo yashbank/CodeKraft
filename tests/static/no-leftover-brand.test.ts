@@ -18,6 +18,7 @@ const ALLOW = [
   /__codekraftDb|codekraft-(local|public|private|documents|settings)|codekraft\.settings/, // keys, buckets, formats
   /phone\.codekraft\.invalid|anonymized\.codekraft\.dev|codekraft@upi/, // synthetic addresses
   /DEFAULT_SITE_NAME = "CodeKraft"|siteName: "CodeKraft"/, // the brand defaults themselves
+  /"https:\/\/codekraft(-dusky|-admin)?\.vercel\.app"/, // modules/auth/trusted-origins.ts: interim hosts CSRF-trusted in production
   /Verify your CodeKraft|Reset your CodeKraft|Your CodeKraft login/, // brandSubject swaps in the site name at send
 ];
 
@@ -42,6 +43,8 @@ describe("no leftover CodeKraft brand in user-visible text (D17-07)", () => {
         .map((l) => `${path.relative(SRC, f)}: ${l.trim()}`),
     );
     // middleware/auth only match *.vercel.app as a pattern, never build a link from it.
-    expect(found.filter((x) => !/^(middleware|modules\/auth\/config)/.test(x))).toEqual([]);
+    expect(
+      found.filter((x) => !/^(middleware|modules\/auth\/(config|trusted-origins))/.test(x)),
+    ).toEqual([]);
   });
 });
