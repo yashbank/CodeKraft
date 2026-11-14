@@ -61,9 +61,12 @@ export function Reveal({
           : undefined
       }
       className={cn(
-        "transition-[opacity,transform] duration-(--ck-motion-duration-lg) ease-emphasized will-change-[opacity,transform]",
+        // The transition belongs to the "in" state only: server HTML is visible, and below-the-fold
+        // items must snap to hidden at hydration instead of fading out (a half-faded card is a
+        // transient contrast failure for any scan that runs right after load).
         state === "pending" && "translate-y-4 opacity-0",
-        state === "in" && "translate-y-0 opacity-100",
+        state === "in" &&
+          "translate-y-0 opacity-100 transition-[opacity,transform] duration-(--ck-motion-duration-lg) ease-emphasized will-change-[opacity,transform]",
         className,
       )}
       {...rest}
