@@ -4,6 +4,7 @@ import {
   buildProductMediaUrl,
   canVisitorViewProductMedia,
   classifyGalleryMedia,
+  toEmbedSrc,
 } from "@/modules/catalog/media-access";
 
 describe("canVisitorViewProductMedia", () => {
@@ -56,6 +57,30 @@ describe("classifyGalleryMedia", () => {
     );
     expect(classifyGalleryMedia({ kind: "attachment", mime: "application/zip", url: "u" })).toBe(
       "hidden",
+    );
+  });
+});
+
+describe("toEmbedSrc / video_embed", () => {
+  it("maps youtube and vimeo urls to privacy-friendly embed urls", () => {
+    expect(toEmbedSrc("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).toBe(
+      "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+    );
+    expect(toEmbedSrc("https://youtu.be/dQw4w9WgXcQ")).toBe(
+      "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+    );
+    expect(toEmbedSrc("https://vimeo.com/123456789")).toBe(
+      "https://player.vimeo.com/video/123456789",
+    );
+  });
+  it("rejects other hosts, http and junk", () => {
+    expect(toEmbedSrc("https://evil.com/watch?v=dQw4w9WgXcQ")).toBeNull();
+    expect(toEmbedSrc("http://youtu.be/dQw4w9WgXcQ")).toBeNull();
+    expect(toEmbedSrc("javascript:alert(1)")).toBeNull();
+    expect(toEmbedSrc("")).toBeNull();
+    expect(classifyGalleryMedia({ kind: "video_embed", url: "https://evil.com/x" })).toBe("hidden");
+    expect(classifyGalleryMedia({ kind: "video_embed", url: "https://youtu.be/dQw4w9WgXcQ" })).toBe(
+      "video",
     );
   });
 });
