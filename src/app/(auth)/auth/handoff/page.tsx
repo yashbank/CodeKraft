@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { safeRedirectPath } from "@/lib/safe-redirect";
+import { HANDOFF_PATH, parseHandoffFragment } from "@/modules/auth/handoff";
 
 /**
  * Admin-host landing for the site -> admin handoff (see LoginForm). Exchanges the single-use
@@ -14,12 +14,11 @@ export default function AdminHandoffPage() {
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-    // Same-site only: backslash hosts and encoded `//` slip past a bare startsWith check.
-    const next = safeRedirectPath(params.get("next"), "/dashboard");
+    // Token rides in the URL fragment (never sent to the server or in Referer). A token in the
+    // query string is ignored. Same-site `next` only (see safeRedirectPath).
+    const { token, next } = parseHandoffFragment(window.location.hash);
     // Keep the token out of the address bar and history as soon as it is read.
-    window.history.replaceState(null, "", "/auth/handoff");
+    window.history.replaceState(null, "", HANDOFF_PATH);
     if (!token) {
       setFailed(true);
       return;

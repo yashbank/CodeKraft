@@ -14,6 +14,7 @@ import { authClient } from "@/modules/auth/client";
 import { GoogleButton } from "./GoogleButton";
 import { PasswordInput } from "./PasswordInput";
 import { SiteName } from "@/components/brand/site-brand";
+import { buildHandoffUrl } from "@/modules/auth/handoff";
 
 export interface LoginFormProps {
   defaultNext?: string;
@@ -99,7 +100,7 @@ export function LoginForm({
                 });
                 const { token } = (await tokenRes.json()) as { token?: string };
                 if (token) {
-                  window.location.href = `${adminUrl}/auth/handoff?token=${encodeURIComponent(token)}&next=/dashboard`;
+                  window.location.href = buildHandoffUrl(adminUrl, token, "/dashboard");
                   return;
                 }
                 window.location.href = `${adminUrl}/auth/login?next=/dashboard`;

@@ -17,6 +17,7 @@ import { hashPassword, verifyPassword } from "./hash";
 import { afterHook, beforeHook, type AuthHost } from "./hooks";
 import { getLogger } from "@/lib/logger";
 import { sendAuthMail } from "./mailer";
+import { HANDOFF_TOKEN_TTL_MINUTES } from "./handoff";
 import { resolveTrustedOrigins } from "./trusted-origins";
 
 export const SESSION_IDLE_SECONDS: Record<AuthHost, number> = { site: 60 * 60, admin: 30 * 60 };
@@ -34,9 +35,10 @@ export function createAuth(host: AuthHost, opts: { phoneOtp?: boolean; siteName?
   const phoneOtp = opts.phoneOtp ?? false;
 
   const plugins = [
-    // Cross-host handoff (site -> admin): the site mints a 2-minute single-use token from its own
-    // session, the admin host verifies it and sets its ckadm cookie, so admins sign in once.
-    oneTimeToken({ expiresIn: 2 }),
+    // Cross-host handoff (site -> admin): the site mints a 60-second single-use token (hashed at
+    // rest, consumed on first verify) from its own session; the admin host verifies it and sets
+    // its ckadm cookie, so admins sign in once. The token travels in a URL fragment only.
+    oneTimeToken({ expiresIn: HANDOFF_TOKEN_TTL_MINUTES, storeToken: "hashed" }),
     twoFactor({
       issuer: siteName,
       skipVerificationOnEnable: false,
