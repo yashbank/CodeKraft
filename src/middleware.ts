@@ -85,6 +85,12 @@ export function buildCsp(
   const r2 = "https://*.r2.cloudflarestorage.com";
   // Self-hosted / local S3 endpoint (the e2e storage stub): the browser PUTs to the presigned URL.
   const storage = originOf(process.env.STORAGE_ENDPOINT);
+  // video_embed product media (see EMBED_HOSTS / toEmbedSrc): youtube privacy host + vimeo player.
+  const videoEmbedHosts = [
+    "https://www.youtube-nocookie.com",
+    "https://www.youtube.com",
+    "https://player.vimeo.com",
+  ];
   const list = (...xs: (string | null | false)[]) => xs.filter(Boolean).join(" ");
   const enforce = cspMode() === "enforce";
   const policy = [
@@ -101,7 +107,7 @@ export function buildCsp(
     `connect-src ${list("'self'", ...razorpayApi, "https://lumberjack.razorpay.com", media, r2, storage, umami, sentry, "https://*.ingest.sentry.io", "https://*.ingest.us.sentry.io", dev && "ws:", dev && "wss:")}`,
     // Video and audio uploaded to R2 play from the media host (default-src would otherwise block them).
     `media-src ${list("'self'", "blob:", media, r2)}`,
-    `frame-src ${list("'self'", ...razorpayApi, media)}`,
+    `frame-src ${list("'self'", ...razorpayApi, media, ...videoEmbedHosts)}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self' https://api.razorpay.com https://checkout.razorpay.com",

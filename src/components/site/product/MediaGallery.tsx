@@ -7,7 +7,7 @@ import { useState } from "react";
 import { cn } from "@/components/ui/_utils";
 
 import { MediaPlaceholder } from "../MediaPlaceholder";
-import { classifyGalleryMedia } from "@/modules/catalog/media-access";
+import { classifyGalleryMedia, toEmbedSrc } from "@/modules/catalog/media-access";
 
 import type { MediaItem } from "../types";
 
@@ -49,7 +49,24 @@ export function MediaGallery({
   return (
     <div className={cn("space-y-3", className)}>
       <div className="relative">
-        {classifyGalleryMedia(active) === "video" && active.url ? (
+        {classifyGalleryMedia(active) === "video" &&
+        active.kind === "video_embed" &&
+        toEmbedSrc(active.url) ? (
+          <iframe
+            key={active.id}
+            src={toEmbedSrc(active.url) as string}
+            title={active.alt || active.caption || "Product video"}
+            loading="lazy"
+            allow="encrypted-media; picture-in-picture; fullscreen"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+            sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
+            className="w-full rounded-xl bg-black"
+            style={{ aspectRatio: "16/10" }}
+          />
+        ) : classifyGalleryMedia(active) === "video" &&
+          active.kind !== "video_embed" &&
+          active.url ? (
           // eslint-disable-next-line jsx-a11y/media-has-caption -- product demo clips have no caption track
           <video
             key={active.id}

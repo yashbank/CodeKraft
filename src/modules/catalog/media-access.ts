@@ -34,7 +34,8 @@ export function classifyGalleryMedia(m: {
   mime?: string | null;
   url?: string | null;
 }): GalleryClass {
-  if (m.kind === "video_embed" || m.kind === "video_file") {
+  if (m.kind === "video_embed") return toEmbedSrc(m.url) ? "video" : "hidden";
+  if (m.kind === "video_file") {
     return m.url ? "video" : "hidden";
   }
   if (m.kind === "presentation") return m.url ? "pdf" : "hidden";
@@ -46,4 +47,35 @@ export function classifyGalleryMedia(m: {
     return "image";
   }
   return "hidden";
+}
+
+/**
+ * Safe iframe `src` for a video_embed URL, or null when the host is not allow-listed.
+ * Accepts youtube watch / youtu.be / embed URLs and vimeo.com / player.vimeo.com URLs.
+ */
+export function toEmbedSrc(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (u.protocol !== "https:") return null;
+  const host = u.hostname.toLowerCase();
+  const id = /^[\w-]{6,20}$/;
+  if (host === "youtu.be") {
+    const v = u.pathname.slice(1);
+    return id.test(v) ? `https://www.youtube-nocookie.com/embed/${v}` : null;
+  }
+  if (host === "youtube.com" || host === "www.youtube.com") {
+    const m = /^\/embed\/([\w-]{6,20})$/.exec(u.pathname);
+    const v = m ? m[1] : u.pathname === "/watch" ? u.searchParams.get("v") : null;
+    return v && id.test(v) ? `https://www.youtube-nocookie.com/embed/${v}` : null;
+  }
+  if (host === "vimeo.com" || host === "player.vimeo.com") {
+    const m = /^(?:\/video)?\/(\d{5,12})$/.exec(u.pathname);
+    return m ? `https://player.vimeo.com/video/${m[1]}` : null;
+  }
+  return null;
 }

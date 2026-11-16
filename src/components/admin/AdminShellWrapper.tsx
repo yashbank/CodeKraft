@@ -94,6 +94,8 @@ interface AdminShellWrapperProps {
   notifications?: AdminNotification[];
   unreadCount?: number;
   sitePhase?: SitePhase;
+  /** Server render time (ISO); keeps relative times identical during hydration. */
+  renderedAt?: string;
   children: React.ReactNode;
 }
 
@@ -103,9 +105,15 @@ export function AdminShellWrapper({
   notifications = [],
   unreadCount,
   sitePhase = "live",
+  renderedAt,
   children,
 }: AdminShellWrapperProps) {
   const pathname = usePathname();
+  // Hydration-safe clock: the server-rendered ISO is reused for the first client render (a fresh
+  // `new Date()` there can cross a minute boundary and flip "just now" -> "1 m ago", React #418).
+  const [now, setNow] = React.useState(renderedAt ?? "1970-01-01T00:00:00.000Z");
+  React.useEffect(() => setNow(new Date().toISOString()), []);
+
   useLiveAdminNotifications(unreadCount ?? 0);
   useLiveOrderAlerts();
 
@@ -131,7 +139,7 @@ export function AdminShellWrapper({
       unreadCount={unreadCount}
       onMarkAllRead={() => void markAllNotificationsRead()}
       onMarkRead={(id) => markNotificationsRead({ notificationIds: [id] })}
-      now={new Date().toISOString()}
+      now={now}
       title={title}
       routes={ADMIN_ROUTE_MAP}
       onSearch={searchAdmin}

@@ -19,4 +19,13 @@ describe("CSP lets uploaded media load from the media host and R2", () => {
     expect(directive("object-src")).toBe("object-src 'none'");
     expect(directive("script-src")).not.toContain("media.example.test");
   });
+
+  it("frame-src allows only youtube and vimeo player frames for video_embed", async () => {
+    const { buildCsp } = await import("@/middleware");
+    const { policy } = buildCsp("n", "h");
+    const frame = policy.split("; ").find((d) => d.startsWith("frame-src ")) ?? "";
+    for (const h of ["https://www.youtube-nocookie.com", "https://player.vimeo.com"])
+      expect(frame).toContain(h);
+    expect(frame).not.toContain("*");
+  });
 });

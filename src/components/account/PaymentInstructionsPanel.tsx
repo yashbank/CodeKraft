@@ -356,8 +356,13 @@ export function PaymentInstructionsPanel({
       )}
 
       <p className="text-caption text-fg-muted">
-        Complete payment by {new Date(expiresAt).toLocaleString()} — unpaid orders are cancelled
-        automatically after that.
+        Complete payment by{" "}
+        {new Date(expiresAt).toLocaleString("en-IN", {
+          dateStyle: "medium",
+          timeStyle: "short",
+          timeZone: "Asia/Kolkata",
+        })}{" "}
+        — unpaid orders are cancelled automatically after that.
       </p>
 
       {submitted ? (

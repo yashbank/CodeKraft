@@ -40,6 +40,7 @@ export default async function AccountAreaLayout({ children }: { children: React.
   return (
     <AccountShellWrapper
       themeToggle={themeToggle}
+      renderedAt={new Date().toISOString()}
       currency={display.currency}
       currencyOptions={display.enabled}
       notifications={
