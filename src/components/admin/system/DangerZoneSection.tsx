@@ -6,6 +6,14 @@ import { toast } from "sonner";
 import { Banner } from "../Banner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -29,6 +37,8 @@ export function DangerZoneSection({ siteName }: { siteName: string }) {
   const [backedUp, setBackedUp] = React.useState(false);
   const [typed, setTyped] = React.useState("");
   const [busy, setBusy] = React.useState(false);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const cancelRef = React.useRef<HTMLButtonElement>(null);
   const categories = expandCategories(picked); // picked + their required dependencies
   const implied = categories.filter((c) => !picked.includes(c));
 
@@ -78,6 +88,7 @@ export function DangerZoneSection({ siteName }: { siteName: string }) {
     const res = await requestSiteResetAction({ categories, confirmName: typed.trim() });
     setBusy(false);
     if (!res.ok) return void toast.error(res.error.message);
+    setConfirmOpen(false);
     toast.success("Reset requested", { description: "Another super admin must approve it." });
     setPicked([]);
     setPreview(null);
@@ -89,9 +100,9 @@ export function DangerZoneSection({ siteName }: { siteName: string }) {
   const blockers = [
     categories.length ? null : "Select the data to delete.",
     backedUp ? null : "Download the backup (JSON) for this selection.",
-    typed.trim() === siteName ? null : "Type the exact site name.",
   ].filter(Boolean);
   const canRequest = blockers.length === 0 && !busy;
+  const nameMatches = typed.trim() === siteName;
 
   return (
     <div className="space-y-4">
@@ -163,23 +174,15 @@ export function DangerZoneSection({ siteName }: { siteName: string }) {
           ))}
         </div>
       ) : null}
-      <div className="space-y-1">
-        <Label htmlFor="reset-confirm" className="block break-words">
-          Type <strong>{siteName}</strong> to confirm
-        </Label>
-        <Input
-          id="reset-confirm"
-          value={typed}
-          onChange={(e) => setTyped(e.target.value)}
-          autoComplete="off"
-        />
-      </div>
       <Button
         type="button"
         variant="destructive"
         className="w-full sm:w-auto"
         disabled={!canRequest}
-        onClick={() => void request()}
+        onClick={() => {
+          setTyped("");
+          setConfirmOpen(true);
+        }}
       >
         Request site reset
       </Button>
@@ -190,6 +193,76 @@ export function DangerZoneSection({ siteName }: { siteName: string }) {
           ))}
         </ul>
       ) : null}
+      <Dialog
+        open={confirmOpen}
+        onOpenChange={(o) => {
+          if (!busy) setConfirmOpen(o);
+        }}
+      >
+        <DialogContent
+          size="md"
+          onOpenAutoFocus={(e) => {
+            // Cancel is the safe default focus, never the destructive button or the input.
+            e.preventDefault();
+            cancelRef.current?.focus();
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>Permanently delete this data?</DialogTitle>
+            <DialogDescription>
+              This asks another super admin to approve a permanent deletion. Nothing is deleted
+              until they approve, and it cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3" data-testid="reset-confirm-summary">
+            <p className="text-body-sm font-medium">Will be deleted:</p>
+            <ul className="list-disc space-y-0.5 pl-5 text-body-sm">
+              {categories.map((c) => {
+                const g = preview ? groupPreview(preview).find((x) => x.category === c) : null;
+                return (
+                  <li key={c}>
+                    {RESET_CATEGORY_LABELS[c]}
+                    {g ? <span className="font-mono"> ({g.total} rows)</span> : null}
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="text-caption text-fg-muted">
+              Super admin accounts, settings, roles, legal pages and the audit log are kept.
+            </p>
+            <div className="space-y-1">
+              <Label htmlFor="reset-confirm" className="block break-words">
+                Type <strong>{siteName}</strong> to confirm
+              </Label>
+              <Input
+                id="reset-confirm"
+                value={typed}
+                onChange={(e) => setTyped(e.target.value)}
+                autoComplete="off"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              ref={cancelRef}
+              type="button"
+              variant="outline"
+              onClick={() => setConfirmOpen(false)}
+              disabled={busy}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={!nameMatches || !canRequest}
+              onClick={() => void request()}
+            >
+              Confirm site reset request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
