@@ -7,9 +7,7 @@ describe("MediaGallery video_embed", () => {
   it("plays an allow-listed YouTube URL in a sandboxed iframe", () => {
     const { container } = render(
       <MediaGallery
-        media={[
-          { id: "1", kind: "video_embed", alt: "Demo", url: "https://youtu.be/dQw4w9WgXcQ" },
-        ]}
+        media={[{ id: "1", kind: "video_embed", alt: "Demo", url: "https://youtu.be/dQw4w9WgXcQ" }]}
       />,
     );
     const frame = container.querySelector("iframe");
