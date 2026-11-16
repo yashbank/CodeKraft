@@ -412,6 +412,7 @@ export class DefaultOrdersService implements OrdersService {
         .values({
           orderNo,
           userId: ctx.userId,
+          createdBy: ctx.userId,
           couponId,
           type: "product",
           status: "pending_payment",

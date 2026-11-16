@@ -541,6 +541,7 @@ export class DefaultQuotesService implements QuotesService {
           orderNo,
           type: "product",
           userId: ctx.userId,
+          createdBy: ctx.userId,
           status: "pending_payment",
           currency: quote.currency,
           subtotalMinor: quote.amountMinor,
