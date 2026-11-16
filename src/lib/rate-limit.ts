@@ -2,7 +2,7 @@
  * Rate limiting port — docs/06 §1.7 (D-1204), docs/09 §7.
  *
  * `RateLimitStore` is the port: `InMemoryRateLimitStore` here (single container / tests), the
- * Postgres `rate_limit_buckets` store arrives in P2, enforcement in P9. Windows are fixed
+ * Postgres `rate_limit_buckets` store is `rate-limit-pg.ts` (default when DATABASE_URL is set). Windows are fixed
  * (anchored at the first hit); the stricter of several rules applies (`checkClass`).
  */
 import { AppError, ErrorCode } from "./errors";
@@ -65,7 +65,26 @@ export class InMemoryRateLimitStore implements RateLimitStore {
   }
 }
 
-let store: RateLimitStore = new InMemoryRateLimitStore();
+/**
+ * Default store: Postgres-backed (shared across serverless instances) when a database is
+ * configured, in-memory otherwise (tests, local runs without a DB). Tests inject their own store.
+ */
+class DefaultRateLimitStore implements RateLimitStore {
+  private readonly memory = new InMemoryRateLimitStore();
+  private pg: Promise<RateLimitStore> | undefined;
+
+  hit(key: string, limit: number, windowMs: number): Promise<RateLimitResult> {
+    if (process.env.VITEST !== undefined || !process.env.DATABASE_URL) {
+      return this.memory.hit(key, limit, windowMs);
+    }
+    this.pg ??= import("./rate-limit-pg").then(
+      (m) => new m.PostgresRateLimitStore(undefined, this.memory),
+    );
+    return this.pg.then((s) => s.hit(key, limit, windowMs));
+  }
+}
+
+let store: RateLimitStore = new DefaultRateLimitStore();
 
 export function setRateLimitStore(next: RateLimitStore): void {
   store = next;

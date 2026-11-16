@@ -10,6 +10,7 @@ import { chatPurgeJob } from "./chat-purge";
 import { subscriptionsRemindGraceSuspendJob, entitlementsExpireJob } from "./subscriptions";
 import { fxRefreshJob } from "./fx";
 import { knowledgeReindexJob } from "./knowledge";
+import { rateLimitPurgeJob } from "./rate-limit-purge";
 import { leadOverdueDigestJob } from "./lead-digest";
 
 export interface JobExecutionReport {
@@ -68,6 +69,7 @@ export async function runDailyJobs(now: Date = new Date()): Promise<JobExecution
     { name: "fx.refresh", fn: () => fxRefreshJob.run(now) },
     { name: "knowledge.reindex", fn: () => knowledgeReindexJob.run(now) },
     { name: "retention.purge", fn: () => chatPurgeJob.run(now) },
+    { name: "rate_limit.purge", fn: () => rateLimitPurgeJob.run(now) },
     { name: "users.anonymise", fn: () => usersAnonymiseSweepJob.run(now) },
     { name: "admin.overdue_digest", fn: () => leadOverdueDigestJob.run(now) },
   ];
