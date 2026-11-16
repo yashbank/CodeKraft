@@ -5,7 +5,7 @@ Resume: read this file, continue the first phase not marked DONE.
 | # | Phase | Branch | Status |
 |---|---|---|---|
 | 1 | Danger Zone confirm dialog | qa/p20-1-dz-confirm | DONE 4491809 (r9-01 spec to verify in gate) |
-| 2 | Login handoff token out of URL | qa/p20-2-handoff | TODO |
+| 2 | Login handoff token out of URL | qa/p20-2-handoff | DONE 6115233 (token in URL fragment, 60 s, single-use) |
 | 3 | Persistent rate-limit store (new table + migration, local only) | qa/p20-3-ratelimit | DONE 81ed496 (no migration needed) |
 | 4 | Audit + fix remaining bugs (BUGS.md open, video_embed, React #418, a11y, UX) | qa/p20-4-bugs | DONE 63ad15c video embed, hydration fix, loading pages |
 | 5 | Google OAuth: needs owner click-through (cannot automate) | - | OWNER (needs real Google login) |
