@@ -77,15 +77,20 @@ test("reset site data: request, second super admin approves, data wiped, admins 
   await page.getByRole("checkbox", { name: /products/i }).click();
   await page.getByRole("button", { name: /preview row counts/i }).click();
   await expect(page.getByLabel("Rows to delete")).toBeVisible();
-  const name = await page.locator("label[for=reset-confirm] strong").innerText();
-  await page.locator("#reset-confirm").fill(name);
-  // Preview + name alone is not enough: the backup is required, and the UI says so.
+  // Preview alone is not enough: the backup is required, and the UI says so.
   await expect(request).toBeDisabled();
   await expect(page.getByTestId("reset-blockers")).toContainText(/download the backup/i);
   await page.getByRole("button", { name: /download backup/i }).click();
   await expect(page.getByText("Backup downloaded")).toBeVisible();
   await expect(request).toBeEnabled();
   await request.click();
+  const dialog = page.getByRole("dialog", { name: /permanently delete/i });
+  await expect(dialog.getByRole("button", { name: /^cancel$/i })).toBeFocused();
+  const name = await dialog.locator("label[for=reset-confirm] strong").innerText();
+  const confirm = dialog.getByRole("button", { name: /confirm site reset request/i });
+  await expect(confirm).toBeDisabled();
+  await dialog.locator("#reset-confirm").fill(name);
+  await confirm.click();
   await expect(page.getByText("Reset requested")).toBeVisible();
 
   const appr = (

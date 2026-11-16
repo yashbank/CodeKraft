@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("@/modules/settings/site-reset-actions", () => ({
@@ -15,6 +15,7 @@ vi.mock("@/modules/settings/site-reset-actions", () => ({
 }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
+import { requestSiteResetAction } from "@/modules/settings/site-reset-actions";
 import { DangerZoneSection } from "@/components/admin/system/DangerZoneSection";
 
 describe("DangerZoneSection", () => {
@@ -41,20 +42,65 @@ describe("DangerZoneSection", () => {
     expect(preview).toHaveTextContent("3 in total");
   });
 
-  it("enables Request only with backup and the exact (trimmed) name", async () => {
-    const u = userEvent.setup();
+  async function pickAndBackup(u: ReturnType<typeof userEvent.setup>) {
     URL.createObjectURL = vi.fn(() => "blob:x");
     URL.revokeObjectURL = vi.fn();
-    render(<DangerZoneSection siteName="Acme" />);
     await u.click(screen.getByRole("checkbox", { name: /customers/i }));
     await u.click(screen.getByRole("button", { name: /download backup/i }));
-    const btn = screen.getByRole("button", { name: /request site reset/i });
-    const input = screen.getByLabelText(/to confirm/i);
+  }
+
+  it("opens a dialog naming what is deleted; Cancel is focused and nothing is requested", async () => {
+    const u = userEvent.setup();
+    vi.mocked(requestSiteResetAction).mockClear();
+    render(<DangerZoneSection siteName="Acme" />);
+    await pickAndBackup(u);
+    await u.click(screen.getByRole("button", { name: /^request site reset$/i }));
+    const dlg = await screen.findByRole("dialog", { name: /permanently delete/i });
+    expect(within(dlg).getByTestId("reset-confirm-summary")).toHaveTextContent(/customers/i);
+    expect(within(dlg).getByRole("button", { name: /^cancel$/i })).toHaveFocus();
+    expect(requestSiteResetAction).not.toHaveBeenCalled();
+  });
+
+  it("confirm stays disabled until the exact (trimmed) name is typed, then requests", async () => {
+    const u = userEvent.setup();
+    vi.mocked(requestSiteResetAction).mockClear();
+    vi.mocked(requestSiteResetAction).mockResolvedValue({
+      ok: true,
+      data: { approvalRequestId: "x" },
+    } as never);
+    render(<DangerZoneSection siteName="Acme" />);
+    await pickAndBackup(u);
+    await u.click(screen.getByRole("button", { name: /^request site reset$/i }));
+    const dlg = await screen.findByRole("dialog");
+    const confirm = within(dlg).getByRole("button", { name: /confirm site reset request/i });
+    const input = within(dlg).getByLabelText(/to confirm/i);
     await u.type(input, "acme");
-    expect(btn).toBeDisabled();
+    expect(confirm).toBeDisabled();
     await u.clear(input);
     await u.type(input, "  Acme ");
-    expect(btn).toBeEnabled();
+    expect(confirm).toBeEnabled();
+    await u.click(confirm);
+    expect(requestSiteResetAction).toHaveBeenCalledWith({
+      categories: expect.any(Array),
+      confirmName: "Acme",
+    });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("Escape closes the dialog without requesting; focus stays inside while open", async () => {
+    const u = userEvent.setup();
+    vi.mocked(requestSiteResetAction).mockClear();
+    render(<DangerZoneSection siteName="Acme" />);
+    await pickAndBackup(u);
+    await u.click(screen.getByRole("button", { name: /^request site reset$/i }));
+    const dlg = await screen.findByRole("dialog");
+    for (let i = 0; i < 6; i++) {
+      await u.tab();
+      expect(dlg.contains(document.activeElement)).toBe(true);
+    }
+    await u.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(requestSiteResetAction).not.toHaveBeenCalled();
   });
 
   it("explains why Request is disabled and clears each reason as it is done", async () => {
@@ -62,14 +108,12 @@ describe("DangerZoneSection", () => {
     URL.createObjectURL = vi.fn(() => "blob:x");
     URL.revokeObjectURL = vi.fn();
     render(<DangerZoneSection siteName="Acme" />);
-    const btn = screen.getByRole("button", { name: /request site reset/i });
+    const btn = screen.getByRole("button", { name: /^request site reset$/i });
     const why = () => screen.getByTestId("reset-blockers").textContent ?? "";
     expect(why()).toMatch(/select/i);
     await u.click(screen.getByRole("checkbox", { name: /customers/i }));
-    await u.type(screen.getByLabelText(/to confirm/i), "Acme");
     expect(btn).toBeDisabled();
     expect(why()).toMatch(/download the backup/i);
-    expect(why()).not.toMatch(/site name/i);
     await u.click(screen.getByRole("button", { name: /download backup/i }));
     expect(btn).toBeEnabled();
     expect(screen.queryByTestId("reset-blockers")).toBeNull();
