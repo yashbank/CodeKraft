@@ -91,7 +91,7 @@ test("admin handoff never leaves the admin host, even for a backslash next", asy
     route.fulfill({ status: 200, contentType: "application/json", body: "{}" }),
   );
   await page.goto(
-    `${ADMIN}/auth/handoff?token=t&next=${encodeURIComponent("/\\evil.example.com")}`,
+    `${ADMIN}/auth/handoff#token=t&next=${encodeURIComponent("/\\evil.example.com")}`,
   );
   await page.waitForURL(/\/auth\/login/);
   expect(new URL(page.url()).hostname).toBe(new URL(ADMIN).hostname);
