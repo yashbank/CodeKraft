@@ -49,7 +49,7 @@ const ACCOUNT_SCOPE: Record<string, RateLimitScope> = {
 
 /**
  * Headroom over the canonical docs/06 §1.7 table for the HTTP wiring (shared NAT IPs, e2e runs).
- * The store is in-memory per serverless instance, so these are best-effort brute-force brakes.
+ * The store is Postgres-backed (in-memory fallback if the DB is down), so counts persist across instances.
  */
 function authLimitScale(): number {
   const n = Number(process.env.AUTH_RATE_LIMIT_SCALE);
