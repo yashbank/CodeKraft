@@ -26,6 +26,8 @@ interface AccountShellWrapperProps {
   currency?: Currency;
   currencyOptions?: readonly Currency[];
   themeToggle?: boolean;
+  /** Server render time (ISO); keeps relative times identical during hydration. */
+  renderedAt?: string;
   children: React.ReactNode;
 }
 
@@ -37,9 +39,15 @@ export function AccountShellWrapper({
   currency = "INR",
   currencyOptions,
   themeToggle,
+  renderedAt,
   children,
 }: AccountShellWrapperProps) {
   const pathname = usePathname();
+  // Hydration-safe clock: the server-rendered ISO is reused for the first client render (a fresh
+  // `new Date()` there can cross a minute boundary and flip "just now" -> "1 m ago", React #418).
+  const [now, setNow] = React.useState(renderedAt ?? "1970-01-01T00:00:00.000Z");
+  React.useEffect(() => setNow(new Date().toISOString()), []);
+
   const router = useRouter();
   usePolling(
     async () => {
@@ -75,7 +83,7 @@ export function AccountShellWrapper({
       notifications={notifications}
       unreadCount={unreadCount}
       onMarkAllRead={() => void markAllMyNotificationsRead()}
-      now={new Date().toISOString()}
+      now={now}
     >
       {/* The overview renders its own verification banner; chat shows an inline one. */}
       {!emailVerified && pathname !== "/account" && !pathname.startsWith("/account/chat") ? (

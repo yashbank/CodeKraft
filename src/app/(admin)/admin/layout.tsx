@@ -87,6 +87,7 @@ export default async function AdminAppLayout({ children }: { children: React.Rea
         notifications={notifications}
         unreadCount={notificationsRes.ok ? notificationsRes.data.unreadCount : 0}
         sitePhase={sitePhase}
+        renderedAt={new Date().toISOString()}
       >
         {emailProblem ? (
           <Banner tone="danger" role="alert" title="Email sender not configured" className="mb-4">
