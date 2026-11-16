@@ -67,7 +67,9 @@ export const PHASE_COOKIE_MAX_AGE = 60;
 
 export function applyPhaseCookie(
   req: NextRequest,
-  res: { cookies: { set: (name: string, value: string, opts: Record<string, unknown>) => unknown } },
+  res: {
+    cookies: { set: (name: string, value: string, opts: Record<string, unknown>) => unknown };
+  },
   phase: SitePhase,
 ): void {
   if (phase === "live") {

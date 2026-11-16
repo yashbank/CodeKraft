@@ -224,7 +224,9 @@ describe("site phase hint cookie (no per-view banner request)", () => {
     expect(res.headers.get("set-cookie")).toMatch(/ck_phase=;/);
   });
   it("never sets it on the admin host or for /api", async () => {
-    expect((await run("testing", "/orders", undefined, "admin.localhost:3000")).cookies.get("ck_phase")).toBeUndefined();
+    expect(
+      (await run("testing", "/orders", undefined, "admin.localhost:3000")).cookies.get("ck_phase"),
+    ).toBeUndefined();
     expect((await run("testing", "/api/x")).cookies.get("ck_phase")).toBeUndefined();
   });
 });

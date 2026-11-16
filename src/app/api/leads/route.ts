@@ -4,8 +4,7 @@ import { submitPublicLead } from "@/modules/leads/public-submit";
 
 const MAX_BODY_BYTES = 64 * 1024;
 
-const fail = (error: string, status: number) =>
-  NextResponse.json({ ok: false, error }, { status });
+const fail = (error: string, status: number) => NextResponse.json({ ok: false, error }, { status });
 
 export async function POST(req: NextRequest) {
   try {
