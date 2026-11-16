@@ -38,8 +38,15 @@ test.afterAll(async ({ browser }) => {
 
 test("live (default): no banner, no badge, indexable", async ({ browser }) => {
   const { ctx, page } = await anonymous(browser);
+  const phaseRequests: string[] = [];
+  page.on("request", (r) => {
+    if (r.url().includes("/api/site-phase")) phaseRequests.push(r.url());
+  });
   const res = await page.goto(SITE);
   expect(res?.status()).toBe(200);
+  expect(res?.headers()["set-cookie"] ?? "").not.toContain("ck_phase");
+  await page.waitForLoadState("networkidle");
+  expect(phaseRequests).toEqual([]); // no per-view phase probe from the browser
   expect(res?.headers()["x-robots-tag"] ?? "").not.toContain("noindex");
   await expect(page.getByTestId("site-test-banner")).toHaveCount(0);
   await page.waitForTimeout(1_000); // banner is fetched client-side after hydration
@@ -69,7 +76,7 @@ test("testing: banner + noindex for visitors, badge for super admin only", async
         const res = await page.request.get(SITE);
         return `${res.status()} ${res.headers()["x-robots-tag"] ?? ""}`;
       },
-      { timeout: 10_000, intervals: [500] },
+      { timeout: 25_000, intervals: [500] }, // middleware phase probe is cached 15 s per instance
     )
     .toBe("200 noindex, nofollow");
   await page.goto(SITE);
@@ -102,7 +109,7 @@ test("maintenance: visitors get 503, admin host + webhooks + admins keep working
   const { ctx, page } = await anonymous(browser);
   await expect
     .poll(async () => (await page.request.get(SITE)).status(), {
-      timeout: 10_000,
+      timeout: 25_000,
       intervals: [500],
     })
     .toBe(503);
@@ -139,7 +146,7 @@ test("live again: storefront normal, no banner, no badge", async ({ browser }) =
   const { ctx, page } = await anonymous(browser);
   await expect
     .poll(async () => (await page.request.get(SITE)).status(), {
-      timeout: 10_000,
+      timeout: 25_000,
       intervals: [500],
     })
     .toBe(200);

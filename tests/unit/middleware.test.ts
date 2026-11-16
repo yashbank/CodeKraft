@@ -1,6 +1,7 @@
 // @vitest-environment node
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { resetSitePhaseCache } from "../../src/lib/site-phase-edge";
 
 process.env.ADMIN_HOST = "admin.localhost:3000";
 process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
@@ -186,5 +187,44 @@ describe("ISR twins for anonymous price pages (P15-02)", () => {
     expect(await rewrite("http://localhost:3000/blog")).toBeNull();
     expect(await rewrite("http://localhost:3000/products/a/opengraph-image")).toBeNull();
     expect(await rewrite("http://localhost:3000/ssg/products")).toContain("/__404");
+  });
+});
+
+describe("site phase hint cookie (no per-view banner request)", () => {
+  const run = async (phase: string, path: string, cookie?: string, host = "localhost:3000") => {
+    resetSitePhaseCache();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ phase, staff: false }), { status: 200 })),
+    );
+    try {
+      return await middleware(
+        new NextRequest(`http://${host}${path}`, {
+          headers: { host, ...(cookie ? { cookie } : {}) },
+        }),
+      );
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  };
+
+  it("live: anonymous / response carries no set-cookie", async () => {
+    const res = await run("live", "/");
+    expect(res.headers.get("set-cookie")).toBeNull();
+  });
+  it("testing: / sets the short-lived readable ck_phase cookie", async () => {
+    const res = await run("testing", "/");
+    const c = res.cookies.get("ck_phase");
+    expect(c?.value).toBe("testing");
+    expect(c?.maxAge).toBe(60);
+    expect(c?.httpOnly).toBeFalsy();
+  });
+  it("live: clears a leftover ck_phase cookie", async () => {
+    const res = await run("live", "/", "ck_phase=testing");
+    expect(res.headers.get("set-cookie")).toMatch(/ck_phase=;/);
+  });
+  it("never sets it on the admin host or for /api", async () => {
+    expect((await run("testing", "/orders", undefined, "admin.localhost:3000")).cookies.get("ck_phase")).toBeUndefined();
+    expect((await run("testing", "/api/x")).cookies.get("ck_phase")).toBeUndefined();
   });
 });

@@ -2,9 +2,34 @@ import { NextRequest, NextResponse } from "next/server";
 import { anonymousContext } from "@/lib/authz/context";
 import { submitPublicLead } from "@/modules/leads/public-submit";
 
+const MAX_BODY_BYTES = 64 * 1024;
+
+const fail = (error: string, status: number) =>
+  NextResponse.json({ ok: false, error }, { status });
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    // Cap the body before parsing: cheap declared-length check, then the real byte length.
+    const declared = Number(req.headers.get("content-length"));
+    if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
+      return fail("Request too large", 413);
+    }
+    const text = await req.text();
+    if (new TextEncoder().encode(text).length > MAX_BODY_BYTES) {
+      return fail("Request too large", 413);
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return fail("Invalid request", 400);
+    }
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return fail("Invalid request", 400);
+    }
+    const body = parsed as Record<string, string | undefined>;
+    // x-forwarded-for: on Vercel the platform overwrites any client-supplied value, so its first
+    // entry is the real client IP. Behind a different proxy this would be spoofable.
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
     const ctx = anonymousContext({
       ip,
@@ -38,11 +63,8 @@ export async function POST(req: NextRequest) {
       leadId: result.data.leadId,
     });
   } catch (caught) {
-    const error = caught as { message?: string; status?: number };
-    console.error("Failed to create lead:", error);
-    return NextResponse.json(
-      { ok: false, error: error.message || "Failed to submit inquiry" },
-      { status: error.status || 400 },
-    );
+    // Detail stays in the server log; the client never sees internal messages.
+    console.error("Failed to create lead:", caught);
+    return fail("Failed to submit inquiry", 500);
   }
 }

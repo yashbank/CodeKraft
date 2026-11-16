@@ -5,7 +5,7 @@
  * Postgres driver. Why in middleware at all: cookie-less visitors are rewritten to /ssg ISR twins
  * (cached up to 300 s), so a layout-level check could serve a stale "live" page. The middleware
  * runs before that cache on every request, so the decision is made here. The probe result is held
- * in module memory for PHASE_TTL_MS (a few seconds), then re-fetched from `/api/site-phase`, which
+ * in module memory for PHASE_TTL_MS (PHASE_TTL_MS, 15 s), then re-fetched from `/api/site-phase`, which
  * reads the `settings`-tagged cache that a settings save invalidates. Any failure means `live`.
  */
 import type { NextRequest } from "next/server";
@@ -17,7 +17,9 @@ import {
   type SitePhase,
 } from "@/lib/site-phase";
 
-export const PHASE_TTL_MS = 3_000;
+// Each warm isolate probes at most once per TTL (a function invocation each time, even with no
+// visitors), so keep it long; the banner/robots lag after a switch stays well under a minute.
+export const PHASE_TTL_MS = 15_000;
 const PROBE_TIMEOUT_MS = 1_500;
 
 let cached: { phase: SitePhase; at: number } | null = null;
@@ -53,6 +55,31 @@ async function currentPhase(origin: string): Promise<SitePhase> {
       inflight = null;
     });
   return inflight;
+}
+
+/**
+ * Non-HttpOnly hint cookie so the storefront banner needs no request of its own. Set (refreshed
+ * every pass, short max-age) only while the phase is not live; removed only if the browser sent it.
+ * A live site never sets any cookie for anonymous visitors.
+ */
+export const PHASE_COOKIE = "ck_phase";
+export const PHASE_COOKIE_MAX_AGE = 60;
+
+export function applyPhaseCookie(
+  req: NextRequest,
+  res: { cookies: { set: (name: string, value: string, opts: Record<string, unknown>) => unknown } },
+  phase: SitePhase,
+): void {
+  if (phase === "live") {
+    if (req.cookies.has(PHASE_COOKIE)) res.cookies.set(PHASE_COOKIE, "", { path: "/", maxAge: 0 });
+    return;
+  }
+  res.cookies.set(PHASE_COOKIE, phase, {
+    path: "/",
+    maxAge: PHASE_COOKIE_MAX_AGE,
+    sameSite: "lax",
+    httpOnly: false,
+  });
 }
 
 export function resetSitePhaseCache(): void {

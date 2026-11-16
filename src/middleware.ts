@@ -4,7 +4,7 @@
  */
 import { NextResponse, type NextRequest } from "next/server";
 import { inlineThemeScript } from "@/lib/theme";
-import { sitePhaseGate } from "@/lib/site-phase-edge";
+import { applyPhaseCookie, sitePhaseGate } from "@/lib/site-phase-edge";
 
 const ADMIN_HOST = process.env.ADMIN_HOST ?? "";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "";
@@ -214,6 +214,11 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
 
   if (APP_ENV === "staging" || APP_ENV === "preview" || phaseGate?.phase === "testing") {
     res.headers.set("X-Robots-Tag", "noindex, nofollow");
+  }
+
+  // Banner hint (see applyPhaseCookie). /api is never gated, so its phase is unknown here.
+  if (phaseGate && pathname !== "/api" && !pathname.startsWith("/api/")) {
+    applyPhaseCookie(req, res, phaseGate.phase);
   }
 
   // Security Headers (docs/09 §9, P9.1)

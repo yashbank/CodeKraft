@@ -4,22 +4,15 @@ import * as React from "react";
 
 /**
  * Slim "Test site" strip shown on the public storefront while the site phase is `testing`.
- * Client-side on purpose: price pages are ISR twins cached for minutes, so the phase is fetched
- * (no-store) after hydration instead of being baked into cached HTML. Renders nothing when live.
+ * Client-side on purpose: price pages are ISR twins cached for minutes, so the phase is never baked
+ * into cached HTML. The middleware already knows the phase and mirrors it into a short-lived
+ * `ck_phase` cookie, which is read here after hydration: no extra request per page view, and
+ * nothing renders (or is set) on a live site.
  */
 export function SitePhaseBanner() {
   const [testing, setTesting] = React.useState(false);
   React.useEffect(() => {
-    let cancelled = false;
-    fetch("/api/site-phase", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((body: { phase?: string } | null) => {
-        if (!cancelled) setTesting(body?.phase === "testing");
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
+    setTesting(/(?:^|;\s*)ck_phase=testing(?:;|$)/.test(document.cookie));
   }, []);
   if (!testing) return null;
   return (

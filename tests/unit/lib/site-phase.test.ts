@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { maintenanceHtml, parseSitePhase, phaseBadge, shouldSuppressEmail } from "@/lib/site-phase";
-import { resetSitePhaseCache, sitePhaseGate } from "@/lib/site-phase-edge";
+import {
+  PHASE_COOKIE,
+  PHASE_TTL_MS,
+  applyPhaseCookie,
+  resetSitePhaseCache,
+  sitePhaseGate,
+} from "@/lib/site-phase-edge";
 
 describe("parseSitePhase", () => {
   it("defaults to live for missing or unknown values", () => {
@@ -59,6 +65,23 @@ describe("sitePhaseGate (middleware)", () => {
     expect(g).toEqual({ phase: "live", response: null });
   });
 
+  it("probe result is cached for 15 s, then refreshed", async () => {
+    expect(PHASE_TTL_MS).toBe(15_000);
+    vi.useFakeTimers();
+    try {
+      fetchMock.mockResolvedValue(phaseBody("live"));
+      await sitePhaseGate(req("/"));
+      vi.advanceTimersByTime(14_000);
+      await sitePhaseGate(req("/"));
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      vi.advanceTimersByTime(2_000);
+      await sitePhaseGate(req("/"));
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("fails open to live when the probe errors", async () => {
     fetchMock.mockRejectedValue(new Error("down"));
     expect((await sitePhaseGate(req("/"))).response).toBeNull();
@@ -97,5 +120,32 @@ describe("sitePhaseGate (middleware)", () => {
     expect(staff.response).toBeNull();
     const customer = await sitePhaseGate(req("/", "ck.session_token=cust"));
     expect(customer.response?.status).toBe(503);
+  });
+});
+
+describe("applyPhaseCookie", () => {
+  const withCookie = (cookie?: string) =>
+    new NextRequest("http://localhost:3000/", { headers: cookie ? { cookie } : undefined });
+  it("testing/maintenance: short-lived readable hint cookie", () => {
+    for (const phase of ["testing", "maintenance"] as const) {
+      const res = NextResponse.next();
+      applyPhaseCookie(withCookie(), res, phase);
+      const c = res.cookies.get(PHASE_COOKIE);
+      expect(c?.value).toBe(phase);
+      expect(c?.maxAge).toBe(60);
+      expect(c?.httpOnly).toBeFalsy();
+      expect(c?.sameSite).toBe("lax");
+      expect(c?.path).toBe("/");
+    }
+  });
+  it("live: no set-cookie at all for an anonymous visitor", () => {
+    const res = NextResponse.next();
+    applyPhaseCookie(withCookie(), res, "live");
+    expect(res.headers.get("set-cookie")).toBeNull();
+  });
+  it("live: expires a stale hint cookie only when the request carried one", () => {
+    const res = NextResponse.next();
+    applyPhaseCookie(withCookie("ck_phase=testing"), res, "live");
+    expect(res.headers.get("set-cookie")).toMatch(/ck_phase=;.*Max-Age=0/i);
   });
 });
