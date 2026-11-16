@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getEnv } from "@/lib/env";
 import { postLoginDestination } from "@/lib/authz/post-login";
 import { safeRedirectPath } from "@/lib/safe-redirect";
+import { buildHandoffUrl } from "@/modules/auth/handoff";
 import { getAuth } from "@/modules/auth/config";
 import { loadRoles } from "@/modules/auth/roles-port";
 import { getSession } from "@/modules/auth/service";
@@ -39,7 +40,5 @@ export default async function PostLoginPage({
     .then((r) => r.token)
     .catch(() => null);
   if (!token) redirect(`${adminUrl}/auth/login?next=${encodeURIComponent(dest.path)}`);
-  redirect(
-    `${adminUrl}/auth/handoff?token=${encodeURIComponent(token)}&next=${encodeURIComponent(dest.path)}`,
-  );
+  redirect(buildHandoffUrl(adminUrl, token, dest.path));
 }

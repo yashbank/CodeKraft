@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 
 import { bootstrapPorts } from "@/lib/bootstrap";
 import { getAuth } from "@/modules/auth/config";
+import { applyHandoffHeaders, isHandoffApiPath } from "@/modules/auth/handoff";
 import { hostFromHeaders } from "@/modules/auth/service";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,12 @@ async function handle(req: NextRequest) {
   // auth mail delivery not depend on that hook actually having fired.
   bootstrapPorts();
   const auth = await getAuth(hostFromHeaders(req.headers));
-  return auth.handler(req);
+  const res = await auth.handler(req);
+  if (!isHandoffApiPath(req.nextUrl.pathname)) return res;
+  // Token mint/exchange: keep the response out of caches, never leak it via Referer.
+  const out = new Response(res.body, res);
+  applyHandoffHeaders(out.headers);
+  return out;
 }
 
 export { handle as GET, handle as POST };

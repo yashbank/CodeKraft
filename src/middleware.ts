@@ -4,6 +4,7 @@
  */
 import { NextResponse, type NextRequest } from "next/server";
 import { inlineThemeScript } from "@/lib/theme";
+import { HANDOFF_PATH, applyHandoffHeaders, isHandoffApiPath } from "@/modules/auth/handoff";
 import { applyPhaseCookie, sitePhaseGate } from "@/lib/site-phase-edge";
 
 const ADMIN_HOST = process.env.ADMIN_HOST ?? "";
@@ -225,6 +226,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   res.headers.set("X-Content-Type-Options", "nosniff");
   res.headers.set("X-Frame-Options", framable ? "SAMEORIGIN" : "DENY");
   res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  if (pathname === HANDOFF_PATH || isHandoffApiPath(pathname)) applyHandoffHeaders(res.headers);
   res.headers.set(
     "Permissions-Policy",
     'camera=(), microphone=(), geolocation=(), payment=(self "https://checkout.razorpay.com" "https://api.razorpay.com")',
