@@ -556,7 +556,14 @@ export function CheckoutScreen({
                 </Button>
               )}
             </div>
-            <div className="overflow-x-auto">
+            {/* Scrollable region must be keyboard focusable (WCAG 2.1.1). */}
+            <div
+              className="overflow-x-auto focus-visible:outline-2 focus-visible:outline-ring"
+              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+              tabIndex={0}
+              role="region"
+              aria-label="Line items"
+            >
               <table className="w-full text-body-sm">
                 <caption className="sr-only">Line items</caption>
                 <thead>

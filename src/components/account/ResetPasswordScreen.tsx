@@ -122,7 +122,10 @@ export function ResetPasswordScreen({
               Send reset link
             </Button>
             <p className="text-center text-body-sm">
-              <Link href="/auth/login" className="text-accent-text hover:underline">
+              <Link
+                href="/auth/login"
+                className="inline-flex min-h-10 items-center text-accent-text hover:underline"
+              >
                 Back to sign in
               </Link>
             </p>

@@ -91,9 +91,12 @@ export function OfferingPanel({
   useEffect(() => {
     const el = ctaRef.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver((entries) =>
-      setBarVisible(!(entries[0]?.isIntersecting ?? true)),
-    );
+    // Only once the CTA has scrolled up out of view: while it is still below the fold the bar
+    // would cover the offering selector.
+    const io = new IntersectionObserver((entries) => {
+      const e = entries[0];
+      setBarVisible(!!e && !e.isIntersecting && e.boundingClientRect.top < 0);
+    });
     io.observe(el);
     return () => io.disconnect();
   }, []);

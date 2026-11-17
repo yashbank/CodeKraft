@@ -57,7 +57,7 @@ export function BlogTeaserCard({
         <Heading className={featured ? "text-h2" : "text-h4"}>
           <Link
             href={href}
-            className="rounded-xs after:absolute after:inset-0 after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="-my-2 inline-block rounded-xs py-2 after:absolute after:inset-0 after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             {post.title}
           </Link>

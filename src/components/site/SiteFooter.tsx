@@ -60,7 +60,9 @@ export function SiteFooter({
           {contact?.address ? <p>{contact.address}</p> : null}
           {contact?.email ? (
             <p>
-              <a href={`mailto:${contact.email}`}>{contact.email}</a>
+              <a href={`mailto:${contact.email}`} className="inline-flex min-h-10 items-center">
+                {contact.email}
+              </a>
             </p>
           ) : null}
           {contact?.phones ? <p>{contact.phones}</p> : null}

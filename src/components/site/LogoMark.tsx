@@ -13,6 +13,7 @@ export function LogoMark({ src, name }: { src: string; name: string }) {
         src={src}
         alt={name}
         fill
+        unoptimized={/\.svg(\?|$)/i.test(src)}
         sizes="112px"
         onError={() => setFailed(true)}
         className="object-contain grayscale transition-[filter] group-hover:grayscale-0"

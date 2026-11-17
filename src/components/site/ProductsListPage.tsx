@@ -372,7 +372,7 @@ function ProductsListBody({
               type="button"
               aria-label="Clear search"
               onClick={() => updateQuery("")}
-              className="absolute top-1/2 right-2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-sm text-fg-muted hover:bg-accent-soft hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="absolute top-1/2 right-1 inline-flex size-10 -translate-y-1/2 items-center justify-center rounded-sm text-fg-muted hover:bg-accent-soft hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               <XIcon aria-hidden className="size-4" />
             </button>
