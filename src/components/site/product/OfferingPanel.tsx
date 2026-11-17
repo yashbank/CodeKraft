@@ -317,7 +317,7 @@ export function OfferingPanel({
       <div
         // inert (not aria-hidden): the off-screen bar still holds focusable buttons.
         inert={!barVisible}
-        data-sticky-bar=""
+        data-sticky-bar="md"
         data-visible={barVisible}
         className={cn(
           "fixed inset-x-0 bottom-0 z-(--ck-z-sticky) border-t border-border bg-glass p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-glass transition-transform duration-(--ck-motion-duration-md) ease-emphasized md:hidden",

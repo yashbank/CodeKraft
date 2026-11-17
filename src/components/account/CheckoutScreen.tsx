@@ -656,7 +656,11 @@ export function CheckoutScreen({
                 </span>
               </Label>
             </div>
-            <div className="sticky bottom-0 -mx-4 border-t border-border bg-canvas/95 p-4 backdrop-blur lg:static lg:m-0 lg:border-0 lg:bg-transparent lg:p-0">
+            <div
+              data-sticky-bar="lg"
+              data-visible="true"
+              className="sticky bottom-0 -mx-4 border-t border-border bg-canvas/95 p-4 backdrop-blur lg:static lg:m-0 lg:border-0 lg:bg-transparent lg:p-0"
+            >
               <Button
                 type="submit"
                 size="lg"

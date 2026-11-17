@@ -21,6 +21,8 @@ export interface HelpLauncherProps {
   suggestions?: Suggestions;
   /** Where the page already pins UI to the bottom edge. "tabbar" lifts the button above the mobile tab bar. */
   area?: "site" | "account" | "admin";
+  /** "inline" is a small ghost icon button for a top bar (admin); "floating" is the round bottom-right button. */
+  variant?: "floating" | "inline";
 }
 
 function typingTarget(el: EventTarget | null): boolean {
@@ -38,6 +40,7 @@ export function HelpLauncher({
   role = "customer",
   suggestions = DEFAULT_SUGGESTIONS,
   area = "site",
+  variant = "floating",
 }: HelpLauncherProps) {
   const [open, setOpen] = React.useState(false);
   const [loaded, setLoaded] = React.useState(false);
@@ -65,6 +68,7 @@ export function HelpLauncher({
   if (!helpEnabled) return null;
   const t = strings("en");
   const keyLabel = questionKey ? "?" : "Alt+/";
+  const inline = variant === "inline";
 
   return (
     <>
@@ -79,30 +83,39 @@ export function HelpLauncher({
         aria-expanded={open}
         aria-keyshortcuts={questionKey ? "?" : "Alt+/"}
         onClick={show}
+        title={inline ? `${t.launcher} (${keyLabel})` : undefined}
         className={cn(
-          "group fixed z-(--ck-z-header) grid size-14 place-items-center rounded-full bg-accent text-accent-fg shadow-glow transition-[transform,opacity,box-shadow] duration-(--ck-motion-duration-md) ease-emphasized print:hidden",
-          "right-4 hover:scale-105 hover:bg-accent-hover hover:shadow-glow-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none sm:right-5",
-          area === "account"
-            ? "bottom-[calc(4.75rem+env(safe-area-inset-bottom))] lg:bottom-5"
-            : "bottom-[calc(1rem+env(safe-area-inset-bottom))] sm:bottom-5",
-          open && "pointer-events-none scale-90 opacity-0",
+          inline
+            ? "relative grid size-9 shrink-0 place-items-center rounded-md text-fg-muted transition-colors hover:bg-elevated hover:text-fg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none print:hidden"
+            : "group fixed z-(--ck-z-header) grid size-14 place-items-center rounded-full bg-accent text-accent-fg shadow-glow transition-[transform,opacity,box-shadow] duration-(--ck-motion-duration-md) ease-emphasized print:hidden",
+          !inline &&
+            "right-4 hover:scale-105 hover:bg-accent-hover hover:shadow-glow-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none sm:right-5",
+          !inline &&
+            (area === "account"
+              ? "bottom-[calc(4.75rem+env(safe-area-inset-bottom))] lg:bottom-5"
+              : "bottom-[calc(1rem+env(safe-area-inset-bottom))] sm:bottom-5"),
+          open && !inline && "pointer-events-none scale-90 opacity-0",
         )}
       >
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-full bg-accent motion-safe:animate-[ck-help-pulse_1800ms_ease-out_1.2s_2_both] motion-reduce:hidden"
-        />
-        <MessageCircleQuestionIcon aria-hidden className="relative size-6" />
-        <span
-          role="tooltip"
-          aria-hidden
-          className="pointer-events-none absolute right-full mr-3 hidden items-center gap-2 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-caption font-medium whitespace-nowrap text-fg opacity-0 shadow-2 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 [@media(hover:hover)]:flex"
-        >
-          {t.launcher}
-          <kbd className="rounded border border-border bg-elevated px-1.5 font-mono text-[11px] text-fg-muted">
-            {keyLabel}
-          </kbd>
-        </span>
+        {inline ? null : (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 rounded-full bg-accent motion-safe:animate-[ck-help-pulse_1800ms_ease-out_1.2s_2_both] motion-reduce:hidden"
+          />
+        )}
+        <MessageCircleQuestionIcon aria-hidden className={inline ? "size-5" : "relative size-6"} />
+        {inline ? null : (
+          <span
+            role="tooltip"
+            aria-hidden
+            className="pointer-events-none absolute right-full mr-3 hidden items-center gap-2 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-caption font-medium whitespace-nowrap text-fg opacity-0 shadow-2 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 [@media(hover:hover)]:flex"
+          >
+            {t.launcher}
+            <kbd className="rounded border border-border bg-elevated px-1.5 font-mono text-[11px] text-fg-muted">
+              {keyLabel}
+            </kbd>
+          </span>
+        )}
       </button>
       {loaded ? (
         <HelpPanel

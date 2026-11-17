@@ -87,8 +87,29 @@
     transform: scaleY(1);
   }
 }
+/* Lift the launcher clear of any bottom-pinned action bar (each bar declares the widths it is pinned at). */
 @media (max-width: 767px) {
-  body:has([data-sticky-bar][data-visible="true"]) [data-help-launcher] {
+  body:has([data-sticky-bar="md"][data-visible="true"]) [data-help-launcher][data-area="site"] {
     bottom: calc(5.75rem + env(safe-area-inset-bottom));
+  }
+}
+@media (max-width: 1023px) {
+  body:has([data-sticky-bar="lg"][data-visible="true"]) [data-help-launcher][data-area="account"] {
+    bottom: calc(10rem + env(safe-area-inset-bottom));
+  }
+}
+@media (max-width: 639px) {
+  body:has([data-sticky-bar="sm"][data-visible="true"]) [data-help-launcher][data-area="account"] {
+    bottom: calc(12rem + env(safe-area-inset-bottom));
+  }
+}
+body:has([data-sticky-bar="queries"][data-visible="true"])
+  [data-help-launcher][data-area="account"] {
+  bottom: calc(9.5rem + env(safe-area-inset-bottom));
+}
+@media (max-width: 1023px) {
+  body:has([data-sticky-bar="queries"][data-visible="true"])
+    [data-help-launcher][data-area="account"] {
+    bottom: calc(14rem + env(safe-area-inset-bottom));
   }
 }

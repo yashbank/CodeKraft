@@ -6,6 +6,7 @@ import { canOpenAdminRoute } from "@/lib/authz/admin-routes";
 import { getSession } from "@/modules/auth/service";
 import { hasAdminClassRole, loadRoles } from "@/modules/auth/roles-port";
 import { buildContext } from "@/lib/authz/context";
+import { HelpMount } from "@/components/help/HelpMount";
 import { AdminShellWrapper } from "@/components/admin/AdminShellWrapper";
 import { AdminCurrencyProvider } from "@/components/admin/AdminCurrency";
 import { adminPreferredCurrency, loadAdminRateTable } from "@/lib/admin/currency";
@@ -88,6 +89,7 @@ export default async function AdminAppLayout({ children }: { children: React.Rea
         unreadCount={notificationsRes.ok ? notificationsRes.data.unreadCount : 0}
         sitePhase={sitePhase}
         renderedAt={new Date().toISOString()}
+        helpSlot={<HelpMount audience={user.role} area="admin" inline />}
       >
         {emailProblem ? (
           <Banner tone="danger" role="alert" title="Email sender not configured" className="mb-4">

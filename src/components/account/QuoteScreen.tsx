@@ -318,7 +318,11 @@ export function QuoteScreen({
                 </span>
               </Label>
             </div>
-            <div className="sticky bottom-0 -mx-6 flex flex-col gap-2 border-t border-border bg-surface/95 p-4 backdrop-blur sm:static sm:m-0 sm:flex-row sm:border-0 sm:bg-transparent sm:p-0">
+            <div
+              data-sticky-bar="sm"
+              data-visible="true"
+              className="sticky bottom-0 -mx-6 flex flex-col gap-2 border-t border-border bg-surface/95 p-4 backdrop-blur sm:static sm:m-0 sm:flex-row sm:border-0 sm:bg-transparent sm:p-0"
+            >
               <Button type="submit" size="lg" disabled={!consent || accepting}>
                 {accepting ? "Placing order…" : `Accept & pay ${format(total)}`}
               </Button>

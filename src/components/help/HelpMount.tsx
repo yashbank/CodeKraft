@@ -21,7 +21,8 @@ async function loadSuggestions(role: HelpRole) {
 export async function HelpMount({
   audience,
   area,
-}: Readonly<{ audience: HelpRole; area: "site" | "account" | "admin" }>) {
+  inline = false,
+}: Readonly<{ audience: HelpRole; area: "site" | "account" | "admin"; inline?: boolean }>) {
   const cfg = await getHelpConfig().catch(() => null);
   if (!cfg?.enabled) return null;
   return (
@@ -30,6 +31,7 @@ export async function HelpMount({
       hindiEnabled={cfg.hindi}
       role={audience}
       area={area}
+      variant={inline ? "inline" : "floating"}
       suggestions={await loadSuggestions(audience)}
     />
   );

@@ -96,6 +96,8 @@ interface AdminShellWrapperProps {
   sitePhase?: SitePhase;
   /** Server render time (ISO); keeps relative times identical during hydration. */
   renderedAt?: string;
+  /** "Ask me anything" trigger rendered in the top bar (never a floating button over page actions). */
+  helpSlot?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -106,6 +108,7 @@ export function AdminShellWrapper({
   unreadCount,
   sitePhase = "live",
   renderedAt,
+  helpSlot,
   children,
 }: AdminShellWrapperProps) {
   const pathname = usePathname();
@@ -143,6 +146,7 @@ export function AdminShellWrapper({
       title={title}
       routes={ADMIN_ROUTE_MAP}
       onSearch={searchAdmin}
+      helpSlot={helpSlot}
     >
       <KeyboardShortcutsSheet area="admin" />
       {children}

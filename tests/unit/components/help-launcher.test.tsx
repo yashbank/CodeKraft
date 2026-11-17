@@ -215,6 +215,15 @@ describe("HelpLauncher", () => {
     await waitFor(() => expect(fetch).toHaveBeenCalled());
   });
 
+  it("inline variant (admin top bar) is not fixed and opens the same dialog", async () => {
+    render(<HelpLauncher area="admin" variant="inline" />);
+    const btn = screen.getByTestId("help-launcher");
+    expect(btn.className).not.toContain("fixed");
+    expect(btn).toHaveAttribute("aria-keyshortcuts", "Alt+/");
+    await openPanel();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
   it("launcher is fixed-position and does not add flow content (no layout shift)", () => {
     const { container } = render(<HelpLauncher />);
     const btn = screen.getByTestId("help-launcher");

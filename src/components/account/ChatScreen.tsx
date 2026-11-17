@@ -431,7 +431,11 @@ export function ChatScreen({
   }
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-8.5rem)] max-w-[880px] flex-col lg:h-[calc(100dvh-9rem)]">
+    <div
+      data-sticky-bar="queries"
+      data-visible="true"
+      className="mx-auto flex h-[calc(100dvh-8.5rem)] max-w-[880px] flex-col lg:h-[calc(100dvh-9rem)]"
+    >
       <header className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
         <BotIcon aria-hidden className="size-5 text-accent-text" />
         <h1 className="text-h3 text-fg">Assistant</h1>

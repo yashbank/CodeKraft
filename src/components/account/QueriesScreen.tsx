@@ -410,6 +410,8 @@ export function QueryThreadScreen({
       </ol>
 
       <form
+        data-sticky-bar="queries"
+        data-visible="true"
         className="sticky bottom-16 space-y-2 rounded-lg border border-border bg-surface p-3 lg:bottom-0"
         onSubmit={handleReply}
       >

@@ -241,6 +241,8 @@ export interface AdminShellProps {
   routes?: Record<string, string>;
   /** CSS length the sticky sidebar must clear (the dev preview header). */
   stickyTop?: string;
+  /** Help trigger shown in the top bar, left of the theme toggle. */
+  helpSlot?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -268,6 +270,7 @@ export function AdminShell({
   onSearch,
   routes,
   stickyTop = "0px",
+  helpSlot,
   children,
 }: AdminShellProps) {
   const href = React.useCallback((route: AdminRoute) => routes?.[route] ?? route, [routes]);
@@ -531,6 +534,7 @@ export function AdminShell({
               </Badge>
             ) : null}
             {/* C16-04: dark/light is the one design choice every user (admins too) can make */}
+            {helpSlot}
             <ThemeToggle enabled />
             <NotificationBell
               notifications={notifications}
