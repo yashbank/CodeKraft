@@ -174,6 +174,9 @@ export const siteSettingsSchema = z.strictObject({
   retention: retentionSchema,
   flags: z.record(flagKeySchema, z.boolean()),
   sitePhase: z.enum(SITE_PHASES),
+  helpEnabled: z.boolean(),
+  helpHindiEnabled: z.boolean(),
+  helpAiEnabled: z.boolean(),
 }) satisfies z.ZodType<SiteSettings>;
 
 /** Release-1 defaults (docs/13 §6, MASTER_SPEC §7). */
@@ -223,6 +226,9 @@ export const SITE_SETTINGS_DEFAULTS: SiteSettings = Object.freeze({
     vendor_marketplace: false,
   },
   sitePhase: "live",
+  helpEnabled: true,
+  helpHindiEnabled: false,
+  helpAiEnabled: true,
 }) as SiteSettings;
 
 /**

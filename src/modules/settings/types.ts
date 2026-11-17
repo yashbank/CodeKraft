@@ -113,6 +113,12 @@ export interface SiteSettings {
   flags: Record<FlagKey, boolean>;
   /** Site phase: `live` (default), `testing` (noindex, test banner, customer email off) or `maintenance` (503 storefront). */
   sitePhase: SitePhase;
+  /** Help assistant ("Ask me anything" pop-up): shown at all. Default true. */
+  helpEnabled: boolean;
+  /** Help assistant offers Hindi. Default false. */
+  helpHindiEnabled: boolean;
+  /** Help assistant may write AI answers (off = free guide-only mode). Default true. */
+  helpAiEnabled: boolean;
 }
 
 export type SiteSettingField = keyof SiteSettings;
@@ -152,6 +158,9 @@ export const SITE_SETTING_KEYS: Readonly<Record<SiteSettingField, string>> = Obj
   chatTimeoutMs: "chat_timeout_ms",
   retention: "retention",
   sitePhase: "site_phase",
+  helpEnabled: "help_enabled",
+  helpHindiEnabled: "help_hindi_enabled",
+  helpAiEnabled: "help_ai_enabled",
   flags: "feature_flags",
 });
 
