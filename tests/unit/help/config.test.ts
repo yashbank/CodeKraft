@@ -74,7 +74,7 @@ describe("getHelpTokenUsage", () => {
   it("shows 0 when the monthly bucket does not exist", async () => {
     expect(await getHelpTokenUsage(new Date("2026-11-17T00:00:00Z"))).toEqual({
       used: 0,
-      budget: 500_000,
+      budget: 400_000,
     });
   });
   it("reads the count and honours the budget env", async () => {

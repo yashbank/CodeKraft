@@ -2,7 +2,7 @@
 id: create-customer
 title: Create a customer
 roles: [admin, super_admin]
-keywords: [add customer, new customer, register customer, customer banao, naya customer, client add]
+keywords: [add customer, new customer, register customer, customer banao, naya customer, client add, customer kaise banaye, customer banaye]
 ---
 Create an account for someone who has not signed up yet.
 1. Open Customers.

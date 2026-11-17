@@ -2,7 +2,7 @@
 id: place-order-admin
 title: Create an order for a customer (admin)
 roles: [admin, super_admin]
-keywords: [new order, manual order, place order, create order, offline sale, client invoice, order banao, naya order]
+keywords: [new order, manual order, place order, create order, offline sale, client invoice, order banao, naya order, order kaise banaye, order banaye, order kaise banate hain]
 ---
 Use this when a customer pays offline or you sell a project directly.
 1. Open Orders and click New manual order.
