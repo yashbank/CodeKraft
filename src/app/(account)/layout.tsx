@@ -12,6 +12,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/modules/auth/service";
 import { getDisplayCurrency } from "@/lib/display-currency";
 import { getRateTable } from "@/lib/rate-table";
+import { HelpMount } from "@/components/help/HelpMount";
 import { ViewerCurrencyProvider } from "@/components/account/ViewerMoney";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,8 @@ export default async function AccountLayout({ children }: { children: React.Reac
   const session = await getSession();
   if (!session) return redirectToLogin("/account");
   // Admin-class users never see the customer area: the post-login page sends them to admin.
-  if (isAdminAreaUser(await loadRoles(session.user.id))) redirect("/auth/post-login");
+  const roles = await loadRoles(session.user.id);
+  if (isAdminAreaUser(roles)) redirect("/auth/post-login");
   enforcePasswordChange(session);
   const [{ currency }, table] = await Promise.all([getDisplayCurrency(), getRateTable()]);
   return (
@@ -35,6 +37,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
         {children}
       </ViewerCurrencyProvider>
       <Toaster />
+      <HelpMount audience="customer" area="account" />
     </div>
   );
 }
