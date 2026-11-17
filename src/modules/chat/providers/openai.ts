@@ -52,6 +52,7 @@ export class OpenAIProvider implements LLMProvider {
               function: { name: t.name, description: t.description, parameters: t.inputSchema },
             })),
           }),
+          ...(opts.temperature !== undefined && { temperature: opts.temperature }),
           stream: true,
           stream_options: { include_usage: true },
         }),

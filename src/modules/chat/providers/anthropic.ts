@@ -36,6 +36,7 @@ export class AnthropicProvider implements LLMProvider {
           max_tokens: Math.min(opts.maxTokens, this.config.maxOutputTokens),
           system,
           messages: messages.map((m) => ({ role: m.role, content: m.content })),
+          ...(opts.temperature !== undefined && { temperature: opts.temperature }),
           stream: true,
         }),
         signal,
