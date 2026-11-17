@@ -20,6 +20,7 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "lhci": "lhci autorun",
+    "help:build": "tsx scripts/help-build.ts",
     "db:local": "tsx scripts/db-local.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:generate": "drizzle-kit generate",
