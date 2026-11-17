@@ -634,7 +634,13 @@ for (const role of ROLES) {
           });
         const raw: Raw[] = [];
         try {
-          raw.push(...(await auditPage(page, width)));
+          const top = await auditPage(page, width);
+          // A fixed/sticky bar over an input at scroll 0 on a scrollable page is cleared by
+          // scrolling; the [bottom] pass below catches real end-of-page covers.
+          const scrollable = await page.evaluate(
+            () => document.documentElement.scrollHeight > window.innerHeight + 4,
+          );
+          raw.push(...top.filter((r) => !(scrollable && r.kind === "sticky-covers-action")));
           // bottom-of-page state for sticky bars
           await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
           await page.waitForTimeout(150);
