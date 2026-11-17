@@ -68,3 +68,33 @@ export class PostgresRateLimitStore implements RateLimitStore {
     }
   }
 }
+
+/**
+ * Additive counter on the same `rate_limit_buckets` table (no migration): `addToBucket` adds
+ * `amount` to `key` (window anchored at first add), `peekBucket` reads the live count. Used by the
+ * help assistant's monthly token budget. Errors propagate; callers choose their fallback.
+ */
+export async function addToBucket(key: string, amount: number, windowMs: number): Promise<number> {
+  const { getDb } = await import("./db");
+  const rows = (await getDb().execute(sql`
+    INSERT INTO rate_limit_buckets AS b ("key", "count", "window_start", "expires_at")
+    VALUES (${key}, ${amount}, now(), now() + (${windowMs}::double precision * interval '1 millisecond'))
+    ON CONFLICT ("key") DO UPDATE SET
+      "count" = CASE WHEN b."expires_at" <= now() THEN ${amount} ELSE b."count" + ${amount} END,
+      "window_start" = CASE WHEN b."expires_at" <= now() THEN now() ELSE b."window_start" END,
+      "expires_at" = CASE WHEN b."expires_at" <= now()
+        THEN now() + (${windowMs}::double precision * interval '1 millisecond')
+        ELSE b."expires_at" END
+    RETURNING "count"::int AS count
+  `)) as unknown as { count: number }[];
+  return Number(rows[0]?.count ?? amount);
+}
+
+export async function peekBucket(key: string): Promise<number> {
+  const { getDb } = await import("./db");
+  const rows = (await getDb().execute(sql`
+    SELECT "count"::int AS count FROM rate_limit_buckets
+    WHERE "key" = ${key} AND "expires_at" > now()
+  `)) as unknown as { count: number }[];
+  return Number(rows[0]?.count ?? 0);
+}
