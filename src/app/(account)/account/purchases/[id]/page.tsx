@@ -38,7 +38,7 @@ export default async function EntitlementDetailPage({ params }: PageProps) {
         purchases: "/account/purchases",
         order:
           entitlement.orderNumber === "Manual grant"
-            ? "/account/orders"
+            ? "/account/purchases"
             : `/account/orders/${entitlement.orderNumber}`,
         invoice: entitlement.invoiceNumber ? "/account/invoices" : undefined,
         newQuery: "/account/queries",

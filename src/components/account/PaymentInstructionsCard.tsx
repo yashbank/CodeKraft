@@ -58,10 +58,14 @@ export function PaymentInstructionsCard({
       {methods.length > 1 ? (
         <TabsList className="mb-4 w-full sm:w-auto">
           {methods.includes("manual_upi") ? (
-            <TabsTrigger value="manual_upi">UPI</TabsTrigger>
+            <TabsTrigger value="manual_upi" className="max-sm:h-10">
+              UPI
+            </TabsTrigger>
           ) : null}
           {methods.includes("manual_bank") ? (
-            <TabsTrigger value="manual_bank">Bank transfer</TabsTrigger>
+            <TabsTrigger value="manual_bank" className="max-sm:h-10">
+              Bank transfer
+            </TabsTrigger>
           ) : null}
         </TabsList>
       ) : null}

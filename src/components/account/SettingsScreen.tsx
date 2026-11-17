@@ -314,7 +314,7 @@ export function SettingsScreen({
               </section>
               <section className="space-y-4">
                 <h2 className="text-h4 text-fg">Billing details</h2>
-                <BillingFields value={billing} onChange={setBilling} idPrefix="pf" />
+                <BillingFields value={billing} onChange={setBilling} idPrefix="bf" />
               </section>
               <Button type="submit" disabled={savingProfile}>
                 {savingProfile ? "Saving…" : "Save"}

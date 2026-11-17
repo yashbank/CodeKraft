@@ -133,7 +133,10 @@ export function EntitlementDetailScreen({
       <Row
         label="Order"
         value={
-          <Link href={links.order} className="font-mono text-accent-text hover:underline">
+          <Link
+            href={links.order}
+            className="max-lg:inline-flex max-lg:min-h-10 max-lg:items-center font-mono text-accent-text hover:underline"
+          >
             {e.orderNumber}
           </Link>
         }
@@ -209,10 +212,16 @@ export function EntitlementDetailScreen({
               {DELIVERY_LABELS[e.deliveryType]}
             </span>
             <span>{entitlementStatusLine(e)}</span>
-            <Link href={links.order} className="font-mono text-accent-text hover:underline">
+            <Link
+              href={links.order}
+              className="max-lg:inline-flex max-lg:min-h-10 max-lg:items-center font-mono text-accent-text hover:underline"
+            >
               {e.orderNumber}
             </Link>
-            <Link href={links.newQuery} className="text-accent-text hover:underline">
+            <Link
+              href={links.newQuery}
+              className="max-lg:inline-flex max-lg:min-h-10 max-lg:items-center text-accent-text hover:underline"
+            >
               Need help? Open a query
             </Link>
           </p>

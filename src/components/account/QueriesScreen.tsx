@@ -155,9 +155,13 @@ export function QueriesScreen({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-h1 text-fg">Queries</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
           <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-            <SelectTrigger size="sm" aria-label="Filter queries" className="w-40">
+            <SelectTrigger
+              size="sm"
+              aria-label="Filter queries"
+              className="min-w-0 flex-1 sm:w-40 sm:flex-none"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -339,7 +343,10 @@ export function QueryThreadScreen({
       <nav aria-label="Breadcrumb">
         <ol className="flex items-center gap-1 text-body-sm text-fg-muted">
           <li>
-            <Link href={links.queries} className="hover:text-fg">
+            <Link
+              href={links.queries}
+              className="max-lg:inline-flex max-lg:min-h-10 max-lg:items-center hover:text-fg"
+            >
               Queries
             </Link>
           </li>
