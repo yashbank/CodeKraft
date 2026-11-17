@@ -24,12 +24,15 @@ export function SeoPreview({ input }: { input: PageMetaInput }) {
           <p className="break-words text-body-sm text-fg-muted">{s.description}</p>
         </div>
         <div className="min-w-0 overflow-hidden rounded-md border border-border bg-canvas">
-          {/* eslint-disable-next-line @next/next/no-img-element -- remote share image, not optimised */}
-          <img
-            src={s.image}
-            alt="Social share card"
-            className="aspect-[1200/630] w-full bg-surface object-cover"
-          />
+          {/* The real share image lives on the public host (cross-origin, and dynamic routes carry a
+              hashed path), so fetching it from admin is blocked (ORB). Draw a same-origin stand-in. */}
+          <div
+            role="img"
+            aria-label="Social share card (preview)"
+            className="grid aspect-[1200/630] w-full place-items-center bg-surface p-4 text-center"
+          >
+            <span className="line-clamp-3 text-h4 font-semibold text-fg-muted">{s.title}</span>
+          </div>
           <div className="p-3">
             <p className="break-words text-body-sm font-semibold">{s.title}</p>
             <p className="line-clamp-2 text-caption text-fg-muted">{s.description}</p>

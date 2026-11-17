@@ -1410,7 +1410,7 @@ export function SettingsScreen({
           ) : null}
 
           {saveable ? (
-            <div className="sticky bottom-0 -mx-4 flex items-center gap-2 border-t border-border bg-canvas px-4 py-3 lg:-mx-6 lg:px-6">
+            <div data-sticky-savebar className="sticky bottom-0 -mx-4 flex items-center gap-2 border-t border-border bg-canvas px-4 py-3 lg:-mx-6 lg:px-6">
               <span className="text-caption text-fg-muted">
                 Changes are audited with before/after.
               </span>

@@ -1205,7 +1205,7 @@ export function ProductEditor({
       >
         <TabsList
           aria-label="Product editor sections"
-          className="h-fit w-[220px] shrink-0 flex-col items-stretch bg-transparent p-0"
+          className="sticky top-[calc(var(--admin-top)+3.5rem+7rem)] h-fit w-[220px] shrink-0 flex-col items-stretch self-start bg-transparent p-0"
         >
           {TABS.map(([key, label], i) => {
             const disabled = isNew && key !== "basics";

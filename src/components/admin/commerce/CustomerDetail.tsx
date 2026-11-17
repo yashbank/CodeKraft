@@ -284,7 +284,7 @@ export function CustomerDetail({
                     }
                   }}
                   placeholder="Add tag"
-                  className="h-6 w-24 px-2 text-caption"
+                  className="h-6 w-28 min-w-[7rem] px-2 text-caption"
                   disabled={deleted}
                 />
               </li>

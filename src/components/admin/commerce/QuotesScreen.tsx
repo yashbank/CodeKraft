@@ -606,7 +606,7 @@ export function QuotesScreen({
               ))}
             </div>
           ) : null}
-          <div className="grid gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))] gap-4">
             <Field id="q-currency" label="Currency" required>
               <Select
                 value={selected ? selected.amount.currency : currency}

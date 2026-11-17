@@ -86,7 +86,7 @@ export function HelpLauncher({
         title={inline ? `${t.launcher} (${keyLabel})` : undefined}
         className={cn(
           inline
-            ? "relative grid size-9 shrink-0 place-items-center rounded-md text-fg-muted transition-colors hover:bg-elevated hover:text-fg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none print:hidden"
+            ? "relative grid size-10 shrink-0 place-items-center rounded-md text-fg-muted transition-colors hover:bg-elevated hover:text-fg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none print:hidden"
             : "group fixed z-(--ck-z-header) grid size-14 place-items-center rounded-full bg-accent text-accent-fg shadow-glow transition-[transform,opacity,box-shadow] duration-(--ck-motion-duration-md) ease-emphasized print:hidden",
           !inline &&
             "right-4 hover:scale-105 hover:bg-accent-hover hover:shadow-glow-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none sm:right-5",
