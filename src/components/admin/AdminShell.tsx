@@ -485,7 +485,7 @@ export function AdminShell({
                   </BreadcrumbList>
                 </Breadcrumb>
               ) : null}
-              <span className="truncate text-body font-semibold lg:hidden">{title}</span>
+              <span className="block truncate text-body font-semibold lg:hidden">{title}</span>
             </div>
             <Button
               variant="outline"

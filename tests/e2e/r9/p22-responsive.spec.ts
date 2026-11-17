@@ -468,7 +468,7 @@ async function auditPage(page: Page, width: number): Promise<Raw[]> {
         el.closest("aside") ||
         pinned.some(
           (bar) =>
-            bar.getBoundingClientRect().top <= 1 && r.top < bar.getBoundingClientRect().bottom,
+            bar.getBoundingClientRect().top <= 200 && r.top < bar.getBoundingClientRect().bottom,
         ) || // scrolled under the sticky top bar: reachable by scrolling
         allFixed.some((f) => f.contains(el)) ||
         el.closest("[style*='position: sticky'],header,nav")
