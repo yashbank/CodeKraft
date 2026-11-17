@@ -91,6 +91,7 @@ export function searchHelp(
   role: HelpRole,
   locale: HelpLocale,
   entries: readonly KnowledgeEntry[] = knowledgeEntries,
+  topN: number = TOP_N,
 ): { hits: HelpHit[] } {
   const terms = [...new Set(tokenize(query))];
   const candidates = pool(entries, role, locale);
@@ -138,7 +139,7 @@ export function searchHelp(
     }
   }
   hits.sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
-  return { hits: hits.slice(0, TOP_N) };
+  return { hits: hits.slice(0, topN) };
 }
 
 /** Best-matching paragraphs of a guide, in original order, capped at `maxChars`. */

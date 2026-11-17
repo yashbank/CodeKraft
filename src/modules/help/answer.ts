@@ -9,6 +9,7 @@ import { addToBucket, peekBucket } from "@/lib/rate-limit-pg";
 import { AnthropicProvider } from "@/modules/chat/providers/anthropic";
 import { OpenAIProvider } from "@/modules/chat/providers/openai";
 import { getHelpConfig } from "./config";
+import { visibleLinks, type HelpLink, type HelpRelated } from "./links";
 import { knowledgeEntries } from "./knowledge";
 import {
   pickSnippet,
@@ -24,6 +25,10 @@ export interface HelpAnswer {
   answer: string;
   sources: { id: string; title: string }[];
   mode: HelpMode;
+  /** Role-checked "Open screen" links (from the guide's `links` frontmatter, when present). */
+  links?: HelpLink[];
+  /** Other close guides the UI offers as chips. */
+  related?: HelpRelated[];
 }
 
 export const GUIDE_THRESHOLD = 0.6;
@@ -143,7 +148,33 @@ function sources(hits: readonly HelpHit[]) {
   return hits.map((h) => ({ id: h.id, title: h.title }));
 }
 
-function searchAnswer(hits: readonly HelpHit[], locale: HelpLocale, note?: string): HelpAnswer {
+/** The `links` field of the guide (phase 2 adds it; absent until then). Locale first, English fallback. */
+function guideLinks(
+  id: string,
+  role: HelpRole,
+  locale: HelpLocale,
+  entries: readonly KnowledgeEntry[],
+): HelpLink[] {
+  const mine = entries.filter((e) => e.id === id);
+  const e = mine.find((x) => x.locale === locale) ?? mine.find((x) => x.locale === "en");
+  const own = visibleLinks((e as { links?: unknown } | undefined)?.links, role);
+  if (own.length || !e || e.locale === "en") return own;
+  return visibleLinks((mine.find((x) => x.locale === "en") as { links?: unknown })?.links, role);
+}
+
+function relatedOf(hits: readonly HelpHit[], skipId?: string): HelpRelated[] {
+  return hits
+    .filter((h) => h.id !== skipId)
+    .slice(0, 3)
+    .map((h) => ({ id: h.id, title: h.title }));
+}
+
+function searchAnswer(
+  hits: readonly HelpHit[],
+  locale: HelpLocale,
+  ctx: { role: HelpRole; entries: readonly KnowledgeEntry[] },
+  note?: string,
+): HelpAnswer {
   const hi = locale === "hi";
   if (hits.length === 0) {
     return {
@@ -154,12 +185,20 @@ function searchAnswer(hits: readonly HelpHit[], locale: HelpLocale, note?: strin
       mode: "search",
     };
   }
-  const head = note ?? (hi ? "ये गाइड आपके काम आ सकते हैं:" : "These guides may help:");
-  return {
-    answer: `${head}\n${hits.map((h) => `- ${h.title}`).join("\n")}`,
+  const head =
+    note ??
+    (hi
+      ? "मुझे सटीक गाइड नहीं मिला। सबसे करीबी विषय:"
+      : "I could not find an exact guide. Closest topics:");
+  const out: HelpAnswer = {
+    answer: head,
     sources: sources(hits),
     mode: "search",
+    related: relatedOf(hits),
   };
+  const links = guideLinks(hits[0]?.id ?? "", ctx.role, locale, ctx.entries);
+  if (links.length) out.links = links;
+  return out;
 }
 
 // ---------- default stores / client ----------
@@ -254,13 +293,15 @@ export async function answerQuestion(
   const cfg = deps.config ?? (await getHelpConfig());
   const locale: HelpLocale = input.locale === "hi" && cfg.hindi ? "hi" : "en";
   const query = normaliseQuery(input.query);
-  if (query.length === 0) return searchAnswer([], locale);
+  const entries = deps.entries ?? knowledgeEntries;
+  const ctx = { role: input.role, entries };
+  if (query.length === 0) return searchAnswer([], locale, ctx);
 
   const cacheKey = `${locale}|${input.role}|${query.toLowerCase()}`;
   const cached = cacheGet(cacheKey, now.getTime());
   if (cached) return cached;
 
-  const { hits } = searchHelp(query, input.role, locale, deps.entries ?? knowledgeEntries);
+  const { hits } = searchHelp(query, input.role, locale, entries, 4);
   const top = hits[0];
 
   if (top && top.score >= GUIDE_THRESHOLD) {
@@ -269,6 +310,10 @@ export async function answerQuestion(
       sources: [{ id: top.id, title: top.title }],
       mode: "guide",
     };
+    const links = guideLinks(top.id, input.role, locale, entries);
+    if (links.length) out.links = links;
+    const related = relatedOf(hits, top.id);
+    if (related.length) out.related = related;
     cacheSet(cacheKey, out, now.getTime());
     return out;
   }
@@ -278,26 +323,27 @@ export async function answerQuestion(
       ? searchAnswer(
           hits,
           locale,
+          ctx,
           locale === "hi"
             ? "मैं इसमें मदद नहीं कर सकता। ये गाइड देखें:"
             : "I can only help with guides about this website. Try these:",
         )
-      : searchAnswer(hits, locale);
+      : searchAnswer(hits, locale, ctx);
   }
 
   const llm = deps.llm === undefined ? getDefaultHelpLlm() : deps.llm;
-  if (!llm) return searchAnswer(hits, locale);
+  if (!llm) return searchAnswer(hits, locale, ctx);
 
   const budget = deps.budget ?? defaultBudget;
   const key = monthKey(now);
-  if ((await budget.used(key)) >= monthlyBudget()) return searchAnswer(hits, locale);
+  if ((await budget.used(key)) >= monthlyBudget()) return searchAnswer(hits, locale, ctx);
 
   const limiter = deps.limiter ?? defaultLimiter;
   const day = now.toISOString().slice(0, 10);
   const capOk = input.userId
     ? await limiter(`help:user:${input.userId}:${day}`, AI_CAP_USER, DAY_MS)
     : await limiter(`help:ip:${input.ip ?? "unknown"}:${day}`, AI_CAP_ANON, DAY_MS);
-  if (!capOk) return searchAnswer(hits, locale);
+  if (!capOk) return searchAnswer(hits, locale, ctx);
 
   const used = hits.slice(0, 2);
   const guides = used
@@ -321,8 +367,12 @@ export async function answerQuestion(
     await budget.add(key, tokens);
     const text = sanitiseOutput(res.text, MAX_ANSWER_CHARS);
     const leaked = /answer only from|never reveal these rules|<guide|<q>/i.test(res.text);
-    if (text.length === 0 || leaked) return searchAnswer(hits, locale);
+    if (text.length === 0 || leaked) return searchAnswer(hits, locale, ctx);
     const out: HelpAnswer = { answer: text, sources: sources(used), mode: "ai" };
+    const links = guideLinks(used[0]?.id ?? "", input.role, locale, entries);
+    if (links.length) out.links = links;
+    const related = relatedOf(hits, used[0]?.id);
+    if (related.length) out.related = related;
     cacheSet(cacheKey, out, now.getTime());
     return out;
   } catch (err) {
@@ -330,6 +380,6 @@ export async function answerQuestion(
       { err: err instanceof Error ? err.message : String(err) },
       "help ai call failed; falling back to search",
     );
-    return searchAnswer(hits, locale);
+    return searchAnswer(hits, locale, ctx);
   }
 }

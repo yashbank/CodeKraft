@@ -47,3 +47,38 @@ export function sourceHref(s: HelpSource, role: HelpRole): string | null {
   const id = s.id.toLowerCase();
   return table.find(([re]) => re.test(id))?.[1] ?? null;
 }
+
+const ADMIN_PATH = /^\/admin(?=\/|$)/;
+
+/**
+ * Where a help link really lives. "/admin/<screen>" is an admin-host path (the admin host serves it
+ * without the "/admin" prefix); everything else is a site path. Same host -> relative href; other
+ * host -> absolute URL from the configured origins; unknown origin -> null (link is hidden).
+ */
+export function linkHref(
+  path: string,
+  currentOrigin: string,
+  adminUrl: string | undefined,
+  siteUrl: string | undefined,
+): string | null {
+  const safe = safePath(path);
+  if (!safe) return null;
+  const origin = (u?: string): string | null => {
+    try {
+      return u ? new URL(u).origin : null;
+    } catch {
+      return null;
+    }
+  };
+  const adminOrigin = origin(adminUrl);
+  const siteOrigin = origin(siteUrl);
+  if (ADMIN_PATH.test(safe)) {
+    const rel = safe.replace(ADMIN_PATH, "") || "/dashboard";
+    const relPath = rel.startsWith("/") ? rel : `/${rel}`;
+    if (!adminOrigin) return /^https?:\/\/admin[.]/.test(currentOrigin) ? relPath : null;
+    return adminOrigin === currentOrigin ? relPath : `${adminOrigin}${relPath}`;
+  }
+  if (siteOrigin && siteOrigin !== currentOrigin && adminOrigin === currentOrigin)
+    return `${siteOrigin}${safe}`;
+  return safe;
+}

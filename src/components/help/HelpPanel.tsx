@@ -22,7 +22,8 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/components/ui/_utils";
-import { HelpMarkdown, toPlainText } from "./markdown";
+import { toPlainText } from "./markdown";
+import { RichAnswer } from "./RichAnswer";
 import { sourceHref } from "./paths";
 import { strings } from "./strings";
 import { useSpeech } from "./use-speech";
@@ -31,6 +32,8 @@ import {
   type AskResponse,
   type HelpLocale,
   type HelpMode,
+  type HelpLink,
+  type HelpRelated,
   type HelpRole,
   type HelpSource,
   type Suggestions,
@@ -43,6 +46,8 @@ type Msg =
       kind: "bot";
       text: string;
       sources: HelpSource[];
+      links: HelpLink[];
+      related: HelpRelated[];
       mode: HelpMode;
       fb?: "up" | "down";
     }
@@ -143,11 +148,15 @@ function BotMessage({
   role,
   t,
   onFeedback,
+  onAsk,
+  onNavigate,
 }: {
   m: Extract<Msg, { kind: "bot" }>;
   role: HelpRole;
   t: ReturnType<typeof strings>;
   onFeedback: (id: number, fb: "up" | "down") => void;
+  onAsk: (q: string) => void;
+  onNavigate: () => void;
 }) {
   const [copied, setCopied] = React.useState(false);
   const copy = async () => {
@@ -165,7 +174,14 @@ function BotMessage({
       <div className="min-w-0 flex-1">
         <div className="rounded-2xl rounded-tl-md border border-border bg-elevated px-3.5 py-3">
           {m.text.trim() ? (
-            <HelpMarkdown text={m.text} />
+            <RichAnswer
+              text={m.text}
+              mode={m.mode}
+              title={m.mode === "guide" ? m.sources[0]?.title : undefined}
+              links={m.links}
+              t={t}
+              onNavigate={onNavigate}
+            />
           ) : (
             <p className="text-body-sm">{t.noAnswer}</p>
           )}
@@ -176,7 +192,25 @@ function BotMessage({
             </p>
           ) : null}
         </div>
-        {m.sources.length ? (
+        {m.related.length ? (
+          <div className="mt-2" aria-label={t.related} role="group" data-testid="help-related">
+            <p className="mb-1.5 text-overline text-fg-subtle uppercase">{t.related}</p>
+            <ul className="flex flex-wrap gap-1.5">
+              {m.related.slice(0, 3).map((r) => (
+                <li key={r.id} className="max-w-full">
+                  <button
+                    type="button"
+                    onClick={() => onAsk(r.title)}
+                    className="inline-flex min-h-8 max-w-full items-center rounded-full border border-border bg-surface px-3 py-1 text-caption text-fg-muted transition-colors hover:border-accent hover:text-accent-text focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+                  >
+                    <span className="truncate">{r.title}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {m.sources.length && m.mode !== "search" ? (
           <div className="mt-2" aria-label={t.sources} role="group">
             <p className="mb-1.5 text-overline text-fg-subtle uppercase">{t.sources}</p>
             <ul className="flex flex-wrap gap-1.5">
@@ -333,6 +367,8 @@ export default function HelpPanel({
             kind: "bot",
             text: body.answer,
             sources: Array.isArray(body.sources) ? body.sources : [],
+            links: Array.isArray(body.links) ? body.links.slice(0, 3) : [],
+            related: Array.isArray(body.related) ? body.related.slice(0, 3) : [],
             mode,
           });
       } else push({ kind: "error", why: res.status === 429 ? "rate" : "error", query });
@@ -472,7 +508,15 @@ export default function HelpPanel({
                   </p>
                 </div>
               ) : m.kind === "bot" ? (
-                <BotMessage key={m.id} m={m} role={role} t={t} onFeedback={onFeedback} />
+                <BotMessage
+                  key={m.id}
+                  m={m}
+                  role={role}
+                  t={t}
+                  onFeedback={onFeedback}
+                  onAsk={(q) => void ask(q)}
+                  onNavigate={() => onOpenChange(false)}
+                />
               ) : (
                 <div
                   key={m.id}
