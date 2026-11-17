@@ -90,7 +90,8 @@ for (const theme of THEMES)
       }
 
       // ask via chip, see answer, sources, no raw external link
-      await panel.getByRole("button", { name: /download my purchase/i }).click();
+      // First suggestion chip (the text comes from knowledge/suggestions.json, so do not hard-code it).
+      await panel.locator("ul button").first().click();
       await expect(page.getByTestId("help-typing")).toBeVisible();
       await expect(page.getByTestId("help-answer")).toContainText("Open Purchases");
       await expect(panel.getByRole("link", { name: /downloading a purchase/i })).toHaveAttribute(

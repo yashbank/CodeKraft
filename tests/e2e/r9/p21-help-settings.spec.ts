@@ -22,7 +22,33 @@ async function openHelp(page: Page): Promise<void> {
   await page.waitForLoadState("networkidle");
 }
 
-test.afterAll(async () => {
+/**
+ * Restore the defaults through the UI, not just SQL: a raw delete leaves the cached help config and
+ * the ISR twins of the public pages (baked without the launcher while "enabled" was off) stale, so
+ * the next spec (p21-help.spec.ts sorts after this file) would find no launcher on "/".
+ */
+test.afterAll(async ({ browser }) => {
+  const page = await browser.newPage();
+  try {
+    await loginAs(page, "super_admin");
+    await openHelp(page);
+    for (const [t, want] of [
+      ["enabled", true],
+      ["hindi", false],
+      ["ai", true],
+    ] as const) {
+      const el = page.getByTestId(`help-toggle-${t}`);
+      if ((await el.isChecked()) !== want) await el.click();
+    }
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("Settings saved", { exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
+  } catch {
+    // fall through to the direct reset
+  } finally {
+    await page.close();
+  }
   await q(`delete from site_settings where key = any($1)`, [[...KEYS]]);
 });
 
