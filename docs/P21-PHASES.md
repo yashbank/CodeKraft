@@ -13,7 +13,7 @@ Resume: read this file, continue the first phase not marked DONE.
 | # | Phase | Branch | Status |
 |---|---|---|---|
 | 1 | Knowledge base EN + HI guides per role | qa/p21-1-knowledge | TODO |
-| 2 | Search + answer API + caps/budget/cache + tests | qa/p21-2-backend | TODO |
+| 2 | Search + answer API + caps/budget/cache + tests | qa/p21-2-backend | DONE 9fc69c4 (stubs: knowledge.ts, config.ts; take other branches' versions on merge; retune guide threshold 0.6 after real guides) |
 | 3 | Premium pop-up UI + mic + mobile + dark mode | qa/p21-3-ui | TODO |
 | 4 | Settings toggles (help, hindi, ai) + getHelpConfig | qa/p21-4-settings | TODO |
 | 5 | Integration merge + security/abuse tests + full gate (3 parallel rounds) | qa/p21-integration | TODO |
