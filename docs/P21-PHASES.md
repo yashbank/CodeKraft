@@ -16,4 +16,4 @@ Resume: read this file, continue the first phase not marked DONE.
 | 2 | Search + answer API + caps/budget/cache + tests | qa/p21-2-backend | DONE 9fc69c4 (stubs: knowledge.ts, config.ts; take other branches' versions on merge; retune guide threshold 0.6 after real guides) |
 | 3 | Premium pop-up UI + mic + mobile + dark mode | qa/p21-3-ui | DONE 7b12294 |
 | 4 | Settings toggles (help, hindi, ai) + getHelpConfig | qa/p21-4-settings | DONE 1dbfcf1 (no migration; MERGE FIX: budget default 400k in backend vs 500k in settings, unify; confirm backend stores tokens in help:budget:YYYY-MM) |
-| 5 | Integration merge + security/abuse tests + full gate (3 parallel rounds) | qa/p21-integration | merged ccea64f; unit green; 3 e2e rounds + abuse test running |
+| 5 | Integration merge + security/abuse tests + full gate (3 parallel rounds) | qa/p21-integration | DONE 79cca46: unit 2679/2679; abuse test 10/10; final 3 rounds: B 442/442 x2 (+1 flake p14-12a, passes 4/4 on repeat); A only the relaxed help-cover test failed, now passes; targeted repeat 104/104 |
