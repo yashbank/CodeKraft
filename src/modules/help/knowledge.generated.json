@@ -3,9 +3,7 @@
     {
       "id": "accept-quote-customer",
       "title": "Accept a quote you received",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "quote",
         "quotation",
@@ -20,11 +18,7 @@
     {
       "id": "add-product",
       "title": "Add a product",
-      "roles": [
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["staff", "admin", "super_admin"],
       "keywords": [
         "new product",
         "create product",
@@ -40,10 +34,7 @@
     {
       "id": "admin-security-totp",
       "title": "Secure admin login with TOTP",
-      "roles": [
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["admin", "super_admin"],
       "keywords": [
         "TOTP",
         "2FA",
@@ -59,9 +50,7 @@
     {
       "id": "admin-users-invite",
       "title": "Invite, change or remove an admin user",
-      "roles": [
-        "super_admin"
-      ],
+      "roles": ["super_admin"],
       "keywords": [
         "admin users",
         "invite admin",
@@ -77,10 +66,7 @@
     {
       "id": "approvals-workflow",
       "title": "Approvals: how requests get approved",
-      "roles": [
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["admin", "super_admin"],
       "keywords": [
         "approval",
         "approvals",
@@ -97,9 +83,7 @@
     {
       "id": "cancel-refund-customer",
       "title": "Cancel an order or ask for a refund",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "cancel order",
         "refund",
@@ -115,10 +99,7 @@
     {
       "id": "chatbot-admin",
       "title": "Monitor the chatbot",
-      "roles": [
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["admin", "super_admin"],
       "keywords": [
         "chatbot",
         "chat",
@@ -134,9 +115,7 @@
     {
       "id": "checkout-customer",
       "title": "Buy a product and place an order (checkout)",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "buy",
         "purchase",
@@ -154,13 +133,7 @@
     {
       "id": "contact-us",
       "title": "Contact us (inquiry form)",
-      "roles": [
-        "customer",
-        "partner",
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["customer", "partner", "staff", "admin", "super_admin"],
       "keywords": [
         "contact",
         "contact us",
@@ -177,10 +150,7 @@
     {
       "id": "coupons",
       "title": "Create a coupon",
-      "roles": [
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["admin", "super_admin"],
       "keywords": [
         "coupon",
         "discount code",
@@ -195,10 +165,7 @@
     {
       "id": "create-customer",
       "title": "Create a customer",
-      "roles": [
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["admin", "super_admin"],
       "keywords": [
         "add customer",
         "new customer",
@@ -214,10 +181,7 @@
     {
       "id": "create-quote",
       "title": "Create a custom quote and turn it into an order",
-      "roles": [
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["admin", "super_admin"],
       "keywords": [
         "quote",
         "quotation",
@@ -233,9 +197,7 @@
     {
       "id": "customer-preferences",
       "title": "Change theme, currency and notification choices",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "theme",
         "dark mode",
@@ -251,9 +213,7 @@
     {
       "id": "customer-support-chat",
       "title": "Ask support: queries and chat",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "support",
         "help",
@@ -270,9 +230,7 @@
     {
       "id": "danger-zone-reset",
       "title": "Danger zone: reset site data (irreversible)",
-      "roles": [
-        "super_admin"
-      ],
+      "roles": ["super_admin"],
       "keywords": [
         "danger zone",
         "reset",
@@ -288,9 +246,7 @@
     {
       "id": "download-invoice-customer",
       "title": "Download my invoice",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "invoice",
         "download invoice",
@@ -306,11 +262,7 @@
     {
       "id": "edit-landing",
       "title": "Edit the landing page and site content",
-      "roles": [
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["staff", "admin", "super_admin"],
       "keywords": [
         "landing page",
         "homepage",
@@ -328,11 +280,7 @@
     {
       "id": "finance-ledger",
       "title": "Read the finance ledger, allocations and reports",
-      "roles": [
-        "admin",
-        "super_admin",
-        "partner"
-      ],
+      "roles": ["admin", "super_admin", "partner"],
       "keywords": [
         "ledger",
         "finance",
@@ -350,11 +298,7 @@
     {
       "id": "fulfil-order",
       "title": "Deliver an order: delivery tasks and entitlements",
-      "roles": [
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["staff", "admin", "super_admin"],
       "keywords": [
         "fulfil",
         "deliver",
@@ -370,9 +314,7 @@
     {
       "id": "get-access-customer",
       "title": "Open or download what I bought",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "download",
         "access",
@@ -389,11 +331,7 @@
     {
       "id": "issue-invoice",
       "title": "Issue and download an invoice (admin)",
-      "roles": [
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["staff", "admin", "super_admin"],
       "keywords": [
         "invoice",
         "issue invoice",
@@ -408,11 +346,7 @@
     {
       "id": "leads-priority",
       "title": "Work leads and set priority",
-      "roles": [
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["staff", "admin", "super_admin"],
       "keywords": [
         "lead",
         "leads",
@@ -428,11 +362,7 @@
     {
       "id": "manage-categories",
       "title": "Manage product categories",
-      "roles": [
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["staff", "admin", "super_admin"],
       "keywords": [
         "category",
         "categories",
@@ -446,27 +376,14 @@
     {
       "id": "notifications-admin",
       "title": "Notifications in the admin",
-      "roles": [
-        "staff",
-        "admin",
-        "super_admin"
-      ],
-      "keywords": [
-        "notifications",
-        "alerts",
-        "bell",
-        "unread",
-        "mark read",
-        "notification kahan"
-      ],
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": ["notifications", "alerts", "bell", "unread", "mark read", "notification kahan"],
       "body": "1. Open Notifications (under Overview), or use the bell in the top bar. It shows the unread count.\n2. Each item has a quick action such as Confirm payment or Review approval.\n3. Click Load more to see older ones.\n4. Mark all as read clears the unread count. An \"All notifications marked read\" message confirms it.\nYou get notices for new orders, payments to confirm, approvals waiting and new queries or leads. Open the Audit log under System if you need the full history of who did what."
     },
     {
       "id": "notifications-customer",
       "title": "See my notifications",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "notifications",
         "alerts",
@@ -480,11 +397,7 @@
     {
       "id": "partners-payouts",
       "title": "Add a partner and record a payout",
-      "roles": [
-        "admin",
-        "super_admin",
-        "partner"
-      ],
+      "roles": ["admin", "super_admin", "partner"],
       "keywords": [
         "partner",
         "payout",
@@ -499,10 +412,7 @@
     {
       "id": "place-order-admin",
       "title": "Create an order for a customer (admin)",
-      "roles": [
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["admin", "super_admin"],
       "keywords": [
         "new order",
         "manual order",
@@ -521,11 +431,7 @@
     {
       "id": "product-media",
       "title": "Add images, video or files to a product",
-      "roles": [
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["staff", "admin", "super_admin"],
       "keywords": [
         "media",
         "image",
@@ -542,9 +448,7 @@
     {
       "id": "profile-security-password",
       "title": "Profile, security and password",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "profile",
         "password",
@@ -561,10 +465,7 @@
     {
       "id": "record-expense",
       "title": "Record an expense",
-      "roles": [
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["admin", "super_admin"],
       "keywords": [
         "expense",
         "cost",
@@ -579,10 +480,7 @@
     {
       "id": "record-payment",
       "title": "Record or confirm a payment",
-      "roles": [
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["admin", "super_admin"],
       "keywords": [
         "confirm payment",
         "record payment",
@@ -598,10 +496,7 @@
     {
       "id": "refund-adjustment",
       "title": "Propose a refund or a ledger adjustment",
-      "roles": [
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["admin", "super_admin"],
       "keywords": [
         "refund",
         "money back",
@@ -616,11 +511,7 @@
     {
       "id": "settings-theme-currency",
       "title": "Change theme, currency and other settings",
-      "roles": [
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["staff", "admin", "super_admin"],
       "keywords": [
         "settings",
         "theme",
@@ -637,9 +528,7 @@
     {
       "id": "sign-in-account",
       "title": "Create an account and sign in",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "sign up",
         "register",
@@ -656,9 +545,7 @@
     {
       "id": "site-phase",
       "title": "Set the site phase: Live, Testing or Maintenance",
-      "roles": [
-        "super_admin"
-      ],
+      "roles": ["super_admin"],
       "keywords": [
         "site phase",
         "maintenance mode",
@@ -673,11 +560,7 @@
     {
       "id": "support-queries-admin",
       "title": "Answer customer queries (support inbox)",
-      "roles": [
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["staff", "admin", "super_admin"],
       "keywords": [
         "query",
         "queries",
@@ -694,9 +577,7 @@
     {
       "id": "track-order",
       "title": "Track my order",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "track order",
         "order status",
@@ -711,9 +592,7 @@
     {
       "id": "wishlist",
       "title": "Use my wishlist",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "wishlist",
         "save for later",
@@ -730,9 +609,7 @@
     {
       "id": "accept-quote-customer",
       "title": "मिला हुआ कोट स्वीकार करें",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "कोट",
         "कोटेशन",
@@ -747,11 +624,7 @@
     {
       "id": "add-product",
       "title": "नया प्रोडक्ट जोड़ें",
-      "roles": [
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["staff", "admin", "super_admin"],
       "keywords": [
         "नया प्रोडक्ट",
         "प्रोडक्ट जोड़ें",
@@ -766,10 +639,7 @@
     {
       "id": "admin-security-totp",
       "title": "TOTP से admin लॉगिन सुरक्षित करें",
-      "roles": [
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["admin", "super_admin"],
       "keywords": [
         "TOTP",
         "2FA",
@@ -785,9 +655,7 @@
     {
       "id": "admin-users-invite",
       "title": "admin यूज़र को invite करें, रोल बदलें या हटाएं",
-      "roles": [
-        "super_admin"
-      ],
+      "roles": ["super_admin"],
       "keywords": [
         "admin users",
         "एडमिन जोड़ें",
@@ -802,10 +670,7 @@
     {
       "id": "approvals-workflow",
       "title": "Approvals: रिक्वेस्ट कैसे मंज़ूर होती हैं",
-      "roles": [
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["admin", "super_admin"],
       "keywords": [
         "अप्रूवल",
         "मंज़ूरी",
@@ -821,9 +686,7 @@
     {
       "id": "cancel-refund-customer",
       "title": "ऑर्डर कैंसल करें या रिफंड मांगें",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "कैंसल",
         "रिफंड",
@@ -839,10 +702,7 @@
     {
       "id": "chatbot-admin",
       "title": "चैटबॉट की निगरानी करें",
-      "roles": [
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["admin", "super_admin"],
       "keywords": [
         "चैटबॉट",
         "बॉट",
@@ -858,9 +718,7 @@
     {
       "id": "checkout-customer",
       "title": "प्रोडक्ट खरीदें और ऑर्डर करें (checkout)",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "खरीदें",
         "ऑर्डर",
@@ -877,13 +735,7 @@
     {
       "id": "contact-us",
       "title": "हमसे संपर्क करें (inquiry form)",
-      "roles": [
-        "customer",
-        "partner",
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["customer", "partner", "staff", "admin", "super_admin"],
       "keywords": [
         "संपर्क",
         "इन्क्वायरी",
@@ -899,10 +751,7 @@
     {
       "id": "coupons",
       "title": "कूपन बनाएं",
-      "roles": [
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["admin", "super_admin"],
       "keywords": [
         "कूपन",
         "डिस्काउंट कोड",
@@ -917,10 +766,7 @@
     {
       "id": "create-customer",
       "title": "नया ग्राहक बनाएं",
-      "roles": [
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["admin", "super_admin"],
       "keywords": [
         "ग्राहक जोड़ें",
         "नया ग्राहक",
@@ -934,10 +780,7 @@
     {
       "id": "create-quote",
       "title": "कस्टम कोट बनाएं और ऑर्डर में बदलें",
-      "roles": [
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["admin", "super_admin"],
       "keywords": [
         "कोट",
         "कोटेशन",
@@ -952,9 +795,7 @@
     {
       "id": "customer-preferences",
       "title": "थीम, करेंसी और नोटिफिकेशन पसंद बदलें",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "थीम",
         "डार्क मोड",
@@ -970,9 +811,7 @@
     {
       "id": "customer-support-chat",
       "title": "सपोर्ट से पूछें: queries और chat",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "सपोर्ट",
         "मदद",
@@ -988,9 +827,7 @@
     {
       "id": "danger-zone-reset",
       "title": "Danger zone: साइट डेटा रीसेट (वापस नहीं होगा)",
-      "roles": [
-        "super_admin"
-      ],
+      "roles": ["super_admin"],
       "keywords": [
         "danger zone",
         "रीसेट",
@@ -1006,9 +843,7 @@
     {
       "id": "download-invoice-customer",
       "title": "मेरा इनवॉइस डाउनलोड करें",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "इनवॉइस",
         "बिल",
@@ -1024,11 +859,7 @@
     {
       "id": "edit-landing",
       "title": "लैंडिंग पेज और साइट कंटेंट एडिट करें",
-      "roles": [
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["staff", "admin", "super_admin"],
       "keywords": [
         "लैंडिंग पेज",
         "होमपेज",
@@ -1045,11 +876,7 @@
     {
       "id": "finance-ledger",
       "title": "फाइनेंस लेजर, allocations और रिपोर्ट पढ़ें",
-      "roles": [
-        "admin",
-        "super_admin",
-        "partner"
-      ],
+      "roles": ["admin", "super_admin", "partner"],
       "keywords": [
         "लेजर",
         "फाइनेंस",
@@ -1066,11 +893,7 @@
     {
       "id": "fulfil-order",
       "title": "ऑर्डर डिलीवर करें: delivery tasks और entitlements",
-      "roles": [
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["staff", "admin", "super_admin"],
       "keywords": [
         "डिलीवरी",
         "लाइसेंस की",
@@ -1085,9 +908,7 @@
     {
       "id": "get-access-customer",
       "title": "जो खरीदा उसे खोलें या डाउनलोड करें",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "डाउनलोड",
         "एक्सेस",
@@ -1103,11 +924,7 @@
     {
       "id": "issue-invoice",
       "title": "इनवॉइस जारी करें और डाउनलोड करें (admin)",
-      "roles": [
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["staff", "admin", "super_admin"],
       "keywords": [
         "इनवॉइस",
         "बिल",
@@ -1122,11 +939,7 @@
     {
       "id": "leads-priority",
       "title": "लीड संभालें और प्रायोरिटी सेट करें",
-      "roles": [
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["staff", "admin", "super_admin"],
       "keywords": [
         "लीड",
         "प्रायोरिटी",
@@ -1142,11 +955,7 @@
     {
       "id": "manage-categories",
       "title": "प्रोडक्ट कैटेगरी संभालें",
-      "roles": [
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["staff", "admin", "super_admin"],
       "keywords": [
         "कैटेगरी",
         "श्रेणी",
@@ -1161,11 +970,7 @@
     {
       "id": "notifications-admin",
       "title": "admin में नोटिफिकेशन",
-      "roles": [
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["staff", "admin", "super_admin"],
       "keywords": [
         "नोटिफिकेशन",
         "अलर्ट",
@@ -1180,9 +985,7 @@
     {
       "id": "notifications-customer",
       "title": "मेरे नोटिफिकेशन देखें",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "नोटिफिकेशन",
         "अलर्ट",
@@ -1198,11 +1001,7 @@
     {
       "id": "partners-payouts",
       "title": "पार्टनर जोड़ें और पेआउट दर्ज करें",
-      "roles": [
-        "admin",
-        "super_admin",
-        "partner"
-      ],
+      "roles": ["admin", "super_admin", "partner"],
       "keywords": [
         "पार्टनर",
         "पेआउट",
@@ -1217,10 +1016,7 @@
     {
       "id": "place-order-admin",
       "title": "ग्राहक के लिए ऑर्डर बनाएं (admin)",
-      "roles": [
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["admin", "super_admin"],
       "keywords": [
         "नया ऑर्डर",
         "मैनुअल ऑर्डर",
@@ -1235,11 +1031,7 @@
     {
       "id": "product-media",
       "title": "प्रोडक्ट में इमेज, वीडियो या फ़ाइल जोड़ें",
-      "roles": [
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["staff", "admin", "super_admin"],
       "keywords": [
         "मीडिया",
         "इमेज",
@@ -1255,9 +1047,7 @@
     {
       "id": "profile-security-password",
       "title": "प्रोफ़ाइल, सुरक्षा और पासवर्ड",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "प्रोफ़ाइल",
         "पासवर्ड",
@@ -1273,10 +1063,7 @@
     {
       "id": "record-expense",
       "title": "खर्च दर्ज करें",
-      "roles": [
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["admin", "super_admin"],
       "keywords": [
         "खर्च",
         "ख़र्चा",
@@ -1292,10 +1079,7 @@
     {
       "id": "record-payment",
       "title": "भुगतान दर्ज या कन्फर्म करें",
-      "roles": [
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["admin", "super_admin"],
       "keywords": [
         "payment confirm karo",
         "payment record karo",
@@ -1310,10 +1094,7 @@
     {
       "id": "refund-adjustment",
       "title": "रिफंड या लेजर एडजस्टमेंट प्रस्तावित करें",
-      "roles": [
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["admin", "super_admin"],
       "keywords": [
         "रिफंड",
         "पैसे वापस",
@@ -1328,11 +1109,7 @@
     {
       "id": "settings-theme-currency",
       "title": "थीम, करेंसी और बाकी सेटिंग बदलें",
-      "roles": [
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["staff", "admin", "super_admin"],
       "keywords": [
         "सेटिंग",
         "थीम",
@@ -1349,9 +1126,7 @@
     {
       "id": "sign-in-account",
       "title": "अकाउंट बनाएं और साइन-इन करें",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "साइन अप",
         "रजिस्टर",
@@ -1367,9 +1142,7 @@
     {
       "id": "site-phase",
       "title": "साइट फ़ेज़ सेट करें: Live, Testing या Maintenance",
-      "roles": [
-        "super_admin"
-      ],
+      "roles": ["super_admin"],
       "keywords": [
         "site phase",
         "maintenance mode",
@@ -1384,11 +1157,7 @@
     {
       "id": "support-queries-admin",
       "title": "ग्राहक के सवालों का जवाब दें (support inbox)",
-      "roles": [
-        "staff",
-        "admin",
-        "super_admin"
-      ],
+      "roles": ["staff", "admin", "super_admin"],
       "keywords": [
         "क्वेरी",
         "सपोर्ट",
@@ -1404,9 +1173,7 @@
     {
       "id": "track-order",
       "title": "मेरा ऑर्डर ट्रैक करें",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "ऑर्डर ट्रैक",
         "ऑर्डर स्टेटस",
@@ -1421,9 +1188,7 @@
     {
       "id": "wishlist",
       "title": "मेरी wishlist इस्तेमाल करें",
-      "roles": [
-        "customer"
-      ],
+      "roles": ["customer"],
       "keywords": [
         "विशलिस्ट",
         "बाद के लिए सेव",
