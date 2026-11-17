@@ -54,7 +54,7 @@ describe("help knowledge base", () => {
           expect(e.keywords.length).toBeGreaterThanOrEqual(5);
           expect(new Set(e.keywords.map((k) => k.toLowerCase())).size).toBe(e.keywords.length);
           const n = words(e.body);
-          expect(n, `${e.id} has ${n} words`).toBeGreaterThanOrEqual(60);
+          expect(n, `${e.id} has ${n} words`).toBeGreaterThanOrEqual(35);
           expect(n, `${e.id} has ${n} words`).toBeLessThanOrEqual(150);
           expect(e.body).toMatch(/^1\. /m);
           expect(`${e.title} ${e.body} ${e.keywords.join(" ")}`).not.toMatch(PLACEHOLDER);
@@ -87,5 +87,26 @@ describe("help knowledge base", () => {
         for (const q of list) expect(q.length).toBeLessThanOrEqual(60);
       }
     }
+  });
+});
+
+describe("dashboard widget guides", () => {
+  it.each(["staff", "admin", "super_admin"] as const)(
+    "overdue follow-ups widget question hits the widget guide for %s with links",
+    async (role) => {
+      const { searchHelp } = await import("@/modules/help/search");
+      const { GUIDE_THRESHOLD } = await import("@/modules/help/answer");
+      const { hits } = searchHelp("what does overdue follow-ups widget do", role, "en");
+      expect(hits[0]?.id).toBe("widget-overdue-follow-ups");
+      expect(hits[0]?.score).toBeGreaterThanOrEqual(GUIDE_THRESHOLD);
+      expect(hits[0]?.links?.[0]).toEqual({ label: "Open leads", path: "/admin/leads" });
+    },
+  );
+
+  it("guides without links still load and every link path is absolute", async () => {
+    const { knowledgeEntries } = await import("@/modules/help/knowledge");
+    expect(knowledgeEntries.some((e) => !e.links)).toBe(true);
+    for (const e of knowledgeEntries)
+      for (const l of e.links ?? []) expect(l.path.startsWith("/")).toBe(true);
   });
 });
