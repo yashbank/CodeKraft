@@ -3,7 +3,6 @@ import { SiteShell } from "@/components/site/SiteShell";
 import { SitePhaseBanner } from "@/components/site/SitePhaseBanner";
 import { getSiteContact, getThemeConfig } from "@/lib/site-brand";
 import { getEnabledCurrencies } from "@/lib/display-currency";
-import { HelpMount } from "@/components/help/HelpMount";
 import { SERVICE_OPTIONS } from "@/app/dev/screens/_fixtures/site";
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
@@ -25,7 +24,6 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         {children}
         <Toaster />
       </SiteShell>
-      <HelpMount audience="customer" area="site" />
     </>
   );
 }

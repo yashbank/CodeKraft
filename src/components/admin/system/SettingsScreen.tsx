@@ -1204,15 +1204,16 @@ export function SettingsScreen({
           {section === "help" ? (
             <div className="space-y-4" data-testid="help-settings-card">
               <p className="text-body-sm text-fg-muted">
-                Why this matters: the help assistant answers visitors&rsquo; questions in a small
-                pop-up. Only a super admin can change these.
+                Why this matters: the help assistant answers questions in a small pop-up. It applies
+                to staff, partners and admins only; customers and visitors never see it. Only a
+                super admin can change these.
               </p>
               {(
                 [
                   [
                     "enabled",
                     "Ask me anything pop-up",
-                    "Shows the help button on the site, account and admin pages.",
+                    "Shows the help button to staff, partners and admins (top bar of the admin area).",
                   ],
                   ["hindi", "Hindi language", "Lets people ask and read answers in Hindi."],
                   [

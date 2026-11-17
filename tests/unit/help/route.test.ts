@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const ctx = vi.hoisted(() => ({
   value: {
-    userId: null as string | null,
-    roles: [] as string[],
+    userId: "u0" as string | null,
+    roles: ["staff"] as string[],
     ip: "9.9.9.9",
     partnerId: undefined as string | undefined,
   },
@@ -16,6 +16,10 @@ vi.mock("@/lib/authz/resolve-route-context", () => ({
   resolveRouteContext: async () => ctx.value,
 }));
 vi.mock("@/modules/help/config", () => ({ getHelpConfig: async () => config.value }));
+vi.mock("@/modules/help/role", async (orig) => ({
+  ...(await orig<typeof import("@/modules/help/role")>()),
+  findPartnerId: async () => undefined,
+}));
 vi.mock("@/modules/help/answer", () => ({ answerQuestion: answer, MAX_QUERY_CHARS: 300 }));
 vi.mock("@/lib/rate-limit", () => ({
   MINUTE_MS: 60_000,
@@ -33,23 +37,36 @@ const post = (body: unknown, raw = false) =>
   );
 
 beforeEach(() => {
-  ctx.value = { userId: null, roles: [], ip: "9.9.9.9", partnerId: undefined };
+  ctx.value = { userId: "u0", roles: ["staff"], ip: "9.9.9.9", partnerId: undefined };
   config.value = { enabled: true, hindi: false, ai: true };
   limit.allowed = true;
   answer.mockReset().mockResolvedValue({ answer: "ok", sources: [], mode: "guide" });
 });
 
 describe("POST /api/help/ask", () => {
-  it("anonymous gets customer-level answer", async () => {
+  it("staff gets an answer", async () => {
     const res = await post({ query: "reset password" });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ answer: "ok", sources: [], mode: "guide" });
     expect(answer.mock.calls[0]![0]).toMatchObject({
-      role: "customer",
-      userId: null,
+      role: "staff",
+      userId: "u0",
       ip: "9.9.9.9",
       locale: "en",
     });
+  });
+
+  it("anonymous and customer get 404 mode off before any work", async () => {
+    for (const c of [
+      { userId: null, roles: [] as string[] },
+      { userId: "c1", roles: ["customer"] },
+    ]) {
+      ctx.value = { ...c, ip: "9.9.9.9", partnerId: undefined };
+      const res = await post({ query: "q" });
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({ mode: "off" });
+    }
+    expect(answer).not.toHaveBeenCalled();
   });
 
   it("maps highest role from session, partner from partnerId", async () => {

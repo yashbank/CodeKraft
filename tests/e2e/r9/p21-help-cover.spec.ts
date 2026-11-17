@@ -48,55 +48,28 @@ async function coveredByLauncher(page: Page): Promise<string[]> {
   });
 }
 
-async function checkPage(page: Page, url: string, width: number) {
-  await page.setViewportSize({ width, height: width < 500 ? 740 : 800 });
-  await page.goto(url);
-  await page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => {});
-  await expect(page.getByTestId("help-launcher")).toBeVisible();
-  // On a scrollable page an inline link under the floating button at scroll 0 is not blocked: the
-  // user scrolls it clear (the bottom check below covers the end of the page). Only a page that
-  // cannot scroll must be clean at the top, because there the overlap would be permanent.
-  const scrollable = await page.evaluate(
-    () => document.documentElement.scrollHeight > window.innerHeight + 4,
-  );
-  if (!scrollable) {
-    expect(await coveredByLauncher(page), `${url} @${width} top`).toEqual([]);
-  }
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-  await page.waitForTimeout(300);
-  expect(await coveredByLauncher(page), `${url} @${width} bottom`).toEqual([]);
-}
-
 const seen = (page: Page) =>
   page.context().addCookies([{ name: "ck_cookie_notice", value: "seen", url: SITE }]);
 
 for (const width of WIDTHS) {
-  test(`site pages: launcher covers nothing @${width}`, async ({ page }) => {
-    // Cookie notice stays visible on purpose: it is one of the things that must not be covered.
-    for (const p of [
-      "/",
-      "/products",
-      "/products/tradeflow",
-      "/contact",
-      "/services",
-      "/legal/privacy",
-    ])
-      await checkPage(page, `${SITE}${p}`, width);
+  test(`site pages: anonymous visitors get no launcher @${width}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: width < 500 ? 740 : 800 });
+    for (const p of ["/", "/products", "/products/tradeflow", "/contact", "/services"]) {
+      await page.goto(`${SITE}${p}`);
+      await page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => {});
+      await expect(page.getByTestId("help-launcher"), p).toHaveCount(0);
+    }
   });
 
-  test(`account pages: launcher covers nothing @${width}`, async ({ page }) => {
+  test(`account pages: customers get no launcher @${width}`, async ({ page }) => {
     await seen(page);
     await loginAs(page, "customer");
-    for (const p of [
-      "/account",
-      "/account/orders",
-      "/account/purchases",
-      "/account/queries",
-      "/account/chat",
-      "/account/quotes",
-      "/account/settings",
-    ])
-      await checkPage(page, `${SITE}${p}`, width);
+    await page.setViewportSize({ width, height: width < 500 ? 740 : 800 });
+    for (const p of ["/account", "/account/orders", "/account/purchases", "/account/chat"]) {
+      await page.goto(`${SITE}${p}`);
+      await page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => {});
+      await expect(page.getByTestId("help-launcher"), p).toHaveCount(0);
+    }
   });
 }
 

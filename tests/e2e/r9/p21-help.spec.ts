@@ -6,7 +6,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import fs from "node:fs";
-import { SITE, WIDTHS } from "./helpers";
+import { ADMIN, SITE, WIDTHS, loginAs } from "./helpers";
 
 test.setTimeout(60_000);
 const THEMES = ["dark-cinematic", "light-editorial"] as const;
@@ -14,18 +14,27 @@ const SHOTS = "test-results/p21-help";
 
 const ANSWER = {
   answer:
-    "To download a purchase:\n1. Open **Purchases** from your account.\n2. Pick the product.\n3. Press **Download**.\n\n[evil](https://evil.test) stays plain text.",
+    "To create a quote:\n1. Open **Quotes** from the admin menu.\n2. Press **New quote**.\n3. Pick the customer.\n\n[evil](https://evil.test) stays plain text.",
   sources: [
-    { id: "purchases-download", title: "Downloading a purchase" },
+    { id: "create-quote", title: "Creating a quote" },
     { id: "unknown-guide", title: "Getting started" },
   ],
   mode: "guide",
 };
 
-async function setup(page: Page, theme: string, width: number, answer: unknown = ANSWER) {
+/** The launcher is staff/partner/admin only (P22-1): UI specs use the admin top bar, signed in. */
+async function setup(
+  page: Page,
+  theme: string,
+  width: number,
+  answer: unknown = ANSWER,
+  role: "staff" | "admin" | "super_admin" | null = "super_admin",
+) {
+  if (role) await loginAs(page, role);
   await page.setViewportSize({ width, height: width < 500 ? 740 : 800 });
   await page.context().addCookies([
     { name: "ck_theme", value: theme, url: SITE },
+    { name: "ck_theme", value: theme, url: ADMIN },
     { name: "ck_cookie_notice", value: "seen", url: SITE },
   ]);
   await page.route("**/api/help/ask", async (route) => {
@@ -55,15 +64,14 @@ for (const theme of THEMES)
       fs.mkdirSync(SHOTS, { recursive: true });
       const csp = watchCsp(page);
       await setup(page, theme, width);
-      await page.goto(`${SITE}/`);
+      await page.goto(`${ADMIN}/admin/dashboard`);
       const launcher = page.getByTestId("help-launcher");
       await expect(launcher).toBeVisible();
       await noOverflow(page);
       await page.screenshot({ path: `${SHOTS}/${theme}-${width}-0-launcher.png` });
 
-      // "?" opens (page body focused)
-      await page.locator("body").click({ position: { x: 5, y: 300 } });
-      await page.keyboard.press("?");
+      // Admin top-bar trigger opens the dialog (no floating "?" shortcut there)
+      await launcher.click();
       const panel = page.getByTestId("help-panel");
       await expect(panel).toBeVisible();
       await expect(page.getByTestId("help-panel").getByRole("textbox")).toBeFocused();
@@ -93,10 +101,10 @@ for (const theme of THEMES)
       // First suggestion chip (the text comes from knowledge/suggestions.json, so do not hard-code it).
       await panel.locator("ul button").first().click();
       await expect(page.getByTestId("help-typing")).toBeVisible();
-      await expect(page.getByTestId("help-answer")).toContainText("Open Purchases");
-      await expect(panel.getByRole("link", { name: /downloading a purchase/i })).toHaveAttribute(
+      await expect(page.getByTestId("help-answer")).toContainText("Open Quotes");
+      await expect(panel.getByRole("link", { name: /creating a quote/i })).toHaveAttribute(
         "href",
-        "/account/purchases",
+        "/quotes",
       );
       expect(await panel.locator('a[href^="http"]').count()).toBe(0);
       await page.waitForTimeout(300);
@@ -116,7 +124,7 @@ test("error and search-only states", async ({ page }) => {
     sources: [],
     mode: "search",
   });
-  await page.goto(`${SITE}/`);
+  await page.goto(`${ADMIN}/admin/dashboard`);
   await page.getByTestId("help-launcher").click();
   await page.getByTestId("help-panel").getByRole("textbox").fill("budget question");
   await page.keyboard.press("Enter");
@@ -143,7 +151,7 @@ test("mic: live interim text, listening state, stop on second tap", async ({ pag
     window.webkitSpeechRecognition = R; window.SpeechRecognition = R;
   })();`);
   await setup(page, "light-editorial", 375);
-  await page.goto(`${SITE}/`);
+  await page.goto(`${ADMIN}/admin/dashboard`);
   await page.getByTestId("help-launcher").click();
   await page.getByTestId("help-mic").click();
   await expect(page.getByTestId("help-listening")).toBeVisible();
@@ -161,8 +169,43 @@ test("mic hidden when unsupported", async ({ page }) => {
     delete (window as unknown as Record<string, unknown>).SpeechRecognition;
   });
   await setup(page, "dark-cinematic", 1280);
-  await page.goto(`${SITE}/`);
+  await page.goto(`${ADMIN}/admin/dashboard`);
   await page.getByTestId("help-launcher").click();
   await expect(page.getByTestId("help-panel")).toBeVisible();
   await expect(page.getByTestId("help-mic")).toHaveCount(0);
 });
+
+test("anonymous visitor: no launcher on the public site, API says off", async ({ page }) => {
+  await setup(page, "dark-cinematic", 1280, ANSWER, null);
+  for (const p of ["/", "/products", "/contact"]) {
+    await page.goto(`${SITE}${p}`);
+    await page.waitForLoadState("networkidle").catch(() => {});
+    await expect(page.getByTestId("help-launcher")).toHaveCount(0);
+  }
+  await page.unroute("**/api/help/ask");
+  const res = await page.request.post(`${SITE}/api/help/ask`, { data: { query: "hello" } });
+  expect(res.status()).toBe(404);
+  expect(await res.json()).toEqual({ mode: "off" });
+});
+
+test("customer: no launcher on site or account pages, API says off", async ({ page }) => {
+  await page.context().addCookies([{ name: "ck_cookie_notice", value: "seen", url: SITE }]);
+  await loginAs(page, "customer");
+  for (const p of ["/", "/account", "/account/orders"]) {
+    await page.goto(`${SITE}${p}`);
+    await page.waitForLoadState("networkidle").catch(() => {});
+    await expect(page.getByTestId("help-launcher")).toHaveCount(0);
+  }
+  const res = await page.request.post(`${SITE}/api/help/ask`, { data: { query: "hello" } });
+  expect(res.status()).toBe(404);
+  expect(await res.json()).toEqual({ mode: "off" });
+});
+
+for (const role of ["staff", "admin", "super_admin"] as const)
+  test(`${role}: launcher in the admin top bar, none on the public site`, async ({ page }) => {
+    await loginAs(page, role);
+    await page.goto(`${ADMIN}/admin/dashboard`);
+    await expect(page.getByTestId("help-launcher")).toBeVisible();
+    await page.goto(`${SITE}/`);
+    await expect(page.getByTestId("help-launcher")).toHaveCount(0);
+  });

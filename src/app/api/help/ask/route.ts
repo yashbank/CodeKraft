@@ -1,4 +1,4 @@
-/** POST /api/help/ask — help assistant (P21). Anonymous = customer-level public help. */
+/** POST /api/help/ask — help assistant (P21). P22-1: staff, partners and admins only; customers and anonymous get 404 {mode:"off"}. */
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { resolveRouteContext } from "@/lib/authz/resolve-route-context";
@@ -6,7 +6,7 @@ import { isAppError } from "@/lib/errors";
 import { MINUTE_MS, rateLimit } from "@/lib/rate-limit";
 import { answerQuestion, MAX_QUERY_CHARS } from "@/modules/help/answer";
 import { getHelpConfig } from "@/modules/help/config";
-import type { HelpRole } from "@/modules/help/knowledge";
+import { findPartnerId, helpAllowed, helpRoleFromRoles } from "@/modules/help/role";
 
 const MAX_BODY_BYTES = 2048;
 const FLOOD_LIMIT = 40;
@@ -19,15 +19,20 @@ const bodySchema = z.strictObject({
 const err = (message: string, status: number, extra: Record<string, unknown> = {}) =>
   NextResponse.json({ ok: false, error: message, ...extra }, { status });
 
-function helpRole(roles: readonly string[], partnerId: string | undefined): HelpRole {
-  if (roles.includes("super_admin")) return "super_admin";
-  if (roles.includes("admin")) return "admin";
-  if (roles.includes("staff")) return "staff";
-  return partnerId ? "partner" : "customer";
-}
-
 export async function POST(req: Request) {
   try {
+    // Role gate first: customers and anonymous visitors get nothing, before any other work.
+    const ctx = await resolveRouteContext(req);
+    const partnerId =
+      ctx.partnerId ??
+      (ctx.userId && !helpAllowed(helpRoleFromRoles(ctx.roles, undefined))
+        ? await findPartnerId(ctx.userId)
+        : undefined);
+    const role = helpRoleFromRoles(ctx.roles, partnerId);
+    if (!ctx.userId || !helpAllowed(role)) {
+      return NextResponse.json({ mode: "off" }, { status: 404 });
+    }
+
     const cfg = await getHelpConfig();
     if (!cfg.enabled) return NextResponse.json({ mode: "off" }, { status: 404 });
 
@@ -48,8 +53,7 @@ export async function POST(req: Request) {
     const { query, locale } = parsed.data;
     if (locale === "hi" && !cfg.hindi) return err("Language not available", 400);
 
-    const ctx = await resolveRouteContext(req);
-    const subject = ctx.userId ?? `ip:${ctx.ip ?? "unknown"}`;
+    const subject = ctx.userId;
     const flood = await rateLimit(`help:ask:${subject}`, FLOOD_LIMIT, 10 * MINUTE_MS);
     if (!flood.allowed) {
       return err("Too many questions. Try again later.", 429, {
@@ -60,7 +64,7 @@ export async function POST(req: Request) {
     const result = await answerQuestion({
       query,
       locale,
-      role: helpRole(ctx.roles, ctx.partnerId),
+      role,
       userId: ctx.userId,
       ip: ctx.ip ?? null,
     });

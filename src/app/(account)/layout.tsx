@@ -12,7 +12,6 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/modules/auth/service";
 import { getDisplayCurrency } from "@/lib/display-currency";
 import { getRateTable } from "@/lib/rate-table";
-import { HelpMount } from "@/components/help/HelpMount";
 import { ViewerCurrencyProvider } from "@/components/account/ViewerMoney";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +36,6 @@ export default async function AccountLayout({ children }: { children: React.Reac
         {children}
       </ViewerCurrencyProvider>
       <Toaster />
-      <HelpMount audience="customer" area="account" />
     </div>
   );
 }
