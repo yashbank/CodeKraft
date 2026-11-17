@@ -486,7 +486,12 @@ async function auditPage(page: Page, width: number): Promise<Raw[]> {
           getComputedStyle(fixedAnc).position !== "sticky"
         )
           fixedAnc = fixedAnc.parentElement;
-        if (fixedAnc && !fixedAnc.contains(el) && tcs.pointerEvents !== "none")
+        // A sticky (not fixed) header in the upper half only hides content that has scrolled under it.
+        const scrolledUnder =
+          !!fixedAnc &&
+          getComputedStyle(fixedAnc).position === "sticky" &&
+          fixedAnc.getBoundingClientRect().top < ih / 2;
+        if (fixedAnc && !scrolledUnder && !fixedAnc.contains(el) && tcs.pointerEvents !== "none")
           covered.push(`${desc(el)} covered by ${desc(fixedAnc)}`);
       }
     }
