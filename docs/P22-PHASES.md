@@ -8,5 +8,5 @@ Owner decisions: customers get NO help button/API (they have queries + chatbot).
 | 2 | Guides per dashboard widget/screen (overdue follow-ups, leads, orders, etc.) for staff/partner/admin, EN (+HI), each guide has `links:` frontmatter (label+path) | qa/p22-2-guides | DONE 158e858 |
 | 3 | Rich answers: summary + steps + role-checked "Open screen" link buttons + Related chips; no extra tokens | qa/p22-3-rich | DONE d31965e |
 | 4 | Responsive audit all roles 320/375/768/1024/1280/1920: spec + docs/P22-RESPONSIVE.md findings (no source fixes) | qa/p22-4-audit | DONE 3222137 |
-| 5 | Fix audit findings + UI polish | qa/p22-5-polish | TODO |
-| 6 | Integration merge + full gate | qa/p22-integration | TODO |
+| 5 | Fix audit findings + UI polish | qa/p22-5a/b/c | DONE (e92cfcd, d813604, 52d9ad8) |
+| 6 | Integration merge + full gate | qa/p22-integration | DONE: A 102/102 x3, B 442/442 x3, unit 2096/2096, responsive audit green |
