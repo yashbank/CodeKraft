@@ -68,7 +68,7 @@ export async function getHelpConfig(): Promise<HelpConfig> {
 /** Monthly help token budget shown in Settings (env override; the answer backend enforces its own). */
 export function helpMonthlyTokenBudget(): number {
   const n = Number(process.env.HELP_MONTHLY_TOKEN_BUDGET);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 500_000;
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 400_000;
 }
 
 /** This month's help tokens used: `rate_limit_buckets` key `help:budget:YYYY-MM`; 0 when absent. */

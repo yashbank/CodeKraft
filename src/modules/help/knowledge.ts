@@ -15,14 +15,22 @@ export interface KnowledgeEntry {
   roles: HelpRole[];
   keywords: string[];
   body: string;
+  locale: HelpLocale;
 }
 
-const DATA = generated as Record<HelpLocale, KnowledgeEntry[]>;
+const RAW = generated as Record<HelpLocale, Omit<KnowledgeEntry, "locale">[]>;
+const DATA: Record<HelpLocale, KnowledgeEntry[]> = {
+  en: RAW.en.map((e) => ({ ...e, locale: "en" as const })),
+  hi: RAW.hi.map((e) => ({ ...e, locale: "hi" as const })),
+};
 
 /** All guides for a locale (falls back to English for unknown locales). */
 export function getKnowledge(locale: HelpLocale = "en"): readonly KnowledgeEntry[] {
   return DATA[locale] ?? DATA.en;
 }
+
+/** Every guide in every locale; search picks the requested locale and falls back to English. */
+export const knowledgeEntries: readonly KnowledgeEntry[] = [...DATA.en, ...DATA.hi];
 
 /** Guides visible to a role. Anonymous visitors should be passed as "customer". */
 export function getKnowledgeForRole(role: HelpRole, locale: HelpLocale = "en"): KnowledgeEntry[] {

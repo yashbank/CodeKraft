@@ -35,7 +35,7 @@ export const MAX_ANSWER_CHARS = 900;
 export const GUIDE_ANSWER_CHARS = 1500;
 export const AI_CAP_USER = 30;
 export const AI_CAP_ANON = 10;
-export const DEFAULT_MONTHLY_BUDGET = 400_000;
+export const DEFAULT_MONTHLY_BUDGET = 400_000; // keep equal to config.ts helpMonthlyTokenBudget default
 const MONTH_WINDOW_MS = 32 * DAY_MS;
 
 export const SYSTEM_PROMPT =
