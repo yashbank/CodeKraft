@@ -1,3 +1,61 @@
+<div align="center">
+
+# CodeKraft
+
+**A white-label software-studio website and digital-product marketplace, with a full admin command centre.**
+
+[Live site](https://crestlinetechnologies.in) · [Architecture](diagrams/system-architecture.md) · [Engineering blueprint](#engineering-blueprint)
+
+![Next.js](https://img.shields.io/badge/Next.js-15-000?logo=nextdotjs) ![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white) ![Postgres](https://img.shields.io/badge/Neon-Postgres-00E599?logo=postgresql&logoColor=white) ![Drizzle](https://img.shields.io/badge/Drizzle-ORM-C5F74F) ![Playwright](https://img.shields.io/badge/E2E-Playwright-2EAD33?logo=playwright&logoColor=white) ![Vercel](https://img.shields.io/badge/Deployed-Vercel-000?logo=vercel)
+
+</div>
+
+CodeKraft is a **product by Crestline Technologies**. It replaces the spreadsheets, chat threads and manual payment checks a small studio runs on with one system: a public storefront, a customer portal, and an admin command centre. It was designed spec-first (BRD to SRS to screen specs) and built with AI coding agents under strict architectural rules, then hardened for production.
+
+## What it does
+
+| Area | Highlights |
+|---|---|
+| **Storefront** | Product catalog, offerings, blog, SEO, live theme studio |
+| **Customer portal** | Orders, downloads, licences, invoices, subscriptions |
+| **Payments** | Razorpay checkout and webhooks, coupons, quotes, multi-currency (FX) |
+| **Finance** | Append-only ledger, reports, automatic partner allocations |
+| **Admin command centre** | 22-widget dashboard, leads and follow-ups, guided product editor |
+| **Governance** | Role-based access, team invites, second-approval on sensitive actions, audit log, feature flags |
+| **AI** | Built-in AI assistant for admin workflows |
+
+## Engineering at a glance
+
+- **~1,000 TS/TSX source files, 147 pages, 26 API routes, 540+ test files**
+- **Modular domain layer** (`src/modules/*`): finance, payments, orders, entitlements, approvals, invoices, auth, chat, media and more
+- **Security by design:** server-side authorization everywhere, approvals for money-moving actions, immutable ledger entries
+- **Quality gates in CI:** lint, typecheck, Vitest (unit and integration against real Postgres), Playwright e2e (desktop and mobile, site and admin), Lighthouse CI and bundle-size budgets
+- **Observability:** Sentry on server, edge and client
+- **Coverage thresholds enforced per module** (for example 100% on authorization and money math)
+
+## Stack
+
+Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · Zod · Drizzle ORM · Neon Postgres · Better Auth (Google sign-in) · Cloudflare R2 · Resend · Razorpay · Sentry · Vitest · Playwright · pnpm · Vercel
+
+## Architecture
+
+```
+Browser ──> Next.js (site + admin, split by host) ──> server modules (authz, validation, audit)
+                                                          ├──> Drizzle ──> Neon Postgres
+                                                          ├──> Cloudflare R2 (files)
+                                                          ├──> Resend (email)
+                                                          └──> Razorpay (payments, webhooks)
+```
+
+Full diagrams: [`diagrams/`](diagrams/) (61 Mermaid diagrams covering system, data, payments and delivery).
+
+## How it was built
+
+Specification first, agents second. Every decision is logged in [`discovery/00-DECISION-LOG.md`](discovery/00-DECISION-LOG.md); every screen has a spec; work was split into dependency-ordered phases with tests gating each one. Built in personal time by [Yash Bankar](https://github.com/yashbank) at Crestline Technologies, using Claude Code and other AI agents under human-owned architecture and review.
+
+---
+
+<a id="engineering-blueprint"></a>
 # CodeKraft — Engineering Blueprint
 
 Premium software-studio website + company-owned digital-product marketplace, specified end to end for AI-assisted implementation.
