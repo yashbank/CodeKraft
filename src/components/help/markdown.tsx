@@ -33,7 +33,7 @@ export function parseBlocks(src: string): Block[] {
 
 const INLINE = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)\s]+\))/g;
 
-function inline(text: string, keyBase: string): React.ReactNode[] {
+export function inline(text: string, keyBase: string): React.ReactNode[] {
   return text.split(INLINE).map((part, i) => {
     const key = `${keyBase}-${i}`;
     if (part.startsWith("**") && part.endsWith("**") && part.length > 4)

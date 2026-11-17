@@ -9,10 +9,22 @@ export interface HelpSource {
   path?: string;
 }
 
+export interface HelpLink {
+  label: string;
+  /** Same-site path; "/admin/<screen>" means the admin host. */
+  path: string;
+}
+export interface HelpRelated {
+  id: string;
+  title: string;
+}
+
 export interface AskResponse {
   answer: string;
   sources: HelpSource[];
   mode: HelpMode;
+  links?: HelpLink[];
+  related?: HelpRelated[];
 }
 
 export type Suggestions = Record<HelpLocale, string[]>;
