@@ -347,6 +347,7 @@ const SAVEABLE_SECTIONS: readonly string[] = [
   "currencies",
   "tax",
   "ai",
+  "help",
   "retention",
   "theme",
   "notifications",
@@ -382,6 +383,7 @@ const SECTIONS = [
   ["payment-methods", "Payment methods"],
   ["theme", "Theme"],
   ["ai", "AI"],
+  ["help", "Help assistant"],
   ["notifications", "Email & notifications"],
   ["flags", "Feature flags"],
   ["retention", "Retention"],
@@ -476,6 +478,10 @@ export interface SettingsScreenProps {
   isSuperAdmin: boolean;
   /** Current site phase (super admin only can change it); defaults to live. */
   sitePhase?: SitePhase;
+  /** Help assistant switches (defaults: on, Hindi off, AI on). */
+  help?: { enabled: boolean; hindi: boolean; ai: boolean };
+  /** This month's help token usage vs budget (read-only). */
+  helpUsage?: { used: number; budget: number };
   initialSection?: SectionKey;
   chatbotHref: string;
   auditHref: string;
@@ -541,6 +547,8 @@ export function SettingsScreen({
   settings: s,
   isSuperAdmin,
   sitePhase: savedPhase = "live",
+  help: savedHelp = { enabled: true, hindi: false, ai: true },
+  helpUsage = { used: 0, budget: 0 },
   initialSection = "general",
   chatbotHref,
   auditHref,
@@ -558,6 +566,7 @@ export function SettingsScreen({
   const formRef = React.useRef<HTMLFormElement>(null);
   const [theme, setTheme] = React.useState(s.theme.defaultTheme);
   const [phase, setPhase] = React.useState<SitePhase>(savedPhase);
+  const [help, setHelp] = React.useState(savedHelp);
   const [refreshInv, setRefreshInv] = React.useState(s.general.refreshOldInvoices);
   const [themeToggle, setThemeToggle] = React.useState(s.theme.toggle);
   const studioFromSaved = (): StudioValues =>
@@ -585,6 +594,7 @@ export function SettingsScreen({
     setEnabledCurrencies(s.currencies.enabled);
     setTheme(s.theme.defaultTheme);
     setThemeToggle(s.theme.toggle);
+    setHelp(savedHelp);
     setStudio(studioFromSaved());
   }
 
@@ -683,6 +693,12 @@ export function SettingsScreen({
         aiDailyPlatformCap: Number(val("st-cap")),
         aiDailyUserCap: Number(val("st-user-cap")),
         chatTimeoutMs: Math.round(Number(val("st-timeout")) * 1000),
+      };
+    } else if (section === "help") {
+      patch = {
+        helpEnabled: help.enabled,
+        helpHindiEnabled: help.hindi,
+        helpAiEnabled: help.ai,
       };
     } else if (section === "notifications") {
       patch = {
@@ -1183,6 +1199,54 @@ export function SettingsScreen({
                 <a href={chatbotHref}>Chatbot › Prompts</a>
               </Button>
             </>
+          ) : null}
+
+          {section === "help" ? (
+            <div className="space-y-4" data-testid="help-settings-card">
+              <p className="text-body-sm text-fg-muted">
+                Why this matters: the help assistant answers visitors&rsquo; questions in a small
+                pop-up. Only a super admin can change these.
+              </p>
+              {(
+                [
+                  [
+                    "enabled",
+                    "Ask me anything pop-up",
+                    "Shows the help button on the site, account and admin pages.",
+                  ],
+                  ["hindi", "Hindi language", "Lets people ask and read answers in Hindi."],
+                  [
+                    "ai",
+                    "AI-written answers",
+                    "Uses small model budget. Off = free guide-only mode.",
+                  ],
+                ] as const
+              ).map(([k, label, hint]) => (
+                <div key={k} className="flex items-start gap-3">
+                  <Switch
+                    id={`help-${k}`}
+                    data-testid={`help-toggle-${k}`}
+                    checked={help[k]}
+                    onCheckedChange={(v) => setHelp((h) => ({ ...h, [k]: v }))}
+                    disabled={ro}
+                  />
+                  <div>
+                    <Label htmlFor={`help-${k}`}>{label}</Label>
+                    <p className="text-caption text-fg-muted">{hint}</p>
+                  </div>
+                </div>
+              ))}
+              <p className="text-body-sm text-fg-muted" data-testid="help-usage">
+                Help tokens used this month:{" "}
+                <span className="font-mono">{helpUsage.used.toLocaleString("en-US")}</span>
+                {helpUsage.budget > 0 ? (
+                  <>
+                    {" "}
+                    of <span className="font-mono">{helpUsage.budget.toLocaleString("en-US")}</span>
+                  </>
+                ) : null}
+              </p>
+            </div>
           ) : null}
 
           {section === "notifications" ? (
