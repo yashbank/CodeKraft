@@ -1,6 +1,8 @@
 <div align="center">
 
-# CodeKraft
+<img src="assets/hero.svg" alt="CodeKraft" width="100%"/>
+
+<img src="https://readme-typing-svg.demolab.com?font=Inter&weight=700&size=22&duration=2600&pause=900&color=A78BFA&center=true&vCenter=true&width=900&lines=Premium+storefront.+Real+finance+engine.;Approvals%2C+audit+log+and+an+append-only+ledger;Spec-first%2C+AI-built%2C+production-hardened" alt="typing"/>
 
 **A white-label software-studio website and digital-product marketplace, with a full admin command centre.**
 
@@ -35,16 +37,22 @@ CodeKraft is a **product by Crestline Technologies**. It replaces the spreadshee
 
 ## Stack
 
+<img src="https://skillicons.dev/icons?i=nextjs,react,ts,tailwind,postgres,docker,vercel,github,playwright&perline=9" alt="stack"/>
+
 Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · Zod · Drizzle ORM · Neon Postgres · Better Auth (Google sign-in) · Cloudflare R2 · Resend · Razorpay · Sentry · Vitest · Playwright · pnpm · Vercel
 
 ## Architecture
 
-```
-Browser ──> Next.js (site + admin, split by host) ──> server modules (authz, validation, audit)
-                                                          ├──> Drizzle ──> Neon Postgres
-                                                          ├──> Cloudflare R2 (files)
-                                                          ├──> Resend (email)
-                                                          └──> Razorpay (payments, webhooks)
+```mermaid
+flowchart LR
+  U[Browser] --> N[Next.js<br/>site + admin by host]
+  N --> M[Server modules<br/>authz · validation · audit]
+  M --> DB[(Neon Postgres<br/>via Drizzle)]
+  M --> R2[Cloudflare R2<br/>files]
+  M --> RS[Resend<br/>email]
+  M --> RP[Razorpay<br/>payments + webhooks]
+  style N fill:#a78bfa,color:#000
+  style DB fill:#00e599,color:#000
 ```
 
 Full diagrams: [`diagrams/`](diagrams/) (61 Mermaid diagrams covering system, data, payments and delivery).
