@@ -207,7 +207,8 @@ describe("HelpLauncher", () => {
   });
 
   it("greets by role and uses suggestion chips", async () => {
-    render(<HelpLauncher role="admin" suggestions={{ en: ["Refund an order"], hi: ["x"] }} />);
+    const who = "admin" as const;
+    render(<HelpLauncher role={who} suggestions={{ en: ["Refund an order"], hi: ["x"] }} />);
     const user = await openPanel();
     expect(screen.getByRole("dialog")).toHaveTextContent(/admin/i);
     await user.click(screen.getByRole("button", { name: "Refund an order" }));
