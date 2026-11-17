@@ -113,3 +113,8 @@ body:has([data-sticky-bar="queries"][data-visible="true"])
     bottom: calc(14rem + env(safe-area-inset-bottom));
   }
 }
+
+/* P22 admin: pages with a sticky bottom save bar keep focused/scrolled-to inputs clear of it. */
+html:has([data-sticky-savebar]) {
+  scroll-padding-bottom: 5rem;
+}

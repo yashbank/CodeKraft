@@ -406,7 +406,7 @@ export function ManualOrderForm({
             {type === "product" ? (
               <div className="space-y-2">
                 {productLines.map((l, i) => (
-                  <div key={l.id} className="grid grid-cols-[1fr_80px_40px] items-end gap-2">
+                  <div key={l.id} className="grid grid-cols-[minmax(0,1fr)_104px_40px] items-end gap-2">
                     <Field id={`mo-off-${l.id}`} label={`Offering ${i + 1}`} required>
                       <Select
                         value={l.offeringId}
@@ -475,7 +475,7 @@ export function ManualOrderForm({
                     key={l.id}
                     className="space-y-3 rounded-lg border border-border bg-surface p-4"
                   >
-                    <div className="grid grid-cols-[1fr_72px_160px_40px] items-end gap-2">
+                    <div className="grid grid-cols-[minmax(0,1fr)_104px_40px] items-end gap-2 xl:grid-cols-[minmax(0,1fr)_104px_160px_40px]">
                       <Field id={`mo-desc-${l.id}`} label={`Line ${i + 1} description`} required>
                         <Input
                           id={`mo-desc-${l.id}`}

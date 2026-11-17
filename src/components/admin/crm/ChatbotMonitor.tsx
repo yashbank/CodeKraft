@@ -307,7 +307,7 @@ export function ChatbotMonitor({
                     <span className="ml-2 text-caption text-fg-muted">Loading…</span>
                   ) : null}
                 </h2>
-                <span className="ml-auto flex gap-1">
+                <span className="ml-auto flex flex-wrap gap-1">
                   <Button asChild size="sm" variant="ghost">
                     <Link href={queriesHref}>Open escalated query</Link>
                   </Button>

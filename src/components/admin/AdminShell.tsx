@@ -555,7 +555,7 @@ export function AdminShell({
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  className="grid size-10 place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   aria-label={`Account menu for ${user.name}`}
                 >
                   <Avatar>

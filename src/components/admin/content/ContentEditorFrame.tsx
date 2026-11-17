@@ -137,7 +137,7 @@ export function ContentEditorFrame({
         {panel ? <aside className="space-y-4">{panel}</aside> : null}
       </div>
       {hideSaveBar ? null : (
-        <div className="sticky bottom-0 mt-6 -mx-4 flex items-center gap-3 border-t border-border bg-canvas px-4 py-3 lg:-mx-6 lg:px-6">
+        <div data-sticky-savebar className="sticky bottom-0 mt-6 -mx-4 flex items-center gap-3 border-t border-border bg-canvas px-4 py-3 lg:-mx-6 lg:px-6">
           <span className="text-caption text-fg-muted" aria-live="polite">
             {dirty ? "Unsaved changes" : `Saved ${savedAgoSeconds} s ago`}
           </span>
