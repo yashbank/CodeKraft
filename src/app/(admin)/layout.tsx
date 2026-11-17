@@ -8,6 +8,7 @@ import { AdminForbidden } from "@/components/admin/AdminForbidden";
 import { DEFAULT_ADMIN_ICON } from "@/lib/brand-constants";
 import { areaMetadata } from "@/lib/seo";
 import { getSiteLogo, getSiteName, getThemeConfig } from "@/lib/site-brand";
+import { HelpMount } from "@/components/help/HelpMount";
 import { ThemeSync } from "@/components/site/ThemeSync";
 import { isThemePref } from "@/lib/theme";
 import { redirectToLogin } from "@/lib/authz/login-redirect";
@@ -44,6 +45,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div data-app="admin">
       {themeToggle ? <ThemeSync pref={isThemePref(themePref) ? themePref : null} /> : null}
       {children}
+      <HelpMount
+        audience={
+          roles.includes("super_admin")
+            ? "super_admin"
+            : roles.includes("admin")
+              ? "admin"
+              : "staff"
+        }
+        area="admin"
+      />
     </div>
   );
 }

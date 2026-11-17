@@ -21,7 +21,7 @@ export function CookieNotice() {
     <div
       role="region"
       aria-label="Cookie notice"
-      className="fixed print:hidden bottom-3 left-3 z-50 max-w-xs rounded-lg border border-border bg-surface p-3 text-caption text-fg-muted shadow-lg max-sm:right-3 max-sm:max-w-none"
+      className="fixed print:hidden bottom-3 left-3 z-50 max-w-xs rounded-lg border border-border bg-surface p-3 text-caption text-fg-muted shadow-lg max-sm:right-20 max-sm:max-w-none"
     >
       <p>
         We only use essential cookies (sign-in, theme, currency). No tracking.{" "}
