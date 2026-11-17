@@ -17,6 +17,12 @@ export interface KnowledgeEntry {
   roles: HelpRole[];
   keywords: string[];
   body: string;
+  /** Optional "open this screen" targets (frontmatter `links:`), omitted when a guide has none. */
+  links?: GuideLink[];
+}
+export interface GuideLink {
+  label: string;
+  path: string;
 }
 export type KnowledgeData = Record<HelpLocale, KnowledgeEntry[]>;
 
@@ -66,13 +72,52 @@ export function parseGuide(raw: string, file: string): KnowledgeEntry {
     if (!r) throw new Error(`${file}: frontmatter list "${key}" missing`);
     return splitList(r[1] ?? "");
   };
+  const links = parseLinks(fm, file);
   return {
     id: scalar("id"),
     title: scalar("title"),
     roles: list("roles") as HelpRole[],
     keywords: list("keywords"),
     body: (m[2] ?? "").trim(),
+    ...(links.length > 0 ? { links } : {}),
   };
+}
+
+/**
+ * Optional block in the frontmatter:
+ *   links:
+ *     - label: Leads
+ *       path: /admin/leads
+ * Absent for older guides. Every item needs a label and a path starting with "/".
+ */
+function parseLinks(fm: string, file: string): GuideLink[] {
+  const lines = fm.split(/\r?\n/);
+  const start = lines.findIndex((l) => /^links:[ \t]*$/.test(l));
+  if (start === -1) return [];
+  const out: GuideLink[] = [];
+  let cur: Partial<GuideLink> | null = null;
+  const flush = () => {
+    if (!cur) return;
+    if (!cur.label || !cur.path || !cur.path.startsWith("/"))
+      throw new Error(`${file}: each link needs a label and a path starting with "/"`);
+    out.push({ label: cur.label, path: cur.path });
+    cur = null;
+  };
+  for (const line of lines.slice(start + 1)) {
+    if (line.trim() === "") continue;
+    if (!/^[ \t]/.test(line)) break;
+    const item = /^[ \t]*-[ \t]+(label|path):[ \t]*(.+)$/.exec(line);
+    const field = /^[ \t]+(label|path):[ \t]*(.+)$/.exec(line);
+    if (item) {
+      flush();
+      cur = {};
+      cur[item[1] as "label" | "path"] = unquote(item[2] ?? "");
+    } else if (field && cur) {
+      cur[field[1] as "label" | "path"] = unquote(field[2] ?? "");
+    } else throw new Error(`${file}: cannot parse links line "${line.trim()}"`);
+  }
+  flush();
+  return out;
 }
 
 export function buildKnowledge(dir: string = KNOWLEDGE_DIR): KnowledgeData {

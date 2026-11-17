@@ -12,6 +12,7 @@ export interface HelpHit {
   title: string;
   body: string;
   score: number;
+  links?: { label: string; path: string }[];
 }
 
 const K1 = 1.2;
@@ -132,6 +133,7 @@ export function searchHelp(
         title: doc.entry.title,
         body: doc.entry.body,
         score: Math.min(1, s / maxScore),
+        ...(doc.entry.links ? { links: doc.entry.links } : {}),
       });
     }
   }

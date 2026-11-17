@@ -15,6 +15,8 @@ export interface KnowledgeEntry {
   roles: HelpRole[];
   keywords: string[];
   body: string;
+  /** Optional screens to open (label + path, admin paths like /admin/leads). */
+  links?: { label: string; path: string }[];
   locale: HelpLocale;
 }
 

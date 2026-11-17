@@ -48,6 +48,30 @@
       "body": "1. Open Admin users, then the Login verification area (the Security button).\n2. Click Enable TOTP.\n3. Scan the QR code with an authenticator app, or copy the Manual secret.\n4. Enter the six-digit code under Confirm code.\nAt the next sign-in the admin login asks for \"Enter your authenticator code\". If you lose the phone, choose Use a backup code. Super admins can see who is covered under Login verification. Disable TOTP only when you have a replacement."
     },
     {
+      "id": "admin-system-menu",
+      "title": "Settings and admin users overview",
+      "roles": ["super_admin"],
+      "keywords": [
+        "admin screens",
+        "where is settings",
+        "where are admin users",
+        "system menu",
+        "settings screen",
+        "admin users screen"
+      ],
+      "body": "The System menu has Settings, Audit log and Admin users.\n1. Open Settings for theme, currency, payment methods and other site options.\n2. Open Audit log to see who changed what.\n3. Open Admin users to invite or manage admins and staff.",
+      "links": [
+        {
+          "label": "Settings",
+          "path": "/admin/settings"
+        },
+        {
+          "label": "Admin users",
+          "path": "/admin/admin-users"
+        }
+      ]
+    },
+    {
       "id": "admin-users-invite",
       "title": "Invite, change or remove an admin user",
       "roles": ["super_admin"],
@@ -79,6 +103,29 @@
         "approval kaise"
       ],
       "body": "Sensitive changes need a second person. These include product publish, project order split, ledger adjustment, payouts, ownership change, admin user change and Reset site data.\n1. Open Approvals (under Overview). The badge shows how many wait for you.\n2. Filter by type, then click a request.\n3. Read What will change, Before and After, and Who must approve.\n4. Click Approve or Reject.\nRequests you made appear in your own list, where you can use Cancel request. You can never approve your own request."
+    },
+    {
+      "id": "audit-log",
+      "title": "Audit log",
+      "roles": ["super_admin"],
+      "keywords": [
+        "audit log",
+        "audit",
+        "who changed",
+        "activity log",
+        "admin actions",
+        "history of changes",
+        "before after",
+        "request id",
+        "audit events"
+      ],
+      "body": "Audit log lists admin actions with Time, Actor, Action, Subject and Summary.\n1. Open Audit log. Filter by Actor, Action, Subject type, Subject id or From date.\n2. Click Expand on a row to see Before / after and the Request id.",
+      "links": [
+        {
+          "label": "Audit log",
+          "path": "/admin/audit"
+        }
+      ]
     },
     {
       "id": "cancel-refund-customer",
@@ -146,6 +193,140 @@
         "sampark karo"
       ],
       "body": "1. Open the site and click Contact (inquiry form) in the footer.\n2. Fill Full name and Work email. Phone and Company are optional.\n3. Pick What do you need? and add a Budget hint (optional).\n4. Write your Message.\n5. Click Send inquiry.\nA \"Sent to our team\" message confirms it, and a lead is created for the team to follow up. If you are signed in and have an order, use Queries instead so we can link it to your account. For a quick answer, use the Ask me anything help button."
+    },
+    {
+      "id": "content-blog",
+      "title": "Blog posts",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "blog",
+        "blog post",
+        "write article",
+        "publish blog",
+        "seo title",
+        "seo description",
+        "slug",
+        "excerpt",
+        "cover image"
+      ],
+      "body": "Blog manages posts on the public blog.\n1. Open Content, then Blog. Click Edit on a post or add one.\n2. Fill Title, Slug, Excerpt, Body, Cover image and optionally Product.\n3. Add SEO title and SEO description.\n4. Save, and set Published when ready.",
+      "links": [
+        {
+          "label": "Blog",
+          "path": "/admin/content/blog"
+        }
+      ]
+    },
+    {
+      "id": "content-case-studies",
+      "title": "Case studies content",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "case studies",
+        "case study",
+        "client story",
+        "portfolio",
+        "add case study",
+        "gallery",
+        "industry",
+        "result highlight"
+      ],
+      "body": "Case studies lists client stories with Title, Client, Industry, Status and Updated.\n1. Open Content, then Case studies.\n2. Click Edit or add one. Fill Client name, Industry, Problem, Result highlight, Cover image and Gallery.\n3. Set status Draft or Published and Save.\n4. Use Move up and Move down to order them.",
+      "links": [
+        {
+          "label": "Case studies",
+          "path": "/admin/content/case-studies"
+        }
+      ]
+    },
+    {
+      "id": "content-faqs",
+      "title": "FAQs",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "faq",
+        "faqs",
+        "frequently asked",
+        "add faq",
+        "chatbot answers",
+        "question answer",
+        "chatbot only"
+      ],
+      "body": "FAQs manages questions and answers shown on the site or used by the chatbot.\n1. Open Content, then FAQs. Filter by Scope: Site, Product or Chatbot-only.\n2. Click Edit or add one. Write the Question and answer.\n3. Set Published and Save.",
+      "links": [
+        {
+          "label": "FAQs",
+          "path": "/admin/content/faqs"
+        },
+        {
+          "label": "Chatbot",
+          "path": "/admin/chatbot"
+        }
+      ]
+    },
+    {
+      "id": "content-landing-services",
+      "title": "Services content",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "services",
+        "services page",
+        "edit service",
+        "service icon",
+        "service summary",
+        "site services",
+        "website services"
+      ],
+      "body": "Services edits the service cards shown on the public site.\n1. Open Content, then Services.\n2. Click Edit on a service or add one. Set Title, Slug, Summary, Icon and Body.\n3. Use Preview, then Save. Set Published to show it on the site.",
+      "links": [
+        {
+          "label": "Services",
+          "path": "/admin/content/services"
+        }
+      ]
+    },
+    {
+      "id": "content-legal",
+      "title": "Legal pages",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "legal",
+        "terms",
+        "privacy policy",
+        "refund policy",
+        "terms and conditions",
+        "legal pages",
+        "version history",
+        "change summary"
+      ],
+      "body": "Legal pages edits terms and policies, with version history.\n1. Open Content, then Legal. Pick a page.\n2. Edit Title and Body. Write a Change summary (internal note).\n3. Save. Use Version history to see earlier versions.",
+      "links": [
+        {
+          "label": "Legal",
+          "path": "/admin/content/legal"
+        }
+      ]
+    },
+    {
+      "id": "content-testimonials",
+      "title": "Testimonials and logos",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "testimonials",
+        "client logos",
+        "reviews",
+        "customer quote",
+        "add testimonial",
+        "logo",
+        "social proof"
+      ],
+      "body": "Testimonials & logos manages customer quotes and client logos on the site.\n1. Open Content, then Testimonials & logos.\n2. In Testimonials, add Quote, Author name, Author title, Company and Product.\n3. In Client logos, add Name, a logo image and a Link URL.\n4. Use Move earlier and Move later to order, and Published to show.",
+      "links": [
+        {
+          "label": "Testimonials & logos",
+          "path": "/admin/content/testimonials"
+        }
+      ]
     },
     {
       "id": "coupons",
@@ -228,6 +409,30 @@
       "body": "Chat:\n1. Open Chat from your account menu and ask about orders or products.\n2. For a person, click Talk to a human. A query is created and the team answers there.\n3. Use New conversation for a fresh start. Past conversations are kept.\nQueries:\n1. Open Queries and click New query.\n2. Write your message, attach files if needed, and send.\n3. Reply under Write a reply. Waiting on you means we need your answer.\n4. When fixed, click Mark resolved.\nYou must verify your email before chatting."
     },
     {
+      "id": "customers-list",
+      "title": "Customers list",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "customers",
+        "customer list",
+        "find customer",
+        "customer search",
+        "customer status",
+        "suspended customer",
+        "lifetime spend",
+        "customer tags",
+        "reset customer password",
+        "new manual order"
+      ],
+      "body": "Customers lists every customer account with Customer, Company / country, Status, Purchases, Lifetime spend, Open items, Joined and Last seen.\n1. Open Customers. Use the filters Status, Country, Tag, Has open order and Has active subscription.\n2. Open the row menu for Open, New quote, New manual order or Reset link / password.\n3. Open a customer to see their orders, queries and notes.\nTip: status can be Active, Suspended or Deleted.",
+      "links": [
+        {
+          "label": "Customers",
+          "path": "/admin/customers"
+        }
+      ]
+    },
+    {
       "id": "danger-zone-reset",
       "title": "Danger zone: reset site data (irreversible)",
       "roles": ["super_admin"],
@@ -242,6 +447,57 @@
         "reset site"
       ],
       "body": "Warning: this permanently deletes data and cannot be undone.\n1. Open Settings, then Danger zone.\n2. Under Data to delete tick what to remove. Use Preview row counts to see Rows to delete.\n3. Click Download backup. The request button stays disabled until you do.\n4. Click Request site reset.\n5. In the confirmation dialog type the site name exactly (the \"Type ... to confirm\" box), then click Confirm site reset request.\nNothing is deleted yet: a different super admin must approve it in Approvals. Super admin accounts, settings, roles, legal pages and the audit log are always kept."
+    },
+    {
+      "id": "dashboard-customise",
+      "title": "Customise the dashboard",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "customise dashboard",
+        "customize dashboard",
+        "add widget",
+        "remove widget",
+        "reorder widgets",
+        "edit layout",
+        "reset dashboard",
+        "change range",
+        "widget library",
+        "dashboard layout",
+        "refresh widget"
+      ],
+      "body": "You can choose which widgets the Dashboard shows, in what order, and for what date range.\n1. Open Dashboard. Use the Range list for Last 7 days, Last 30 days, Last 90 days or This FY.\n2. Click Customise to open the widget library and switch widgets on or off. You only see widgets your role may use.\n3. Click Edit layout to drag cards or use the move earlier and move later buttons. Click Done when finished.\n4. Use the refresh icon on a card to reload only that card, or its menu to Remove it.\n5. Click Reset to default to restore the standard layout.\nTip: your layout is saved for your own account.",
+      "links": [
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "delivery-tasks-screen",
+      "title": "Delivery tasks screen",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "delivery tasks",
+        "provision",
+        "revoke external",
+        "mark task done",
+        "task queue",
+        "assign delivery task",
+        "external account",
+        "delivery screen"
+      ],
+      "body": "Delivery tasks lists manual work after a sale: Provision and Revoke external tasks, with Product, Customer, Assigned to and Created.\n1. Open Delivery tasks. Use Filter by kind to see Provision or Revoke external.\n2. Open the row menu for Open order or Mark done.\n3. When done, click Mark done and add a Note if needed.\nTip: the Revocation tasks dashboard card links here.",
+      "links": [
+        {
+          "label": "Delivery tasks",
+          "path": "/admin/delivery-tasks"
+        },
+        {
+          "label": "Entitlements",
+          "path": "/admin/entitlements"
+        }
+      ]
     },
     {
       "id": "download-invoice-customer",
@@ -278,6 +534,57 @@
       "body": "1. Open Content, then Landing.\n2. Edit sections such as Who we are, What we build and What we sell. Change the Hero image with Upload image or Replace image.\n3. Set Primary CTA label, Primary CTA target and the secondary CTA.\n4. Under Featured products click Add product to pick published products.\n5. Save your work. A \"Saved n s ago\" or \"Unsaved changes\" note shows the state.\nOther pages live under Content too: Services, Case studies, Testimonials & logos, Blog, FAQs and Legal. Staff can edit but only admins can publish."
     },
     {
+      "id": "entitlements-screen",
+      "title": "Entitlements screen",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "entitlements",
+        "access",
+        "customer access",
+        "extend access",
+        "revoke access",
+        "reset downloads",
+        "service steps",
+        "mark delivered",
+        "downloads cap",
+        "subscription access"
+      ],
+      "body": "Entitlements lists what customers have access to, with Customer, Product, Type, Status, Access ends, Downloads and Provisioning.\n1. Open Entitlements. Filter by kind and status.\n2. Open the row menu for Extend, Revoke, Reset downloads, Service steps, Mark delivered, Create delivery task or Open order.\n3. For services, open Service steps and mark each step done.\nTip: Cap reached means the download limit is used.",
+      "links": [
+        {
+          "label": "Entitlements",
+          "path": "/admin/entitlements"
+        },
+        {
+          "label": "Delivery tasks",
+          "path": "/admin/delivery-tasks"
+        }
+      ]
+    },
+    {
+      "id": "finance-allocations",
+      "title": "Allocations screen",
+      "roles": ["admin", "super_admin", "partner"],
+      "keywords": [
+        "allocations",
+        "allocation",
+        "company cut",
+        "partner split",
+        "gateway fee",
+        "distributable",
+        "ownership version",
+        "how was order split",
+        "revenue split"
+      ],
+      "body": "Allocations shows how each order was split: Gross, Discount, Tax, Bank charge, Distributable, Company cut and each partner share.\n1. Open Finance, then Allocations.\n2. Filter by Product, Partner, Ownership version or From date.\n3. Click Expand on a row to see the breakdown.\nTip: partners see only their own share.",
+      "links": [
+        {
+          "label": "Allocations",
+          "path": "/admin/finance/allocations"
+        }
+      ]
+    },
+    {
       "id": "finance-ledger",
       "title": "Read the finance ledger, allocations and reports",
       "roles": ["admin", "super_admin", "partner"],
@@ -294,6 +601,30 @@
         "finance dekho"
       ],
       "body": "1. Open Finance (left menu). It expands into Ledger, Allocations, Partners & payouts, Expenses, Adjustments and Reports & statements.\n2. Ledger lists every Entry. Filter by Entry type, Party type or Order number. Entries are Immutable, so errors are fixed with an adjustment.\n3. Allocations shows how each sale splits: Company cut, Gateway fee, Bank charge and partner shares.\n4. In Reports & statements pick a period (This month, Last month, This FY), choose Partner, then click Generate statement and Download.\nPartners see only their own lines."
+    },
+    {
+      "id": "finance-reports",
+      "title": "Reports and statements",
+      "roles": ["admin", "super_admin", "partner"],
+      "keywords": [
+        "reports",
+        "statements",
+        "partner statement",
+        "generate statement",
+        "download report",
+        "finance report",
+        "monthly statement",
+        "customer credits",
+        "this fy",
+        "last month"
+      ],
+      "body": "Reports & statements builds finance reports and partner statements.\n1. Open Finance, then Reports & statements.\n2. Pick a period with the presets This month, Last month, This FY, Last FY or Custom.\n3. Choose Partner, Currency and Format.\n4. Click Generate statement. Generated statements lists past ones; use Regenerate (5-min link) to download again.\nTip: partners see only their own statements.",
+      "links": [
+        {
+          "label": "Reports",
+          "path": "/admin/finance/reports"
+        }
+      ]
     },
     {
       "id": "fulfil-order",
@@ -342,6 +673,34 @@
         "invoice download"
       ],
       "body": "Invoices are issued automatically when a payment is confirmed. There is no separate button to draft one.\n1. Open Orders and click the order.\n2. Confirm the order is paid (use Confirm payment first if it is not).\n3. Click More order actions.\n4. Choose Download invoice.\nThe option stays disabled until the order has an invoice number. Refunds produce a credit note automatically. The customer sees the same PDF under Invoices & payments."
+    },
+    {
+      "id": "leads-board",
+      "title": "Leads board and table",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "leads board",
+        "kanban",
+        "lead board",
+        "table view",
+        "board view",
+        "pipeline board",
+        "leads screen",
+        "lead status columns",
+        "all leads",
+        "lead list"
+      ],
+      "body": "Leads shows the same leads as a Table or as a Board of columns by status.\n1. Open Leads. Use the Table or Board switch to change the view.\n2. In the Table, use filters such as Unassigned pool, Overdue only, Priority and Source. Columns include Name, Source, Status, Priority, Assigned and Next follow-up.\n3. Open the row menu for Open, Assign to me, Set follow-up, Change status or Mark lost.\n4. Click New lead to add one by hand (source Manual).\nTip: Overdue only matches the Overdue follow-ups dashboard card.",
+      "links": [
+        {
+          "label": "Leads",
+          "path": "/admin/leads"
+        },
+        {
+          "label": "Leads board",
+          "path": "/admin/leads/board"
+        }
+      ]
     },
     {
       "id": "leads-priority",
@@ -393,6 +752,32 @@
         "notification kahan dekhein"
       ],
       "body": "1. Click the bell in the top bar. The number shows unread items.\n2. Click Mark all read to clear them, or View all to open the full page.\n3. On Notifications use Filter by type (for example Product updates) and the Unread filter.\n4. Click an item to jump to the order, query or product it is about.\nYou are told when a payment is confirmed, when access is ready, when support replies and when a product you own is updated. To stop some of these emails, go to Settings, then Notifications."
+    },
+    {
+      "id": "orders-list",
+      "title": "Orders list and queue",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "orders",
+        "order list",
+        "order queue",
+        "awaiting confirmation",
+        "confirm payment",
+        "mark failed",
+        "order status",
+        "find order",
+        "order no",
+        "download invoice",
+        "pending orders",
+        "payment confirmation"
+      ],
+      "body": "Orders has an Order queue of orders awaiting confirmation and a Full orders list.\n1. Open Orders. The Order queue shows orders with Awaiting confirmation status.\n2. Open the row menu for Open, Confirm payment, Mark failed, Cancel or Download invoice.\n3. Use filters such as Status, Type, Method and From to narrow the Full orders list.\n4. Click an order to see items, payment, invoice and timeline.\nTip: the Payments awaiting confirmation dashboard card links here.",
+      "links": [
+        {
+          "label": "Orders",
+          "path": "/admin/orders"
+        }
+      ]
     },
     {
       "id": "partners-payouts",
@@ -461,6 +846,34 @@
         "password badlo"
       ],
       "body": "Change details:\n1. Open Settings from the account menu.\n2. Under Profile edit your name and Phone, or use Change email (a verification link is sent).\n3. Under Billing details save your address and GST number.\nChange password:\n1. In Change password enter your current and new password, confirm it, then click Update password.\nForgot it? On the sign-in page click Forgot password? and follow the Reset your password email.\nClick Sign out other sessions if you used a shared device. Delete account closes your account for good."
+    },
+    {
+      "id": "quotes-screen",
+      "title": "Custom quotes screen",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "quotes",
+        "custom quote",
+        "quote list",
+        "pay link",
+        "quote status",
+        "quote expiry",
+        "send quote",
+        "copy pay link",
+        "valid until",
+        "quote screen"
+      ],
+      "body": "Custom quotes lists quotes with Title, Customer, Amount, Status, Expires, Sent on, Order and Pay link.\n1. Open Quotes. Use Filter by status to narrow the list.\n2. To make one, create it, pick a customer, add a Title, Description (what's included), Price (tax-exclusive), Tax % and Valid until.\n3. Use the row menu to Open, Copy pay link or Cancel.\n4. Use Email preview to see what the customer receives.\nTip: the customer pays through the pay link.",
+      "links": [
+        {
+          "label": "Quotes",
+          "path": "/admin/quotes"
+        },
+        {
+          "label": "Customers",
+          "path": "/admin/customers"
+        }
+      ]
     },
     {
       "id": "record-expense",
@@ -590,6 +1003,585 @@
       "body": "1. Sign in and open your account.\n2. Go to Purchases & access. Use the filters or Search by product name.\n3. Open orders waiting for payment show Pay now or Submit reference.\n4. Click an order to see Order progress, Order summary and Paid on.\n5. Statuses include Pending payment, Confirmed by us, Access ready and Partially refunded.\nWhen access is ready click Go to your purchase. Past payments are also under Invoices & payments, with Open order beside each line. Still stuck? Click Open a query."
     },
     {
+      "id": "widget-catalog-status",
+      "title": "Catalog status counts widget",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "catalog status counts",
+        "catalog status",
+        "products per status",
+        "draft products",
+        "published products",
+        "product count",
+        "catalog widget"
+      ],
+      "body": "The Catalog status counts widget shows how many products are in each status, such as Draft, Pending approval or Published. Admins see their own products.\n1. Open Dashboard and find Catalog status counts.\n2. Each bar carries a status badge and a count.\n3. Click View all to open Products.",
+      "links": [
+        {
+          "label": "Products",
+          "path": "/admin/products"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-chatbot-usage",
+      "title": "Chatbot usage vs limits widget",
+      "roles": ["super_admin"],
+      "keywords": [
+        "chatbot usage",
+        "chatbot limits",
+        "daily cap",
+        "ai messages today",
+        "chat cap",
+        "platform messages today",
+        "users at cap",
+        "chatbot widget"
+      ],
+      "body": "The Chatbot usage vs limits widget shows today's platform chatbot messages against the daily cap, and how many users reached their per-user cap.\n1. Open Dashboard and find Chatbot usage vs limits.\n2. Read Platform messages today against the platform cap.\n3. Click View all to open Chatbot and review transcripts.",
+      "links": [
+        {
+          "label": "Chatbot",
+          "path": "/admin/chatbot"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-conversion-rate",
+      "title": "Conversion rate widget",
+      "roles": ["super_admin"],
+      "keywords": [
+        "conversion rate",
+        "conversion",
+        "won lost",
+        "win rate",
+        "lead conversion",
+        "won closed leads",
+        "conversion widget"
+      ],
+      "body": "The Conversion rate widget shows Won divided by closed leads (Won plus Lost) for the selected range.\n1. Open Dashboard and pick a range (Last 7 days, 30 days, 90 days or This FY).\n2. Read the percentage on the Conversion rate card. The line under it says how many were won of how many closed.\n3. It shows No data yet when no lead was closed in that range.\nTip: the range chip on the card tells which range is used.",
+      "links": [
+        {
+          "label": "Open leads",
+          "path": "/admin/leads"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-expenses-vs-profit",
+      "title": "Expenses vs profit widget",
+      "roles": ["super_admin"],
+      "keywords": [
+        "expenses vs profit",
+        "profit",
+        "expenses chart",
+        "monthly profit",
+        "profit and loss",
+        "costs",
+        "expense widget"
+      ],
+      "body": "The Expenses vs profit widget is a stacked bar chart of expenses and profit for each of the last 6 months.\n1. Open Dashboard and find Expenses vs profit.\n2. Read each month: expenses in one colour, profit in the other. Profit below zero is shown as zero.\n3. Click View all to open Expenses and add or check expenses.\nTip: expenses in other currencies are converted to INR.",
+      "links": [
+        {
+          "label": "Expenses",
+          "path": "/admin/finance/expenses"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-my-share",
+      "title": "My share widget",
+      "roles": ["admin", "super_admin", "partner"],
+      "keywords": [
+        "my share",
+        "my earnings",
+        "partner share",
+        "my allocation",
+        "my revenue share",
+        "how much did i earn",
+        "share sparkline",
+        "my share widget"
+      ],
+      "body": "The My share widget shows your own allocations in the selected range, net of refunds, with a weekly trend line.\n1. Open Dashboard and pick a range.\n2. Read the amount on My share. The hint says Your allocations, net of refunds.\n3. For the details per order, open Ledger or Allocations.\nTip: the amount covers only your own share, not other partners.",
+      "links": [
+        {
+          "label": "Ledger",
+          "path": "/admin/finance/ledger"
+        },
+        {
+          "label": "Allocations",
+          "path": "/admin/finance/allocations"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-new-customers",
+      "title": "New customers widget",
+      "roles": ["super_admin"],
+      "keywords": [
+        "new customers",
+        "sign ups",
+        "signups",
+        "new registrations",
+        "customer growth",
+        "daily sign-ups",
+        "customers widget"
+      ],
+      "body": "The New customers widget shows sign-ups in the selected range with a daily sign-up trend.\n1. Open Dashboard and pick a range.\n2. Read the count and the line under it that compares with before.\n3. Open Customers to see who signed up.\nTip: the range chip on the card shows the range used.",
+      "links": [
+        {
+          "label": "Customers",
+          "path": "/admin/customers"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-new-leads",
+      "title": "New leads widget",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "new leads widget",
+        "new leads",
+        "unassigned leads",
+        "lead pool",
+        "fresh leads",
+        "new lead count",
+        "dashboard widget",
+        "leads count"
+      ],
+      "body": "The New leads widget shows how many leads still have status New, plus the newest ones.\n1. Open Dashboard and find New leads.\n2. The big number is the total of leads with status New that you can see. A line under it compares with before.\n3. Below it, up to 5 leads show with company or email. Click one to open it.\n4. Click View all to open Leads, then use Assign to me to claim one.\nTip: admins and staff see leads assigned to them plus the unassigned pool.",
+      "links": [
+        {
+          "label": "Open leads",
+          "path": "/admin/leads"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-open-queries",
+      "title": "Open queries widget",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "open queries widget",
+        "open queries",
+        "unanswered queries",
+        "support inbox",
+        "customer queries",
+        "inbox zero",
+        "pending queries",
+        "dashboard widget"
+      ],
+      "body": "The Open queries widget lists customer support queries with status Open, up to 10, so you can reply fast.\n1. Open Dashboard and find Open queries.\n2. Each row shows the query subject and the customer name or email.\n3. Click a row to open the thread and reply. Click View all to open Queries.\n4. If it says Inbox zero, no query is open.\nTip: staff and admins see only queries assigned to them or in the pool.",
+      "links": [
+        {
+          "label": "Open queries",
+          "path": "/admin/queries"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-orders-heatmap",
+      "title": "Orders by weekday and hour widget",
+      "roles": ["super_admin"],
+      "keywords": [
+        "orders heatmap",
+        "orders by weekday",
+        "orders by hour",
+        "busiest time",
+        "order times",
+        "when do orders come",
+        "heatmap"
+      ],
+      "body": "The Orders by weekday and hour widget is a heatmap of when orders arrived in the last 90 days, in Indian Standard Time.\n1. Open Dashboard and find Orders by weekday and hour.\n2. Darker cells mean more orders at that weekday and hour.\n3. Use it to plan when to be available for support.\nTip: Super Admin only. It ignores the range selector.",
+      "links": [
+        {
+          "label": "Orders",
+          "path": "/admin/orders"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-outstanding-payouts",
+      "title": "Outstanding payouts widget",
+      "roles": ["super_admin"],
+      "keywords": [
+        "outstanding payouts",
+        "partner balance",
+        "payout pending",
+        "owed to partners",
+        "pay partner",
+        "unpaid partner",
+        "payouts widget"
+      ],
+      "body": "The Outstanding payouts widget shows the total owed to partners (allocated minus refunded minus paid out, all time) and the top 6 partners.\n1. Open Dashboard and find Outstanding payouts.\n2. The big number is the total across all partners. Each row shows a partner and the amount owed.\n3. Click a row or View all to open Partners & payouts and record a payout.\nTip: an empty card says Nothing outstanding.",
+      "links": [
+        {
+          "label": "Partners & payouts",
+          "path": "/admin/finance/partners"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-overdue-follow-ups",
+      "title": "Overdue follow-ups widget",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "overdue follow-ups widget",
+        "overdue",
+        "overdue follow up",
+        "follow up",
+        "follow-up",
+        "followup",
+        "due",
+        "late",
+        "missed follow-up",
+        "lead follow up late",
+        "overdue leads",
+        "dashboard widget"
+      ],
+      "body": "The Overdue follow-ups widget lists leads whose follow-up date has passed and that are not yet Won or Lost.\n1. Open Dashboard. Find the card titled Overdue follow-ups.\n2. Each row shows the lead name with the company or email under it, marked with an amber dot. Up to 5 rows show.\n3. Click a row to open that lead. Click View all at the bottom to open Leads.\n4. On the lead, use Set follow-up to pick a new date, or Add note and change the status.\n5. If the card says No overdue follow-ups, nothing is late.\nTip: staff and admin see only leads assigned to them or in the unassigned pool.",
+      "links": [
+        {
+          "label": "Open leads",
+          "path": "/admin/leads"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-payments-awaiting",
+      "title": "Payments awaiting confirmation widget",
+      "roles": ["super_admin"],
+      "keywords": [
+        "payments awaiting confirmation",
+        "awaiting payment",
+        "confirm payment",
+        "payment reference",
+        "bank transfer pending",
+        "pending payment",
+        "utr",
+        "payments widget"
+      ],
+      "body": "The Payments awaiting confirmation widget lists orders where the customer submitted a payment reference and the order is still Pending payment, oldest first.\n1. Open Dashboard and find Payments awaiting confirmation.\n2. Each row shows the order number, customer name, amount and the text reference submitted.\n3. Click a row to open the order, check the reference against your bank, then confirm the payment.\n4. View all opens Orders.\nTip: only people who can confirm payments see this card.",
+      "links": [
+        {
+          "label": "Orders",
+          "path": "/admin/orders"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-pipeline-funnel",
+      "title": "Pipeline funnel widget",
+      "roles": ["super_admin"],
+      "keywords": [
+        "pipeline funnel",
+        "funnel",
+        "leads per stage",
+        "lead stages",
+        "new contacted qualified proposal won lost",
+        "pipeline widget",
+        "sales funnel"
+      ],
+      "body": "The Pipeline funnel widget shows how many leads sit in each stage: New, Contacted, Qualified, Proposal, Won and Lost.\n1. Open Dashboard and find Pipeline funnel.\n2. Each bar is one stage; longer means more leads. It counts all leads, not only yours.\n3. If it says No leads in the pipeline yet, there are no leads.\n4. To work the leads, open Leads or Leads board.\nTip: Customise on the Dashboard adds or removes this card (Super Admin only).",
+      "links": [
+        {
+          "label": "Open leads",
+          "path": "/admin/leads"
+        },
+        {
+          "label": "Leads board",
+          "path": "/admin/leads/board"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-publish-approvals",
+      "title": "Publish approvals pending widget",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "publish approvals pending",
+        "publish approval",
+        "product publish",
+        "approve product",
+        "pending approval",
+        "waiting for my approval",
+        "approvals widget"
+      ],
+      "body": "The Publish approvals pending widget lists product publish requests waiting for your decision. Your own requests never show here.\n1. Open Dashboard and find Publish approvals pending.\n2. Each row shows what is to be published and how many hours ago it was requested.\n3. Click a row or View all to open Approvals and approve or reject it.\nTip: an empty card says No publish approvals pending.",
+      "links": [
+        {
+          "label": "Approvals",
+          "path": "/admin/approvals"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-revenue-by-partner",
+      "title": "Revenue by partner widget",
+      "roles": ["super_admin"],
+      "keywords": [
+        "revenue by partner",
+        "partner revenue",
+        "partner allocations",
+        "partner share chart",
+        "revenue widget"
+      ],
+      "body": "The Revenue by partner widget is a bar chart of partner allocations per partner (top 8) for the selected range. It is for Super Admin only.\n1. Open Dashboard and pick a range.\n2. Read the bars to compare partners.\n3. Click View all to open Reports & statements, or open Allocations for the split of each order.",
+      "links": [
+        {
+          "label": "Reports",
+          "path": "/admin/finance/reports"
+        },
+        {
+          "label": "Allocations",
+          "path": "/admin/finance/allocations"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-revenue-by-period",
+      "title": "Revenue by period widget",
+      "roles": ["super_admin"],
+      "keywords": [
+        "revenue by period",
+        "revenue",
+        "sales chart",
+        "net revenue",
+        "weekly revenue",
+        "monthly revenue",
+        "revenue graph",
+        "income",
+        "revenue widget"
+      ],
+      "body": "The Revenue by period widget is a line chart of net revenue per week or month for the selected range, in INR.\n1. Open Dashboard and choose a range at the top: Last 7 days, 30 days, 90 days or This FY.\n2. Click View all to open Reports & statements for detail.\nTip: it says no data when there was no revenue in the range.",
+      "links": [
+        {
+          "label": "Reports",
+          "path": "/admin/finance/reports"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-revenue-by-product",
+      "title": "Revenue by product widget",
+      "roles": ["super_admin"],
+      "keywords": [
+        "revenue by product",
+        "product revenue",
+        "top products revenue",
+        "best selling",
+        "sales by product",
+        "revenue widget"
+      ],
+      "body": "The Revenue by product widget is a bar chart of net revenue per product for the selected range.\n1. Open Dashboard and pick a range.\n2. Read the bars to see which product earns most.\n3. Click a bar to open the Ledger filtered to that product and range.\nTip: View all opens Reports & statements.",
+      "links": [
+        {
+          "label": "Reports",
+          "path": "/admin/finance/reports"
+        },
+        {
+          "label": "Ledger",
+          "path": "/admin/finance/ledger"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-revocation-tasks",
+      "title": "Revocation tasks widget",
+      "roles": ["super_admin"],
+      "keywords": [
+        "revocation tasks",
+        "revoke external",
+        "disable account",
+        "refund revoke",
+        "external access",
+        "revocation widget",
+        "delivery task"
+      ],
+      "body": "The Revocation tasks widget lists open Revoke external delivery tasks: external accounts to disable after a refund or revocation.\n1. Open Dashboard and find Revocation tasks.\n2. Each row shows the product name and the text Disable the external account.\n3. Click a row or View all to open Delivery tasks.\n4. Disable the account outside the system, then click Mark done on the task.\nTip: an empty card says No revocation tasks.",
+      "links": [
+        {
+          "label": "Delivery tasks",
+          "path": "/admin/delivery-tasks"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-service-checklists",
+      "title": "Service checklists due widget",
+      "roles": ["staff", "super_admin"],
+      "keywords": [
+        "service checklists due",
+        "service checklist",
+        "service steps",
+        "open service delivery",
+        "delivery progress",
+        "entitlement steps",
+        "pending service",
+        "dashboard widget"
+      ],
+      "body": "The Service checklists due widget lists service deliveries with steps still not done, oldest first (up to 10).\n1. Open Dashboard and find Service checklists due.\n2. Each row shows the product name, a progress bar and text like 2 of 5 steps done.\n3. Click a row to open Entitlements and tick off the Service steps.\n4. If it says No service checklists due, every service delivery is complete.\nTip: only deliveries with status Pending or Active are counted.",
+      "links": [
+        {
+          "label": "Entitlements",
+          "path": "/admin/entitlements"
+        },
+        {
+          "label": "Orders",
+          "path": "/admin/orders"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-split-approvals",
+      "title": "Split approvals pending widget",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "split approvals pending",
+        "split approval",
+        "project order split",
+        "partner split",
+        "approve split",
+        "pending split",
+        "approvals widget"
+      ],
+      "body": "The Split approvals pending widget lists project-order splits waiting for your approval. Your own requests never show here.\n1. Open Dashboard and find Split approvals pending.\n2. Each row shows the request summary and how many hours ago it was requested.\n3. Click a row or View all to open Approvals and decide.\nTip: an empty card says No split approvals pending.",
+      "links": [
+        {
+          "label": "Approvals",
+          "path": "/admin/approvals"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-system-health",
+      "title": "System health widget",
+      "roles": ["super_admin"],
+      "keywords": [
+        "system health",
+        "database status",
+        "email status",
+        "ai provider status",
+        "cron status",
+        "is the site up",
+        "health check",
+        "status widget"
+      ],
+      "body": "The System health widget lists status of the database, email, AI provider and scheduled jobs (cron).\n1. Open Dashboard and find System health.\n2. Each line shows the service name and its status.\n3. If one is not healthy, open Settings to check its configuration.\nTip: Super Admin only.",
+      "links": [
+        {
+          "label": "Settings",
+          "path": "/admin/settings"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-visits-top-products",
+      "title": "Visits and top products widget",
+      "roles": ["super_admin"],
+      "keywords": [
+        "visits",
+        "top products",
+        "traffic",
+        "page views",
+        "product views",
+        "most viewed",
+        "umami",
+        "analytics",
+        "visits widget"
+      ],
+      "body": "The Visits & top products widget shows total page and product views for the range and the 5 most viewed products.\n1. Open Dashboard and pick a range.\n2. The big number is views. The table lists Product and Visits.\n3. It shows No product views yet when nothing was viewed.\nTip: this card is for Super Admin only.",
+      "links": [
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
       "id": "wishlist",
       "title": "Use my wishlist",
       "roles": ["customer"],
@@ -653,6 +1645,33 @@
       "body": "1. Admin users खोलें, फिर Login verification वाला हिस्सा (Security बटन)।\n2. Enable TOTP दबाएं।\n3. ऑथेंटिकेटर ऐप से QR स्कैन करें, या Manual secret कॉपी करें।\n4. Confirm code में छह अंकों का कोड डालें।\nअगली बार साइन-इन पर admin लॉगिन \"Enter your authenticator code\" पूछेगा। फोन खो जाए तो Use a backup code चुनें। Login verification में दिखता है कि किसके लिए चालू है। Disable TOTP तभी करें जब नया विकल्प तैयार हो।"
     },
     {
+      "id": "admin-system-menu",
+      "title": "Settings और Admin users का परिचय",
+      "roles": ["super_admin"],
+      "keywords": [
+        "सेटिंग कहां है",
+        "एडमिन यूज़र",
+        "सिस्टम मेन्यू",
+        "admin screens",
+        "where is settings",
+        "where are admin users",
+        "system menu",
+        "settings screen",
+        "admin users screen"
+      ],
+      "body": "System मेन्यू में Settings, Audit log और Admin users हैं।\n1. थीम, मुद्रा, पेमेंट तरीके और साइट के बाकी विकल्पों के लिए Settings खोलें।\n2. किसने क्या बदला यह देखने के लिए Audit log खोलें।\n3. एडमिन और staff को बुलाने या संभालने के लिए Admin users खोलें।\nTip: ये स्क्रीन सिर्फ Super Admin के लिए हैं।",
+      "links": [
+        {
+          "label": "Settings",
+          "path": "/admin/settings"
+        },
+        {
+          "label": "Admin users",
+          "path": "/admin/admin-users"
+        }
+      ]
+    },
+    {
       "id": "admin-users-invite",
       "title": "admin यूज़र को invite करें, रोल बदलें या हटाएं",
       "roles": ["super_admin"],
@@ -682,6 +1701,32 @@
         "approvals"
       ],
       "body": "संवेदनशील बदलावों के लिए दूसरे व्यक्ति की मंज़ूरी चाहिए। जैसे प्रोडक्ट पब्लिश, प्रोजेक्ट ऑर्डर स्प्लिट, लेजर एडजस्टमेंट, पेआउट, ownership बदलाव, admin यूज़र बदलाव और Reset site data।\n1. Approvals खोलें (Overview के नीचे)। बैज बताता है कितनी आपका इंतज़ार कर रही हैं।\n2. टाइप से फ़िल्टर करें, फिर रिक्वेस्ट पर क्लिक करें।\n3. What will change, Before, After और Who must approve पढ़ें।\n4. Approve या Reject दबाएं।\nआपकी अपनी रिक्वेस्ट आपकी सूची में दिखती है, जहां Cancel request कर सकते हैं। अपनी रिक्वेस्ट आप कभी मंज़ूर नहीं कर सकते।"
+    },
+    {
+      "id": "audit-log",
+      "title": "Audit log",
+      "roles": ["super_admin"],
+      "keywords": [
+        "ऑडिट लॉग",
+        "किसने बदला",
+        "एडमिन गतिविधि",
+        "audit log",
+        "audit",
+        "who changed",
+        "activity log",
+        "admin actions",
+        "history of changes",
+        "before after",
+        "request id",
+        "audit events"
+      ],
+      "body": "Audit log में एडमिन की कार्रवाइयां Time, Actor, Action, Subject और Summary के साथ दिखती हैं।\n1. Audit log खोलें। Actor, Action, Subject type, Subject id या From तारीख से फ़िल्टर करें।\n2. किसी पंक्ति पर Expand दबाकर Before / after और Request id देखें।",
+      "links": [
+        {
+          "label": "Audit log",
+          "path": "/admin/audit"
+        }
+      ]
     },
     {
       "id": "cancel-refund-customer",
@@ -747,6 +1792,160 @@
         "contact"
       ],
       "body": "1. साइट खोलें और फूटर में Contact (inquiry form) दबाएं।\n2. Full name और Work email भरें। Phone और Company वैकल्पिक हैं।\n3. What do you need? चुनें और चाहें तो Budget hint (optional) डालें।\n4. अपना Message लिखें।\n5. Send inquiry दबाएं।\n\"Sent to our team\" संदेश पुष्टि करता है, और टीम के फॉलो-अप के लिए एक लीड बन जाती है। साइन-इन हैं और ऑर्डर है तो Queries इस्तेमाल करें ताकि वह आपके अकाउंट से जुड़े। जल्दी जवाब के लिए Ask me anything हेल्प बटन इस्तेमाल करें।"
+    },
+    {
+      "id": "content-blog",
+      "title": "Blog पोस्ट",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "ब्लॉग",
+        "ब्लॉग पोस्ट",
+        "लेख लिखें",
+        "seo",
+        "blog",
+        "blog post",
+        "write article",
+        "publish blog",
+        "seo title",
+        "seo description",
+        "slug",
+        "excerpt",
+        "cover image"
+      ],
+      "body": "Blog पब्लिक ब्लॉग की पोस्ट संभालता है।\n1. Content खोलें, फिर Blog। किसी पोस्ट पर Edit दबाएं या नई जोड़ें।\n2. Title, Slug, Excerpt, Body, Cover image और चाहें तो Product भरें।\n3. SEO title और SEO description जोड़ें।\n4. Save करें, और तैयार होने पर Published चुनें।",
+      "links": [
+        {
+          "label": "Blog",
+          "path": "/admin/content/blog"
+        }
+      ]
+    },
+    {
+      "id": "content-case-studies",
+      "title": "Case studies कंटेंट",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "केस स्टडी",
+        "क्लाइंट स्टोरी",
+        "पोर्टफोलियो",
+        "case studies",
+        "case study",
+        "client story",
+        "portfolio",
+        "add case study",
+        "gallery",
+        "industry",
+        "result highlight"
+      ],
+      "body": "Case studies में Title, Client, Industry, Status और Updated के साथ क्लाइंट कहानियों की सूची होती है।\n1. Content खोलें, फिर Case studies।\n2. Edit दबाएं या नई जोड़ें। Client name, Industry, Problem, Result highlight, Cover image और Gallery भरें।\n3. स्टेटस Draft या Published चुनकर Save करें।\n4. क्रम बदलने के लिए Move up और Move down इस्तेमाल करें।",
+      "links": [
+        {
+          "label": "Case studies",
+          "path": "/admin/content/case-studies"
+        }
+      ]
+    },
+    {
+      "id": "content-faqs",
+      "title": "FAQs",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "एफएक्यू",
+        "अक्सर पूछे सवाल",
+        "चैटबॉट जवाब",
+        "faq",
+        "faqs",
+        "frequently asked",
+        "add faq",
+        "chatbot answers",
+        "question answer",
+        "chatbot only"
+      ],
+      "body": "FAQs साइट पर दिखने वाले या chatbot के इस्तेमाल के सवाल-जवाब संभालता है।\n1. Content खोलें, फिर FAQs। Scope से फ़िल्टर करें: Site, Product या Chatbot-only।\n2. Edit दबाएं या नया जोड़ें। Question और जवाब लिखें।\n3. Published चुनें और Save करें।",
+      "links": [
+        {
+          "label": "FAQs",
+          "path": "/admin/content/faqs"
+        },
+        {
+          "label": "Chatbot",
+          "path": "/admin/chatbot"
+        }
+      ]
+    },
+    {
+      "id": "content-landing-services",
+      "title": "Services कंटेंट",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "सर्विसेज़",
+        "सर्विस पेज",
+        "सर्विस आइकन",
+        "services",
+        "services page",
+        "edit service",
+        "service icon",
+        "service summary",
+        "site services",
+        "website services"
+      ],
+      "body": "Services पब्लिक साइट पर दिखने वाले service कार्ड एडिट करता है।\n1. Content खोलें, फिर Services।\n2. किसी सर्विस पर Edit दबाएं या नई जोड़ें। Title, Slug, Summary, Icon और Body भरें।\n3. Preview देखें, फिर Save करें। साइट पर दिखाने के लिए Published चुनें।",
+      "links": [
+        {
+          "label": "Services",
+          "path": "/admin/content/services"
+        }
+      ]
+    },
+    {
+      "id": "content-legal",
+      "title": "Legal पेज",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "लीगल",
+        "नियम और शर्तें",
+        "प्राइवेसी पॉलिसी",
+        "वर्ज़न हिस्ट्री",
+        "legal",
+        "terms",
+        "privacy policy",
+        "refund policy",
+        "terms and conditions",
+        "legal pages",
+        "version history",
+        "change summary"
+      ],
+      "body": "Legal pages नियम और नीतियां एडिट करता है, वर्ज़न हिस्ट्री के साथ।\n1. Content खोलें, फिर Legal। एक पेज चुनें।\n2. Title और Body बदलें। Change summary (internal note) लिखें।\n3. Save करें। पुराने वर्ज़न देखने के लिए Version history खोलें।",
+      "links": [
+        {
+          "label": "Legal",
+          "path": "/admin/content/legal"
+        }
+      ]
+    },
+    {
+      "id": "content-testimonials",
+      "title": "Testimonials और logos",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "टेस्टिमोनियल",
+        "क्लाइंट लोगो",
+        "ग्राहक की राय",
+        "testimonials",
+        "client logos",
+        "reviews",
+        "customer quote",
+        "add testimonial",
+        "logo",
+        "social proof"
+      ],
+      "body": "Testimonials & logos साइट पर दिखने वाली ग्राहक राय और क्लाइंट लोगो संभालता है।\n1. Content खोलें, फिर Testimonials & logos।\n2. Testimonials में Quote, Author name, Author title, Company और Product जोड़ें।\n3. Client logos में Name, लोगो इमेज और Link URL जोड़ें।\n4. क्रम के लिए Move earlier और Move later, और दिखाने के लिए Published इस्तेमाल करें।",
+      "links": [
+        {
+          "label": "Testimonials & logos",
+          "path": "/admin/content/testimonials"
+        }
+      ]
     },
     {
       "id": "coupons",
@@ -825,6 +2024,34 @@
       "body": "Chat:\n1. अकाउंट मेन्यू से Chat खोलें और ऑर्डर या प्रोडक्ट के बारे में पूछें।\n2. इंसान से बात के लिए Talk to a human दबाएं। एक query बनती है और टीम वहीं जवाब देती है।\n3. नई शुरुआत के लिए New conversation दबाएं। पुरानी बातचीत सुरक्षित रहती है।\nQueries:\n1. Queries खोलें और New query दबाएं।\n2. संदेश लिखें, ज़रूरत हो तो फ़ाइल जोड़ें और भेजें।\n3. Write a reply में जवाब दें। Waiting on you का मतलब है कि हमें आपका उत्तर चाहिए।\n4. हल हो जाए तो Mark resolved दबाएं।\nचैट से पहले ईमेल वेरिफाई करना ज़रूरी है।"
     },
     {
+      "id": "customers-list",
+      "title": "Customers सूची",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "कस्टमर सूची",
+        "ग्राहक खोजें",
+        "ग्राहक स्टेटस",
+        "पासवर्ड रीसेट",
+        "customers",
+        "customer list",
+        "find customer",
+        "customer search",
+        "customer status",
+        "suspended customer",
+        "lifetime spend",
+        "customer tags",
+        "reset customer password",
+        "new manual order"
+      ],
+      "body": "Customers में सभी ग्राहक खाते Customer, Company / country, Status, Purchases, Lifetime spend, Open items, Joined और Last seen के साथ दिखते हैं।\n1. Customers खोलें। Status, Country, Tag, Has open order और Has active subscription फ़िल्टर लगाएं।\n2. पंक्ति के मेन्यू में Open, New quote, New manual order या Reset link / password मिलता है।\n3. ग्राहक खोलकर उनके ऑर्डर, queries और notes देखें।\nTip: स्टेटस Active, Suspended या Deleted हो सकता है।",
+      "links": [
+        {
+          "label": "Customers",
+          "path": "/admin/customers"
+        }
+      ]
+    },
+    {
       "id": "danger-zone-reset",
       "title": "Danger zone: साइट डेटा रीसेट (वापस नहीं होगा)",
       "roles": ["super_admin"],
@@ -839,6 +2066,65 @@
         "data delete"
       ],
       "body": "चेतावनी: यह डेटा हमेशा के लिए मिटाता है और वापस नहीं हो सकता।\n1. Settings खोलें, फिर Danger zone।\n2. Data to delete में मिटाने वाला डेटा चुनें। Preview row counts से Rows to delete देखें।\n3. Download backup दबाएं। जब तक यह न करें, रिक्वेस्ट बटन बंद रहता है।\n4. Request site reset दबाएं।\n5. पुष्टि वाले डायलॉग में साइट का नाम ठीक वैसा ही टाइप करें (\"Type ... to confirm\" बॉक्स), फिर Confirm site reset request दबाएं।\nअभी कुछ नहीं मिटता: दूसरे super admin को Approvals में मंज़ूर करना होगा। Super admin अकाउंट, settings, roles, legal पेज और audit log हमेशा बचे रहते हैं।"
+    },
+    {
+      "id": "dashboard-customise",
+      "title": "Dashboard कस्टमाइज़ करें",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "डैशबोर्ड बदलें",
+        "विजेट जोड़ें",
+        "विजेट हटाएं",
+        "लेआउट",
+        "रेंज",
+        "customise dashboard",
+        "customize dashboard",
+        "add widget",
+        "remove widget",
+        "reorder widgets",
+        "edit layout",
+        "reset dashboard",
+        "change range",
+        "widget library",
+        "dashboard layout",
+        "refresh widget"
+      ],
+      "body": "आप तय कर सकते हैं कि Dashboard पर कौन से विजेट, किस क्रम में और किस अवधि के लिए दिखें।\n1. Dashboard खोलें। Range सूची से Last 7 days, Last 30 days, Last 90 days या This FY चुनें।\n2. Customise दबाकर विजेट लाइब्रेरी खोलें और विजेट चालू या बंद करें। आपको सिर्फ अपनी भूमिका के विजेट दिखते हैं।\n3. Edit layout दबाकर कार्ड खींचें या move earlier और move later बटन इस्तेमाल करें। पूरा होने पर Done दबाएं।\n4. कार्ड के refresh आइकन से सिर्फ वही कार्ड दोबारा लोड करें, या उसके मेन्यू से Remove करें।\n5. Reset to default से मानक लेआउट वापस लाएं।\nTip: लेआउट आपके अपने अकाउंट के लिए सेव होता है।",
+      "links": [
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "delivery-tasks-screen",
+      "title": "Delivery tasks स्क्रीन",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "डिलीवरी टास्क",
+        "प्रोविज़न",
+        "टास्क पूरा करें",
+        "delivery tasks",
+        "provision",
+        "revoke external",
+        "mark task done",
+        "task queue",
+        "assign delivery task",
+        "external account",
+        "delivery screen"
+      ],
+      "body": "Delivery tasks में बिक्री के बाद का हाथ का काम दिखता है: Provision और Revoke external टास्क, साथ में Product, Customer, Assigned to और Created।\n1. Delivery tasks खोलें। Filter by kind से Provision या Revoke external चुनें।\n2. पंक्ति के मेन्यू में Open order या Mark done मिलता है।\n3. काम होने पर Mark done दबाएं और ज़रूरत हो तो Note जोड़ें।\nTip: Dashboard का Revocation tasks कार्ड यहीं खुलता है।",
+      "links": [
+        {
+          "label": "Delivery tasks",
+          "path": "/admin/delivery-tasks"
+        },
+        {
+          "label": "Entitlements",
+          "path": "/admin/entitlements"
+        }
+      ]
     },
     {
       "id": "download-invoice-customer",
@@ -874,6 +2160,64 @@
       "body": "1. Content खोलें, फिर Landing।\n2. Who we are, What we build और What we sell जैसे सेक्शन एडिट करें। Hero image को Upload image या Replace image से बदलें।\n3. Primary CTA label, Primary CTA target और दूसरा CTA सेट करें।\n4. Featured products में Add product दबाकर पब्लिश्ड प्रोडक्ट चुनें।\n5. काम सेव करें। \"Saved n s ago\" या \"Unsaved changes\" से स्थिति पता चलती है।\nबाकी पेज भी Content में हैं: Services, Case studies, Testimonials & logos, Blog, FAQs और Legal। Staff एडिट कर सकते हैं, पर पब्लिश केवल admin कर सकते हैं।"
     },
     {
+      "id": "entitlements-screen",
+      "title": "Entitlements स्क्रीन",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "एंटाइटलमेंट",
+        "ग्राहक का एक्सेस",
+        "एक्सेस बढ़ाएं",
+        "डाउनलोड रीसेट",
+        "entitlements",
+        "access",
+        "customer access",
+        "extend access",
+        "revoke access",
+        "reset downloads",
+        "service steps",
+        "mark delivered",
+        "downloads cap",
+        "subscription access"
+      ],
+      "body": "Entitlements में ग्राहकों के एक्सेस की सूची होती है: Customer, Product, Type, Status, Access ends, Downloads और Provisioning।\n1. Entitlements खोलें। kind और status से फ़िल्टर करें।\n2. पंक्ति के मेन्यू में Extend, Revoke, Reset downloads, Service steps, Mark delivered, Create delivery task या Open order मिलता है।\n3. सर्विस के लिए Service steps खोलें और हर step पूरा चिह्नित करें।\nTip: Cap reached का मतलब है कि डाउनलोड की सीमा पूरी हो गई।",
+      "links": [
+        {
+          "label": "Entitlements",
+          "path": "/admin/entitlements"
+        },
+        {
+          "label": "Delivery tasks",
+          "path": "/admin/delivery-tasks"
+        }
+      ]
+    },
+    {
+      "id": "finance-allocations",
+      "title": "Allocations स्क्रीन",
+      "roles": ["admin", "super_admin", "partner"],
+      "keywords": [
+        "allocation",
+        "कंपनी हिस्सा",
+        "पार्टनर बंटवारा",
+        "ऑर्डर का बंटवारा",
+        "allocations",
+        "company cut",
+        "partner split",
+        "gateway fee",
+        "distributable",
+        "ownership version",
+        "how was order split",
+        "revenue split"
+      ],
+      "body": "Allocations दिखाता है कि हर ऑर्डर कैसे बंटा: Gross, Discount, Tax, Bank charge, Distributable, Company cut और हर पार्टनर का हिस्सा।\n1. Finance खोलें, फिर Allocations।\n2. Product, Partner, Ownership version या From तारीख से फ़िल्टर करें।\n3. किसी पंक्ति पर Expand दबाकर पूरा हिसाब देखें।\nTip: पार्टनर को सिर्फ अपना हिस्सा दिखता है।",
+      "links": [
+        {
+          "label": "Allocations",
+          "path": "/admin/finance/allocations"
+        }
+      ]
+    },
+    {
       "id": "finance-ledger",
       "title": "फाइनेंस लेजर, allocations और रिपोर्ट पढ़ें",
       "roles": ["admin", "super_admin", "partner"],
@@ -889,6 +2233,33 @@
         "partner share"
       ],
       "body": "1. Finance खोलें (बाएं मेन्यू)। इसमें Ledger, Allocations, Partners & payouts, Expenses, Adjustments और Reports & statements हैं।\n2. Ledger में हर Entry है। Entry type, Party type या Order number से फ़िल्टर करें। Entries Immutable हैं, गलती Adjustment से सुधारी जाती है।\n3. Allocations दिखाता है कि हर बिक्री कैसे बंटी: Company cut, Gateway fee, Bank charge और पार्टनर हिस्से।\n4. Reports & statements में अवधि (This month, Last month, This FY) और Partner चुनकर Generate statement, फिर Download दबाएं।\nपार्टनर केवल अपनी लाइनें देखते हैं।"
+    },
+    {
+      "id": "finance-reports",
+      "title": "Reports और statements",
+      "roles": ["admin", "super_admin", "partner"],
+      "keywords": [
+        "रिपोर्ट",
+        "स्टेटमेंट",
+        "पार्टनर स्टेटमेंट",
+        "reports",
+        "statements",
+        "partner statement",
+        "generate statement",
+        "download report",
+        "finance report",
+        "monthly statement",
+        "customer credits",
+        "this fy",
+        "last month"
+      ],
+      "body": "Reports & statements फाइनेंस रिपोर्ट और पार्टनर statements बनाता है।\n1. Finance खोलें, फिर Reports & statements।\n2. प्रीसेट This month, Last month, This FY, Last FY या Custom से अवधि चुनें।\n3. Partner, Currency और Format चुनें।\n4. Generate statement दबाएं। Generated statements में पुराने दिखते हैं; दोबारा डाउनलोड के लिए Regenerate (5-min link) इस्तेमाल करें।\nTip: पार्टनर को सिर्फ अपने statements दिखते हैं।",
+      "links": [
+        {
+          "label": "Reports",
+          "path": "/admin/finance/reports"
+        }
+      ]
     },
     {
       "id": "fulfil-order",
@@ -935,6 +2306,38 @@
         "issue invoice"
       ],
       "body": "भुगतान कन्फर्म होते ही इनवॉइस अपने आप जारी हो जाता है। अलग से ड्राफ्ट बनाने का बटन नहीं है।\n1. Orders खोलें और ऑर्डर पर क्लिक करें।\n2. देखें कि ऑर्डर paid है (नहीं है तो पहले Confirm payment करें)।\n3. More order actions पर क्लिक करें।\n4. Download invoice चुनें।\nजब तक ऑर्डर का इनवॉइस नंबर नहीं बनता, यह विकल्प बंद रहता है। रिफंड पर क्रेडिट नोट अपने आप बनता है। ग्राहक वही PDF Invoices & payments में देखता है।"
+    },
+    {
+      "id": "leads-board",
+      "title": "Leads बोर्ड और टेबल",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "लीड बोर्ड",
+        "कानबान",
+        "लीड सूची",
+        "सभी लीड",
+        "leads board",
+        "kanban",
+        "lead board",
+        "table view",
+        "board view",
+        "pipeline board",
+        "leads screen",
+        "lead status columns",
+        "all leads",
+        "lead list"
+      ],
+      "body": "Leads उन्हीं लीड को Table या स्टेटस के कॉलम वाले Board के रूप में दिखाता है।\n1. Leads खोलें। Table या Board स्विच से दृश्य बदलें।\n2. Table में Unassigned pool, Overdue only, Priority और Source जैसे फ़िल्टर लगाएं। कॉलम में Name, Source, Status, Priority, Assigned और Next follow-up होते हैं।\n3. पंक्ति के मेन्यू में Open, Assign to me, Set follow-up, Change status या Mark lost मिलता है।\n4. New lead से हाथ से लीड जोड़ें (source Manual)।\nTip: Overdue only वही लीड दिखाता है जो Dashboard के Overdue follow-ups कार्ड में आती हैं।",
+      "links": [
+        {
+          "label": "Leads",
+          "path": "/admin/leads"
+        },
+        {
+          "label": "Leads board",
+          "path": "/admin/leads/board"
+        }
+      ]
     },
     {
       "id": "leads-priority",
@@ -999,6 +2402,36 @@
       "body": "1. ऊपर की बार में घंटी दबाएं। संख्या बताती है कितने unread हैं।\n2. सबको साफ़ करने के लिए Mark all read, या पूरा पेज खोलने के लिए View all दबाएं।\n3. Notifications पेज पर Filter by type (जैसे Product updates) और Unread फ़िल्टर इस्तेमाल करें।\n4. किसी आइटम पर क्लिक करके संबंधित ऑर्डर, query या प्रोडक्ट पर जाएं।\nभुगतान कन्फर्म होने, एक्सेस तैयार होने, सपोर्ट के जवाब और आपके प्रोडक्ट के अपडेट पर सूचना मिलती है। कुछ ईमेल बंद करने के लिए Settings में Notifications जाएं।"
     },
     {
+      "id": "orders-list",
+      "title": "Orders सूची और queue",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "ऑर्डर सूची",
+        "ऑर्डर कतार",
+        "पेमेंट कन्फर्म",
+        "ऑर्डर खोजें",
+        "pending orders",
+        "orders",
+        "order list",
+        "order queue",
+        "awaiting confirmation",
+        "confirm payment",
+        "mark failed",
+        "order status",
+        "find order",
+        "order no",
+        "download invoice",
+        "payment confirmation"
+      ],
+      "body": "Orders में कन्फर्मेशन का इंतज़ार करते ऑर्डर की Order queue और Full orders list होती है।\n1. Orders खोलें। Order queue में Awaiting confirmation स्टेटस के ऑर्डर दिखते हैं।\n2. पंक्ति के मेन्यू में Open, Confirm payment, Mark failed, Cancel या Download invoice मिलता है।\n3. Full orders list छोटी करने के लिए Status, Type, Method और From फ़िल्टर इस्तेमाल करें।\n4. ऑर्डर खोलकर items, payment, invoice और timeline देखें।\nTip: Dashboard का Payments awaiting confirmation कार्ड यहीं खुलता है।",
+      "links": [
+        {
+          "label": "Orders",
+          "path": "/admin/orders"
+        }
+      ]
+    },
+    {
       "id": "partners-payouts",
       "title": "पार्टनर जोड़ें और पेआउट दर्ज करें",
       "roles": ["admin", "super_admin", "partner"],
@@ -1059,6 +2492,38 @@
         "email change"
       ],
       "body": "जानकारी बदलें:\n1. अकाउंट मेन्यू से Settings खोलें।\n2. Profile में नाम और Phone बदलें, या Change email इस्तेमाल करें (वेरिफिकेशन लिंक जाता है)।\n3. Billing details में पता और GST number सेव करें।\nपासवर्ड बदलें:\n1. Change password में मौजूदा और नया पासवर्ड डालें, पुष्टि करें, फिर Update password दबाएं।\nभूल गए? साइन-इन पेज पर Forgot password? दबाएं और Reset your password वाले ईमेल का पालन करें।\nसाझा डिवाइस इस्तेमाल किया हो तो Sign out other sessions दबाएं। Delete account आपका अकाउंट हमेशा के लिए बंद कर देता है।"
+    },
+    {
+      "id": "quotes-screen",
+      "title": "Custom quotes स्क्रीन",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "कोटेशन",
+        "क्वोट",
+        "पे लिंक",
+        "क्वोट सूची",
+        "quotes",
+        "custom quote",
+        "quote list",
+        "pay link",
+        "quote status",
+        "quote expiry",
+        "send quote",
+        "copy pay link",
+        "valid until",
+        "quote screen"
+      ],
+      "body": "Custom quotes में Title, Customer, Amount, Status, Expires, Sent on, Order और Pay link के साथ quotes की सूची होती है।\n1. Quotes खोलें। सूची छोटी करने के लिए Filter by status इस्तेमाल करें।\n2. नया बनाने के लिए ग्राहक चुनें और Title, Description (what's included), Price (tax-exclusive), Tax % और Valid until भरें।\n3. पंक्ति के मेन्यू में Open, Copy pay link या Cancel मिलता है।\n4. Email preview से देखें कि ग्राहक को क्या मिलेगा।\nTip: ग्राहक pay link से भुगतान करता है।",
+      "links": [
+        {
+          "label": "Quotes",
+          "path": "/admin/quotes"
+        },
+        {
+          "label": "Customers",
+          "path": "/admin/customers"
+        }
+      ]
     },
     {
       "id": "record-expense",
@@ -1184,6 +2649,651 @@
         "ऑर्डर कहां है"
       ],
       "body": "1. साइन-इन करके अपना अकाउंट खोलें।\n2. Purchases & access पर जाएं। फ़िल्टर या Search by product name इस्तेमाल करें।\n3. भुगतान के इंतज़ार वाले ऑर्डर पर Pay now या Submit reference दिखता है।\n4. किसी ऑर्डर पर क्लिक करके Order progress, Order summary और Paid on देखें।\n5. स्थितियां: Pending payment, Confirmed by us, Access ready और Partially refunded।\nएक्सेस तैयार होने पर Go to your purchase दबाएं। पुराने भुगतान Invoices & payments में भी हैं, हर पंक्ति के पास Open order के साथ। अटक जाएं तो Open a query दबाएं।"
+    },
+    {
+      "id": "widget-catalog-status",
+      "title": "Catalog status counts विजेट",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "कैटलॉग स्टेटस",
+        "प्रोडक्ट स्टेटस",
+        "ड्राफ्ट प्रोडक्ट",
+        "catalog status counts",
+        "catalog status",
+        "products per status",
+        "draft products",
+        "published products",
+        "product count",
+        "catalog widget"
+      ],
+      "body": "Catalog status counts विजेट दिखाता है कि हर स्टेटस (जैसे Draft, Pending approval या Published) में कितने प्रोडक्ट हैं। Admin को अपने प्रोडक्ट दिखते हैं।\n1. Dashboard खोलें और Catalog status counts कार्ड देखें।\n2. हर बार पर स्टेटस बैज और गिनती होती है।\n3. View all से Products खोलें।",
+      "links": [
+        {
+          "label": "Products",
+          "path": "/admin/products"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-chatbot-usage",
+      "title": "Chatbot usage vs limits विजेट",
+      "roles": ["super_admin"],
+      "keywords": [
+        "चैटबॉट उपयोग",
+        "चैटबॉट लिमिट",
+        "daily cap",
+        "chatbot usage",
+        "chatbot limits",
+        "ai messages today",
+        "chat cap",
+        "platform messages today",
+        "users at cap",
+        "chatbot widget"
+      ],
+      "body": "Chatbot usage vs limits विजेट आज के platform chatbot संदेश दैनिक सीमा के मुकाबले दिखाता है, और कितने users अपनी per-user सीमा तक पहुंचे।\n1. Dashboard खोलें और Chatbot usage vs limits कार्ड देखें।\n2. Platform messages today को platform सीमा के साथ पढ़ें।\n3. View all से Chatbot खोलकर transcripts देखें।\nTip: यह कार्ड सिर्फ Super Admin के लिए है।",
+      "links": [
+        {
+          "label": "Chatbot",
+          "path": "/admin/chatbot"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-conversion-rate",
+      "title": "Conversion rate विजेट",
+      "roles": ["super_admin"],
+      "keywords": [
+        "कन्वर्ज़न रेट",
+        "जीत दर",
+        "won lost",
+        "conversion rate",
+        "conversion",
+        "win rate",
+        "lead conversion",
+        "won closed leads",
+        "conversion widget"
+      ],
+      "body": "Conversion rate विजेट चुनी गई अवधि में Won को बंद लीड (Won + Lost) से भाग देकर प्रतिशत दिखाता है।\n1. Dashboard खोलें और ऊपर अवधि चुनें (Last 7 days, 30 days, 90 days या This FY)।\n2. Conversion rate कार्ड पर प्रतिशत पढ़ें। नीचे की लाइन बताती है कि कितनी बंद लीड में से कितनी won हुईं।\n3. अगर उस अवधि में कोई लीड बंद नहीं हुई तो No data yet दिखता है।\nTip: कार्ड का रेंज चिप बताता है कि कौन सी अवधि इस्तेमाल हुई।",
+      "links": [
+        {
+          "label": "Open leads",
+          "path": "/admin/leads"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-expenses-vs-profit",
+      "title": "Expenses vs profit विजेट",
+      "roles": ["super_admin"],
+      "keywords": [
+        "खर्च बनाम मुनाफा",
+        "प्रॉफिट",
+        "खर्चे",
+        "expenses vs profit",
+        "profit",
+        "expenses chart",
+        "monthly profit",
+        "profit and loss",
+        "costs",
+        "expense widget"
+      ],
+      "body": "Expenses vs profit विजेट पिछले 6 महीनों में हर महीने का खर्च और मुनाफा स्टैक्ड बार चार्ट में दिखाता है।\n1. Dashboard खोलें और Expenses vs profit कार्ड देखें।\n2. हर महीने में एक रंग खर्च का और दूसरा मुनाफे का है। शून्य से नीचे का मुनाफा शून्य दिखता है।\n3. View all से Expenses खोलें और खर्च जोड़ें या जांचें।\nTip: दूसरी मुद्रा के खर्च INR में बदलकर गिने जाते हैं।",
+      "links": [
+        {
+          "label": "Expenses",
+          "path": "/admin/finance/expenses"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-my-share",
+      "title": "My share विजेट",
+      "roles": ["admin", "super_admin", "partner"],
+      "keywords": [
+        "मेरा हिस्सा",
+        "मेरी कमाई",
+        "पार्टनर शेयर",
+        "my share",
+        "my earnings",
+        "partner share",
+        "my allocation",
+        "my revenue share",
+        "how much did i earn",
+        "share sparkline",
+        "my share widget"
+      ],
+      "body": "My share विजेट चुनी गई अवधि में आपकी अपनी allocations (refund घटाकर) और साप्ताहिक trend लाइन दिखाता है।\n1. Dashboard खोलें और अवधि चुनें।\n2. My share पर राशि पढ़ें। hint में लिखा होता है Your allocations, net of refunds।\n3. हर ऑर्डर का विवरण देखने के लिए Ledger या Allocations खोलें।\nTip: राशि सिर्फ आपके अपने हिस्से की है, दूसरे पार्टनरों की नहीं।",
+      "links": [
+        {
+          "label": "Ledger",
+          "path": "/admin/finance/ledger"
+        },
+        {
+          "label": "Allocations",
+          "path": "/admin/finance/allocations"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-new-customers",
+      "title": "New customers विजेट",
+      "roles": ["super_admin"],
+      "keywords": [
+        "नए ग्राहक",
+        "साइन अप",
+        "नए कस्टमर",
+        "new customers",
+        "sign ups",
+        "signups",
+        "new registrations",
+        "customer growth",
+        "daily sign-ups",
+        "customers widget"
+      ],
+      "body": "New customers विजेट चुनी गई अवधि के sign-ups और रोज़ के sign-up trend दिखाता है।\n1. Dashboard खोलें और अवधि चुनें।\n2. गिनती और उसके नीचे की तुलना वाली लाइन पढ़ें।\n3. कौन जुड़ा यह देखने के लिए Customers खोलें।\nTip: कार्ड का रेंज चिप इस्तेमाल हुई अवधि बताता है।",
+      "links": [
+        {
+          "label": "Customers",
+          "path": "/admin/customers"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-new-leads",
+      "title": "New leads विजेट",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "नई लीड",
+        "नए लीड",
+        "अनअसाइन्ड लीड",
+        "new leads widget",
+        "new leads",
+        "unassigned leads",
+        "lead pool",
+        "fresh leads",
+        "new lead count",
+        "dashboard widget",
+        "leads count"
+      ],
+      "body": "New leads विजेट बताता है कि कितनी लीड का स्टेटस अभी New है, और सबसे नई लीड दिखाता है।\n1. Dashboard खोलें और New leads कार्ड देखें।\n2. बड़ी संख्या उन लीड की कुल गिनती है जिनका स्टेटस New है और जो आपको दिखती हैं। नीचे की लाइन पहले से तुलना करती है।\n3. उसके नीचे अधिकतम 5 लीड कंपनी या ईमेल के साथ दिखती हैं। किसी पर क्लिक करके खोलें।\n4. View all से Leads खोलें, फिर Assign to me से लीड अपने नाम करें।\nTip: admin और staff को अपने नाम की और unassigned pool की लीड दिखती हैं।",
+      "links": [
+        {
+          "label": "Open leads",
+          "path": "/admin/leads"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-open-queries",
+      "title": "Open queries विजेट",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "ओपन क्वेरी",
+        "बिना जवाब की क्वेरी",
+        "सपोर्ट इनबॉक्स",
+        "query",
+        "open queries widget",
+        "open queries",
+        "unanswered queries",
+        "support inbox",
+        "customer queries",
+        "inbox zero",
+        "pending queries",
+        "dashboard widget"
+      ],
+      "body": "Open queries विजेट Open स्टेटस वाली ग्राहक queries (अधिकतम 10) दिखाता है ताकि आप जल्दी जवाब दें।\n1. Dashboard खोलें और Open queries कार्ड देखें।\n2. हर पंक्ति में query का subject और ग्राहक का नाम या ईमेल होता है।\n3. पंक्ति पर क्लिक करके थ्रेड खोलें और जवाब दें। View all से Queries खुलता है।\n4. Inbox zero लिखा हो तो कोई query खुली नहीं है।\nTip: staff और admin को सिर्फ अपने नाम की या pool की queries दिखती हैं।",
+      "links": [
+        {
+          "label": "Open queries",
+          "path": "/admin/queries"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-orders-heatmap",
+      "title": "Orders by weekday and hour विजेट",
+      "roles": ["super_admin"],
+      "keywords": [
+        "ऑर्डर हीटमैप",
+        "व्यस्त समय",
+        "ऑर्डर का समय",
+        "orders heatmap",
+        "orders by weekday",
+        "orders by hour",
+        "busiest time",
+        "order times",
+        "when do orders come",
+        "heatmap"
+      ],
+      "body": "Orders by weekday and hour विजेट पिछले 90 दिनों में ऑर्डर कब आए, यह भारतीय समय (IST) में heatmap के रूप में दिखाता है।\n1. Dashboard खोलें और Orders by weekday and hour कार्ड देखें।\n2. गहरा खाना यानी उस दिन और घंटे में ज़्यादा ऑर्डर।\n3. इससे तय करें कि सपोर्ट के लिए कब उपलब्ध रहना है।\nTip: यह सिर्फ Super Admin के लिए है और अवधि चयन का असर नहीं पड़ता।",
+      "links": [
+        {
+          "label": "Orders",
+          "path": "/admin/orders"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-outstanding-payouts",
+      "title": "Outstanding payouts विजेट",
+      "roles": ["super_admin"],
+      "keywords": [
+        "बकाया पेआउट",
+        "पार्टनर बैलेंस",
+        "पार्टनर को भुगतान",
+        "outstanding payouts",
+        "partner balance",
+        "payout pending",
+        "owed to partners",
+        "pay partner",
+        "unpaid partner",
+        "payouts widget"
+      ],
+      "body": "Outstanding payouts विजेट पार्टनरों को देय कुल राशि (allocated घटा refunded घटा paid out, पूरे समय की) और टॉप 6 पार्टनर दिखाता है।\n1. Dashboard खोलें और Outstanding payouts कार्ड देखें।\n2. बड़ी संख्या सभी पार्टनरों की कुल राशि है। हर पंक्ति में पार्टनर और देय राशि होती है।\n3. पंक्ति या View all पर क्लिक करके Partners & payouts खोलें और payout दर्ज करें।\nTip: खाली कार्ड पर Nothing outstanding लिखा होता है।",
+      "links": [
+        {
+          "label": "Partners & payouts",
+          "path": "/admin/finance/partners"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-overdue-follow-ups",
+      "title": "Overdue follow-ups विजेट क्या करता है",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "ओवरड्यू फॉलो-अप",
+        "फॉलो अप लेट",
+        "देर",
+        "बकाया फॉलो-अप",
+        "overdue follow-ups widget",
+        "overdue",
+        "overdue follow up",
+        "follow up",
+        "follow-up",
+        "followup",
+        "due",
+        "late",
+        "missed follow-up",
+        "lead follow up late",
+        "overdue leads",
+        "dashboard widget"
+      ],
+      "body": "Overdue follow-ups विजेट उन लीड की सूची दिखाता है जिनकी follow-up तारीख निकल चुकी है और जो अभी Won या Lost नहीं हुईं।\n1. Dashboard खोलें। Overdue follow-ups नाम का कार्ड ढूंढें।\n2. हर पंक्ति में लीड का नाम और नीचे कंपनी या ईमेल होता है, साथ में पीला डॉट। अधिकतम 5 पंक्तियां दिखती हैं।\n3. पंक्ति पर क्लिक करके लीड खोलें। नीचे View all से Leads खुलता है।\n4. लीड में Set follow-up से नई तारीख चुनें, या Add note करें और स्टेटस बदलें।\n5. अगर No overdue follow-ups लिखा है तो कुछ भी लेट नहीं है।\nTip: staff और admin को सिर्फ अपने नाम की या unassigned pool की लीड दिखती हैं।",
+      "links": [
+        {
+          "label": "Open leads",
+          "path": "/admin/leads"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-payments-awaiting",
+      "title": "Payments awaiting confirmation विजेट",
+      "roles": ["super_admin"],
+      "keywords": [
+        "पेमेंट कन्फर्म",
+        "पेमेंट रेफरेंस",
+        "बैंक ट्रांसफर",
+        "utr",
+        "payments awaiting confirmation",
+        "awaiting payment",
+        "confirm payment",
+        "payment reference",
+        "bank transfer pending",
+        "pending payment",
+        "payments widget"
+      ],
+      "body": "Payments awaiting confirmation विजेट उन ऑर्डर को दिखाता है जिनमें ग्राहक ने पेमेंट रेफरेंस डाल दिया है और ऑर्डर अभी Pending payment है, सबसे पुराना पहले।\n1. Dashboard खोलें और Payments awaiting confirmation कार्ड देखें।\n2. हर पंक्ति में ऑर्डर नंबर, ग्राहक का नाम, राशि और reference submitted लिखा होता है।\n3. पंक्ति पर क्लिक करके ऑर्डर खोलें, रेफरेंस को बैंक से मिलाएं, फिर पेमेंट कन्फर्म करें।\n4. View all से Orders खुलता है।\nTip: यह कार्ड सिर्फ उन्हें दिखता है जो पेमेंट कन्फर्म कर सकते हैं।",
+      "links": [
+        {
+          "label": "Orders",
+          "path": "/admin/orders"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-pipeline-funnel",
+      "title": "Pipeline funnel विजेट",
+      "roles": ["super_admin"],
+      "keywords": [
+        "पाइपलाइन फनल",
+        "फनल",
+        "लीड स्टेज",
+        "pipeline funnel",
+        "funnel",
+        "leads per stage",
+        "lead stages",
+        "new contacted qualified proposal won lost",
+        "pipeline widget",
+        "sales funnel"
+      ],
+      "body": "Pipeline funnel विजेट दिखाता है कि हर स्टेज में कितनी लीड हैं: New, Contacted, Qualified, Proposal, Won और Lost।\n1. Dashboard खोलें और Pipeline funnel कार्ड देखें।\n2. हर बार एक स्टेज है। जितनी लंबी बार, उतनी ज़्यादा लीड। यह सभी लीड गिनता है, सिर्फ आपकी नहीं।\n3. अगर No leads in the pipeline yet लिखा है तो कोई लीड नहीं है।\n4. लीड पर काम करने के लिए Leads या Leads board खोलें।\nTip: Dashboard पर Customise से यह कार्ड जोड़ या हटा सकते हैं (सिर्फ Super Admin)।",
+      "links": [
+        {
+          "label": "Open leads",
+          "path": "/admin/leads"
+        },
+        {
+          "label": "Leads board",
+          "path": "/admin/leads/board"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-publish-approvals",
+      "title": "Publish approvals pending विजेट",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "पब्लिश अप्रूवल",
+        "प्रोडक्ट अप्रूव",
+        "अप्रूवल बाकी",
+        "publish approvals pending",
+        "publish approval",
+        "product publish",
+        "approve product",
+        "pending approval",
+        "waiting for my approval",
+        "approvals widget"
+      ],
+      "body": "Publish approvals pending विजेट उन प्रोडक्ट publish अनुरोधों को दिखाता है जो आपके फ़ैसले का इंतज़ार कर रहे हैं। आपके अपने अनुरोध यहां नहीं दिखते।\n1. Dashboard खोलें और Publish approvals pending कार्ड देखें।\n2. हर पंक्ति में क्या publish होना है और अनुरोध को कितने घंटे हुए, यह दिखता है।\n3. पंक्ति या View all पर क्लिक करके Approvals खोलें और approve या reject करें।\nTip: खाली कार्ड पर No publish approvals pending लिखा होता है।",
+      "links": [
+        {
+          "label": "Approvals",
+          "path": "/admin/approvals"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-revenue-by-partner",
+      "title": "Revenue by partner विजेट",
+      "roles": ["super_admin"],
+      "keywords": [
+        "पार्टनर रेवेन्यू",
+        "पार्टनर allocation",
+        "revenue by partner",
+        "partner revenue",
+        "partner allocations",
+        "partner share chart",
+        "revenue widget"
+      ],
+      "body": "Revenue by partner विजेट चुनी गई अवधि में हर पार्टनर (टॉप 8) की allocation बार चार्ट में दिखाता है। यह सिर्फ Super Admin के लिए है।\n1. Dashboard खोलें और अवधि चुनें।\n2. बार देखकर पार्टनरों की तुलना करें।\n3. View all से Reports & statements खोलें, या हर ऑर्डर का बंटवारा देखने के लिए Allocations खोलें।\nTip: पार्टनर के भुगतान के लिए Partners & payouts देखें।",
+      "links": [
+        {
+          "label": "Reports",
+          "path": "/admin/finance/reports"
+        },
+        {
+          "label": "Allocations",
+          "path": "/admin/finance/allocations"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-revenue-by-period",
+      "title": "Revenue by period विजेट",
+      "roles": ["super_admin"],
+      "keywords": [
+        "रेवेन्यू",
+        "कमाई",
+        "बिक्री चार्ट",
+        "राजस्व",
+        "revenue by period",
+        "revenue",
+        "sales chart",
+        "net revenue",
+        "weekly revenue",
+        "monthly revenue",
+        "revenue graph",
+        "income",
+        "revenue widget"
+      ],
+      "body": "Revenue by period विजेट चुनी गई अवधि के लिए हर हफ्ते या महीने का net revenue (INR में) लाइन चार्ट में दिखाता है।\n1. Dashboard खोलें और ऊपर अवधि चुनें: Last 7 days, 30 days, 90 days या This FY।\n2. विस्तार के लिए View all से Reports & statements खोलें।\nTip: अवधि में कोई revenue न हो तो यह खाली दिखता है।",
+      "links": [
+        {
+          "label": "Reports",
+          "path": "/admin/finance/reports"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-revenue-by-product",
+      "title": "Revenue by product विजेट",
+      "roles": ["super_admin"],
+      "keywords": [
+        "प्रोडक्ट रेवेन्यू",
+        "सबसे ज़्यादा बिकने वाला",
+        "revenue by product",
+        "product revenue",
+        "top products revenue",
+        "best selling",
+        "sales by product",
+        "revenue widget"
+      ],
+      "body": "Revenue by product विजेट चुनी गई अवधि में हर प्रोडक्ट का net revenue बार चार्ट में दिखाता है।\n1. Dashboard खोलें और अवधि चुनें।\n2. बार देखकर समझें कि कौन सा प्रोडक्ट सबसे ज़्यादा कमाता है।\n3. किसी बार पर क्लिक करने से Ledger उसी प्रोडक्ट और अवधि के फ़िल्टर के साथ खुलता है।\nTip: View all से Reports & statements खुलता है।",
+      "links": [
+        {
+          "label": "Reports",
+          "path": "/admin/finance/reports"
+        },
+        {
+          "label": "Ledger",
+          "path": "/admin/finance/ledger"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-revocation-tasks",
+      "title": "Revocation tasks विजेट",
+      "roles": ["super_admin"],
+      "keywords": [
+        "रिवोकेशन टास्क",
+        "एक्सेस बंद करना",
+        "external account",
+        "revocation tasks",
+        "revoke external",
+        "disable account",
+        "refund revoke",
+        "external access",
+        "revocation widget",
+        "delivery task"
+      ],
+      "body": "Revocation tasks विजेट खुले Revoke external delivery tasks दिखाता है: रिफंड या revoke के बाद जिन बाहरी अकाउंट को बंद करना है।\n1. Dashboard खोलें और Revocation tasks कार्ड देखें।\n2. हर पंक्ति में प्रोडक्ट का नाम और Disable the external account लिखा होता है।\n3. पंक्ति या View all पर क्लिक करके Delivery tasks खोलें।\n4. बाहर अकाउंट बंद करें, फिर टास्क पर Mark done दबाएं।\nTip: खाली कार्ड पर No revocation tasks लिखा होता है।",
+      "links": [
+        {
+          "label": "Delivery tasks",
+          "path": "/admin/delivery-tasks"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-service-checklists",
+      "title": "Service checklists due विजेट",
+      "roles": ["staff", "super_admin"],
+      "keywords": [
+        "सर्विस चेकलिस्ट",
+        "सर्विस स्टेप",
+        "बाकी डिलीवरी",
+        "service checklists due",
+        "service checklist",
+        "service steps",
+        "open service delivery",
+        "delivery progress",
+        "entitlement steps",
+        "pending service",
+        "dashboard widget"
+      ],
+      "body": "Service checklists due विजेट उन सर्विस डिलीवरी को दिखाता है जिनके कुछ steps बाकी हैं, सबसे पुरानी पहले (अधिकतम 10)।\n1. Dashboard खोलें और Service checklists due कार्ड देखें।\n2. हर पंक्ति में प्रोडक्ट का नाम, प्रगति बार और 2 of 5 steps done जैसा टेक्स्ट होता है।\n3. पंक्ति पर क्लिक करके Entitlements खोलें और Service steps पूरे करें।\n4. No service checklists due लिखा हो तो सारी सर्विस डिलीवरी पूरी है।\nTip: सिर्फ Pending या Active स्टेटस वाली डिलीवरी गिनी जाती हैं।",
+      "links": [
+        {
+          "label": "Entitlements",
+          "path": "/admin/entitlements"
+        },
+        {
+          "label": "Orders",
+          "path": "/admin/orders"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-split-approvals",
+      "title": "Split approvals pending विजेट",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "स्प्लिट अप्रूवल",
+        "प्रोजेक्ट ऑर्डर स्प्लिट",
+        "पार्टनर स्प्लिट",
+        "split approvals pending",
+        "split approval",
+        "project order split",
+        "partner split",
+        "approve split",
+        "pending split",
+        "approvals widget"
+      ],
+      "body": "Split approvals pending विजेट उन project-order splits को दिखाता है जो आपकी मंज़ूरी का इंतज़ार कर रहे हैं। आपके अपने अनुरोध यहां नहीं दिखते।\n1. Dashboard खोलें और Split approvals pending कार्ड देखें।\n2. हर पंक्ति में अनुरोध का सार और कितने घंटे पहले किया गया, यह दिखता है।\n3. पंक्ति या View all पर क्लिक करके Approvals खोलें और फ़ैसला करें।\nTip: खाली कार्ड पर No split approvals pending लिखा होता है।",
+      "links": [
+        {
+          "label": "Approvals",
+          "path": "/admin/approvals"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-system-health",
+      "title": "System health विजेट",
+      "roles": ["super_admin"],
+      "keywords": [
+        "सिस्टम हेल्थ",
+        "डेटाबेस स्टेटस",
+        "साइट चालू है",
+        "system health",
+        "database status",
+        "email status",
+        "ai provider status",
+        "cron status",
+        "is the site up",
+        "health check",
+        "status widget"
+      ],
+      "body": "System health विजेट database, email, AI provider और scheduled jobs (cron) की स्थिति सूची में दिखाता है।\n1. Dashboard खोलें और System health कार्ड देखें।\n2. हर लाइन में सर्विस का नाम और उसकी स्थिति होती है।\n3. कोई सर्विस ठीक न हो तो उसकी सेटिंग जांचने के लिए Settings खोलें।\nTip: यह कार्ड सिर्फ Super Admin के लिए है।",
+      "links": [
+        {
+          "label": "Settings",
+          "path": "/admin/settings"
+        },
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
+    },
+    {
+      "id": "widget-visits-top-products",
+      "title": "Visits & top products विजेट",
+      "roles": ["super_admin"],
+      "keywords": [
+        "विज़िट",
+        "ट्रैफिक",
+        "टॉप प्रोडक्ट",
+        "पेज व्यू",
+        "visits",
+        "top products",
+        "traffic",
+        "page views",
+        "product views",
+        "most viewed",
+        "umami",
+        "analytics",
+        "visits widget"
+      ],
+      "body": "Visits & top products विजेट अवधि में कुल page और product views और सबसे ज़्यादा देखे गए 5 प्रोडक्ट दिखाता है।\n1. Dashboard खोलें और अवधि चुनें।\n2. बड़ी संख्या views की है। तालिका में Product और Visits होते हैं।\n3. कुछ भी न देखा गया हो तो No product views yet दिखता है।\nTip: यह कार्ड सिर्फ Super Admin के लिए है।",
+      "links": [
+        {
+          "label": "Dashboard",
+          "path": "/admin/dashboard"
+        }
+      ]
     },
     {
       "id": "wishlist",
