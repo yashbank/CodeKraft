@@ -166,7 +166,7 @@ export function OverviewScreen(props: OverviewScreenProps) {
               </h2>
               <Link
                 href={links.purchases}
-                className="text-body-sm text-accent-text hover:underline"
+                className="max-lg:inline-flex max-lg:min-h-10 max-lg:items-center text-body-sm text-accent-text hover:underline"
               >
                 View all purchases
               </Link>
@@ -199,7 +199,7 @@ export function OverviewScreen(props: OverviewScreenProps) {
                   Recent invoices
                   <Link
                     href={links.invoices}
-                    className="text-body-sm font-normal text-accent-text hover:underline"
+                    className="max-lg:inline-flex max-lg:min-h-10 max-lg:items-center text-body-sm font-normal text-accent-text hover:underline"
                   >
                     All
                   </Link>
@@ -239,7 +239,7 @@ export function OverviewScreen(props: OverviewScreenProps) {
                   Open queries
                   <Link
                     href={links.queries}
-                    className="text-body-sm font-normal text-accent-text hover:underline"
+                    className="max-lg:inline-flex max-lg:min-h-10 max-lg:items-center text-body-sm font-normal text-accent-text hover:underline"
                   >
                     All
                   </Link>

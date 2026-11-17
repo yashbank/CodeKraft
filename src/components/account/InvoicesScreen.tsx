@@ -194,7 +194,7 @@ export function InvoicesScreen({
                         <TableCell>
                           <Link
                             href={`${links.order}/${inv.orderNumber}`}
-                            className="font-mono text-body-sm text-accent-text hover:underline"
+                            className="max-lg:inline-flex max-lg:min-h-10 max-lg:items-center font-mono text-body-sm text-accent-text hover:underline"
                           >
                             {inv.orderNumber}
                           </Link>
@@ -222,7 +222,7 @@ export function InvoicesScreen({
                           {inv.kind === "invoice" ? (
                             <Link
                               href={`/account/invoices/${inv.id}`}
-                              className="mr-3 text-body-sm text-accent-text hover:underline"
+                              className="max-lg:inline-flex max-lg:min-h-10 max-lg:items-center mr-3 text-body-sm text-accent-text hover:underline"
                             >
                               View
                             </Link>
@@ -376,7 +376,7 @@ export function InvoicesScreen({
                           <TableCell>
                             <Link
                               href={p.orderHref}
-                              className="font-mono text-body-sm text-accent-text hover:underline"
+                              className="max-lg:inline-flex max-lg:min-h-10 max-lg:items-center font-mono text-body-sm text-accent-text hover:underline"
                             >
                               {p.orderNumber}
                             </Link>

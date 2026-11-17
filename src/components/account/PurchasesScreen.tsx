@@ -121,8 +121,8 @@ export function PurchasesScreen({
           <TabsTrigger value="past">Expired &amp; revoked</TabsTrigger>
         </TabsList>
 
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative sm:max-w-xs sm:flex-1">
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="relative sm:max-w-xs sm:min-w-56 sm:flex-1">
             <SearchIcon
               aria-hidden
               className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-fg-subtle"

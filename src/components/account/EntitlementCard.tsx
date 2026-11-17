@@ -65,7 +65,10 @@ export function EntitlementCard({
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex flex-wrap items-center gap-2">
           <h3 id={`ent-${e.id}-title`} className="text-body font-semibold text-fg">
-            <Link href={detailHref} className="hover:underline">
+            <Link
+              href={detailHref}
+              className="max-lg:inline-flex max-lg:min-h-10 max-lg:items-center hover:underline"
+            >
               {e.productName}
             </Link>
           </h3>
@@ -102,7 +105,10 @@ export function EntitlementCard({
           )}
         </Button>
         {!compact ? (
-          <Link href={detailHref} className="text-body-sm text-accent-text hover:underline">
+          <Link
+            href={detailHref}
+            className="max-lg:inline-flex max-lg:min-h-10 max-lg:items-center text-body-sm text-accent-text hover:underline"
+          >
             Details
           </Link>
         ) : null}
