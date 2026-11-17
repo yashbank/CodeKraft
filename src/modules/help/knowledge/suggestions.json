@@ -1,0 +1,134 @@
+{
+  "guest": {
+    "en": [
+      "How do I contact you?",
+      "How do I buy a product?",
+      "How do I create an account?",
+      "How do I reset my password?",
+      "Can I get a custom quote?",
+      "How do I pay by bank transfer?",
+      "Where can I see your products?",
+      "What happens after I place an order?"
+    ],
+    "hi": [
+      "आपसे संपर्क कैसे करूं?",
+      "प्रोडक्ट कैसे खरीदूं?",
+      "अकाउंट कैसे बनाऊं?",
+      "पासवर्ड रीसेट कैसे करूं?",
+      "क्या मुझे कस्टम कोट मिल सकता है?",
+      "बैंक ट्रांसफर से भुगतान कैसे करूं?",
+      "आपके प्रोडक्ट कहां देखूं?",
+      "ऑर्डर के बाद क्या होता है?"
+    ]
+  },
+  "customer": {
+    "en": [
+      "Track my order",
+      "Download my invoice",
+      "How do I get my licence key?",
+      "Cancel an order or ask for a refund",
+      "How do I accept a quote?",
+      "Add a product to my wishlist",
+      "Change my password",
+      "Talk to a human"
+    ],
+    "hi": [
+      "मेरा ऑर्डर ट्रैक करें",
+      "मेरा इनवॉइस डाउनलोड करें",
+      "लाइसेंस की कहां मिलेगी?",
+      "ऑर्डर कैंसल या रिफंड कैसे मांगूं?",
+      "कोट कैसे स्वीकार करूं?",
+      "wishlist में प्रोडक्ट कैसे जोड़ूं?",
+      "पासवर्ड कैसे बदलूं?",
+      "इंसान से बात करनी है"
+    ]
+  },
+  "partner": {
+    "en": [
+      "How do I download my statement?",
+      "Where is my payout balance?",
+      "What is the Closing balance?",
+      "How are sales split between partners?",
+      "How do I see my ledger lines?",
+      "How do I record a payout?",
+      "Who approves a payout?",
+      "How do I read Allocations?"
+    ],
+    "hi": [
+      "मेरा स्टेटमेंट कैसे डाउनलोड करूं?",
+      "मेरा पेआउट बैलेंस कहां है?",
+      "Closing बैलेंस क्या है?",
+      "पार्टनर्स में बिक्री कैसे बंटती है?",
+      "मेरी लेजर लाइनें कहां देखूं?",
+      "पेआउट कैसे दर्ज करूं?",
+      "पेआउट कौन मंज़ूर करता है?",
+      "Allocations कैसे पढ़ूं?"
+    ]
+  },
+  "staff": {
+    "en": [
+      "How do I answer a customer query?",
+      "How do I set lead priority?",
+      "How do I mark an order delivered?",
+      "How do I add a product image?",
+      "How do I edit the landing page?",
+      "How do I add a note to a lead?",
+      "How do I download an invoice?",
+      "How do I manage categories?"
+    ],
+    "hi": [
+      "ग्राहक की query का जवाब कैसे दूं?",
+      "लीड की priority कैसे सेट करूं?",
+      "ऑर्डर delivered कैसे मार्क करूं?",
+      "प्रोडक्ट में इमेज कैसे जोड़ूं?",
+      "लैंडिंग पेज कैसे एडिट करूं?",
+      "लीड में नोट कैसे जोड़ूं?",
+      "इनवॉइस कैसे डाउनलोड करूं?",
+      "कैटेगरी कैसे संभालूं?"
+    ]
+  },
+  "admin": {
+    "en": [
+      "How do I create a manual order?",
+      "How do I confirm a payment?",
+      "How do I create a quote?",
+      "How do I propose a refund?",
+      "How do I add a product?",
+      "How do I record a payout?",
+      "How do approvals work?",
+      "How do I create a coupon?"
+    ],
+    "hi": [
+      "मैनुअल ऑर्डर कैसे बनाऊं?",
+      "पेमेंट कन्फर्म कैसे करूं?",
+      "कोट कैसे बनाऊं?",
+      "रिफंड कैसे प्रस्तावित करूं?",
+      "प्रोडक्ट कैसे जोड़ूं?",
+      "पेआउट कैसे दर्ज करूं?",
+      "approvals कैसे काम करते हैं?",
+      "कूपन कैसे बनाऊं?"
+    ]
+  },
+  "super_admin": {
+    "en": [
+      "How do I invite an admin?",
+      "How do I put the site in Maintenance?",
+      "How do I reset site data?",
+      "How do I change the theme or currency?",
+      "How do approvals work?",
+      "How do I turn on TOTP?",
+      "How do I remove an admin user?",
+      "How do I record a payout?"
+    ],
+    "hi": [
+      "admin को invite कैसे करूं?",
+      "साइट को Maintenance में कैसे रखूं?",
+      "साइट डेटा रीसेट कैसे करूं?",
+      "थीम या करेंसी कैसे बदलूं?",
+      "approvals कैसे काम करते हैं?",
+      "TOTP कैसे चालू करूं?",
+      "admin यूज़र को कैसे हटाऊं?",
+      "पेआउट कैसे दर्ज करूं?"
+    ]
+  }
+}

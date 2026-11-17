@@ -1,0 +1,1200 @@
+{
+  "en": [
+    {
+      "id": "accept-quote-customer",
+      "title": "Accept a quote you received",
+      "roles": ["customer"],
+      "keywords": [
+        "quote",
+        "quotation",
+        "accept quote",
+        "reject quote",
+        "pay link",
+        "custom quote",
+        "quote accept karo"
+      ],
+      "body": "1. Open the quote link from your email, or go to Quotes in your account.\n2. Make sure you are signed in with the same email the quote was sent to. If not, use Switch account.\n3. Read the Amount, tax and the Valid until date.\n4. Click Accept & pay and complete payment.\n5. Not interested? Click Reject quote.\nHave a question first? Click Ask a question or Open a query. After you pay, the quote shows Open order and Open purchase. A quote cannot be paid after it expires or is cancelled."
+    },
+    {
+      "id": "add-product",
+      "title": "Add a product",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "new product",
+        "create product",
+        "add product",
+        "catalog",
+        "offering",
+        "price",
+        "product banao",
+        "naya product"
+      ],
+      "body": "1. Open Products and click New product.\n2. On the Basics tab fill the details, then click Create product.\n3. On Content add the Short description and Rich description.\n4. On Offerings & prices click Add offering, set Base price and payment method, then Save offering.\n5. Set up Delivery config and Ownership / split.\n6. Check the Readiness checklist.\n7. On Publish / schedule click Submit for approval and confirm the request.\nStaff can edit drafts but cannot submit. Products go live only after approval."
+    },
+    {
+      "id": "admin-security-totp",
+      "title": "Secure admin login with TOTP",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "TOTP",
+        "2FA",
+        "authenticator",
+        "two factor",
+        "login verification",
+        "backup code",
+        "security",
+        "admin login"
+      ],
+      "body": "1. Open Admin users, then the Login verification area (the Security button).\n2. Click Enable TOTP.\n3. Scan the QR code with an authenticator app, or copy the Manual secret.\n4. Enter the six-digit code under Confirm code.\nAt the next sign-in the admin login asks for \"Enter your authenticator code\". If you lose the phone, choose Use a backup code. Super admins can see who is covered under Login verification. Disable TOTP only when you have a replacement."
+    },
+    {
+      "id": "admin-users-invite",
+      "title": "Invite, change or remove an admin user",
+      "roles": ["super_admin"],
+      "keywords": [
+        "admin users",
+        "invite admin",
+        "remove admin",
+        "role",
+        "staff",
+        "add admin",
+        "admin banao",
+        "admin hatao"
+      ],
+      "body": "Only a super admin can manage admin users.\n1. Open Admin users (under System).\n2. Invite: click Invite admin, enter Email, choose Role (Super Admin, Admin or Staff). Turn on Also a partner if needed. The invite goes to Approvals (\"Invite approval requested\").\n3. Change role: open the row actions and choose Change role, then pick the New role.\n4. Remove: choose Delete account… and confirm.\nRole changes and removals also need approval. The last super admin cannot be deleted."
+    },
+    {
+      "id": "approvals-workflow",
+      "title": "Approvals: how requests get approved",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "approval",
+        "approvals",
+        "approve",
+        "reject",
+        "request approval",
+        "pending",
+        "second approver",
+        "maker checker",
+        "approval kaise"
+      ],
+      "body": "Sensitive changes need a second person. These include product publish, project order split, ledger adjustment, payouts, ownership change, admin user change and Reset site data.\n1. Open Approvals (under Overview). The badge shows how many wait for you.\n2. Filter by type, then click a request.\n3. Read What will change, Before and After, and Who must approve.\n4. Click Approve or Reject.\nRequests you made appear in your own list, where you can use Cancel request. You can never approve your own request."
+    },
+    {
+      "id": "cancel-refund-customer",
+      "title": "Cancel an order or ask for a refund",
+      "roles": ["customer"],
+      "keywords": [
+        "cancel order",
+        "refund",
+        "money back",
+        "return",
+        "refund request",
+        "cancel karo",
+        "refund chahiye",
+        "paisa wapas"
+      ],
+      "body": "1. Open Purchases & access and click the order.\n2. Not paid yet? Click Cancel order.\n3. Already paid? Click Request refund, write Tell us why (optional), then Send request.\n4. A \"Refund request sent\" message appears. If one is already open you will see \"Refund request already open\".\nWe review it, and an approver must sign off before money moves. Track the thread in Queries. A confirmed refund shows as Partially refunded or refunded, with a credit note in Invoices & payments."
+    },
+    {
+      "id": "chatbot-admin",
+      "title": "Monitor the chatbot",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "chatbot",
+        "chat",
+        "bot",
+        "AI chat",
+        "transcripts",
+        "system prompt",
+        "escalation",
+        "chatbot monitor"
+      ],
+      "body": "1. Open Chatbot (under Growth).\n2. Check Usage for Daily chatbot messages, Estimated cost and Users at cap.\n3. Open Conversations to read a Chat transcript. Use Open lead or Open escalated query to follow up.\n4. Under Prompts edit the System prompt, add Version notes and save a new Prompt version.\n5. Use Try a message to test the bot before relying on it.\nPlatform cap and Escalation rate show whether the bot is hitting limits or handing too many chats to humans."
+    },
+    {
+      "id": "checkout-customer",
+      "title": "Buy a product and place an order (checkout)",
+      "roles": ["customer"],
+      "keywords": [
+        "buy",
+        "purchase",
+        "checkout",
+        "place order",
+        "order",
+        "pay",
+        "coupon",
+        "order banao",
+        "kharidna",
+        "buy now"
+      ],
+      "body": "1. Open a product and click Buy now. (Custom products show Request a quote instead.)\n2. Sign in and verify your email if asked.\n3. On checkout fill Billing details: country, State, City, Postal code, and GST number (optional).\n4. Under Review & discounts enter a Coupon (optional) and check the Total.\n5. Choose a Payment method: Pay instantly by card or UPI, or Bank transfer.\n6. Click Place order.\nFor bank transfer, pay using the shown details, then Submit your reference. We confirm within one business day. You will find the order under Purchases & access."
+    },
+    {
+      "id": "contact-us",
+      "title": "Contact us (inquiry form)",
+      "roles": ["customer", "partner", "staff", "admin", "super_admin"],
+      "keywords": [
+        "contact",
+        "contact us",
+        "inquiry",
+        "enquiry",
+        "talk to team",
+        "get in touch",
+        "sales",
+        "phone number",
+        "sampark karo"
+      ],
+      "body": "1. Open the site and click Contact (inquiry form) in the footer.\n2. Fill Full name and Work email. Phone and Company are optional.\n3. Pick What do you need? and add a Budget hint (optional).\n4. Write your Message.\n5. Click Send inquiry.\nA \"Sent to our team\" message confirms it, and a lead is created for the team to follow up. If you are signed in and have an order, use Queries instead so we can link it to your account. For a quick answer, use the Ask me anything help button."
+    },
+    {
+      "id": "coupons",
+      "title": "Create a coupon",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "coupon",
+        "discount code",
+        "promo",
+        "offer",
+        "percent off",
+        "coupon banao",
+        "discount"
+      ],
+      "body": "1. Open Coupons (under Catalog).\n2. Click New coupon.\n3. Enter the Code and choose Percentage or a fixed amount under Type & value.\n4. Set Starts at and Ends at.\n5. Optional limits: Max redemptions, Restrict to products, First purchase only.\n6. Add an Internal note if needed, then click Save coupon.\nUse Copy code to share it. Customers type it in Coupon (optional) at checkout. Open View orders to see where it was used."
+    },
+    {
+      "id": "create-customer",
+      "title": "Create a customer",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "add customer",
+        "new customer",
+        "register customer",
+        "customer banao",
+        "naya customer",
+        "client add"
+      ],
+      "body": "Create an account for someone who has not signed up yet.\n1. Open Customers.\n2. Click New customer.\n3. Fill Name and Email. Phone and Company are optional.\n4. Submit the dialog. The customer gets an email to set a password.\n5. If the email fails, a warning appears. Open the customer and use Reset link / password to send it again.\nAfter this you can pick the customer in New manual order or New quote. Staff can view customers but cannot create them."
+    },
+    {
+      "id": "create-quote",
+      "title": "Create a custom quote and turn it into an order",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "quote",
+        "quotation",
+        "custom quote",
+        "send quote",
+        "pay link",
+        "convert quote",
+        "quote banao",
+        "quotation bhejo"
+      ],
+      "body": "A quote becomes an order when the customer accepts and pays.\n1. Open Quotes and click New quote.\n2. Choose the Customer, set the Title, Currency, Price (tax-exclusive) and Tax %. Optionally pick a Linked offering.\n3. Set Valid until (default is 14 days).\n4. Click Send to customer, or Save draft to finish later.\n5. After sending, copy the Pay link, or use Resend to customer.\n6. The customer opens the quote and clicks Accept & pay. The quote then shows its Order number.\nYou can also start one from a lead with Send custom quote."
+    },
+    {
+      "id": "customer-preferences",
+      "title": "Change theme, currency and notification choices",
+      "roles": ["customer"],
+      "keywords": [
+        "theme",
+        "dark mode",
+        "light mode",
+        "currency",
+        "display currency",
+        "notification settings",
+        "email preferences",
+        "dark mode lagao"
+      ],
+      "body": "1. Open Settings from the account menu.\n2. Under Preferences choose a Theme (light or dark). A \"Theme saved\" message confirms it.\n3. Choose your Display currency. Prices are shown in it.\n4. Under Notifications switch on or off Orders and delivery, Queries and support, and Product updates.\nYou can also change the theme and Display currency from the site header."
+    },
+    {
+      "id": "customer-support-chat",
+      "title": "Ask support: queries and chat",
+      "roles": ["customer"],
+      "keywords": [
+        "support",
+        "help",
+        "query",
+        "chat",
+        "talk to human",
+        "ticket",
+        "contact team",
+        "madad",
+        "support chahiye"
+      ],
+      "body": "Chat:\n1. Open Chat from your account menu and ask about orders or products.\n2. For a person, click Talk to a human. A query is created and the team answers there.\n3. Use New conversation for a fresh start. Past conversations are kept.\nQueries:\n1. Open Queries and click New query.\n2. Write your message, attach files if needed, and send.\n3. Reply under Write a reply. Waiting on you means we need your answer.\n4. When fixed, click Mark resolved.\nYou must verify your email before chatting."
+    },
+    {
+      "id": "danger-zone-reset",
+      "title": "Danger zone: reset site data (irreversible)",
+      "roles": ["super_admin"],
+      "keywords": [
+        "danger zone",
+        "reset",
+        "delete all data",
+        "wipe",
+        "clear demo data",
+        "site reset",
+        "data delete",
+        "reset site"
+      ],
+      "body": "Warning: this permanently deletes data and cannot be undone.\n1. Open Settings, then Danger zone.\n2. Under Data to delete tick what to remove. Use Preview row counts to see Rows to delete.\n3. Click Download backup. The request button stays disabled until you do.\n4. Click Request site reset.\n5. In the confirmation dialog type the site name exactly (the \"Type ... to confirm\" box), then click Confirm site reset request.\nNothing is deleted yet: a different super admin must approve it in Approvals. Super admin accounts, settings, roles, legal pages and the audit log are always kept."
+    },
+    {
+      "id": "download-invoice-customer",
+      "title": "Download my invoice",
+      "roles": ["customer"],
+      "keywords": [
+        "invoice",
+        "download invoice",
+        "bill",
+        "receipt",
+        "GST invoice",
+        "PDF",
+        "invoice download karo",
+        "bill chahiye"
+      ],
+      "body": "1. Sign in and open Invoices & payments from the account menu.\n2. Use All years to narrow the list if needed.\n3. Find the row. The Invoice no, Date, Order and Status are shown.\n4. Click PDF. The invoice opens in a new tab, and you can save or print it.\nInvoices appear once your payment is confirmed. Bank transfers can take up to one business day. If the PDF fails, wait a minute and try again, or Open a query from Queries. Refunds show as credit notes in the same list."
+    },
+    {
+      "id": "edit-landing",
+      "title": "Edit the landing page and site content",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "landing page",
+        "homepage",
+        "hero",
+        "site content",
+        "CTA",
+        "blog",
+        "FAQ",
+        "services",
+        "website badlo",
+        "homepage edit"
+      ],
+      "body": "1. Open Content, then Landing.\n2. Edit sections such as Who we are, What we build and What we sell. Change the Hero image with Upload image or Replace image.\n3. Set Primary CTA label, Primary CTA target and the secondary CTA.\n4. Under Featured products click Add product to pick published products.\n5. Save your work. A \"Saved n s ago\" or \"Unsaved changes\" note shows the state.\nOther pages live under Content too: Services, Case studies, Testimonials & logos, Blog, FAQs and Legal. Staff can edit but only admins can publish."
+    },
+    {
+      "id": "finance-ledger",
+      "title": "Read the finance ledger, allocations and reports",
+      "roles": ["admin", "super_admin", "partner"],
+      "keywords": [
+        "ledger",
+        "finance",
+        "allocation",
+        "partner share",
+        "statement",
+        "report",
+        "export",
+        "balance",
+        "hisab",
+        "finance dekho"
+      ],
+      "body": "1. Open Finance (left menu). It expands into Ledger, Allocations, Partners & payouts, Expenses, Adjustments and Reports & statements.\n2. Ledger lists every Entry. Filter by Entry type, Party type or Order number. Entries are Immutable, so errors are fixed with an adjustment.\n3. Allocations shows how each sale splits: Company cut, Gateway fee, Bank charge and partner shares.\n4. In Reports & statements pick a period (This month, Last month, This FY), choose Partner, then click Generate statement and Download.\nPartners see only their own lines."
+    },
+    {
+      "id": "fulfil-order",
+      "title": "Deliver an order: delivery tasks and entitlements",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "fulfil",
+        "deliver",
+        "delivery task",
+        "licence key",
+        "license key",
+        "entitlement",
+        "mark delivered",
+        "delivery karo"
+      ],
+      "body": "After payment, deliver what the customer bought.\n1. Open Delivery tasks to see open work. Use Assign to, then Mark done when finished.\n2. For access or keys, open Entitlements.\n3. Expand a row to use Enter licence key, Replace licence key, Reset downloads or Revoke external.\n4. For services, work through Service steps.\n5. When everything is handed over, click Mark delivered and add a Note to customer.\nYou can also reach the same actions from the order page under Items & fulfilment. The Fulfilment guide in Settings explains each delivery type."
+    },
+    {
+      "id": "get-access-customer",
+      "title": "Open or download what I bought",
+      "roles": ["customer"],
+      "keywords": [
+        "download",
+        "access",
+        "licence key",
+        "license key",
+        "instructions",
+        "my products",
+        "renew",
+        "download karo",
+        "key kahan"
+      ],
+      "body": "1. Open Purchases & access (also called Your products).\n2. Find the product card. Its status chip shows if access is active.\n3. Use the button on the card: Reveal key, Open instructions, View progress or Manage subscription, depending on the type.\n4. For more, click the card for details: License type, Version owned and Access period.\n5. If access ended, click Renew or Buy again.\nSomething wrong or not working? Click Contact support. Downloads can have a limit, and the details page shows what is left."
+    },
+    {
+      "id": "issue-invoice",
+      "title": "Issue and download an invoice (admin)",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "invoice",
+        "issue invoice",
+        "bill",
+        "GST invoice",
+        "download invoice",
+        "invoice banao",
+        "invoice download"
+      ],
+      "body": "Invoices are issued automatically when a payment is confirmed. There is no separate button to draft one.\n1. Open Orders and click the order.\n2. Confirm the order is paid (use Confirm payment first if it is not).\n3. Click More order actions.\n4. Choose Download invoice.\nThe option stays disabled until the order has an invoice number. Refunds produce a credit note automatically. The customer sees the same PDF under Invoices & payments."
+    },
+    {
+      "id": "leads-priority",
+      "title": "Work leads and set priority",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "lead",
+        "leads",
+        "priority",
+        "follow-up",
+        "pipeline",
+        "assign lead",
+        "lead mark lost",
+        "lead priority"
+      ],
+      "body": "1. Open Leads. Use the Unassigned pool filter to find new ones.\n2. Use the row actions: Assign to me to claim a lead.\n3. Choose Set priority and pick Normal or High.\n4. Choose Set follow-up and a date. Overdue only shows missed follow-ups.\n5. Open a lead to Add note, check the Chat transcript or Original message.\n6. Move it forward with Change status, Send custom quote or Create project order.\n7. If it will not close, choose Mark lost and give a reason.\nAdd a lead yourself with New lead (source is Manual)."
+    },
+    {
+      "id": "manage-categories",
+      "title": "Manage product categories",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "category",
+        "categories",
+        "sub category",
+        "tag",
+        "group products",
+        "category banao"
+      ],
+      "body": "1. Open Categories (under Catalog), or use the Category tree beside the Products list.\n2. Click Category to add one. Choose a Parent to make it a sub-category (maximum depth is 2).\n3. Click an existing category to rename or edit it, then save.\n4. To remove one, select it and click Delete.\nDelete is blocked while any product still uses the category. Move those products to another category first. Use All categories on the Products list to filter by category."
+    },
+    {
+      "id": "notifications-admin",
+      "title": "Notifications in the admin",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": ["notifications", "alerts", "bell", "unread", "mark read", "notification kahan"],
+      "body": "1. Open Notifications (under Overview), or use the bell in the top bar. It shows the unread count.\n2. Each item has a quick action such as Confirm payment or Review approval.\n3. Click Load more to see older ones.\n4. Mark all as read clears the unread count. An \"All notifications marked read\" message confirms it.\nYou get notices for new orders, payments to confirm, approvals waiting and new queries or leads. Open the Audit log under System if you need the full history of who did what."
+    },
+    {
+      "id": "notifications-customer",
+      "title": "See my notifications",
+      "roles": ["customer"],
+      "keywords": [
+        "notifications",
+        "alerts",
+        "bell",
+        "unread",
+        "updates",
+        "notification kahan dekhein"
+      ],
+      "body": "1. Click the bell in the top bar. The number shows unread items.\n2. Click Mark all read to clear them, or View all to open the full page.\n3. On Notifications use Filter by type (for example Product updates) and the Unread filter.\n4. Click an item to jump to the order, query or product it is about.\nYou are told when a payment is confirmed, when access is ready, when support replies and when a product you own is updated. To stop some of these emails, go to Settings, then Notifications."
+    },
+    {
+      "id": "partners-payouts",
+      "title": "Add a partner and record a payout",
+      "roles": ["admin", "super_admin", "partner"],
+      "keywords": [
+        "partner",
+        "payout",
+        "pay partner",
+        "partner balance",
+        "bank reference",
+        "payout record karo",
+        "partner add"
+      ],
+      "body": "1. Open Finance, then Partners & payouts.\n2. To add a partner click Add partner, pick an Admin user (or enter Admin email) and set Display name.\n3. Read Partner balances: Earned (all time), Paid out and Closing.\n4. To pay one, click Record payout. Choose the partner, enter Amount, Date paid and Bank reference, then submit.\nThe payout goes to Approvals (\"Payout sent for approval\") and posts to the ledger once approved. Use Payout status to filter Awaiting approval."
+    },
+    {
+      "id": "place-order-admin",
+      "title": "Create an order for a customer (admin)",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "new order",
+        "manual order",
+        "place order",
+        "create order",
+        "offline sale",
+        "client invoice",
+        "order banao",
+        "naya order"
+      ],
+      "body": "Use this when a customer pays offline or you sell a project directly.\n1. Open Orders and click New manual order.\n2. Choose Product order (offline sale) or Project order (client invoice).\n3. Pick the Registered customer (search by email) or click Invite customer.\n4. Click Add line for each offering. Set Currency, Discount amount and Apply tax if needed.\n5. Optional: turn on Record payment now and fill Method, Amount received, Reference and Paid on.\n6. Click Create order, or Create & confirm when a payment is recorded.\nA project order shows Create & request split approval and waits in Approvals first."
+    },
+    {
+      "id": "product-media",
+      "title": "Add images, video or files to a product",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "media",
+        "image",
+        "photo",
+        "video",
+        "upload",
+        "cover image",
+        "gallery",
+        "photo lagao",
+        "image upload"
+      ],
+      "body": "1. Open Products and click the product.\n2. Go to the Media tab.\n3. Click Choose file. Images, MP4/WebM/MOV video and PDF are accepted.\n4. Add Alt text (optional) for accessibility.\n5. Click Upload & attach. A Media attached message appears.\n6. To use an image as the thumbnail, click Use cover image.\nThe Cover image appears on product cards. Remove an item from the same tab if it is wrong. Release downloads go in the Versions tab with Upload release file."
+    },
+    {
+      "id": "profile-security-password",
+      "title": "Profile, security and password",
+      "roles": ["customer"],
+      "keywords": [
+        "profile",
+        "password",
+        "change password",
+        "forgot password",
+        "email change",
+        "security",
+        "sessions",
+        "delete account",
+        "password badlo"
+      ],
+      "body": "Change details:\n1. Open Settings from the account menu.\n2. Under Profile edit your name and Phone, or use Change email (a verification link is sent).\n3. Under Billing details save your address and GST number.\nChange password:\n1. In Change password enter your current and new password, confirm it, then click Update password.\nForgot it? On the sign-in page click Forgot password? and follow the Reset your password email.\nClick Sign out other sessions if you used a shared device. Delete account closes your account for good."
+    },
+    {
+      "id": "record-expense",
+      "title": "Record an expense",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "expense",
+        "cost",
+        "spend",
+        "receipt",
+        "shared expense",
+        "kharcha",
+        "expense add karo"
+      ],
+      "body": "1. Open Finance, then Expenses.\n2. Click Record expense.\n3. Fill Description, Category, Amount, Incurred on, and attach a Receipt if you have one.\n4. Choose who bears it: Company (no product), a Product, or Shared by split (Share by product split).\n5. Save. An \"Expense recorded\" message appears.\nExpenses cannot be edited. To fix one, use Reverse via adjustment. Each row has View receipt and Copy seq for the ledger sequence number."
+    },
+    {
+      "id": "record-payment",
+      "title": "Record or confirm a payment",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "confirm payment",
+        "record payment",
+        "bank transfer",
+        "UPI",
+        "UTR",
+        "mark paid",
+        "payment confirm karo",
+        "payment record karo"
+      ],
+      "body": "Use this for bank transfer or UPI orders waiting for confirmation.\n1. Open Orders and find the order (the queue shows Awaiting confirmation).\n2. Click Confirm payment.\n3. Fill Received on and Reference (UTR / NEFT). Add a Note if useful.\n4. Check the Payment recap, then click Confirm and mark Paid.\nThe order becomes paid, the invoice is created and the customer gets access. If money never arrived, use Mark failed and give a Reason instead."
+    },
+    {
+      "id": "refund-adjustment",
+      "title": "Propose a refund or a ledger adjustment",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "refund",
+        "money back",
+        "adjustment",
+        "correct ledger",
+        "chargeback",
+        "refund karo",
+        "paisa wapas"
+      ],
+      "body": "Refunds and adjustments always need a second person to approve.\nRefund:\n1. Open Orders and click the order.\n2. Click More order actions, then Propose refund.\n3. Enter the amount and a reason, then click Request approval.\nAdjustment (fixes a ledger mistake):\n1. Open Finance, then Adjustments.\n2. Click New adjustment, fill Lines and Reason, check Impact preview.\n3. Submit it.\nWatch the status in Approvals. You cannot approve your own request."
+    },
+    {
+      "id": "settings-theme-currency",
+      "title": "Change theme, currency and other settings",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "settings",
+        "theme",
+        "dark mode",
+        "currency",
+        "base currency",
+        "logo",
+        "GST",
+        "site name",
+        "setting badlo"
+      ],
+      "body": "1. Open Settings (under System). Staff and admins can view; only a super admin can save changes.\n2. Use the section list: General / seller, Currencies, Tax & GSTIN, Payment methods, Theme, AI, Email & notifications, Feature flags, Fulfilment guide and Danger zone.\n3. Theme: pick Light editorial or Dark cinematic as the default theme.\n4. Currencies: set the Base currency and Enabled display currencies. Use Refresh now for exchange rates.\n5. Click Save changes. \"Settings saved\" confirms it."
+    },
+    {
+      "id": "sign-in-account",
+      "title": "Create an account and sign in",
+      "roles": ["customer"],
+      "keywords": [
+        "sign up",
+        "register",
+        "create account",
+        "login",
+        "sign in",
+        "google login",
+        "phone login",
+        "account banao",
+        "login kaise karein"
+      ],
+      "body": "Create an account:\n1. Click Sign in, then choose Create account.\n2. Enter your full name, a valid email and a password, or use Continue with Google.\n3. Open the email we send and verify it. Use Resend verification email if it did not arrive.\nSign in:\n1. Enter Email and Password, then click Sign in. Tick Remember this device on your own device only.\n2. Or choose Sign in with phone instead for a code.\nYou need a verified email to buy or chat."
+    },
+    {
+      "id": "site-phase",
+      "title": "Set the site phase: Live, Testing or Maintenance",
+      "roles": ["super_admin"],
+      "keywords": [
+        "site phase",
+        "maintenance mode",
+        "testing mode",
+        "go live",
+        "back soon page",
+        "site band karo",
+        "maintenance"
+      ],
+      "body": "Only a super admin can change this.\n1. Open Settings and go to General / seller.\n2. Find Site phase.\n3. Choose one:\n- Live: the normal public site.\n- Testing: shows a Test site banner, asks search engines not to index, and does not email customers.\n- Maintenance: visitors see a back soon page; admin and payments keep working.\n4. Click Save changes.\nUse Testing while trying things out, Maintenance for downtime, and switch back to Live before launch."
+    },
+    {
+      "id": "support-queries-admin",
+      "title": "Answer customer queries (support inbox)",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "query",
+        "queries",
+        "support",
+        "ticket",
+        "reply",
+        "customer question",
+        "refund request",
+        "query reply karo",
+        "help desk"
+      ],
+      "body": "1. Open Queries. Pick a thread from the Query list.\n2. Choose Unassigned (claim) to take a thread from the Pool.\n3. Type in Reply and click Send.\n4. Use More thread actions for Create lead, View customer or Propose refund (when the thread is a Refund request).\n5. When the customer is done, mark it Resolved or Closed.\nTo start a thread for a phone call or email, click Log a query and search the customer. Threads waiting on the customer show Waiting."
+    },
+    {
+      "id": "track-order",
+      "title": "Track my order",
+      "roles": ["customer"],
+      "keywords": [
+        "track order",
+        "order status",
+        "where is my order",
+        "order tracking",
+        "my orders",
+        "order kahan hai",
+        "order status dekho"
+      ],
+      "body": "1. Sign in and open your account.\n2. Go to Purchases & access. Use the filters or Search by product name.\n3. Open orders waiting for payment show Pay now or Submit reference.\n4. Click an order to see Order progress, Order summary and Paid on.\n5. Statuses include Pending payment, Confirmed by us, Access ready and Partially refunded.\nWhen access is ready click Go to your purchase. Past payments are also under Invoices & payments, with Open order beside each line. Still stuck? Click Open a query."
+    },
+    {
+      "id": "wishlist",
+      "title": "Use my wishlist",
+      "roles": ["customer"],
+      "keywords": [
+        "wishlist",
+        "save for later",
+        "favourite",
+        "favorite",
+        "heart",
+        "saved products",
+        "wishlist mein daalo"
+      ],
+      "body": "1. Sign in. Without an account the heart icon says Sign in to add to wishlist.\n2. On any product card click the heart (Add to wishlist). Click it again to take it off (Remove from wishlist).\n3. Open Wishlist from your account menu.\n4. Use Sort wishlist for Recently added, Name or Price.\n5. For each item click Buy now (or Request a quote), View product, or Remove.\nPrices follow your Display currency. Your list is saved to your account, so it is there on every device."
+    }
+  ],
+  "hi": [
+    {
+      "id": "accept-quote-customer",
+      "title": "मिला हुआ कोट स्वीकार करें",
+      "roles": ["customer"],
+      "keywords": [
+        "कोट",
+        "कोटेशन",
+        "quote accept karo",
+        "reject quote",
+        "pay link",
+        "custom quote",
+        "quote"
+      ],
+      "body": "1. ईमेल में आया कोट लिंक खोलें, या अकाउंट में Quotes पर जाएं।\n2. उसी ईमेल से साइन-इन हों जिस पर कोट भेजा गया था। नहीं तो Switch account दबाएं।\n3. Amount, टैक्स और Valid until तारीख पढ़ें।\n4. Accept & pay दबाएं और भुगतान पूरा करें।\n5. पसंद न हो तो Reject quote दबाएं।\nपहले कुछ पूछना हो तो Ask a question या Open a query दबाएं। भुगतान के बाद कोट में Open order और Open purchase दिखते हैं। समय सीमा खत्म या कैंसल होने पर कोट का भुगतान नहीं हो सकता।"
+    },
+    {
+      "id": "add-product",
+      "title": "नया प्रोडक्ट जोड़ें",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "नया प्रोडक्ट",
+        "प्रोडक्ट जोड़ें",
+        "कैटलॉग",
+        "product banao",
+        "naya product",
+        "price",
+        "offering"
+      ],
+      "body": "1. Products खोलें और New product दबाएं।\n2. Basics टैब में जानकारी भरें, फिर Create product दबाएं।\n3. Content में Short description और Rich description लिखें।\n4. Offerings & prices में Add offering दबाएं, Base price और भुगतान तरीका सेट करें, फिर Save offering।\n5. Delivery config और Ownership / split तैयार करें।\n6. Readiness checklist देखें।\n7. Publish / schedule में Submit for approval दबाएं और रिक्वेस्ट की पुष्टि करें।\nStaff ड्राफ्ट एडिट कर सकते हैं पर सबमिट नहीं। प्रोडक्ट मंज़ूरी के बाद ही लाइव होता है।"
+    },
+    {
+      "id": "admin-security-totp",
+      "title": "TOTP से admin लॉगिन सुरक्षित करें",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "TOTP",
+        "2FA",
+        "ऑथेंटिकेटर",
+        "टू फैक्टर",
+        "login verification",
+        "backup code",
+        "security",
+        "admin login"
+      ],
+      "body": "1. Admin users खोलें, फिर Login verification वाला हिस्सा (Security बटन)।\n2. Enable TOTP दबाएं।\n3. ऑथेंटिकेटर ऐप से QR स्कैन करें, या Manual secret कॉपी करें।\n4. Confirm code में छह अंकों का कोड डालें।\nअगली बार साइन-इन पर admin लॉगिन \"Enter your authenticator code\" पूछेगा। फोन खो जाए तो Use a backup code चुनें। Login verification में दिखता है कि किसके लिए चालू है। Disable TOTP तभी करें जब नया विकल्प तैयार हो।"
+    },
+    {
+      "id": "admin-users-invite",
+      "title": "admin यूज़र को invite करें, रोल बदलें या हटाएं",
+      "roles": ["super_admin"],
+      "keywords": [
+        "admin users",
+        "एडमिन जोड़ें",
+        "रोल बदलें",
+        "admin banao",
+        "admin hatao",
+        "invite admin",
+        "staff add"
+      ],
+      "body": "Admin यूज़र केवल super admin संभाल सकता है।\n1. Admin users खोलें (System के नीचे)।\n2. Invite: Invite admin दबाएं, Email डालें, Role चुनें (Super Admin, Admin या Staff)। ज़रूरत हो तो Also a partner ऑन करें। इनवाइट Approvals में जाता है (\"Invite approval requested\")।\n3. रोल बदलना: पंक्ति के actions में Change role चुनें, फिर New role रखें।\n4. हटाना: Delete account… चुनकर पुष्टि करें।\nरोल बदलने और हटाने के लिए भी मंज़ूरी चाहिए। आख़िरी super admin को डिलीट नहीं कर सकते।"
+    },
+    {
+      "id": "approvals-workflow",
+      "title": "Approvals: रिक्वेस्ट कैसे मंज़ूर होती हैं",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "अप्रूवल",
+        "मंज़ूरी",
+        "approve",
+        "reject",
+        "approval kaise",
+        "pending",
+        "maker checker",
+        "approvals"
+      ],
+      "body": "संवेदनशील बदलावों के लिए दूसरे व्यक्ति की मंज़ूरी चाहिए। जैसे प्रोडक्ट पब्लिश, प्रोजेक्ट ऑर्डर स्प्लिट, लेजर एडजस्टमेंट, पेआउट, ownership बदलाव, admin यूज़र बदलाव और Reset site data।\n1. Approvals खोलें (Overview के नीचे)। बैज बताता है कितनी आपका इंतज़ार कर रही हैं।\n2. टाइप से फ़िल्टर करें, फिर रिक्वेस्ट पर क्लिक करें।\n3. What will change, Before, After और Who must approve पढ़ें।\n4. Approve या Reject दबाएं।\nआपकी अपनी रिक्वेस्ट आपकी सूची में दिखती है, जहां Cancel request कर सकते हैं। अपनी रिक्वेस्ट आप कभी मंज़ूर नहीं कर सकते।"
+    },
+    {
+      "id": "cancel-refund-customer",
+      "title": "ऑर्डर कैंसल करें या रिफंड मांगें",
+      "roles": ["customer"],
+      "keywords": [
+        "कैंसल",
+        "रिफंड",
+        "पैसे वापस",
+        "cancel karo",
+        "refund chahiye",
+        "paisa wapas",
+        "refund request",
+        "cancel order"
+      ],
+      "body": "1. Purchases & access खोलें और ऑर्डर पर क्लिक करें।\n2. अभी भुगतान नहीं हुआ? Cancel order दबाएं।\n3. भुगतान हो चुका है? Request refund दबाएं, Tell us why (optional) में कारण लिखें, फिर Send request।\n4. \"Refund request sent\" संदेश दिखेगा। पहले से खुली हो तो \"Refund request already open\" दिखता है।\nहम समीक्षा करते हैं और पैसे लौटने से पहले अप्रूवर की मंज़ूरी ज़रूरी है। थ्रेड Queries में देखें। मंज़ूर रिफंड Partially refunded या refunded दिखता है, और Invoices & payments में क्रेडिट नोट आता है।"
+    },
+    {
+      "id": "chatbot-admin",
+      "title": "चैटबॉट की निगरानी करें",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "चैटबॉट",
+        "बॉट",
+        "चैट",
+        "ट्रांसक्रिप्ट",
+        "system prompt",
+        "escalation",
+        "chatbot monitor",
+        "AI chat"
+      ],
+      "body": "1. Chatbot खोलें (Growth के नीचे)।\n2. Usage में Daily chatbot messages, Estimated cost और Users at cap देखें।\n3. Conversations खोलकर Chat transcript पढ़ें। आगे के लिए Open lead या Open escalated query दबाएं।\n4. Prompts में System prompt बदलें, Version notes जोड़ें और नया Prompt version सेव करें।\n5. भरोसा करने से पहले Try a message से बॉट टेस्ट करें।\nPlatform cap और Escalation rate बताते हैं कि बॉट सीमा छू रहा है या बहुत चैट इंसानों को भेज रहा है।"
+    },
+    {
+      "id": "checkout-customer",
+      "title": "प्रोडक्ट खरीदें और ऑर्डर करें (checkout)",
+      "roles": ["customer"],
+      "keywords": [
+        "खरीदें",
+        "ऑर्डर",
+        "चेकआउट",
+        "भुगतान",
+        "कूपन",
+        "order banao",
+        "kharidna",
+        "buy now",
+        "place order"
+      ],
+      "body": "1. प्रोडक्ट खोलें और Buy now दबाएं। (कस्टम प्रोडक्ट पर Request a quote दिखता है।)\n2. मांगे जाने पर साइन-इन करें और ईमेल वेरिफाई करें।\n3. चेकआउट में Billing details भरें: देश, State, City, Postal code और GST number (वैकल्पिक)।\n4. Review & discounts में Coupon (optional) डालें और Total देखें।\n5. Payment method चुनें: Pay instantly by card or UPI, या Bank transfer।\n6. Place order दबाएं।\nबैंक ट्रांसफर में दिए विवरण से भुगतान करें, फिर Submit your reference दबाएं। हम एक कार्यदिवस में कन्फर्म करते हैं। ऑर्डर आपको Purchases & access में मिलेगा।"
+    },
+    {
+      "id": "contact-us",
+      "title": "हमसे संपर्क करें (inquiry form)",
+      "roles": ["customer", "partner", "staff", "admin", "super_admin"],
+      "keywords": [
+        "संपर्क",
+        "इन्क्वायरी",
+        "पूछताछ",
+        "टीम से बात",
+        "sampark karo",
+        "contact us",
+        "sales",
+        "contact"
+      ],
+      "body": "1. साइट खोलें और फूटर में Contact (inquiry form) दबाएं।\n2. Full name और Work email भरें। Phone और Company वैकल्पिक हैं।\n3. What do you need? चुनें और चाहें तो Budget hint (optional) डालें।\n4. अपना Message लिखें।\n5. Send inquiry दबाएं।\n\"Sent to our team\" संदेश पुष्टि करता है, और टीम के फॉलो-अप के लिए एक लीड बन जाती है। साइन-इन हैं और ऑर्डर है तो Queries इस्तेमाल करें ताकि वह आपके अकाउंट से जुड़े। जल्दी जवाब के लिए Ask me anything हेल्प बटन इस्तेमाल करें।"
+    },
+    {
+      "id": "coupons",
+      "title": "कूपन बनाएं",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "कूपन",
+        "डिस्काउंट कोड",
+        "प्रोमो",
+        "coupon banao",
+        "discount",
+        "offer",
+        "percent off"
+      ],
+      "body": "1. Coupons खोलें (Catalog के नीचे)।\n2. New coupon पर क्लिक करें।\n3. Code लिखें और Type & value में Percentage या तय राशि चुनें।\n4. Starts at और Ends at सेट करें।\n5. वैकल्पिक सीमाएं: Max redemptions, Restrict to products, First purchase only।\n6. ज़रूरत हो तो Internal note जोड़ें, फिर Save coupon दबाएं।\nCopy code से कोड शेयर करें। ग्राहक चेकआउट पर Coupon (optional) में इसे डालता है। कहां इस्तेमाल हुआ, यह View orders में दिखता है।"
+    },
+    {
+      "id": "create-customer",
+      "title": "नया ग्राहक बनाएं",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "ग्राहक जोड़ें",
+        "नया ग्राहक",
+        "customer banao",
+        "naya customer",
+        "client add",
+        "register customer"
+      ],
+      "body": "जिसने अभी साइन-अप नहीं किया, उसके लिए अकाउंट बनाएं।\n1. Customers खोलें।\n2. New customer पर क्लिक करें।\n3. Name और Email भरें। Phone और Company वैकल्पिक हैं।\n4. डायलॉग सबमिट करें। ग्राहक को पासवर्ड सेट करने का ईमेल जाता है।\n5. ईमेल न जाए तो चेतावनी दिखती है। ग्राहक खोलकर Reset link / password से दोबारा भेजें।\nइसके बाद आप New manual order या New quote में उस ग्राहक को चुन सकते हैं। Staff ग्राहक देख सकते हैं पर बना नहीं सकते।"
+    },
+    {
+      "id": "create-quote",
+      "title": "कस्टम कोट बनाएं और ऑर्डर में बदलें",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "कोट",
+        "कोटेशन",
+        "quote banao",
+        "quotation bhejo",
+        "pay link",
+        "quote convert",
+        "custom quote"
+      ],
+      "body": "कोट तब ऑर्डर बनता है जब ग्राहक उसे स्वीकार करके भुगतान करे।\n1. Quotes खोलें और New quote दबाएं।\n2. Customer चुनें, फिर Title, Currency, Price (tax-exclusive) और Tax % भरें। चाहें तो Linked offering चुनें।\n3. Valid until सेट करें (डिफ़ॉल्ट 14 दिन)।\n4. Send to customer दबाएं, या बाद के लिए Save draft।\n5. भेजने के बाद Pay link कॉपी करें, या Resend to customer करें।\n6. ग्राहक कोट खोलकर Accept & pay दबाता है। तब कोट में Order नंबर दिखता है।\nलीड से भी Send custom quote के ज़रिए कोट शुरू कर सकते हैं।"
+    },
+    {
+      "id": "customer-preferences",
+      "title": "थीम, करेंसी और नोटिफिकेशन पसंद बदलें",
+      "roles": ["customer"],
+      "keywords": [
+        "थीम",
+        "डार्क मोड",
+        "लाइट मोड",
+        "करेंसी",
+        "dark mode lagao",
+        "display currency",
+        "notification settings",
+        "theme"
+      ],
+      "body": "1. अकाउंट मेन्यू से Settings खोलें।\n2. Preferences में Theme (लाइट या डार्क) चुनें। \"Theme saved\" संदेश पुष्टि करता है।\n3. अपनी Display currency चुनें। कीमतें उसी में दिखती हैं।\n4. Notifications में Orders and delivery, Queries and support और Product updates को ऑन या ऑफ करें।\nथीम और Display currency साइट हेडर से भी बदल सकते हैं। बदलाव अगली बार साइन-इन पर भी वैसे ही रहता है।"
+    },
+    {
+      "id": "customer-support-chat",
+      "title": "सपोर्ट से पूछें: queries और chat",
+      "roles": ["customer"],
+      "keywords": [
+        "सपोर्ट",
+        "मदद",
+        "क्वेरी",
+        "चैट",
+        "इंसान से बात",
+        "madad",
+        "support chahiye",
+        "talk to human"
+      ],
+      "body": "Chat:\n1. अकाउंट मेन्यू से Chat खोलें और ऑर्डर या प्रोडक्ट के बारे में पूछें।\n2. इंसान से बात के लिए Talk to a human दबाएं। एक query बनती है और टीम वहीं जवाब देती है।\n3. नई शुरुआत के लिए New conversation दबाएं। पुरानी बातचीत सुरक्षित रहती है।\nQueries:\n1. Queries खोलें और New query दबाएं।\n2. संदेश लिखें, ज़रूरत हो तो फ़ाइल जोड़ें और भेजें।\n3. Write a reply में जवाब दें। Waiting on you का मतलब है कि हमें आपका उत्तर चाहिए।\n4. हल हो जाए तो Mark resolved दबाएं।\nचैट से पहले ईमेल वेरिफाई करना ज़रूरी है।"
+    },
+    {
+      "id": "danger-zone-reset",
+      "title": "Danger zone: साइट डेटा रीसेट (वापस नहीं होगा)",
+      "roles": ["super_admin"],
+      "keywords": [
+        "danger zone",
+        "रीसेट",
+        "सारा डेटा हटाओ",
+        "डेमो डेटा",
+        "site reset",
+        "wipe",
+        "reset site",
+        "data delete"
+      ],
+      "body": "चेतावनी: यह डेटा हमेशा के लिए मिटाता है और वापस नहीं हो सकता।\n1. Settings खोलें, फिर Danger zone।\n2. Data to delete में मिटाने वाला डेटा चुनें। Preview row counts से Rows to delete देखें।\n3. Download backup दबाएं। जब तक यह न करें, रिक्वेस्ट बटन बंद रहता है।\n4. Request site reset दबाएं।\n5. पुष्टि वाले डायलॉग में साइट का नाम ठीक वैसा ही टाइप करें (\"Type ... to confirm\" बॉक्स), फिर Confirm site reset request दबाएं।\nअभी कुछ नहीं मिटता: दूसरे super admin को Approvals में मंज़ूर करना होगा। Super admin अकाउंट, settings, roles, legal पेज और audit log हमेशा बचे रहते हैं।"
+    },
+    {
+      "id": "download-invoice-customer",
+      "title": "मेरा इनवॉइस डाउनलोड करें",
+      "roles": ["customer"],
+      "keywords": [
+        "इनवॉइस",
+        "बिल",
+        "रसीद",
+        "PDF",
+        "invoice download karo",
+        "bill chahiye",
+        "download invoice",
+        "GST invoice"
+      ],
+      "body": "1. साइन-इन करके अकाउंट मेन्यू से Invoices & payments खोलें।\n2. ज़रूरत हो तो All years से सूची छोटी करें।\n3. अपनी पंक्ति ढूंढें। Invoice no, Date, Order और Status दिखते हैं।\n4. PDF दबाएं। इनवॉइस नए टैब में खुलता है, वहां से सेव या प्रिंट करें।\nइनवॉइस भुगतान कन्फर्म होने के बाद दिखता है। बैंक ट्रांसफर में एक कार्यदिवस तक लग सकता है। PDF न खुले तो एक मिनट रुककर दोबारा कोशिश करें, या Queries से Open a query करें। रिफंड क्रेडिट नोट के रूप में उसी सूची में आते हैं।"
+    },
+    {
+      "id": "edit-landing",
+      "title": "लैंडिंग पेज और साइट कंटेंट एडिट करें",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "लैंडिंग पेज",
+        "होमपेज",
+        "हीरो",
+        "साइट कंटेंट",
+        "CTA",
+        "blog",
+        "FAQ",
+        "website badlo",
+        "homepage edit"
+      ],
+      "body": "1. Content खोलें, फिर Landing।\n2. Who we are, What we build और What we sell जैसे सेक्शन एडिट करें। Hero image को Upload image या Replace image से बदलें।\n3. Primary CTA label, Primary CTA target और दूसरा CTA सेट करें।\n4. Featured products में Add product दबाकर पब्लिश्ड प्रोडक्ट चुनें।\n5. काम सेव करें। \"Saved n s ago\" या \"Unsaved changes\" से स्थिति पता चलती है।\nबाकी पेज भी Content में हैं: Services, Case studies, Testimonials & logos, Blog, FAQs और Legal। Staff एडिट कर सकते हैं, पर पब्लिश केवल admin कर सकते हैं।"
+    },
+    {
+      "id": "finance-ledger",
+      "title": "फाइनेंस लेजर, allocations और रिपोर्ट पढ़ें",
+      "roles": ["admin", "super_admin", "partner"],
+      "keywords": [
+        "लेजर",
+        "फाइनेंस",
+        "हिस्सा",
+        "स्टेटमेंट",
+        "रिपोर्ट",
+        "hisab",
+        "finance dekho",
+        "ledger",
+        "partner share"
+      ],
+      "body": "1. Finance खोलें (बाएं मेन्यू)। इसमें Ledger, Allocations, Partners & payouts, Expenses, Adjustments और Reports & statements हैं।\n2. Ledger में हर Entry है। Entry type, Party type या Order number से फ़िल्टर करें। Entries Immutable हैं, गलती Adjustment से सुधारी जाती है।\n3. Allocations दिखाता है कि हर बिक्री कैसे बंटी: Company cut, Gateway fee, Bank charge और पार्टनर हिस्से।\n4. Reports & statements में अवधि (This month, Last month, This FY) और Partner चुनकर Generate statement, फिर Download दबाएं।\nपार्टनर केवल अपनी लाइनें देखते हैं।"
+    },
+    {
+      "id": "fulfil-order",
+      "title": "ऑर्डर डिलीवर करें: delivery tasks और entitlements",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "डिलीवरी",
+        "लाइसेंस की",
+        "entitlement",
+        "delivery task",
+        "license key",
+        "mark delivered",
+        "delivery karo"
+      ],
+      "body": "भुगतान के बाद ग्राहक ने जो खरीदा है, उसे सौंपें।\n1. Delivery tasks खोलकर खुला काम देखें। Assign to चुनें और पूरा होने पर Mark done दबाएं।\n2. एक्सेस या की के लिए Entitlements खोलें।\n3. पंक्ति खोलकर Enter licence key, Replace licence key, Reset downloads या Revoke external इस्तेमाल करें।\n4. सर्विस के लिए Service steps पूरे करें।\n5. सब सौंपने के बाद Mark delivered दबाएं और Note to customer लिखें।\nयही काम ऑर्डर पेज पर Items & fulfilment से भी हो सकते हैं। Settings का Fulfilment guide हर डिलीवरी टाइप समझाता है।"
+    },
+    {
+      "id": "get-access-customer",
+      "title": "जो खरीदा उसे खोलें या डाउनलोड करें",
+      "roles": ["customer"],
+      "keywords": [
+        "डाउनलोड",
+        "एक्सेस",
+        "लाइसेंस की",
+        "निर्देश",
+        "download karo",
+        "key kahan",
+        "renew",
+        "my products"
+      ],
+      "body": "1. Purchases & access खोलें (इसे Your products भी कहते हैं)।\n2. प्रोडक्ट कार्ड ढूंढें। स्टेटस चिप बताता है कि एक्सेस चालू है या नहीं।\n3. कार्ड पर टाइप के हिसाब से बटन इस्तेमाल करें: Reveal key, Open instructions, View progress या Manage subscription।\n4. ज़्यादा जानकारी के लिए कार्ड खोलें: License type, Version owned और Access period।\n5. एक्सेस खत्म हो गया हो तो Renew या Buy again दबाएं।\nकुछ गड़बड़ या काम नहीं कर रहा? Contact support दबाएं। डाउनलोड की सीमा हो सकती है, और डिटेल पेज में बचा हुआ दिखता है।"
+    },
+    {
+      "id": "issue-invoice",
+      "title": "इनवॉइस जारी करें और डाउनलोड करें (admin)",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "इनवॉइस",
+        "बिल",
+        "GST invoice",
+        "invoice banao",
+        "invoice download",
+        "download invoice",
+        "issue invoice"
+      ],
+      "body": "भुगतान कन्फर्म होते ही इनवॉइस अपने आप जारी हो जाता है। अलग से ड्राफ्ट बनाने का बटन नहीं है।\n1. Orders खोलें और ऑर्डर पर क्लिक करें।\n2. देखें कि ऑर्डर paid है (नहीं है तो पहले Confirm payment करें)।\n3. More order actions पर क्लिक करें।\n4. Download invoice चुनें।\nजब तक ऑर्डर का इनवॉइस नंबर नहीं बनता, यह विकल्प बंद रहता है। रिफंड पर क्रेडिट नोट अपने आप बनता है। ग्राहक वही PDF Invoices & payments में देखता है।"
+    },
+    {
+      "id": "leads-priority",
+      "title": "लीड संभालें और प्रायोरिटी सेट करें",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "लीड",
+        "प्रायोरिटी",
+        "फॉलो-अप",
+        "पाइपलाइन",
+        "lead priority",
+        "lead assign",
+        "follow up",
+        "leads"
+      ],
+      "body": "1. Leads खोलें। नई लीड के लिए Unassigned pool फ़िल्टर लगाएं।\n2. पंक्ति के actions में Assign to me से लीड अपने नाम करें।\n3. Set priority चुनकर Normal या High रखें।\n4. Set follow-up चुनकर तारीख डालें। Overdue only छूटे फॉलो-अप दिखाता है।\n5. लीड खोलकर Add note करें, Chat transcript या Original message देखें।\n6. Change status, Send custom quote या Create project order से आगे बढ़ाएं।\n7. डील न बने तो Mark lost चुनकर कारण लिखें।\nखुद लीड जोड़ने के लिए New lead दबाएं (source Manual रहता है)।"
+    },
+    {
+      "id": "manage-categories",
+      "title": "प्रोडक्ट कैटेगरी संभालें",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "कैटेगरी",
+        "श्रेणी",
+        "सब कैटेगरी",
+        "टैग",
+        "category banao",
+        "category",
+        "categories"
+      ],
+      "body": "1. Categories खोलें (Catalog के नीचे), या Products सूची के पास Category tree इस्तेमाल करें।\n2. नई जोड़ने के लिए Category दबाएं। सब-कैटेगरी के लिए Parent चुनें (अधिकतम गहराई 2)।\n3. मौजूदा कैटेगरी पर क्लिक करके नाम बदलें या एडिट करें, फिर सेव करें।\n4. हटाने के लिए उसे चुनें और Delete दबाएं।\nजब तक किसी प्रोडक्ट में वह कैटेगरी लगी है, Delete बंद रहता है। पहले उन प्रोडक्ट को दूसरी कैटेगरी में डालें। Products सूची में All categories से फ़िल्टर करें।"
+    },
+    {
+      "id": "notifications-admin",
+      "title": "admin में नोटिफिकेशन",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "नोटिफिकेशन",
+        "अलर्ट",
+        "घंटी",
+        "unread",
+        "notification kahan",
+        "notifications",
+        "mark read"
+      ],
+      "body": "1. Notifications खोलें (Overview के नीचे), या ऊपर की घंटी इस्तेमाल करें। उसमें unread गिनती दिखती है।\n2. हर आइटम पर Confirm payment या Review approval जैसा त्वरित एक्शन होता है।\n3. पुराने देखने के लिए Load more दबाएं।\n4. Mark all as read से unread गिनती साफ़ होती है। \"All notifications marked read\" संदेश पुष्टि करता है।\nनए ऑर्डर, कन्फर्म होने वाले पेमेंट, इंतज़ार करती approvals और नई queries या leads की सूचना मिलती है। किसने क्या किया, इसका पूरा इतिहास System के Audit log में है।"
+    },
+    {
+      "id": "notifications-customer",
+      "title": "मेरे नोटिफिकेशन देखें",
+      "roles": ["customer"],
+      "keywords": [
+        "नोटिफिकेशन",
+        "अलर्ट",
+        "घंटी",
+        "unread",
+        "अपडेट",
+        "notification kahan dekhein",
+        "notifications",
+        "bell"
+      ],
+      "body": "1. ऊपर की बार में घंटी दबाएं। संख्या बताती है कितने unread हैं।\n2. सबको साफ़ करने के लिए Mark all read, या पूरा पेज खोलने के लिए View all दबाएं।\n3. Notifications पेज पर Filter by type (जैसे Product updates) और Unread फ़िल्टर इस्तेमाल करें।\n4. किसी आइटम पर क्लिक करके संबंधित ऑर्डर, query या प्रोडक्ट पर जाएं।\nभुगतान कन्फर्म होने, एक्सेस तैयार होने, सपोर्ट के जवाब और आपके प्रोडक्ट के अपडेट पर सूचना मिलती है। कुछ ईमेल बंद करने के लिए Settings में Notifications जाएं।"
+    },
+    {
+      "id": "partners-payouts",
+      "title": "पार्टनर जोड़ें और पेआउट दर्ज करें",
+      "roles": ["admin", "super_admin", "partner"],
+      "keywords": [
+        "पार्टनर",
+        "पेआउट",
+        "पार्टनर को भुगतान",
+        "payout record karo",
+        "partner add",
+        "bank reference",
+        "partner balance"
+      ],
+      "body": "1. Finance खोलें, फिर Partners & payouts।\n2. पार्टनर जोड़ने के लिए Add partner दबाएं, Admin user चुनें (या Admin email डालें) और Display name सेट करें।\n3. Partner balances में Earned (all time), Paid out और Closing पढ़ें।\n4. भुगतान के लिए Record payout दबाएं। पार्टनर चुनें, Amount, Date paid और Bank reference भरकर सबमिट करें।\nपेआउट Approvals में जाता है (\"Payout sent for approval\") और मंज़ूरी के बाद लेजर में दर्ज होता है। Payout status से Awaiting approval फ़िल्टर करें।"
+    },
+    {
+      "id": "place-order-admin",
+      "title": "ग्राहक के लिए ऑर्डर बनाएं (admin)",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "नया ऑर्डर",
+        "मैनुअल ऑर्डर",
+        "ऑर्डर बनाओ",
+        "order banao",
+        "naya order",
+        "offline sale",
+        "manual order"
+      ],
+      "body": "जब ग्राहक ऑफलाइन भुगतान करे या आप सीधे प्रोजेक्ट बेचें, तब यह तरीका इस्तेमाल करें।\n1. Orders खोलें और New manual order पर क्लिक करें।\n2. Product order (offline sale) या Project order (client invoice) चुनें।\n3. Registered customer चुनें (email से खोजें) या Invite customer दबाएं।\n4. हर ऑफरिंग के लिए Add line दबाएं। ज़रूरत हो तो Currency, Discount amount और Apply tax सेट करें।\n5. चाहें तो Record payment now ऑन करके Method, Amount received, Reference और Paid on भरें।\n6. Create order दबाएं, या भुगतान दर्ज हो तो Create & confirm।\nProject order में Create & request split approval दिखता है और वह पहले Approvals में जाता है।"
+    },
+    {
+      "id": "product-media",
+      "title": "प्रोडक्ट में इमेज, वीडियो या फ़ाइल जोड़ें",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "मीडिया",
+        "इमेज",
+        "फोटो",
+        "वीडियो",
+        "अपलोड",
+        "cover image",
+        "photo lagao",
+        "image upload"
+      ],
+      "body": "1. Products खोलें और प्रोडक्ट पर क्लिक करें।\n2. Media टैब पर जाएं।\n3. Choose file दबाएं। इमेज, MP4/WebM/MOV वीडियो और PDF चलते हैं।\n4. एक्सेसिबिलिटी के लिए Alt text (optional) लिखें।\n5. Upload & attach दबाएं। Media attached संदेश दिखेगा।\n6. किसी इमेज को थंबनेल बनाने के लिए Use cover image दबाएं।\nCover image प्रोडक्ट कार्ड पर दिखती है। गलत हो तो उसी टैब से हटाएं। रिलीज़ डाउनलोड Versions टैब में Upload release file से जाते हैं।"
+    },
+    {
+      "id": "profile-security-password",
+      "title": "प्रोफ़ाइल, सुरक्षा और पासवर्ड",
+      "roles": ["customer"],
+      "keywords": [
+        "प्रोफ़ाइल",
+        "पासवर्ड",
+        "पासवर्ड बदलें",
+        "पासवर्ड भूल गए",
+        "password badlo",
+        "security",
+        "delete account",
+        "email change"
+      ],
+      "body": "जानकारी बदलें:\n1. अकाउंट मेन्यू से Settings खोलें।\n2. Profile में नाम और Phone बदलें, या Change email इस्तेमाल करें (वेरिफिकेशन लिंक जाता है)।\n3. Billing details में पता और GST number सेव करें।\nपासवर्ड बदलें:\n1. Change password में मौजूदा और नया पासवर्ड डालें, पुष्टि करें, फिर Update password दबाएं।\nभूल गए? साइन-इन पेज पर Forgot password? दबाएं और Reset your password वाले ईमेल का पालन करें।\nसाझा डिवाइस इस्तेमाल किया हो तो Sign out other sessions दबाएं। Delete account आपका अकाउंट हमेशा के लिए बंद कर देता है।"
+    },
+    {
+      "id": "record-expense",
+      "title": "खर्च दर्ज करें",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "खर्च",
+        "ख़र्चा",
+        "रसीद",
+        "expense",
+        "kharcha",
+        "expense add karo",
+        "receipt",
+        "cost"
+      ],
+      "body": "1. Finance खोलें, फिर Expenses।\n2. Record expense दबाएं।\n3. Description, Category, Amount, Incurred on भरें और हो तो Receipt जोड़ें।\n4. तय करें कि खर्च किसका है: Company (no product), कोई Product, या Shared by split (Share by product split)।\n5. सेव करें। \"Expense recorded\" संदेश दिखेगा।\nExpense एडिट नहीं होता। सुधारने के लिए Reverse via adjustment इस्तेमाल करें। हर पंक्ति में View receipt और लेजर नंबर के लिए Copy seq है।"
+    },
+    {
+      "id": "record-payment",
+      "title": "भुगतान दर्ज या कन्फर्म करें",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "payment confirm karo",
+        "payment record karo",
+        "bank transfer",
+        "UPI",
+        "UTR",
+        "mark paid",
+        "भुगतान कन्फर्म"
+      ],
+      "body": "बैंक ट्रांसफर या UPI वाले ऑर्डर, जो कन्फर्मेशन का इंतज़ार कर रहे हैं, उनके लिए।\n1. Orders खोलें और ऑर्डर ढूंढें (कतार में Awaiting confirmation दिखता है)।\n2. Confirm payment पर क्लिक करें।\n3. Received on और Reference (UTR / NEFT) भरें। चाहें तो Note जोड़ें।\n4. Payment recap जांचें और Confirm and mark Paid दबाएं।\nऑर्डर paid हो जाता है, इनवॉइस बनता है और ग्राहक को एक्सेस मिलता है। पैसा नहीं आया हो तो Mark failed दबाकर Reason लिखें।"
+    },
+    {
+      "id": "refund-adjustment",
+      "title": "रिफंड या लेजर एडजस्टमेंट प्रस्तावित करें",
+      "roles": ["admin", "super_admin"],
+      "keywords": [
+        "रिफंड",
+        "पैसे वापस",
+        "एडजस्टमेंट",
+        "refund karo",
+        "paisa wapas",
+        "adjustment",
+        "chargeback"
+      ],
+      "body": "रिफंड और एडजस्टमेंट के लिए हमेशा दूसरे व्यक्ति की मंज़ूरी चाहिए।\nरिफंड:\n1. Orders खोलें और ऑर्डर पर क्लिक करें।\n2. More order actions में Propose refund चुनें।\n3. राशि और कारण लिखकर Request approval दबाएं।\nएडजस्टमेंट (लेजर की गलती सुधारने के लिए):\n1. Finance खोलें, फिर Adjustments।\n2. New adjustment दबाएं, Lines और Reason भरें, Impact preview देखें।\n3. सबमिट करें।\nस्थिति Approvals में देखें। अपनी ही रिक्वेस्ट आप मंज़ूर नहीं कर सकते।"
+    },
+    {
+      "id": "settings-theme-currency",
+      "title": "थीम, करेंसी और बाकी सेटिंग बदलें",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "सेटिंग",
+        "थीम",
+        "डार्क मोड",
+        "करेंसी",
+        "लोगो",
+        "GST",
+        "setting badlo",
+        "theme",
+        "currency"
+      ],
+      "body": "1. Settings खोलें (System के नीचे)। Staff और admin केवल देख सकते हैं; बदलाव सेव करना सिर्फ super admin के पास है।\n2. सेक्शन सूची: General / seller, Currencies, Tax & GSTIN, Payment methods, Theme, AI, Email & notifications, Feature flags, Fulfilment guide और Danger zone।\n3. Theme: Light editorial या Dark cinematic को डिफ़ॉल्ट थीम चुनें।\n4. Currencies: Base currency और Enabled display currencies सेट करें। एक्सचेंज रेट के लिए Refresh now दबाएं।\n5. Save changes दबाएं। \"Settings saved\" से पुष्टि होती है।"
+    },
+    {
+      "id": "sign-in-account",
+      "title": "अकाउंट बनाएं और साइन-इन करें",
+      "roles": ["customer"],
+      "keywords": [
+        "साइन अप",
+        "रजिस्टर",
+        "लॉगिन",
+        "गूगल लॉगिन",
+        "account banao",
+        "login kaise karein",
+        "sign in",
+        "create account"
+      ],
+      "body": "अकाउंट बनाएं:\n1. Sign in दबाएं, फिर Create account चुनें।\n2. पूरा नाम, सही ईमेल और पासवर्ड डालें, या Continue with Google इस्तेमाल करें।\n3. आए ईमेल में वेरिफाई करें। न आए तो Resend verification email दबाएं।\nसाइन-इन:\n1. Email और Password डालकर Sign in दबाएं। Remember this device सिर्फ अपने डिवाइस पर टिक करें।\n2. या कोड के लिए Sign in with phone instead चुनें।\nखरीदने या चैट के लिए वेरिफाइड ईमेल ज़रूरी है।"
+    },
+    {
+      "id": "site-phase",
+      "title": "साइट फ़ेज़ सेट करें: Live, Testing या Maintenance",
+      "roles": ["super_admin"],
+      "keywords": [
+        "site phase",
+        "maintenance mode",
+        "testing mode",
+        "साइट लाइव",
+        "maintenance",
+        "go live",
+        "site band karo"
+      ],
+      "body": "यह केवल super admin बदल सकता है।\n1. Settings खोलें और General / seller पर जाएं।\n2. Site phase ढूंढें।\n3. एक चुनें:\n- Live: सामान्य पब्लिक साइट।\n- Testing: Test site बैनर दिखता है, सर्च इंजन को इंडेक्स न करने को कहा जाता है और ग्राहकों को ईमेल नहीं जाते।\n- Maintenance: विज़िटर को back soon पेज दिखता है; admin और पेमेंट चलते रहते हैं।\n4. Save changes दबाएं।\nप्रयोग के लिए Testing, डाउनटाइम के लिए Maintenance रखें, और लॉन्च से पहले Live पर लौटें।"
+    },
+    {
+      "id": "support-queries-admin",
+      "title": "ग्राहक के सवालों का जवाब दें (support inbox)",
+      "roles": ["staff", "admin", "super_admin"],
+      "keywords": [
+        "क्वेरी",
+        "सपोर्ट",
+        "टिकट",
+        "जवाब",
+        "query reply karo",
+        "support",
+        "refund request",
+        "ग्राहक सवाल"
+      ],
+      "body": "1. Queries खोलें। Query list से थ्रेड चुनें।\n2. Pool से थ्रेड लेने के लिए Unassigned (claim) चुनें।\n3. Reply में लिखें और Send दबाएं।\n4. More thread actions से Create lead, View customer या Propose refund करें (जब थ्रेड Refund request हो)।\n5. ग्राहक का काम हो जाए तो उसे Resolved या Closed करें।\nफोन या ईमेल की बात दर्ज करने के लिए Log a query दबाकर ग्राहक खोजें। ग्राहक के जवाब का इंतज़ार करते थ्रेड पर Waiting दिखता है।"
+    },
+    {
+      "id": "track-order",
+      "title": "मेरा ऑर्डर ट्रैक करें",
+      "roles": ["customer"],
+      "keywords": [
+        "ऑर्डर ट्रैक",
+        "ऑर्डर स्टेटस",
+        "order kahan hai",
+        "order status dekho",
+        "track order",
+        "my orders",
+        "ऑर्डर कहां है"
+      ],
+      "body": "1. साइन-इन करके अपना अकाउंट खोलें।\n2. Purchases & access पर जाएं। फ़िल्टर या Search by product name इस्तेमाल करें।\n3. भुगतान के इंतज़ार वाले ऑर्डर पर Pay now या Submit reference दिखता है।\n4. किसी ऑर्डर पर क्लिक करके Order progress, Order summary और Paid on देखें।\n5. स्थितियां: Pending payment, Confirmed by us, Access ready और Partially refunded।\nएक्सेस तैयार होने पर Go to your purchase दबाएं। पुराने भुगतान Invoices & payments में भी हैं, हर पंक्ति के पास Open order के साथ। अटक जाएं तो Open a query दबाएं।"
+    },
+    {
+      "id": "wishlist",
+      "title": "मेरी wishlist इस्तेमाल करें",
+      "roles": ["customer"],
+      "keywords": [
+        "विशलिस्ट",
+        "बाद के लिए सेव",
+        "पसंदीदा",
+        "हार्ट",
+        "wishlist mein daalo",
+        "wishlist",
+        "favourite",
+        "saved products"
+      ],
+      "body": "1. साइन-इन करें। अकाउंट न हो तो हार्ट आइकन पर Sign in to add to wishlist लिखा आता है।\n2. किसी भी प्रोडक्ट कार्ड पर हार्ट (Add to wishlist) दबाएं। हटाने के लिए फिर दबाएं (Remove from wishlist)।\n3. अकाउंट मेन्यू से Wishlist खोलें।\n4. Sort wishlist में Recently added, Name या Price चुनें।\n5. हर आइटम पर Buy now (या Request a quote), View product या Remove दबाएं।\nकीमतें आपकी Display currency में दिखती हैं। सूची अकाउंट में सेव रहती है, इसलिए हर डिवाइस पर मिलती है।"
+    }
+  ]
+}
